@@ -1,0 +1,421 @@
+#include "hs_llm.h"
+#include "hs_json.h"
+#include "Log.h"
+
+// Rename httplib's namespace to avoid an ODR violation: mod-ollama-chat and
+// mod-game-state-api each already vendor a different version of cpp-httplib
+// under the unqualified `httplib` namespace, and all three land in the same
+// worldserver binary (trap 19 / PLAN.md §4.19). mod-playerbots-characters
+// solved this the same way; this module follows suit under its own name.
+#define httplib hs_httplib
+#include <httplib.h>
+#undef httplib
+
+#include <algorithm>
+#include <cctype>
+#include <memory>
+#include <regex>
+#include <utility>
+
+using json = hs_json;
+
+namespace
+{
+    bool IEquals(const std::string& a, const std::string& b)
+    {
+        if (a.size() != b.size())
+            return false;
+        for (size_t i = 0; i < a.size(); ++i)
+            if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i])))
+                return false;
+        return true;
+    }
+
+    std::string Trim(std::string s)
+    {
+        auto notSpace = [](unsigned char c) { return !std::isspace(c); };
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), notSpace));
+        s.erase(std::find_if(s.rbegin(), s.rend(), notSpace).base(), s.end());
+        return s;
+    }
+
+    // trap 2: mod-ollama-chat's ExtractTextBetweenDoubleQuotes truncates at
+    // the first two quote characters anywhere in the reply, silently
+    // mangling any line that quotes a word. Only strip a leading/trailing
+    // quote pair that wraps the *entire* string.
+    std::string StripWrappingQuotes(std::string s)
+    {
+        if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
+            s = s.substr(1, s.size() - 2);
+        return s;
+    }
+
+    // Chat lines are single-line by construction (trap 12: style/format is
+    // applied at delivery, never baked into stored or cached text — this is
+    // just making the raw model output fit one chat line).
+    std::string CollapseNewlines(std::string s)
+    {
+        for (char& c : s)
+            if (c == '\n' || c == '\r')
+                c = ' ';
+        return s;
+    }
+
+    // §4.2 "the few-shot register block" — fixed, byte-identical for every
+    // bot, teaching register (casual/short/lowercase) rather than subject
+    // matter, which would leak answers into unrelated replies (§4.11).
+    // Deliberately off-topic from anything a bot will actually be asked.
+    // PLAN.md §6: only five exist, written to prove the mechanism works —
+    // a wider set is still an open authoring item, not required to ship
+    // this layering.
+    const std::vector<std::pair<std::string, std::string>>& Fewshot()
+    {
+        static const std::vector<std::pair<std::string, std::string>> examples =
+        {
+            { "you around later?", "prob yeah, after work" },
+            { "did you see what they did to the patch notes", "lol yeah" },
+            { "hey can i ask you something", "sure" },
+            { "what do you think", "eh. not sure tbh" },
+            { "thanks!!", "np" },
+        };
+        return examples;
+    }
+
+    std::string BaseUrlNoTrailingSlash(std::string url)
+    {
+        if (!url.empty() && url.back() == '/')
+            url.pop_back();
+        return url;
+    }
+
+    HsLLMFailure ClassifyTransportError(hs_httplib::Error err)
+    {
+        switch (err)
+        {
+            case hs_httplib::Error::ConnectionTimeout:
+            case hs_httplib::Error::Timeout:
+            case hs_httplib::Error::Read:
+            case hs_httplib::Error::Write:
+                return HsLLMFailure::Timeout;
+            default:
+                return HsLLMFailure::ConnectionFailed;
+        }
+    }
+
+    // §4.1: "hold persistent keep-alive clients rather than constructing one
+    // per request". Cached thread_local, keyed by host:port — safe without
+    // locking because PLAN.md §4.3 fixes the worker pool at exactly one
+    // thread, so exactly one thread ever calls this.
+    hs_httplib::Client& GetPlainClient(const std::string& host, int port, int timeoutSec)
+    {
+        static thread_local std::string s_key;
+        static thread_local std::unique_ptr<hs_httplib::Client> s_client;
+
+        std::string key = host + ":" + std::to_string(port);
+        if (!s_client || s_key != key)
+        {
+            s_client = std::make_unique<hs_httplib::Client>(host, port);
+            s_client->set_keep_alive(true);
+            s_key = key;
+        }
+        s_client->set_connection_timeout(timeoutSec);
+        s_client->set_read_timeout(timeoutSec);
+        s_client->set_write_timeout(timeoutSec);
+        return *s_client;
+    }
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+    hs_httplib::SSLClient& GetSSLClient(const std::string& host, int port, int timeoutSec)
+    {
+        static thread_local std::string s_key;
+        static thread_local std::unique_ptr<hs_httplib::SSLClient> s_client;
+
+        std::string key = host + ":" + std::to_string(port);
+        if (!s_client || s_key != key)
+        {
+            s_client = std::make_unique<hs_httplib::SSLClient>(host, port);
+            s_client->enable_server_certificate_verification(false);
+            s_client->set_keep_alive(true);
+            s_key = key;
+        }
+        s_client->set_connection_timeout(timeoutSec);
+        s_client->set_read_timeout(timeoutSec);
+        s_client->set_write_timeout(timeoutSec);
+        return *s_client;
+    }
+#endif
+
+    struct HsHttpOutcome
+    {
+        std::string  body;
+        HsLLMFailure failure;
+        int          httpStatus;
+    };
+
+    HsHttpOutcome HttpPost(const std::string& url,
+                            const std::string& body,
+                            const std::vector<std::pair<std::string, std::string>>& extraHeaders,
+                            int timeoutSec)
+    {
+        static const std::regex urlRe(R"(^(https?)://([^:/]+)(?::(\d+))?(/.*)?$)");
+        std::smatch m;
+        if (!std::regex_match(url, m, urlRe))
+        {
+            LOG_ERROR("server.loading", "[HearthsideChat] Invalid LLM URL: {}", url);
+            return { "", HsLLMFailure::ConnectionFailed, 0 };
+        }
+
+        std::string proto = m[1].str();
+        std::string host  = m[2].str();
+        std::string path  = m[4].matched ? m[4].str() : "/";
+        int port = proto == "https" ? 443 : 80;
+        if (m[3].matched)
+            port = std::stoi(m[3].str());
+
+        hs_httplib::Headers headers = { {"Accept", "application/json"}, {"User-Agent", "mod-hearthside-chat/1.0"} };
+        for (auto const& h : extraHeaders)
+            headers.emplace(h.first, h.second);
+
+        hs_httplib::Result res;
+        if (proto == "https")
+        {
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+            hs_httplib::SSLClient& cli = GetSSLClient(host, port, timeoutSec);
+            res = cli.Post(path, headers, body, "application/json");
+#else
+            LOG_ERROR("server.loading", "[HearthsideChat] HTTPS requested but OpenSSL not compiled in.");
+            return { "", HsLLMFailure::ConnectionFailed, 0 };
+#endif
+        }
+        else
+        {
+            hs_httplib::Client& cli = GetPlainClient(host, port, timeoutSec);
+            res = cli.Post(path, headers, body, "application/json");
+        }
+
+        if (!res)
+        {
+            HsLLMFailure failure = ClassifyTransportError(res.error());
+            LOG_ERROR("server.loading", "[HearthsideChat] LLM request failed for {}:{}{} — {}",
+                host, port, path, failure == HsLLMFailure::Timeout ? "timeout" : "connection failed");
+            return { "", failure, 0 };
+        }
+        if (res->status != 200)
+        {
+            HsLLMFailure failure = res->status >= 500 ? HsLLMFailure::ServerError : HsLLMFailure::ClientError;
+            LOG_ERROR("server.loading", "[HearthsideChat] LLM HTTP {} from {}:{}{} — {}",
+                res->status, host, port, path, failure == HsLLMFailure::ServerError ? "backend error" : "our bug (malformed request?)");
+            return { "", failure, res->status };
+        }
+        return { res->body, HsLLMFailure::None, res->status };
+    }
+}
+
+HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
+                        const std::string& archetypeLine,
+                        const std::vector<HsHistoryTurn>& history, const std::string& trigger)
+{
+    HsLLMResult result{ false, "", HsLLMFailure::None, 0 };
+
+    const bool isLlamaCpp = IEquals(cfg.apiType, "llamacpp");
+    const bool isOllama   = IEquals(cfg.apiType, "ollama");
+
+    std::string url = BaseUrlNoTrailingSlash(cfg.baseUrl);
+    json body;
+    std::vector<std::pair<std::string, std::string>> headers;
+
+    // Samplers are PLAN.md §4.11's decided profile (min_p alone beat both
+    // Qwen's and Meta's recommended profiles on measured opener diversity).
+    // trap 31: these must travel in the request body, not rely on whatever
+    // the operator last typed on the llama-server command line.
+    if (isLlamaCpp)
+    {
+        url += "/completion";
+
+        // Native /completion bypasses the server's chat template entirely,
+        // so the module must reproduce the model's dialect itself (ISSUES-
+        // model-quality.md §5). Llama-3.1-Instruct (PLAN.md §4.1's chosen
+        // model) uses header-tagged turns with <|eot_id|> stops, not ChatML.
+        //
+        // Layer order is the cache design (§4.2, §4.11 "baseline persona
+        // plus archetype delta"): system rules, then the fixed few-shot
+        // block (byte-identical for every bot — this whole prefix is what
+        // the server reuses), then the archetype delta (byte-identical
+        // across bots sharing an archetype, but not across all bots, so it
+        // sits after the truly-shared prefix rather than inside it), then
+        // this bot-player pair's history as real prior turns so a later
+        // turn's prompt is a strict byte extension of an earlier one, then
+        // the new trigger.
+        std::string prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
+        for (auto const& ex : Fewshot())
+        {
+            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + ex.first + "<|eot_id|>";
+            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + ex.second + "<|eot_id|>";
+        }
+        if (!archetypeLine.empty())
+            prompt += "<|start_header_id|>system<|end_header_id|>\n\n" + archetypeLine + "<|eot_id|>";
+        for (auto const& turn : history)
+        {
+            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + turn.trigger + "<|eot_id|>";
+            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + turn.reply + "<|eot_id|>";
+        }
+        prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + trigger + "<|eot_id|>";
+        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n";
+
+        body["prompt"]       = prompt;
+        body["n_predict"]    = cfg.maxTokens;
+        body["temperature"]  = 1.0;
+        body["top_p"]        = 1.0;
+        body["top_k"]        = 0;
+        body["min_p"]        = 0.05;
+        body["cache_prompt"] = true;
+        body["stop"]         = json::array({ "<|eot_id|>", "\n" });
+
+        // §4.11 DRY retest: only meaningful now that history gives DRY a
+        // cross-turn window to look back through (dry_penalty_last_n: 64,
+        // never -1 — that setting suppressed every continuation outright).
+        // Off by default (dryMultiplier 0.0) until the retest earns its
+        // ~85ms/reply cost against the opener-diversity measure.
+        if (cfg.dryMultiplier > 0.0f)
+        {
+            body["dry_multiplier"]     = cfg.dryMultiplier;
+            body["dry_base"]           = 1.75;
+            body["dry_allowed_length"] = 2;
+            body["dry_penalty_last_n"] = 64;
+        }
+
+        if (!cfg.apiKey.empty())
+            headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
+    }
+    else if (isOllama)
+    {
+        url += "/api/chat";
+
+        json messages = json::array();
+        if (!systemPrompt.empty())
+            messages.push_back({ {"role", "system"}, {"content", systemPrompt} });
+        for (auto const& ex : Fewshot())
+        {
+            messages.push_back({ {"role", "user"}, {"content", ex.first} });
+            messages.push_back({ {"role", "assistant"}, {"content", ex.second} });
+        }
+        if (!archetypeLine.empty())
+            messages.push_back({ {"role", "system"}, {"content", archetypeLine} });
+        for (auto const& turn : history)
+        {
+            messages.push_back({ {"role", "user"}, {"content", turn.trigger} });
+            messages.push_back({ {"role", "assistant"}, {"content", turn.reply} });
+        }
+        messages.push_back({ {"role", "user"}, {"content", trigger} });
+
+        body["model"]    = cfg.model;
+        body["messages"] = messages;
+        body["stream"]   = false;
+        body["options"]  = { {"temperature", 1.0}, {"top_p", 1.0}, {"top_k", 0}, {"min_p", 0.05}, {"num_predict", cfg.maxTokens} };
+
+        if (!cfg.apiKey.empty())
+            headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
+    }
+    else // "openai" — also the shape llama-server's /v1/chat/completions accepts
+    {
+        url += "/chat/completions";
+
+        json messages = json::array();
+        if (!systemPrompt.empty())
+            messages.push_back({ {"role", "system"}, {"content", systemPrompt} });
+        for (auto const& ex : Fewshot())
+        {
+            messages.push_back({ {"role", "user"}, {"content", ex.first} });
+            messages.push_back({ {"role", "assistant"}, {"content", ex.second} });
+        }
+        if (!archetypeLine.empty())
+            messages.push_back({ {"role", "system"}, {"content", archetypeLine} });
+        for (auto const& turn : history)
+        {
+            messages.push_back({ {"role", "user"}, {"content", turn.trigger} });
+            messages.push_back({ {"role", "assistant"}, {"content", turn.reply} });
+        }
+        messages.push_back({ {"role", "user"}, {"content", trigger} });
+
+        body["model"]       = cfg.model;
+        body["messages"]    = messages;
+        body["max_tokens"]  = cfg.maxTokens;
+        body["temperature"] = 1.0;
+        body["top_p"]       = 1.0;
+        body["stream"]      = false;
+
+        if (!cfg.apiKey.empty())
+            headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
+    }
+
+    HsHttpOutcome outcome = HttpPost(url, body.dump(), headers, cfg.timeoutSec);
+    result.httpStatus = outcome.httpStatus;
+    if (outcome.failure != HsLLMFailure::None)
+    {
+        result.failure = outcome.failure;
+        return result;
+    }
+
+    try
+    {
+        json resp = json::parse(outcome.body);
+
+        if (resp.contains("error"))
+        {
+            std::string errMsg = resp["error"].is_object() && resp["error"].contains("message")
+                ? resp["error"]["message"].get<std::string>()
+                : outcome.body;
+            LOG_ERROR("server.loading", "[HearthsideChat] LLM API error: {}", errMsg);
+            result.failure = HsLLMFailure::ParseError;
+            return result;
+        }
+
+        std::string text;
+        if (isLlamaCpp)
+        {
+            if (!resp.contains("content"))
+            {
+                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected llama.cpp /completion response shape.");
+                result.failure = HsLLMFailure::ParseError;
+                return result;
+            }
+            text = resp["content"].get<std::string>();
+        }
+        else if (isOllama)
+        {
+            if (!resp.contains("message") || !resp["message"].contains("content"))
+            {
+                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected Ollama response shape.");
+                result.failure = HsLLMFailure::ParseError;
+                return result;
+            }
+            text = resp["message"]["content"].get<std::string>();
+        }
+        else
+        {
+            if (!resp.contains("choices") || resp["choices"].empty())
+            {
+                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected OpenAI-compatible response shape.");
+                result.failure = HsLLMFailure::ParseError;
+                return result;
+            }
+            text = resp["choices"][0]["message"]["content"].get<std::string>();
+        }
+
+        text = CollapseNewlines(Trim(text));
+        text = StripWrappingQuotes(text);
+        text = Trim(text);
+
+        result.success = !text.empty();
+        result.text    = text;
+        if (!result.success)
+            result.failure = HsLLMFailure::ParseError;
+        return result;
+    }
+    catch (const std::exception& ex)
+    {
+        LOG_ERROR("server.loading", "[HearthsideChat] LLM response JSON parse error: {}", ex.what());
+        result.failure = HsLLMFailure::ParseError;
+        return result;
+    }
+}

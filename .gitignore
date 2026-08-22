@@ -67,3 +67,31 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Claude stuff
+.claude/
+Claude/
+.claudeignore
+CLAUDE.md
+
+# Code tests
+Tests/
+# ---------------------------------------------------------------------------
+# AzerothCore module specifics
+# ---------------------------------------------------------------------------
+
+# Live config is a deploy-local artifact - only the .dist template is source.
+# Once the openai/anthropic adapter paths are enabled, this file holds an API key.
+conf/*.conf
+!conf/*.conf.dist
+
+# Deploy-local secrets
+.env
+
+# Local Claude Code settings (CLAUDE.md itself stays tracked)
+.claude/settings.local.json
+
+# Generated corpus exports. Schema files under data/sql/ are source and stay tracked,
+# so match compressed dumps only - never a bare *.sql glob.
+*.sql.gz
+*.sql.zst
