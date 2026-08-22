@@ -4,13 +4,13 @@
 #include "ScriptMgr.h"
 #include <cstdint>
 
-// PLAN.md §4.16/§7 step 14: scripted bot-to-bot conversations. Pre-generated
-// during GPU idle (hs_generator.cpp's script-reserve queue), replayed near a
-// real player -- never improvised live (§4.16, trap 17: MaxTier.BotToBot
-// stays corpus-only in v1). This is the module's first genuinely stateful
-// runtime subsystem: everything through step 13 is either one delivered
-// reply or a single fire-and-forget line. A script is several lines paced
-// over time with something that can interrupt it partway through.
+// Scripted bot-to-bot conversations. Pre-generated during GPU idle
+// (hs_generator.cpp's script-reserve queue), replayed near a real player --
+// never improvised live (MaxTier.BotToBot stays corpus-only in v1). This is
+// the module's first genuinely stateful runtime subsystem: elsewhere a
+// reply is either one delivered line or a single fire-and-forget line. A
+// script is several lines paced over time with something that can
+// interrupt it partway through.
 //
 // Two moving parts:
 // - A periodic proximity scan (HsScriptRunnerWorldScript::OnUpdate, gated to
@@ -38,22 +38,20 @@ public:
 };
 
 // Marks every currently active script run witnessed by this real player as
-// aborted -- §4.16: "a player speaking aborts the script... finish the line
-// in flight, then stop." Called from hs_handler.cpp's real-player /say path
-// only (bot-authored Say() calls, including a script's own turns, also pass
-// through the chat hook but are filtered out before reaching this call).
+// aborted -- a player speaking aborts the script, finishing the line in
+// flight and stopping there. Called from hs_handler.cpp's real-player /say
+// path only (bot-authored Say() calls, including a script's own turns,
+// also pass through the chat hook but are filtered out before reaching
+// this call).
 void Hs_AbortScriptsWitnessedBy(uint64_t playerGuid);
 
 // Read-only status for `.hearthside status` -- reserve depth already lives
-// on hs_generator.h (Hs_ScriptReserveDepth); this is the runtime half, since
-// "reserve depth is an observability metric, not an assumption" applies to
-// consumption too.
+// on hs_generator.h (Hs_ScriptReserveDepth); this is the runtime half.
 uint32_t Hs_ActiveScriptRunCount();
 
-// §4.19/§7 step 19: "dump script reserve depth and consumption rate."
 // Scripts claimed (hside_script.consumed_at set) in the last 24h -- reuses
-// the column step 14 already wrote for claim-tracking rather than adding new
-// instrumentation, same discipline as this step's other metrics.
+// the column already written for claim-tracking rather than adding new
+// instrumentation.
 uint32_t Hs_ScriptsConsumedLast24h();
 
 #endif // MOD_HS_SCRIPT_H

@@ -8,9 +8,9 @@
 
 namespace
 {
-    // §4.7's two placeholder classes. Universal ones resolve for all 5000
-    // bots straight off the character row; card-only ones resolve only for
-    // carded bots (step 15) and would fail silently for everyone else, so a
+    // Two placeholder classes. Universal ones resolve for all 5000 bots
+    // straight off the character row; card-only ones resolve only for
+    // carded bots and would fail silently for everyone else, so a
     // non-card-gated category must never accept them.
     const std::unordered_set<std::string> kUniversalPlaceholders = {
         "%item_link", "%quest_link", "%class", "%level", "%zone", "%guild",
@@ -20,10 +20,10 @@ namespace
     };
 
     // Deliberately short and low-collision: WoW chat legitimately uses
-    // words like "cap" (level cap) and "based" would be too noisy to trust
-    // as a single token, so the list sticks to slang with little chance of
-    // colliding with ordinary WoW-flavor prose. Not exhaustive by design
-    // (§4.7 names this a cheap regex-shaped gate, not a rule engine).
+    // words like "cap" (level cap), and "based" would be too noisy to
+    // trust as a single token, so the list sticks to slang with little
+    // chance of colliding with ordinary WoW-flavor prose. Not exhaustive
+    // by design -- this is a cheap regex-shaped gate, not a rule engine.
     const std::vector<std::string> kSlangTokens = {
         "lol", "lmao", "rofl", "bruh", "bestie", "ngl", "sus", "bussin", "yeet", "rn",
     };
@@ -123,9 +123,9 @@ namespace
         return false;
     }
 
-    // §4.4's named corruption marker -- the utf8mb3-era mojibake problem
-    // that motivated authoring the corpus fresh rather than importing stock
-    // rows. U+FFFD REPLACEMENT CHARACTER, encoded as EF BF BD in UTF-8.
+    // The utf8mb3-era mojibake problem that motivated authoring the corpus
+    // fresh rather than importing stock rows. U+FFFD REPLACEMENT CHARACTER,
+    // encoded as EF BF BD in UTF-8.
     bool ContainsReplacementChar(const std::string& s)
     {
         return s.find("\xEF\xBF\xBD") != std::string::npos;
@@ -228,7 +228,7 @@ HsGenVerdict Hs_PlaceholderDiscipline(const std::string& candidate,
 
 HsGenVerdict Hs_DedupCheck(const std::string& candidate, const std::vector<std::string>& existingRows)
 {
-    constexpr double kDedupThreshold = 0.6; // §4.7: "reject above ~0.6"
+    constexpr double kDedupThreshold = 0.6; // reject above ~0.6
     for (auto const& row : existingRows)
         if (Hs_JaccardSimilarity(candidate, row) > kDedupThreshold)
             return { false, "too_similar_to_existing" };

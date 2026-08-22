@@ -15,19 +15,17 @@ std::string g_HsLLMApiKey  = "";
 uint32_t     g_HsLLMTimeoutSeconds = 20;
 uint32_t     g_HsLLMMaxTokens      = 60;
 
-// PLAN.md §4.11: "player, not character" — the frame that avoided the
-// "Hmph."-collapse failure mode measured against PBC's in-fiction frame
-// (ISSUES-model-quality.md §2.1). This is a placeholder single-sentence
-// frame; the shared-prefix baseline persona + few-shot register examples
-// that §4.11 actually specifies land in step 5-7, not here.
+// A "player, not character" frame -- avoids the terse "Hmph."-collapse
+// failure mode seen with an in-fiction frame. This is a placeholder
+// single-sentence frame; the fuller shared-prefix baseline persona +
+// few-shot register examples live elsewhere.
 std::string g_HsLLMSystemPrompt =
     "You are an ordinary player in World of Warcraft: Wrath of the Lich King, chatting in game. "
     "Reply the way a real player types in chat: casual, brief, one short line. "
     "No roleplay narration, no asterisks, no fantasy dialogue, no mention of being an AI or a game.";
 
-// §4.2, decided 2026-08-20: four lines (2 trigger/reply pairs) per bot-player
-// pair. "If either [verification] fails, history reverts to zero lines" —
-// this is that dial, live-tunable without a rebuild.
+// Four lines (2 trigger/reply pairs) per bot-player pair by default;
+// live-tunable without a rebuild.
 uint32_t g_HsLLMHistoryTurns  = 2;
 float     g_HsLLMDryMultiplier = 0.0f;
 
@@ -69,9 +67,9 @@ bool Hs_IsExcludedBotName(const std::string& botName)
     return g_ExcludeNameSet.count(botName) != 0;
 }
 
-// PLAN.md §4.3, measured 2026-08-20: warm serial reply ceiling is 104/min.
-// Default bucket rate sits a little under that so the bucket binds before
-// the backend itself would queue up.
+// Measured warm serial reply ceiling is 104/min. Default bucket rate sits a
+// little under that so the bucket binds before the backend itself would
+// queue up.
 uint32_t g_HsQueueTTLSeconds             = 15;
 uint32_t g_HsQueueMaxDepth               = 20;
 uint32_t g_HsBucketRepliesPerMinute      = 90;

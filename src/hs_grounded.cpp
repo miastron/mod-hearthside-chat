@@ -21,8 +21,8 @@ namespace
         return x;
     }
 
-    // hash(botGuid, message text) -- §4.11 "seed per message, not per bot",
-    // same idiom as hs_reflex.cpp's SeedForMessage (Plain family).
+    // hash(botGuid, message text) -- seeded per message rather than per
+    // bot, same idiom as hs_reflex.cpp's SeedForMessage (Plain family).
     uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
     {
         uint64_t h = std::hash<std::string>{}(text);
@@ -137,7 +137,6 @@ namespace
         return phrases;
     }
 
-    // §4.20's own three named examples for the card-facts class.
     const std::vector<const char*>& CurrentGoalPhrases()
     {
         static const std::vector<const char*> phrases = {
@@ -166,7 +165,6 @@ namespace
         return phrases;
     }
 
-    // §4.12/§4.20 step 16's three named recall examples.
     const std::vector<const char*>& RecallMetPhrases()
     {
         static const std::vector<const char*> phrases = {

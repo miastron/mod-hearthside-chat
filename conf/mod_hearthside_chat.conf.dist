@@ -4,14 +4,16 @@
 # mod-hearthside-chat configuration
 ########################################
 #
-# PLAN.md §7 step 4. Only the reactive tier exists: a real player's /say or
-# whisper is answered by a live call to an LLM endpoint, arbitrated by §4.15
+# Gives playerbots LLM-driven chat. A real player's /say or whisper is
+# answered by a live call to an LLM endpoint (the reactive tier), arbitrated
 # so at most 0-2 bots answer one /say instead of every eligible bot rolling
-# independently. The real bounded queue, token bucket, per-bot cooldown and
-# backend-down circuit breaker (§4.3) are live; the tier-ceiling enum (§4.14)
-# is wired but only MaxTier.DirectReply has a consumer today. Corpus/ambient
-# chatter, identity rings and scripted bot-to-bot conversations do not exist
-# yet — see Claude/PLAN.md for the full design and build order.
+# independently. A bounded queue, token bucket, per-bot cooldown and
+# backend-down circuit breaker protect the LLM backend. Tier-0 reflex
+# replies, grounded (DB-lookup) answers, an idle-time generator that fills
+# the corpus/script content used for openers and bot-to-bot chatter, and
+# per-surface tier ceilings are all live and configured below. Identity
+# rings (per-player social memory) also exist in the module but are not
+# configured through this file.
 
 # --------------------------------------------
 # CORE MODULE TOGGLES & DEBUGGING
@@ -28,16 +30,16 @@ HearthsideChat.Enable = 1
 HearthsideChat.DebugEnabled = 0
 
 # --------------------------------------------
-# LLM ENDPOINT (PLAN.md §4.1)
+# LLM ENDPOINT
 # --------------------------------------------
 
 # HearthsideChat.LLM.ApiType
 #     Description: Which wire format to speak. "llamacpp" uses llama.cpp's
-#                  native /completion endpoint (preferred — exposes
-#                  cache_prompt for the prefix-cache design in a later step).
-#                  "openai" uses /v1/chat/completions (works against
-#                  llama-server with --jinja, or any OpenAI-compatible
-#                  endpoint). "ollama" uses Ollama's native /api/chat.
+#                  native /completion endpoint (preferred -- exposes
+#                  cache_prompt for prefix caching). "openai" uses
+#                  /v1/chat/completions (works against llama-server with
+#                  --jinja, or any OpenAI-compatible endpoint). "ollama"
+#                  uses Ollama's native /api/chat.
 #     Values:      llamacpp | openai | ollama
 #     Default:     llamacpp
 HearthsideChat.LLM.ApiType = llamacpp
@@ -47,9 +49,9 @@ HearthsideChat.LLM.ApiType = llamacpp
 #                    llamacpp -> http://host:port          (module appends /completion)
 #                    openai   -> http://host:port/v1        (module appends /chat/completions)
 #                    ollama   -> http://host:port           (module appends /api/chat)
-#                  PLAN.md §4.1: llama-server runs remote and containerized,
-#                  bound beyond loopback only behind a firewall rule or
-#                  dedicated Docker network — never publish it to 0.0.0.0.
+#                  llama-server typically runs remote and containerized --
+#                  bind it beyond loopback only behind a firewall rule or a
+#                  dedicated Docker network; never publish it to 0.0.0.0.
 #     Default:     http://127.0.0.1:8080
 HearthsideChat.LLM.Url = http://127.0.0.1:8080
 
@@ -72,52 +74,41 @@ HearthsideChat.LLM.ApiKey =
 HearthsideChat.LLM.TimeoutSeconds = 20
 
 # HearthsideChat.LLM.MaxTokens
-#     Description: Output cap (PLAN.md §4.2) — a GPU budget, not a hard
-#                  chop; the model's own stop token and sequence end a reply
-#                  properly. The full sentence-boundary trim (§4.11) is not
-#                  built yet, so a reply that hits this cap may end abruptly
-#                  until that step lands.
+#     Description: Output token cap -- a GPU budget, not a hard chop; the
+#                  model's own stop token normally ends a reply first. A
+#                  reply that hits this cap can end abruptly mid-sentence.
 #     Default:     60
 HearthsideChat.LLM.MaxTokens = 60
 
 # HearthsideChat.LLM.SystemPrompt
-#     Description: The system-block half of the shared prefix (PLAN.md §4.11:
-#                  "player, not character" — the frame that avoided the
-#                  "Hmph."-collapse failure mode). The fixed few-shot register
-#                  block that completes the shared prefix is not configurable
-#                  here — it is small, decided content, hardcoded in hs_llm.cpp
-#                  (PLAN.md §6: only five examples exist and a wider set is
-#                  still an open authoring item).
+#     Description: System-prompt half of the shared prompt prefix -- frames
+#                  bots as ordinary players, not characters. A fixed
+#                  few-shot example block completes the prefix and is
+#                  hardcoded in hs_llm.cpp, not configurable here.
 HearthsideChat.LLM.SystemPrompt = You are an ordinary player in World of Warcraft: Wrath of the Lich King, chatting in game. Reply the way a real player types in chat: casual, brief, one short line. No roleplay narration, no asterisks, no fantasy dialogue, no mention of being an AI or a game.
 
 # HearthsideChat.LLM.HistoryTurns
 #     Description: Trigger/reply pairs kept per bot-player pair and replayed
-#                  as real prior turns (PLAN.md §4.2, decided 2026-08-20).
-#                  2 = four lines of history. Set to 0 to disable history
-#                  entirely without a rebuild — the documented fallback if
-#                  cache-reuse or slot-similarity verification fails.
+#                  as prior turns. 2 = four lines of history. Set to 0 to
+#                  disable history entirely without a rebuild.
 #     Default:     2
 HearthsideChat.LLM.HistoryTurns = 2
 
 # HearthsideChat.LLM.DryMultiplier
 #     Description: DRY repetition penalty strength (llamacpp ApiType only).
-#                  0.0 leaves DRY off. PLAN.md §4.11: DRY was tested negative
-#                  before conversation history existed (nothing for it to see
-#                  repetition across); the retest at dry_penalty_last_n=64 is
-#                  only meaningful now that history gives it a window. Costs
-#                  ~85ms/reply — only enable after that retest earns it
-#                  against the opener-diversity measure.
+#                  0.0 leaves DRY off. Costs roughly 85ms per reply when
+#                  enabled.
 #     Default:     0.0
 HearthsideChat.LLM.DryMultiplier = 0.0
 
 # --------------------------------------------
-# REPLY GATING (PLAN.md §4.8 candidate gate + §4.15 arbiter)
+# REPLY GATING
 # --------------------------------------------
 # Player-initiated only. Candidate gating (real player, faction, range,
 # combat) happens first; the arbiter then picks 0-2 of the eligible bots to
-# answer a /say (named address always wins outright). Whisper is inherently
-# 1:1, so it keeps a simple chance roll instead of going through the
-# arbiter. Bot-to-bot chatter is a later step.
+# answer a /say (a named address always wins outright). Whisper is
+# inherently 1:1, so it uses a simple chance roll instead of the arbiter.
+# Bot-to-bot chatter is handled separately, via scripted replay below.
 
 # HearthsideChat.Say.Distance
 #     Description: Yards within which a bot is an eligible /say candidate.
@@ -140,10 +131,10 @@ HearthsideChat.DisableRepliesInCombat = 1
 #                  or LLM reply, and the bot is never archetype-assigned.
 #                  Separate from mod-playerbots' own LevelBrackets.ExcludeNames/
 #                  ResetBotLevel.ExcludeNames, which this module already
-#                  manages automatically for carded bots (PLAN.md §4.13) --
-#                  those protect a bot FROM recycling; this one keeps a named
-#                  bot out of Hearthside entirely, e.g. a bot reserved for
-#                  another system or a GM's own test character.
+#                  manages automatically for carded bots -- those protect a
+#                  bot FROM recycling; this one keeps a named bot out of
+#                  Hearthside entirely, e.g. a bot reserved for another
+#                  system or a GM's own test character.
 #     Default:     (empty)
 HearthsideChat.ExcludeNames =
 
@@ -151,28 +142,25 @@ HearthsideChat.ExcludeNames =
 #     Description: Logs every reactive-tier (LLM) exchange -- trigger text,
 #                  the model's pre-style output, and the styled text actually
 #                  delivered -- to hside_chat_log, for an operator to review
-#                  later and hand-pick examples that need improvement or are
-#                  worth using for model training. A different thing from
-#                  PLAN.md §4.7's rejected automatic corpus harvesting: this
-#                  never writes to hside_corpus by itself, it's a raw log an
-#                  operator reads and manually promotes via `.hearthside
-#                  capture`, same as any other reply. Not covered by any
-#                  eviction sweep -- prune it yourself on a busy realm.
+#                  and hand-pick examples worth promoting. Does not write to
+#                  hside_corpus by itself; promote entries manually via
+#                  `.hearthside capture`. Not covered by any eviction sweep --
+#                  prune it yourself on a busy realm.
 #     Default:     0 (false)
 HearthsideChat.DebugChatLog.Enable = 0
 
 # --------------------------------------------
-# RUNTIME QUEUE (PLAN.md §4.3)
+# RUNTIME QUEUE
 # --------------------------------------------
-# Fixed worker pool of exactly one thread — llama-server's slots are a
+# Fixed worker pool of exactly one thread -- llama-server's slots are a
 # prompt cache, not a concurrency target, so requests are dispatched
 # serially. The token bucket is the primary load ceiling; the per-bot
 # cooldown and circuit breaker sit on top of it.
 
 # HearthsideChat.Queue.TTLSeconds
 #     Description: A queued request older than this when the worker reaches
-#                  it is dropped rather than answered — the moment has
-#                  passed (§1's retreat rule: silence beats a late reply).
+#                  it is dropped rather than answered -- silence beats a
+#                  late reply.
 #     Default:     15
 HearthsideChat.Queue.TTLSeconds = 15
 
@@ -183,10 +171,10 @@ HearthsideChat.Queue.TTLSeconds = 15
 HearthsideChat.Queue.MaxDepth = 20
 
 # HearthsideChat.Bucket.RepliesPerMinute
-#     Description: Global token bucket refill rate — the primary load
-#                  ceiling across all bots. Measured 2026-08-20: warm serial
-#                  reply ceiling is 104/min; default sits a little under
-#                  that so the bucket binds before the backend would queue.
+#     Description: Global token bucket refill rate -- the primary load
+#                  ceiling across all bots. Measured warm serial reply
+#                  ceiling is about 104/min; default sits a little under so
+#                  the bucket binds before the backend would queue.
 #     Default:     90
 HearthsideChat.Bucket.RepliesPerMinute = 90
 
@@ -215,14 +203,13 @@ HearthsideChat.CircuitBreaker.FailureThreshold = 3
 HearthsideChat.CircuitBreaker.ProbeIntervalSeconds = 15
 
 # --------------------------------------------
-# TYPING DELAY (PLAN.md §3/§4.11 decision flow's "typing delay, persona
-# profile" step)
+# TYPING DELAY
 # --------------------------------------------
 # Reflex/grounded/corpus-fallback replies already carry their own fixed
 # 400-1500ms delay and are unaffected by this section. This is specifically
 # the tier-2 (LLM) reply's delay: a same-tick reply is as unhuman as a
 # four-minute one, so a base+per-character delay is applied on top of
-# however long the LLM call itself already took — never shortening what
+# however long the LLM call itself already took -- never shortening what
 # generation already cost, only topping it up toward a human-plausible total.
 
 # HearthsideChat.TypingDelay.Enable
@@ -231,7 +218,7 @@ HearthsideChat.CircuitBreaker.ProbeIntervalSeconds = 15
 HearthsideChat.TypingDelay.Enable = 1
 
 # HearthsideChat.TypingDelay.BaseMs
-#     Description: Flat milliseconds added before any per-character cost —
+#     Description: Flat milliseconds added before any per-character cost --
 #                  time to "notice" the message and start typing.
 #     Default:     800
 HearthsideChat.TypingDelay.BaseMs = 800
@@ -248,7 +235,7 @@ HearthsideChat.TypingDelay.PerCharMs = 45
 HearthsideChat.TypingDelay.MaxMs = 6000
 
 # --------------------------------------------
-# TIER CEILINGS (PLAN.md §4.14) — one GPU dial per surface
+# TIER CEILINGS -- one GPU dial per surface
 # --------------------------------------------
 # Values: off | reflex | corpus | inference. MaxTier.DirectReply (LLM
 # replies), MaxTier.Reflex (canned pattern replies), MaxTier.Openers
@@ -273,84 +260,76 @@ HearthsideChat.MaxTier.Ambient = corpus
 
 # HearthsideChat.MaxTier.Openers
 #     Description: Ceiling for shared-context-triggered openers (group
-#                  formed, joint kill, rez, dungeon completed, and
-#                  prolonged proximity -- PLAN.md §3, all five triggers).
-#                  corpus-only in v1 -- "corpus" or "inference" both permit
-#                  it (no higher tier is wired for this surface yet);
-#                  "reflex" or "off" silence it.
+#                  formed, joint kill, rez, dungeon completed, prolonged
+#                  proximity). "corpus" or "inference" both permit it (no
+#                  higher tier is wired for this surface yet); "reflex" or
+#                  "off" silence it.
 #     Default:     corpus
 HearthsideChat.MaxTier.Openers = corpus
 
 # HearthsideChat.MaxTier.BotToBot
-#     Description: Ceiling for scripted bot-to-bot conversation replay
-#                  (PLAN.md §4.16). "corpus" or "inference" both permit it
-#                  (there is no live bot-to-bot inference path built --
-#                  "inference" behaves the same as "corpus" here, trap 17);
-#                  "reflex" or "off" silence it.
+#     Description: Ceiling for scripted bot-to-bot conversation replay.
+#                  "corpus" or "inference" both permit it (there is no live
+#                  bot-to-bot inference path, so "inference" behaves the
+#                  same as "corpus" here); "reflex" or "off" silence it.
 #     Default:     corpus
 HearthsideChat.MaxTier.BotToBot = corpus
 
 # HearthsideChat.MaxTier.Reflex
 #     Description: Ceiling for tier-0 canned pattern replies: the plain
 #                  gz/ty/inv/sum/lol/wb vocabulary, the "are you a bot?"
-#                  question and the personal-probe deflection set (PLAN.md
-#                  §3/§4.18/§4.20). Independent of MaxTier.DirectReply below
-#                  — set to "off" to disable canned replies without touching
-#                  the LLM ceiling.
+#                  question, and the personal-probe deflection set.
+#                  Independent of MaxTier.DirectReply -- set to "off" to
+#                  disable canned replies without touching the LLM ceiling.
 #     Default:     reflex
 HearthsideChat.MaxTier.Reflex = reflex
 
 # HearthsideChat.MaxTier.EngagementFollowUp
 #     Description: Ceiling for engagement follow-ups -- a bot continuing a
 #                  conversation on its own initiative after it has already
-#                  answered a player once (Claude/PLAN-engagement.md).
-#                  Generated (tier 2, a second LLM call), not corpus -- only
-#                  "inference" actually enables it; "corpus" behaves the
-#                  same as "off" here (this surface has no canned-content
-#                  path), same shape as MaxTier.DirectReply. New, unproven,
-#                  and doubles GPU spend on every fired follow-up, so unlike
-#                  Openers/BotToBot this defaults off rather than corpus --
-#                  an operator opts in deliberately.
+#                  answered a player once. Generated via a second LLM call,
+#                  not corpus -- only "inference" enables it; "corpus"
+#                  behaves the same as "off" here (no canned-content path
+#                  for this surface). Doubles GPU spend on every fired
+#                  follow-up, so unlike Openers/BotToBot this defaults off
+#                  rather than corpus -- opt in deliberately.
 #     Default:     off
 HearthsideChat.MaxTier.EngagementFollowUp = off
 
 # --------------------------------------------
-# TIER-0 REFLEX (PLAN.md §3/§4.18/§4.20)
+# TIER-0 REFLEX
 # --------------------------------------------
 # The plain gz/ty/inv/sum/lol/wb vocabulary and the personal-probe
-# deflection set are hardcoded content, not configurable — the pattern
-# table is small, changes rarely, and is deliberately kept out of a config
-# surface (§3: "editing costs a rebuild, which is the right price for
-# something that should not be tuned casually").
+# deflection set are hardcoded content, not configurable here -- the
+# pattern table is small, changes rarely, and editing it costs a rebuild
+# deliberately, since it shouldn't be tuned casually.
 
 # HearthsideChat.BotQuestion
-#     Description: How a bot answers "are you a bot?" (§4.18). The illusion
-#                  may break, but it must never be defended with a lie — a
+#     Description: How a bot answers "are you a bot?" The illusion may
+#                  break, but it must never be defended with a lie -- a
 #                  flat "no, I'm a real player" is the one forbidden answer.
 #                  "wink" is a non-answer ("maybe!", "huh?") that neither
 #                  confirms nor denies. "deflect" is the more evasive subset
 #                  ("huh?"/"what?" only). "silent" drops the question rather
 #                  than answering it. "admit" is for operators who would
-#                  rather their realm be straightforward about it — a
-#                  legitimate position this module does not override.
+#                  rather their realm be straightforward about it.
 #     Values:      wink | deflect | silent | admit
 #     Default:     wink
 HearthsideChat.BotQuestion = deflect
 
 # --------------------------------------------
-# GROUNDED ANSWERS (PLAN.md §4.20, step 10) — the fourth answer source
+# GROUNDED ANSWERS -- the fourth answer source
 # --------------------------------------------
 # Six questions the realm can already answer truthfully from live game
-# state — a bot's mount, level, zone, guild, profession skill, and what it
-# is wearing — answered by direct lookup and a short template rather than
+# state -- a bot's mount, level, zone, guild, profession skill, and what it
+# is wearing -- answered by direct lookup and a short template rather than
 # by asking the LLM to guess. No GPU work, no chance of invention. Not a
-# tier ceiling (the branch sits beside the reflex/ceiling system, not
-# inside it — §3 decision flow); the question list and template wording
-# are hardcoded content, same reasoning as the reflex table above.
+# tier ceiling; the question list and template wording are hardcoded
+# content, same reasoning as the reflex table above.
 
 # HearthsideChat.GroundedAnswers
 #     Description: Master on/off switch for the grounded-answer branch.
-#                  Independent of MaxTier.Reflex and MaxTier.DirectReply —
+#                  Independent of MaxTier.Reflex and MaxTier.DirectReply --
 #                  an operator can disable this lookup path without
 #                  touching either.
 #     Values:      0 | 1
@@ -358,15 +337,15 @@ HearthsideChat.BotQuestion = deflect
 HearthsideChat.GroundedAnswers = 1
 
 # --------------------------------------------
-# IDLE-TIME GENERATOR (PLAN.md §4.7, step 12)
+# IDLE-TIME GENERATOR
 # --------------------------------------------
 # Fills hside_corpus during GPU idle time -- picks one under-quota
-# (category, tag-bucket) at a time (§4.5: quotas are per bucket, never
-# global), generates one candidate line, and runs it through the same
+# (category, tag-bucket) at a time, with quotas tracked per bucket rather
+# than globally, generates one candidate line, and runs it through the same
 # validation gate `.hearthside capture` uses (placeholder discipline, dedup,
-# quality gate) before inserting. Only ever fires when the reactive tier has
-# nothing queued and isn't mid-request — "generation is always the
-# lowest-priority work."
+# quality gate) before inserting. Only fires when the reactive tier has
+# nothing queued and isn't mid-request -- generation is always the
+# lowest-priority work.
 
 # HearthsideChat.Generator.Enable
 #     Description: Master on/off switch. Off by default: this is new,
@@ -378,9 +357,9 @@ HearthsideChat.Generator.Enable = 0
 
 # HearthsideChat.Generator.LLM.ApiType / Url / Model / ApiKey / TimeoutSeconds / MaxTokens
 #     Description: The generator's own LLM endpoint, kept separate from the
-#                  reactive path's HearthsideChat.LLM.* (§4.1 decision) —
-#                  whether or not they currently point at the same
-#                  container. Same shape as the reactive keys above.
+#                  reactive path's HearthsideChat.LLM.* -- whether or not
+#                  they currently point at the same container. Same shape
+#                  as the reactive keys above.
 #     Defaults:    llamacpp / http://127.0.0.1:8080 / (empty) / (empty) / 30 / 60
 HearthsideChat.Generator.LLM.ApiType = llamacpp
 HearthsideChat.Generator.LLM.Url = http://127.0.0.1:8080
@@ -390,10 +369,10 @@ HearthsideChat.Generator.LLM.TimeoutSeconds = 30
 HearthsideChat.Generator.LLM.MaxTokens = 60
 
 # HearthsideChat.Generator.RowsPerBucket
-#     Description: Target row count for each (category, tag-bucket)
-#                  independently (§4.5: "quotas are per bucket, never
-#                  global"). The generator stops filling a bucket once it
-#                  reaches this and moves on to whatever else is under quota.
+#     Description: Target row count for each (category, tag-bucket) pair,
+#                  tracked independently. The generator stops filling a
+#                  bucket once it reaches this and moves on to whatever
+#                  else is under quota.
 #     Default:     20
 HearthsideChat.Generator.RowsPerBucket = 20
 
@@ -406,46 +385,43 @@ HearthsideChat.Generator.PollIntervalSeconds = 5
 
 # HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds
 #     Description: How long the generator waits before checking again once
-#                  every bucket it understands is at quota — no sense
+#                  every bucket it understands is at quota -- no sense
 #                  polling every few seconds when there's nothing to do.
 #     Default:     300
 HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds = 300
 
 # HearthsideChat.Generator.PromptVersion
 #     Description: Tags every row this generator run inserts (the
-#                  hside_corpus.prompt_version column, §4.4) so a bad run
-#                  can be bulk-evicted later by this value alone. Bump it
-#                  when the generation prompt changes meaningfully.
+#                  hside_corpus.prompt_version column) so a bad run can be
+#                  bulk-evicted later by this value alone. Bump it when the
+#                  generation prompt changes meaningfully.
 #     Default:     v1
 HearthsideChat.Generator.PromptVersion = v1
 
 # HearthsideChat.Generator.ScriptReserveTarget
 #     Description: Target number of unconsumed scripted bot-to-bot
-#                  conversations (hside_script, §4.16) to keep in reserve.
-#                  Takes priority over bucket-filling while under target, but
-#                  behind the character-card work queue (§4.7: "cards, then
-#                  script reserve, then buckets" -- real as of step 15). If
-#                  consumption outpaces production the bots simply stop
-#                  chatting to each other --
-#                  running dry is the correct failure mode (§4.16).
+#                  conversations (hside_script) to keep in reserve. Takes
+#                  priority over bucket-filling while under target, but
+#                  behind the character-card work queue. If consumption
+#                  outpaces production the bots simply stop chatting to
+#                  each other -- running dry is the correct failure mode.
 #     Default:     15
 HearthsideChat.Generator.ScriptReserveTarget = 15
 
 # --------------------------------------------
-# OBSERVABILITY AND THE CONTROL API (PLAN.md §4.19, step 19)
+# OBSERVABILITY AND THE CONTROL API
 # --------------------------------------------
 # An authenticated HTTP server, lifted structurally from
 # mod-playerbots-characters' own (Unlicense) implementation, plus a rolling
-# hside_metrics history table. Disabled by default -- a single shared bearer
-# token, not PBC's per-account OTP/session system, since this is a
-# single-operator admin tool, not a multi-user web app. Read routes need only
-# the token; mutating routes additionally require HttpControlEnable (a
+# hside_metrics history table. Disabled by default -- uses a single shared
+# bearer token rather than a per-account OTP/session system, since this is
+# a single-operator admin tool, not a multi-user web app. Read routes need
+# only the token; mutating routes additionally require HttpControlEnable (a
 # separate risk surface -- acore-web-reg, this realm's actual frontend, has
-# no authentication layer at all, so anything on this box must assume it may
-# end up reachable from something open). Every GM command this step adds
-# (`.hearthside inspect/review/promote/demote/retire/pin/unpin/evict-run`)
-# works with the HTTP server off -- "neither should depend on the other
-# existing."
+# no authentication layer at all, so anything on this box must assume it
+# may end up reachable from something open). The `.hearthside` GM commands
+# (inspect/review/promote/demote/retire/pin/unpin/evict-run) work with the
+# HTTP server off -- neither depends on the other.
 
 # HearthsideChat.HttpServerPort
 #     Description: TCP port for the HTTP control API. 0 disables the server

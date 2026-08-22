@@ -32,20 +32,18 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // §6 lists "opener trigger tuning: which shared-context events fire
-    // openers, and at what rate before they read as spam" as a live-realm
-    // judgement, not something a design session can settle -- same
-    // reasoning as §4.2's history depth and §7 step 11.5's anti-repeat pool
-    // size, so these are compiled constants an operator has no way to judge
-    // yet, not config keys. 10 minutes and a coin-flip-ish chance are
-    // starting guesses, not measurements.
+    // Opener trigger tuning -- which shared-context events fire openers,
+    // and at what rate before they read as spam -- is a live-realm
+    // judgement, not something to settle in advance, so these are compiled
+    // constants rather than config keys. 10 minutes and a coin-flip-ish
+    // chance are starting guesses, not measurements.
     constexpr uint32_t kOpenerCooldownSeconds = 600;
     constexpr uint32_t kOpenerFireChancePercent = 40;
 
-    // Fifth trigger (§3, built 2026-08-21): how long a (bot, player) pair
-    // must be continuously observed in range before "prolonged proximity"
-    // counts as a shared moment worth a line. Same "starting guess, not a
-    // measurement" reasoning as the constants above.
+    // Fifth trigger: how long a (bot, player) pair must be continuously
+    // observed in range before "prolonged proximity" counts as a shared
+    // moment worth a line. Same starting-guess reasoning as the constants
+    // above.
     constexpr uint32_t kProximityDurationThresholdSeconds = 90;
 
     bool IsBot(Player* p)
@@ -84,20 +82,19 @@ namespace
     std::mutex g_ProximityMutex;
     std::map<std::pair<uint64_t, uint64_t>, Clock::time_point> g_ProximityStartedAt;
 
-    // The one place all four triggers converge: ceiling check, cooldown,
+    // The one place all five triggers converge: ceiling check, cooldown,
     // chance roll, corpus pick, style pass, delivery. Same "answer without
     // the GPU" shape as hs_handler.cpp's TryReflex/TryGrounded/
-    // TryCorpusFallback -- no bucket, no worker thread, and (deliberately,
-    // per §4.12/hs_opener.h's own note) no history or identity write, since
-    // hside_identity doesn't exist yet and openers must never feed it once
-    // it does.
+    // TryCorpusFallback -- no bucket, no worker thread, and deliberately no
+    // history or identity write; openers must never feed interaction score
+    // or identity state.
     void FireOpener(Player* bot, Player* player, const char* categoryName)
     {
         if (!g_HsEnable || !bot || !player || !bot->IsInWorld() || !player->IsInWorld())
             return;
 
         HsTier ceiling = HsParseTier(g_HsMaxTierOpeners);
-        if (!HsTierAllows(ceiling, HsTier::Corpus)) // §4.14: MaxTier.Openers is corpus-only in v1
+        if (!HsTierAllows(ceiling, HsTier::Corpus)) // MaxTier.Openers is corpus-only in v1
             return;
 
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
@@ -164,11 +161,11 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
 
     if (bot && player)
     {
-        // §4.12 step 16: "grouped in a zone" -- a shared-experience memory
-        // beat independent of whether an opener actually fires, same
-        // "not a player utterance, so it lives at the trigger site rather
-        // than WorkerLoop" reasoning as the dungeon-completion score bump
-        // below in HsOpenerEncounterHandler.
+        // "Grouped in a zone" is a shared-experience memory beat
+        // independent of whether an opener actually fires -- not a player
+        // utterance, so it's recorded here at the trigger site rather than
+        // in hs_queue.cpp's WorkerLoop, same as the dungeon-completion
+        // score bump below in HsOpenerEncounterHandler.
         AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId());
         const char* zoneName = entry ? entry->area_name[0] : nullptr;
         std::string zone = (zoneName && *zoneName) ? zoneName : "the field";
@@ -182,9 +179,9 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
 void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*killed*/)
 {
     // Only fires when a bot lands the killing blow -- OnPlayerCreatureKill
-    // fires once per player who does, not once per player with kill credit,
-    // so "jointly" is scoped to this direction rather than a cross-player
-    // correlation cache (hs_opener.h).
+    // fires once per player who does, not once per player with kill
+    // credit, so "jointly" is scoped to this direction rather than a
+    // cross-player correlation cache (hs_opener.h).
     if (!killer || !IsBot(killer))
         return;
 
@@ -254,20 +251,16 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
 
     if (bot && player)
     {
-        // §4.12's weight table: "dungeon completed together: 2 (flat)" is a
-        // shared-experience signal independent of whether an opener fires
-        // -- it is not a player utterance, so it lives here rather than in
-        // hs_queue.cpp's WorkerLoop. One representative bot/player pair,
-        // same scoping as the opener trigger itself (§4.12's own "no
-        // expensive failure mode" framing means exact multiplicity across a
-        // multi-bot group doesn't need to be exact).
+        // "Dungeon completed together" is a shared-experience signal
+        // independent of whether an opener fires -- not a player
+        // utterance, so it's scored here rather than in hs_queue.cpp's
+        // WorkerLoop. One representative bot/player pair; exact
+        // multiplicity across a multi-bot group doesn't need to be exact.
         Hs_BumpInteractionScore(bot->GetGUID().GetRawValue(), bot->GetLevel(), kHsScoreWeightDungeonComplete);
 
-        // §4.12 step 16: "dungeon or raid completed together" -- Map::GetMapName()
-        // rather than resolving dungeonCompleted's LFG dungeon id to a display
-        // name; the map's own name is real, always available, and equally
-        // truthful for this purpose (same "what the realm can cheaply and
-        // truthfully look up" discipline as step 10's grounded answers).
+        // Uses Map::GetMapName() rather than resolving dungeonCompleted's
+        // LFG dungeon id to a display name; the map's own name is real,
+        // always available, and equally truthful for this purpose.
         Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(),
                               kHsMemoryEventDungeonCompleted, Hs_BuildDungeonCompletedText(map->GetMapName()));
 

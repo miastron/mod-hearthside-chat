@@ -1,21 +1,12 @@
--- PLAN.md §4.4 / §7 step 11: the corpus row table.
--- Authored by hand (§4.4 "seed with our own authored SQL, shipped in the repo"
--- — decided 2026-08-19, supersedes importing ai_playerbot_texts). enUS only;
--- text_locN stay NULL and are read with COALESCE(text_locN, text) (§4.4).
--- No style baked in here (trap 12, PLAN.md line 2382) — text is clean,
--- grammatical prose. Typos/abbreviation/casing are applied at delivery time
--- by the style pass (hs_style.cpp), never stored.
+-- The corpus row table: pre-generated chat lines selected by the corpus
+-- tier with no runtime GPU work. enUS only; text_locN stay NULL and are
+-- read with COALESCE(text_locN, text). No style baked in here -- text is
+-- clean, grammatical prose. Typos, abbreviation, and casing are applied at
+-- delivery time by the style pass (hs_style.cpp), never stored.
 --
 -- This is a proof-of-concept seed: 6 categories (3 /say, 3 global-channel,
--- matching hside_corpus_category.sql), enough to prove the schema and
--- install path end to end. Breadth (more categories, all 11 classes instead
--- of 3, card-gated lines once step 15 exists) is a follow-up pass, not
--- attempted here.
---
--- Squashed 2026-08-21: the opener_* and chat_carded_focus rows below
--- originally shipped in data/sql/db-characters/updates/2026_08_21_00.sql and
--- _02.sql. Folded into base ahead of the module's first real deploy
--- (test-realm only, confirmed disposable) so v1.0 installs as one import.
+-- matching hside_corpus_category.sql). Breadth (more categories, all 11
+-- classes instead of 3, card-gated lines) is a follow-up pass.
 
 CREATE TABLE IF NOT EXISTS `hside_corpus` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -33,10 +24,10 @@ CREATE TABLE IF NOT EXISTS `hside_corpus` (
   `faction_tag`    TINYINT UNSIGNED DEFAULT NULL COMMENT '0 = Alliance, 1 = Horde, set only when tag_axis = faction',
   `level_band_tag` VARCHAR(16) DEFAULT NULL COMMENT 'low|mid|high|endgame, set only when tag_axis = level_band',
   `zone_tag`       INT UNSIGNED DEFAULT NULL COMMENT 'Area/Zone id, set only when tag_axis = zone',
-  `locale`         VARCHAR(8) NOT NULL DEFAULT 'enUS' COMMENT 'locale this row was authored/generated for (§4.4)',
-  `event_id`       INT UNSIGNED DEFAULT NULL COMMENT 'core GameEvent id; NULL = not seasonal (§4.5)',
-  `times_used`     INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'exposure counter, primary eviction signal (§4.5)',
-  `last_used_at`   TIMESTAMP NULL DEFAULT NULL COMMENT 'drives eviction and anti-repeat selection (§4.6)',
+  `locale`         VARCHAR(8) NOT NULL DEFAULT 'enUS' COMMENT 'locale this row was authored/generated for',
+  `event_id`       INT UNSIGNED DEFAULT NULL COMMENT 'core GameEvent id; NULL = not seasonal',
+  `times_used`     INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'exposure counter, primary eviction signal',
+  `last_used_at`   TIMESTAMP NULL DEFAULT NULL COMMENT 'drives eviction and anti-repeat selection',
   `generated_at`   TIMESTAMP NULL DEFAULT NULL COMMENT 'NULL for hand-authored rows; set for generator output',
   `model`          VARCHAR(64) DEFAULT NULL COMMENT 'NULL for hand-authored rows; generation model otherwise',
   `prompt_version` VARCHAR(32) DEFAULT NULL COMMENT 'NULL for hand-authored rows; lets a bad run be bulk-evicted',
@@ -45,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `hside_corpus` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
--- chat_gripe_general — tag_axis none; unfalsifiable opinions/gripes (§4.13's free bottom rows)
+-- chat_gripe_general: tag_axis none; unfalsifiable opinions/gripes
 ('chat_gripe_general', 'man this zone has been a grind lately', NULL),
 ('chat_gripe_general', 'still can''t believe that pack respawned so fast', NULL),
 ('chat_gripe_general', 'not gonna lie, today''s been a rough one', NULL),
@@ -54,7 +45,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
 ('chat_gripe_general', 'some days you''re the hammer, some days you''re the nail', NULL),
 ('chat_gripe_general', 'i swear this mob has a personal vendetta against me', NULL),
 ('chat_gripe_general', 'at least the scenery''s nice out here', NULL),
--- chat_class_banter — tag_axis class; 3 of 11 classes seeded (warrior=1, rogue=4, mage=8)
+-- chat_class_banter: tag_axis class; 3 of 11 classes seeded (warrior=1, rogue=4, mage=8)
 ('chat_class_banter', 'another day, another shield to bash things with', 1),
 ('chat_class_banter', 'rage''s easy to build when everything here wants me dead', 1),
 ('chat_class_banter', 'charge in, ask questions never', 1),
@@ -69,7 +60,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
 ('chat_class_banter', 'frost or fire, can never decide', 8);
 
 INSERT INTO `hside_corpus` (`name`, `text`, `level_band_tag`) VALUES
--- chat_levelband_musing — tag_axis level_band; all 4 bands seeded
+-- chat_levelband_musing: tag_axis level_band; all 4 bands seeded
 ('chat_levelband_musing', 'still figuring out where everything is around here', 'low'),
 ('chat_levelband_musing', 'everything in this zone can still kill me, be careful', 'low'),
 ('chat_levelband_musing', 'haven''t even left the starting zones really', 'low'),
@@ -88,21 +79,21 @@ INSERT INTO `hside_corpus` (`name`, `text`, `level_band_tag`) VALUES
 ('chat_levelband_musing', 'feels like i''ve seen everything twice now', 'endgame');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
--- channel_trade_wts — Trade channel (§4.17); bag-stock only, universal %item_link, never AH listings (trap 13)
+-- channel_trade_wts: Trade channel; bag-stock only, universal %item_link, never AH listings
 ('channel_trade_wts', 'WTS %item_link, make an offer'),
 ('channel_trade_wts', 'selling %item_link, pst'),
 ('channel_trade_wts', 'got a stack of %item_link if anyone needs it'),
 ('channel_trade_wts', 'WTS %item_link cheap, just clearing bag space'),
 ('channel_trade_wts', 'anyone need %item_link? selling'),
 ('channel_trade_wts', '%item_link for sale, reasonable price'),
--- channel_general_chat — General channel (§4.17); zone flavour, questions, gripes, nothing checkable
+-- channel_general_chat: General channel; zone flavour, questions, gripes, nothing checkable
 ('channel_general_chat', 'anyone else think this zone is bigger than it looks'),
 ('channel_general_chat', 'is it just me or has it been quiet today'),
 ('channel_general_chat', 'does anyone know a good spot to farm around here'),
 ('channel_general_chat', 'this place always feels a little eerie at night'),
 ('channel_general_chat', 'kind of a slow day so far'),
 ('channel_general_chat', 'always something new to see around every corner'),
--- channel_world_chat — World channel (§4.17); same register as General
+-- channel_world_chat: World channel; same register as General
 ('channel_world_chat', 'world feels pretty alive today'),
 ('channel_world_chat', 'anyone else just wandering around right now'),
 ('channel_world_chat', 'always someone doing something interesting somewhere'),
@@ -111,7 +102,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_world_chat', 'world''s a big place, still finding new corners of it');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
--- opener_* — §3/§7 step 13, fired only by hs_opener.cpp's shared-context triggers
+-- opener_*: fired only by hs_opener.cpp's shared-context triggers
 ('opener_group_formed', 'hey, thanks for the invite.'),
 ('opener_group_formed', 'alright, let''s do this.'),
 ('opener_group_formed', 'good to have another hand.'),
@@ -128,7 +119,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('opener_dungeon_complete', 'that went smoother than i expected.'),
 ('opener_dungeon_complete', 'solid group, that one.'),
 ('opener_dungeon_complete', 'nice, one down.'),
--- chat_carded_focus — §4.7/§4.12 step 15, card-gated (%main_focus, %current_goal)
+-- chat_carded_focus: card-gated (%main_focus, %current_goal)
 ('chat_carded_focus', 'still grinding away at %main_focus, honestly'),
 ('chat_carded_focus', 'lately it is all about %current_goal for me'),
 ('chat_carded_focus', 'main focus right now is %main_focus'),

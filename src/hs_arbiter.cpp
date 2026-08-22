@@ -12,8 +12,7 @@
 
 namespace
 {
-    // Whole-word, case-insensitive search for botName inside msg. Ported
-    // as-is from the step-3 handler.
+    // Whole-word, case-insensitive search for botName inside msg.
     bool MentionsName(const std::string& msg, const std::string& botName)
     {
         auto lower = [](std::string s) { for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c))); return s; };
@@ -35,8 +34,8 @@ namespace
         return false;
     }
 
-    // §4.15 step 3: weighted toward 0 and 1, 2 rare. Compiled constants, not
-    // config — this tunes the illusion, not a GPU dial (§4.14 owns those).
+    // Weighted toward 0 and 1, 2 rare. Compiled constants, not config --
+    // this tunes the illusion, not a GPU dial.
     uint32_t PickReplyCount(size_t eligibleCount)
     {
         if (eligibleCount == 0)
@@ -47,11 +46,10 @@ namespace
         return static_cast<uint32_t>(std::min<size_t>(count, eligibleCount));
     }
 
-    // Recent-speaker penalty (§4.15 step 4): a bot that just answered is
-    // down-weighted for a short window so the same bot doesn't answer three
-    // lines running. No archetype/ring multipliers yet — those subsystems
-    // don't exist yet (later build-order steps); proximity + recency is the
-    // whole weighting model until they land.
+    // Recent-speaker penalty: a bot that just answered is down-weighted
+    // for a short window so the same bot doesn't answer three lines
+    // running. No archetype/ring multipliers yet -- proximity + recency
+    // is the whole weighting model until they land.
     double RecencyWeight(uint32_t secondsSinceLastReply)
     {
         constexpr uint32_t window    = 60;
@@ -77,7 +75,7 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
     if (!speaker || candidates.empty())
         return selected;
 
-    // Step 2: named address wins outright — no lottery, no substitutes.
+    // Named address wins outright -- no lottery, no substitutes.
     for (Player* bot : candidates)
     {
         if (MentionsName(message, bot->GetName()))
@@ -87,13 +85,13 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
         }
     }
 
-    // Step 3: pick a reply count, which may be zero.
+    // Pick a reply count, which may be zero.
     uint32_t replyCount = PickReplyCount(candidates.size());
     if (replyCount == 0)
         return selected;
 
-    // Step 4: weighted select without replacement — proximity and recency,
-    // not uniform.
+    // Weighted select without replacement -- proximity and recency, not
+    // uniform.
     std::vector<Player*> pool = candidates;
     std::random_device   rd;
     std::mt19937          gen(rd());

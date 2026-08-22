@@ -4,11 +4,11 @@
 #include "ScriptMgr.h"
 #include <string>
 
-// Chat hooks — PLAN.md §7 step 4: /say gathers real-player-gated candidates
-// and hands them to the arbiter (hs_arbiter.h, §4.15); whisper stays a simple
-// 1:1 surface. Both route the arbiter's/receiver's tier-ceiling check (§4.14)
-// and admission (hs_queue.h, §4.3) rather than dispatching an LLM call
-// directly. Party/raid/guild/channel surfaces are later steps.
+// Chat hooks -- /say gathers real-player-gated candidates and hands them to
+// the arbiter (hs_arbiter.h); whisper stays a simple 1:1 surface. Both route
+// through the tier-ceiling check and admission (hs_queue.h) rather than
+// dispatching an LLM call directly. Party/raid/guild/channel surfaces are
+// not yet implemented.
 class HsChatHandler : public PlayerScript
 {
 public:

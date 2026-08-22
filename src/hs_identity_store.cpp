@@ -24,8 +24,8 @@ namespace
     std::atomic<uint32_t> g_RetirementsThisSession{0};
 
     // Idempotent append -- both vectors are re-applied on every startup and
-    // `.reload config` (trap 16), so a repeat call must not accumulate
-    // duplicate entries.
+    // `.reload config`, so a repeat call must not accumulate duplicate
+    // entries.
     void AppendIfMissing(std::vector<std::string>& names, const std::string& name)
     {
         if (std::find(names.begin(), names.end(), name) == names.end())
@@ -59,10 +59,10 @@ namespace
         EraseIfPresent(sPlayerbotAIConfig.resetBotLevelExcludeNames, botName);
     }
 
-    // §4.12 "unfriending is not observable via hooks" -- character_social is
-    // this module's only bots, since every hside_identity row is created
-    // exclusively by Hs_BumpInteractionScore (always called with a bot's
-    // guid), so no separate "is this guid a bot" check is needed here.
+    // Every hside_identity row is created exclusively by
+    // Hs_BumpInteractionScore (always called with a bot's guid), so joining
+    // against hside_identity is enough to guarantee these results are bots
+    // -- no separate "is this guid a bot" check needed.
     std::set<uint64_t> FetchFriendedIdentityBotGuids()
     {
         std::set<uint64_t> guids;
@@ -87,13 +87,11 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
     if (weight == 0)
         return;
 
-    // §4.12 retirement (§7 step 17, trap 10): "a carded bot whose level
-    // drops is a retirement, not a repair." This call site already has a
-    // trustworthy, freshly-read botLevel on every tier-2 delivery, which is
-    // exactly the "whenever a gate is evaluated" trigger PLAN.md names --
-    // checked before the score bump below so a level-dropped bot's next
-    // utterance retires it instead of scoring a persona that no longer
-    // applies.
+    // A carded bot whose level drops is retired, not repaired. This call
+    // site already has a trustworthy, freshly-read botLevel on every tier-2
+    // delivery, so the level check runs before the score bump below -- a
+    // level-dropped bot's next utterance retires it instead of scoring a
+    // persona that no longer applies.
     QueryResult existing = CharacterDatabase.Query(
         "SELECT card_active, last_known_level FROM hside_identity WHERE bot_guid = {}", botGuid);
     if (existing && (*existing)[0].Get<bool>() && botLevel < (*existing)[1].Get<uint8_t>())
@@ -272,7 +270,7 @@ void Hs_RunIdentityDailySweep()
         kHsScoreDecayPointsPerDay, kHsScoreDecayGraceDays);
 
     // 3. Card demotion -- dormant, unpinned cards clear. Card text is not
-    // touched (§4.12).
+    // touched.
     QueryResult toDemote = CharacterDatabase.Query(
         "SELECT bot_guid FROM hside_identity WHERE card_active = 1 AND pinned_by_friend = 0 "
         "AND last_used_at < NOW() - INTERVAL {} DAY",
@@ -293,11 +291,11 @@ void Hs_RunIdentityDailySweep()
     // 4. Retirement for currently-online carded bots whose level dropped
     // while nobody was talking to them. Hs_BumpInteractionScore already
     // catches this live for bots still being chatted with; this covers the
-    // "bot login" / quiet-carded-bot gap PLAN.md's §4.13 also names. Only
-    // online bots can be checked here (needs a live Player* for the current
-    // level) -- an offline one is caught the next time it's talked to, or
-    // the next time this sweep finds it online, same "lazy, not instant"
-    // tolerance as the friend poll above.
+    // bot-login / quiet-carded-bot gap. Only online bots can be checked here
+    // (needs a live Player* for the current level) -- an offline one is
+    // caught the next time it's talked to, or the next time this sweep
+    // finds it online, same lazy-not-instant tolerance as the friend poll
+    // above.
     QueryResult carded = CharacterDatabase.Query(
         "SELECT bot_guid, last_known_level FROM hside_identity WHERE card_active = 1");
     if (carded)
@@ -312,17 +310,17 @@ void Hs_RunIdentityDailySweep()
         } while (carded->NextRow());
     }
 
-    // 5. New 2026-08-21: orphan cleanup. AiPlayerbot.DeleteRandomBotAccounts
-    // wipes every random-bot account/character in one shot, followed by an
-    // immediate worldserver restart -- a one-shot startup action, not a live
-    // event this module can hook. Any hside_identity/hside_memory row still
+    // 5. Orphan cleanup. AiPlayerbot.DeleteRandomBotAccounts wipes every
+    // random-bot account/character in one shot, followed by an immediate
+    // worldserver restart -- a one-shot startup action, not a live event
+    // this module can hook. Any hside_identity/hside_memory row still
     // pointing at a since-deleted bot_guid is dead weight with no possible
     // owner to reconcile against: a full wipe invalidates every card
     // regardless of whether a recreated bot happens to reuse the old GUID.
     // Self-healing -- no operator step, no new config key -- and folded into
-    // this existing daily sweep rather than a dedicated one, same "shares
-    // this WorldScript" reasoning hs_main.cpp already gives for putting
-    // decay/pinning/retirement here instead of their own timer.
+    // this existing daily sweep rather than a dedicated one, same reasoning
+    // hs_main.cpp gives for putting decay/pinning/retirement here instead of
+    // their own timer.
     QueryResult orphans = CharacterDatabase.Query(
         "SELECT hi.bot_guid FROM hside_identity hi "
         "LEFT JOIN characters c ON c.guid = hi.bot_guid WHERE c.guid IS NULL");

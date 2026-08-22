@@ -38,8 +38,8 @@ namespace
     // Populated by Hs_SetArchetypeTable, normally called once at startup by
     // hs_archetype_store.cpp's Hs_LoadArchetypesFromDb(). Defaults to a
     // single safe entry (CASUAL at full weight, no eligibility bound) so a
-    // lookup before that call — or a missing/misconfigured hside_archetype
-    // table — degrades to "every bot is CASUAL" rather than reading
+    // lookup before that call -- or a missing/misconfigured hside_archetype
+    // table -- degrades to "every bot is CASUAL" rather than reading
     // uninitialized data. hs_archetype_store.cpp logs an error on that path;
     // this file has no logging dependency of its own by design.
     std::array<HsArchetypeInfo, kHsArchetypeCount> g_Archetypes = {{
@@ -113,11 +113,11 @@ std::string Hs_ArchetypePromptLine(HsArchetype a)
     const HsArchetypeInfo& info = Hs_ArchetypeInfoFor(a);
     std::string line = std::string("You mostly talk about: ") + info.talksAbout + ".";
 
-    // New 2026-08-21: TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. Scoped
-    // to the game deliberately -- gear, rotations, loot, other players'
-    // choices -- never the real person on the other end. That boundary is
-    // part of the generated prompt text itself so it travels with every
-    // request, not left to the model's judgement or to a post-hoc filter.
+    // TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. Scoped to the game
+    // deliberately -- gear, rotations, loot, other players' choices --
+    // never the real person on the other end. That boundary is part of the
+    // generated prompt text itself so it travels with every request, not
+    // left to the model's judgement or a post-hoc filter.
     if (info.profanityLevel == 1)
         line += " You swear lightly and casually when annoyed (damn, hell, crap-tier) -- about the game, never at the person you're talking to.";
     else if (info.profanityLevel == 2)

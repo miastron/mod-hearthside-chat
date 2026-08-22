@@ -27,10 +27,10 @@ using namespace Acore::ChatCommands;
 
 namespace
 {
-    // Resolves a bot by name regardless of online status (§4.19's control
-    // commands act on a named bot whether or not it's currently loaded,
-    // unlike `.hearthside capture` above which needs a live Player* for the
-    // bot's current class/level). Returns 0 if the name doesn't exist.
+    // Resolves a bot by name regardless of online status -- control commands
+    // act on a named bot whether or not it's currently loaded, unlike
+    // `.hearthside capture` which needs a live Player* for the bot's
+    // current class/level. Returns 0 if the name doesn't exist.
     uint64_t ResolveBotGuidByName(const std::string& name)
     {
         ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(name);
@@ -67,10 +67,10 @@ namespace
         return true;
     }
 
-    // PLAN.md §4.7 "No automatic harvesting of reactive replies into the
-    // corpus (decided)" -- the honest version of the idea: a GM manually
-    // promotes the last *pre-style* reply from a named bot into a category,
-    // reusing step 12's whole validation gate rather than a new one.
+    // Reactive replies are never harvested into the corpus automatically; a
+    // GM manually promotes the last *pre-style* reply from a named bot into
+    // a category instead, reusing the generator's own validation gate
+    // rather than a separate one.
     bool HandleHearthsideCapture(ChatHandler* handler, std::string_view botNameArg, std::string_view categoryArg)
     {
         std::string botName  = std::string(botNameArg);
@@ -122,7 +122,8 @@ namespace
 
         // gm-capture is a one-off GM action, not a versioned generation run
         // -- prompt_version stays NULL (empty string here, coalesced to
-        // NULL by Hs_TryInsertCorpusRow), same convention as a hand-authored row.
+        // NULL by Hs_TryInsertCorpusRow), same convention as a hand-authored
+        // row.
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(category, tagColumn, tagValueSql, preStyleText, "gm-capture", "");
         if (verdict.accepted)
             handler->PSendSysMessage("[HearthsideChat] Captured into '{}': \"{}\"", category, preStyleText);
@@ -132,9 +133,8 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19: "inspect... a bot's ring and card." Ring 3 is
-    // reported directly (card_active is bot-global); rings 1/2 are only
-    // meaningful relative to one specific player, so this reports the
+    // Ring 3 is reported directly (card_active is bot-global); rings 1/2 are
+    // only meaningful relative to one specific player, so this reports the
     // row-level facts rather than a single invented ring number -- see
     // HsIdentityInspection's doc comment in hs_identity_store.h.
     bool HandleHearthsideInspect(ChatHandler* handler, std::string_view botNameArg)
@@ -164,11 +164,9 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19's "review commands" -- the read counterpart to
-    // evict-run: eyeball a category's (optionally one run's) actual output
-    // before deciding whether to evict it. PLAN.md names "review commands"
-    // once with no further detail; this is the documented interpretation,
-    // not an assumed one (hs_generator.h's Hs_ReviewCorpusRows).
+    // The read counterpart to evict-run: eyeball a category's (optionally
+    // one run's) actual output before deciding whether to evict it
+    // (hs_generator.h's Hs_ReviewCorpusRows).
     bool HandleHearthsideReview(ChatHandler* handler, std::string_view categoryArg, Optional<std::string_view> promptVersionArg)
     {
         std::string category      = std::string(categoryArg);
@@ -188,11 +186,9 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19: "inspect/force a bot's ring and card" -- the force
-    // half. Forces promotion (ring 3 eligibility) without waiting on the
-    // score threshold; the generator's existing pickup still does the
-    // actual card generation, so this doesn't block the world thread on an
-    // LLM call.
+    // Forces promotion (ring 3 eligibility) without waiting on the score
+    // threshold; the generator's existing pickup still does the actual card
+    // generation, so this doesn't block the world thread on an LLM call.
     bool HandleHearthsidePromote(ChatHandler* handler, std::string_view botNameArg)
     {
         std::string botName = std::string(botNameArg);
@@ -230,9 +226,9 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19: "force retirement." Reuses step 17's Hs_RetireCard
-    // directly against the bot's current DB level (works whether or not the
-    // bot is currently online, unlike `.hearthside capture` above).
+    // Reuses Hs_RetireCard directly against the bot's current DB level
+    // (works whether or not the bot is currently online, unlike
+    // `.hearthside capture` above).
     bool HandleHearthsideRetire(ChatHandler* handler, std::string_view botNameArg)
     {
         std::string botName = std::string(botNameArg);
@@ -249,10 +245,9 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19: "pin a bot into the exclude list regardless of
-    // card_active." A raw exclude-vector push, independent of the card/
-    // pinned_by_friend machinery -- the bot doesn't need an hside_identity
-    // row at all.
+    // Pins a bot into the exclude list regardless of card_active -- a raw
+    // exclude-vector push, independent of the card/pinned_by_friend
+    // machinery. The bot doesn't need an hside_identity row at all.
     bool HandleHearthsidePin(ChatHandler* handler, std::string_view botNameArg)
     {
         std::string botName = std::string(botNameArg);
@@ -283,8 +278,8 @@ namespace
         return true;
     }
 
-    // §4.19/§7 step 19: "bulk-evict by generation run." A run is identified
-    // by its prompt_version tag (§4.4).
+    // Bulk-evicts by generation run; a run is identified by its
+    // prompt_version tag.
     bool HandleHearthsideEvictRun(ChatHandler* handler, std::string_view promptVersionArg)
     {
         std::string promptVersion = std::string(promptVersionArg);

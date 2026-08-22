@@ -5,8 +5,8 @@
 // Rename httplib's namespace to avoid an ODR violation: mod-ollama-chat and
 // mod-game-state-api each already vendor a different version of cpp-httplib
 // under the unqualified `httplib` namespace, and all three land in the same
-// worldserver binary (trap 19 / PLAN.md §4.19). mod-playerbots-characters
-// solved this the same way; this module follows suit under its own name.
+// worldserver binary. mod-playerbots-characters solved this the same way;
+// this module follows suit under its own name.
 #define httplib hs_httplib
 #include <httplib.h>
 #undef httplib
@@ -39,10 +39,10 @@ namespace
         return s;
     }
 
-    // trap 2: mod-ollama-chat's ExtractTextBetweenDoubleQuotes truncates at
-    // the first two quote characters anywhere in the reply, silently
-    // mangling any line that quotes a word. Only strip a leading/trailing
-    // quote pair that wraps the *entire* string.
+    // mod-ollama-chat's ExtractTextBetweenDoubleQuotes truncates at the
+    // first two quote characters anywhere in the reply, silently mangling
+    // any line that quotes a word. Only strip a leading/trailing quote pair
+    // that wraps the *entire* string.
     std::string StripWrappingQuotes(std::string s)
     {
         if (s.size() >= 2 && s.front() == '"' && s.back() == '"')
@@ -50,9 +50,9 @@ namespace
         return s;
     }
 
-    // Chat lines are single-line by construction (trap 12: style/format is
-    // applied at delivery, never baked into stored or cached text — this is
-    // just making the raw model output fit one chat line).
+    // Chat lines are single-line by construction -- style/format is applied
+    // at delivery, never baked into stored or cached text; this just makes
+    // the raw model output fit one chat line.
     std::string CollapseNewlines(std::string s)
     {
         for (char& c : s)
@@ -61,13 +61,11 @@ namespace
         return s;
     }
 
-    // §4.2 "the few-shot register block" — fixed, byte-identical for every
-    // bot, teaching register (casual/short/lowercase) rather than subject
-    // matter, which would leak answers into unrelated replies (§4.11).
-    // Deliberately off-topic from anything a bot will actually be asked.
-    // PLAN.md §6: only five exist, written to prove the mechanism works —
-    // a wider set is still an open authoring item, not required to ship
-    // this layering.
+    // Fixed, byte-identical for every bot -- teaches register (casual/
+    // short/lowercase) rather than subject matter, which would leak answers
+    // into unrelated replies. Deliberately off-topic from anything a bot
+    // will actually be asked. Only five exist, written to prove the
+    // mechanism works; a wider set is an open authoring item.
     const std::vector<std::pair<std::string, std::string>>& Fewshot()
     {
         static const std::vector<std::pair<std::string, std::string>> examples =
@@ -102,10 +100,10 @@ namespace
         }
     }
 
-    // §4.1: "hold persistent keep-alive clients rather than constructing one
-    // per request". Cached thread_local, keyed by host:port — safe without
-    // locking because PLAN.md §4.3 fixes the worker pool at exactly one
-    // thread, so exactly one thread ever calls this.
+    // Holds a persistent keep-alive client rather than constructing one per
+    // request. Cached thread_local, keyed by host:port -- safe without
+    // locking because the worker pool is fixed at exactly one thread, so
+    // exactly one thread ever calls this.
     hs_httplib::Client& GetPlainClient(const std::string& host, int port, int timeoutSec)
     {
         static thread_local std::string s_key;
@@ -224,28 +222,27 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
     json body;
     std::vector<std::pair<std::string, std::string>> headers;
 
-    // Samplers are PLAN.md §4.11's decided profile (min_p alone beat both
-    // Qwen's and Meta's recommended profiles on measured opener diversity).
-    // trap 31: these must travel in the request body, not rely on whatever
-    // the operator last typed on the llama-server command line.
+    // Sampler profile: min_p alone beat both Qwen's and Meta's recommended
+    // profiles on measured opener diversity. These must travel in the
+    // request body rather than rely on whatever the operator last typed on
+    // the llama-server command line.
     if (isLlamaCpp)
     {
         url += "/completion";
 
         // Native /completion bypasses the server's chat template entirely,
-        // so the module must reproduce the model's dialect itself (ISSUES-
-        // model-quality.md §5). Llama-3.1-Instruct (PLAN.md §4.1's chosen
-        // model) uses header-tagged turns with <|eot_id|> stops, not ChatML.
+        // so the module must reproduce the model's dialect itself.
+        // Llama-3.1-Instruct uses header-tagged turns with <|eot_id|>
+        // stops, not ChatML.
         //
-        // Layer order is the cache design (§4.2, §4.11 "baseline persona
-        // plus archetype delta"): system rules, then the fixed few-shot
-        // block (byte-identical for every bot — this whole prefix is what
-        // the server reuses), then the archetype delta (byte-identical
-        // across bots sharing an archetype, but not across all bots, so it
-        // sits after the truly-shared prefix rather than inside it), then
-        // this bot-player pair's history as real prior turns so a later
-        // turn's prompt is a strict byte extension of an earlier one, then
-        // the new trigger.
+        // Layer order matters for prompt caching: system rules, then the
+        // fixed few-shot block (byte-identical for every bot -- this whole
+        // prefix is what the server reuses), then the archetype delta
+        // (byte-identical across bots sharing an archetype, but not across
+        // all bots, so it sits after the truly-shared prefix rather than
+        // inside it), then this bot-player pair's history as real prior
+        // turns so a later turn's prompt is a strict byte extension of an
+        // earlier one, then the new trigger.
         std::string prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
         for (auto const& ex : Fewshot())
         {
@@ -271,11 +268,10 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["cache_prompt"] = true;
         body["stop"]         = json::array({ "<|eot_id|>", "\n" });
 
-        // §4.11 DRY retest: only meaningful now that history gives DRY a
-        // cross-turn window to look back through (dry_penalty_last_n: 64,
-        // never -1 — that setting suppressed every continuation outright).
-        // Off by default (dryMultiplier 0.0) until the retest earns its
-        // ~85ms/reply cost against the opener-diversity measure.
+        // Only meaningful now that history gives DRY a cross-turn window to
+        // look back through (dry_penalty_last_n: 64, never -1 -- that
+        // setting suppressed every continuation outright). Off by default
+        // (dryMultiplier 0.0) since it costs ~85ms/reply.
         if (cfg.dryMultiplier > 0.0f)
         {
             body["dry_multiplier"]     = cfg.dryMultiplier;
@@ -316,7 +312,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         if (!cfg.apiKey.empty())
             headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
     }
-    else // "openai" — also the shape llama-server's /v1/chat/completions accepts
+    else // "openai" -- also the shape llama-server's /v1/chat/completions accepts
     {
         url += "/chat/completions";
 

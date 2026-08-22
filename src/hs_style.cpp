@@ -14,7 +14,7 @@
 
 namespace
 {
-    // §4.11's care table collapses to four bands; every transform below
+    // The care table collapses to four bands; every transform below
     // switches on this rather than re-deriving thresholds from a raw float.
     enum class StyleBand
     {
@@ -40,9 +40,8 @@ namespace
         return out;
     }
 
-    // Moved up from the "casing" section below so StripRestatingLeadIn (LLM-
-    // tell stripping) can reuse it too — capitalization is a generic helper,
-    // not something either caller owns.
+    // Shared helper -- used by both the casing section below and
+    // StripRestatingLeadIn (LLM-tell stripping).
     std::string CapitalizeFirstAlpha(std::string s)
     {
         for (char& c : s)
@@ -57,19 +56,17 @@ namespace
     }
 
     // Placeholder marker (SOH, never occurs in real chat text) used to mask
-    // protected spans out of every transform below, and the reflex/self-
-    // abbreviation vocabulary that must never be typo'd even though it isn't
-    // wrapped in [] or /.
+    // protected spans (item links, hyperlinks, slash commands) out of every
+    // transform below.
     constexpr char kPlaceholderMark = '\x01';
 
     const std::unordered_set<std::string>& ProtectedWords()
     {
-        // §4.11: "the tier-0 reflex vocabulary ... those are already the
-        // compressed form and typo'ing them destroys their function." Tier 0
-        // itself doesn't exist yet (step 9), but the vocabulary it will use
-        // is already named in the plan, and the abbreviation transform below
-        // produces some of these same tokens (e.g. "ty", "w/") — they must
-        // survive the typo pass that runs immediately after it.
+        // The tier-0 reflex vocabulary, plus tokens the abbreviation
+        // transform below produces (e.g. "ty", "w/") -- already the
+        // compressed form, so typo'ing them would destroy their function.
+        // Checked here because they must survive the typo pass that runs
+        // immediately after abbreviation.
         static const std::unordered_set<std::string> words = {
             "gz", "ty", "inv", "sum", "wtb", "wts", "lol", "wb", "rdy", "w/", "brb",
         };
@@ -78,10 +75,10 @@ namespace
 
     // ---- protected-span extraction (item links, hyperlinks, slash commands) ----
 
-    // Full WoW chat hyperlink markup (|cAARRGGBB|Hitem:...|h[Name]|h|r) must be
-    // masked as one atomic unit — corrupting the |H control sequence breaks a
-    // clickable link, not just the visible text. Bare [Name]-only brackets and
-    // /commands get the same treatment. §4.11's protected list.
+    // Full WoW chat hyperlink markup (|cAARRGGBB|Hitem:...|h[Name]|h|r) must
+    // be masked as one atomic unit -- corrupting the |H control sequence
+    // breaks a clickable link, not just the visible text. Bare [Name]-only
+    // brackets and /commands get the same treatment.
     std::string ExtractProtectedSpans(const std::string& text, std::vector<std::string>& spans)
     {
         static const std::regex kHyperlink(R"(\|c[0-9A-Fa-f]{8}\|H[^|]*\|h\[[^\]]*\]\|h\|r)");
@@ -164,7 +161,7 @@ namespace
     // ---- LLM-tell stripping ----
 
     // UTF-8 decode/reencode dropping codepoints in the common emoji blocks.
-    // Malformed sequences are passed through unchanged rather than rejected —
+    // Malformed sequences are passed through unchanged rather than rejected --
     // this is a cheap cosmetic filter, not a validator.
     std::string StripEmoji(const std::string& in)
     {
@@ -245,15 +242,14 @@ namespace
         return s;
     }
 
-    // §4.11's fourth named tell: "restating the question." A semantic
-    // check against the trigger text was the first idea, but it's unsafe —
-    // a bot directly answering a factual question ("where's the AH?" ->
-    // "the AH is in Orgrimmar") legitimately shares nouns with the
-    // question, and a word-overlap heuristic would gut real answers along
-    // with the tell. Restricted instead to the same literal-phrase approach
-    // already used for "Ah," below: a short list of explicit meta-
-    // referential openers that are themselves the tell no matter what
-    // follows, so no trigger text is needed at all.
+    // Detects "restating the question" as an LLM tell. A semantic check
+    // against the trigger text would be unsafe -- a bot directly answering a
+    // factual question ("where's the AH?" -> "the AH is in Orgrimmar")
+    // legitimately shares nouns with the question, and a word-overlap
+    // heuristic would gut real answers along with the tell. Instead this
+    // matches a short list of explicit meta-referential openers that are
+    // themselves the tell no matter what follows, so no trigger text is
+    // needed at all.
     std::string StripRestatingLeadIn(const std::string& text)
     {
         static const std::vector<std::string> kLeadIns = {
@@ -271,7 +267,7 @@ namespace
 
             // The restated question ends, and the real answer begins, at
             // the next clause boundary. If none turns up nearby this
-            // probably isn't the tell after all — leave the text alone
+            // probably isn't the tell after all -- leave the text alone
             // rather than guess where to cut.
             size_t searchFrom = leadIn.size();
             size_t searchLimit = std::min(text.size(), searchFrom + 100);
@@ -293,8 +289,8 @@ namespace
         return text;
     }
 
-    // §4.11: "strips known LLM tells: em-dash, leading 'Ah,', emoji, restating
-    // the question." All four are literal and mechanical.
+    // Strips known LLM tells: em dash, leading "Ah,", emoji, restating the
+    // question. All four are literal and mechanical.
     std::string StripLLMTells(const std::string& text)
     {
         std::string s = StripEmoji(text);
@@ -355,9 +351,9 @@ namespace
         return word.find(kPlaceholderMark) != std::string::npos;
     }
 
-    // §4.11 protected-token list: item links / slash commands (masked out
-    // before this ever runs), digits and money strings, the reflex/self-
-    // abbreviation vocabulary, and the bot's or sender's own name.
+    // Protected-token list: item links / slash commands (masked out before
+    // this ever runs), digits and money strings, the reflex/abbreviation
+    // vocabulary, and the bot's or sender's own name.
     bool IsProtectedToken(const std::string& word, const std::string& botName, const std::string& senderName)
     {
         if (IsPlaceholderToken(word))
@@ -429,10 +425,10 @@ namespace
 
     // care table abbreviation levels (heavy/moderate/light/minimal) as a
     // per-matching-word substitution chance. Small curated first-pass
-    // dictionary — extend it as real replies surface more candidates.
-    // `abbrevOverrideChance >= 0` bypasses the band entirely — §4.11
-    // "abbreviation is not always carelessness": TRADER writes heavy
-    // abbreviation (WTS, pst) regardless of its care band.
+    // dictionary -- extend it as real replies surface more candidates.
+    // `abbrevOverrideChance >= 0` bypasses the band entirely: some
+    // archetypes (e.g. TRADER) write heavy abbreviation (WTS, pst)
+    // regardless of their care band.
     std::string ApplyAbbreviation(const std::string& text, StyleBand band, float abbrevOverrideChance, std::mt19937& rng)
     {
         float chance;
@@ -482,7 +478,7 @@ namespace
         return JoinWords(words);
     }
 
-    // ---- typo injection (§4.11: all six mechanisms) ----
+    // ---- typo injection: six mechanisms ----
 
     enum class TypoMechanism { MissingApostrophe, Transposition, DroppedLetter, AdjacentKey, DoubledLetter, Homophone };
 
@@ -604,8 +600,8 @@ namespace
 
     // care table: ~3% / ~1.5% / ~0.5% / 0%, per word. `correctionOut` is
     // cleared, then set to the pre-typo form of the *first* word this pass
-    // actually alters (§4.11's self-correction follow-up needs "the
-    // corrected word", singular) — left empty if no word ends up changed.
+    // actually alters -- the self-correction follow-up needs a single
+    // corrected word -- left empty if no word ends up changed.
     std::string InjectTypos(const std::string& text, StyleBand band, const std::string& botName,
                              const std::string& senderName, std::mt19937& rng, std::string& correctionOut)
     {
@@ -649,10 +645,9 @@ namespace
 
     // SplitMix64's finalizer. AzerothCore GUIDs are allocated from a small
     // sequential counter, so `std::hash<uint64_t>` (identity on libstdc++)
-    // barely perturbs neighbouring GUIDs — confirmed by test: care values for
-    // GUIDs 1..5000 drifted in a visible sawtooth instead of scattering. This
-    // gives every input a full-avalanche 64-bit spread regardless of how the
-    // platform's std::hash<uint64_t> happens to behave.
+    // barely perturbs neighbouring GUIDs. This gives every input a
+    // full-avalanche 64-bit spread regardless of how the platform's
+    // std::hash<uint64_t> happens to behave.
     uint64_t MixBits64(uint64_t x)
     {
         x ^= x >> 30;
@@ -665,8 +660,8 @@ namespace
 
     uint64_t SeedFor(uint64_t botGuid, const std::string& text)
     {
-        // Not cryptographic — reproducibility for a given (bot, message) pair
-        // is all §4.11 asks for ("seed per message, not per bot").
+        // Not cryptographic -- reproducibility for a given (bot, message)
+        // pair is all this needs.
         uint64_t h = std::hash<std::string>{}(text);
         h ^= MixBits64(botGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
         return h;
@@ -675,21 +670,17 @@ namespace
 
 float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat)
 {
-    // Step 7: baselineCare comes from the bot's archetype
-    // (hs_archetype.h) — no more flat 0.5 placeholder. The same +/-0.20
-    // GUID jitter §4.11 specifies still applies on top, so bots sharing an
-    // archetype still sound like different people rather than reading
-    // identically.
+    // baselineCare comes from the bot's archetype (hs_archetype.h). A
+    // +/-0.20 GUID jitter applies on top, so bots sharing an archetype still
+    // sound like different people rather than reading identically.
     constexpr float kJitterWidth = 0.20f;
 
-    // §4.11: "context modulates care downward" — negative offset in combat.
-    // The plan also names party chat during an encounter (no hook exists
-    // for that yet — only /say and whisper, hs_config.h) and a positive
-    // offset for trade/recruitment posts (no channel-chat hook exists at
-    // all). Combat is the one signal already reachable at the call site
-    // (hs_handler.cpp's TryDispatch has the bot's Player*). -0.15 is a
-    // starting guess, same footing as the archetype table itself (§7 step 7
-    // notes the whole care table is starting guesses).
+    // Negative offset in combat. Party chat during an encounter and a
+    // positive offset for trade/recruitment posts are related cases with no
+    // hook to read them from yet (this module only hooks /say and whisper --
+    // hs_config.h). Combat is the one signal already reachable at the call
+    // site (hs_handler.cpp's TryDispatch has the bot's Player*). -0.15 is a
+    // starting guess, same footing as the rest of the archetype care table.
     constexpr float kCombatCareOffset = -0.15f;
 
     uint64_t h = MixBits64(botGuid ^ 0x9E3779B97F4A7C15ULL);

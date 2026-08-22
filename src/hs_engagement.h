@@ -4,25 +4,24 @@
 #include "ScriptMgr.h"
 #include <cstdint>
 
-// Claude/PLAN-engagement.md (design draft, decisions resolved 2026-08-21): a
-// bot continuing a conversation on its own initiative after it has already
-// answered a player once -- a follow-up question or related comment, rather
-// than going silent until the player speaks again. Generated (tier 2, a
-// second Hs_CallLLM pass), gated by its own MaxTier.EngagementFollowUp
-// ceiling, on both whisper and /say.
+// A bot continuing a conversation on its own initiative after it has
+// already answered a player once -- a follow-up question or related
+// comment, rather than going silent until the player speaks again.
+// Generated (tier 2, a second Hs_CallLLM pass), gated by its own
+// MaxTier.EngagementFollowUp ceiling, on both whisper and /say.
 //
 // One periodic scan WorldScript (HsEngagementScanWorldScript) serves two
-// gaps: this feature, and hs_opener.h's own named-but-unbuilt fifth trigger
-// ("prolonged proximity") -- see hs_opener.cpp's Hs_ScanProximityOpeners,
-// called from the same OnUpdate tick rather than running a second
-// near-identical timer.
+// gaps: this feature, and hs_opener.h's own named-but-unbuilt fifth
+// trigger ("prolonged proximity") -- see hs_opener.cpp's
+// Hs_ScanProximityOpeners, called from the same OnUpdate tick rather than
+// running a second near-identical timer.
 //
-// A follow-up chain is not capped at exactly one: each fired follow-up can
-// earn another, but the fire chance decays per depth and the chain's real
-// ceiling is the player -- it only continues if they keep replying (each
-// direct reply re-arms eligibility via Hs_EngagementNoteDirectReply; a
-// follow-up firing does not). A hard depth cap is a safety-valve backstop
-// only, not the normal way a chain ends.
+// A follow-up chain is not capped at exactly one: each fired follow-up
+// can earn another, but the fire chance decays per depth and the chain's
+// real ceiling is the player -- it only continues if they keep replying
+// (each direct reply re-arms eligibility via Hs_EngagementNoteDirectReply;
+// a follow-up firing does not). A hard depth cap is a safety-valve
+// backstop only, not the normal way a chain ends.
 
 class HsEngagementScanWorldScript : public WorldScript
 {

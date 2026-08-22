@@ -3,8 +3,8 @@
 
 #include <string>
 
-// PLAN.md §4.14: one enum, five keys, one shared parse and resolve helper.
-// Ordered — reflex < corpus < inference — so a surface's config value is a
+// One enum, five keys, one shared parse and resolve helper. Ordered --
+// reflex < corpus < inference -- so a surface's config value is a
 // ceiling, not a mode switch.
 enum class HsTier
 {

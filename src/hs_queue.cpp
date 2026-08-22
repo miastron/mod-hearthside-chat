@@ -8,7 +8,7 @@
 #include "hs_memory_store.h"
 #include "hs_style.h"
 
-#include "DatabaseEnv.h" // new 2026-08-21: HearthsideChat.DebugChatLog insert
+#include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
 #include "Log.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -33,25 +33,19 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // §4.11's self-correction follow-up: "~5% (decided)" is a settled design
-    // constant, not an operator knob, so it lives here rather than in
-    // hs_config.h. 2-5s for "a beat later" is a starting guess — there's no
-    // typing-delay profile in this module yet to derive it from.
+    // Self-correction follow-up: a settled design constant, not an operator
+    // knob, so it lives here rather than in hs_config.h.
     constexpr uint32_t kSelfCorrectionChancePercent   = 5;
     constexpr uint32_t kSelfCorrectionMinDelaySeconds = 2;
     constexpr uint32_t kSelfCorrectionMaxDelaySeconds = 5;
 
-    // New 2026-08-21: a short, factual line describing what the bot is
-    // actually doing right now (mod-playerbots' own NewRpgStatus), appended
-    // to personaLine in WorkerLoop below so a free-generating reply can't
-    // contradict observable state -- "pvping" while the bot is mid-quest is
-    // exactly the kind of tell §1's retreat rule exists to prevent. Plain
-    // statement of fact, not a behavioural instruction -- the same register
-    // §4.20's grounded answers and the card voice block already use for
-    // things the model is simply told rather than asked to obey. RPG_IDLE
-    // and the exploratory wander states return empty -- "idle" or
-    // "wandering" isn't a distinctive enough claim to be worth the tokens or
-    // the risk of sounding stilted ("I'm currently idle").
+    // A short, factual line describing what the bot is actually doing right
+    // now (mod-playerbots' own NewRpgStatus), appended to personaLine in
+    // WorkerLoop below so a free-generating reply can't contradict
+    // observable state -- e.g. claiming to be PvPing while mid-quest. Stated
+    // as plain fact, not an instruction, matching how the card voice block
+    // and grounded answers address the model. RPG_IDLE and the wander states
+    // return empty -- not distinctive enough to be worth stating.
     std::string RpgStatusHint(NewRpgStatus status)
     {
         switch (status)
@@ -66,36 +60,32 @@ namespace
         }
     }
 
-    // §3 tier 0: "real players fire these back in under a second" -- a
-    // same-tick reply would be more of a tell than the LLM's latency this
-    // tier exists to avoid, so it still gets a short, randomized delay.
-    // Settled design constant, not an operator knob, same as the
-    // self-correction delay above.
+    // Real players answer these in under a second, but a same-tick reply
+    // would itself be a tell, so tier 0 still gets a short randomized delay.
     constexpr uint32_t kReflexDelayMinMs = 400;
     constexpr uint32_t kReflexDelayMaxMs = 1500;
 
     struct HsQueuedRequest
     {
         uint64_t     botGuid;
-        std::string  botName;     // §4.11 style pass: protected from typo injection
+        std::string  botName;     // style pass: protected from typo injection
         uint64_t     senderGuid;
-        std::string  senderName;  // §4.11 style pass: protected from typo injection
+        std::string  senderName;  // style pass: protected from typo injection
         bool         isWhisper;
         std::string  prompt;
         Clock::time_point enqueuedAt;
         bool         isProbe;
-        bool         inCombat;    // §4.11 style pass: combat `care` offset
-        uint8_t      botLevel;    // §4.13 archetype eligibility filter (hs_archetype.h)
-        NewRpgStatus rpgStatus;   // new 2026-08-21: live activity fact, folded into personaLine below
-        bool         isFollowUp;  // new 2026-08-21: self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
+        bool         inCombat;    // style pass: combat `care` offset
+        uint8_t      botLevel;    // archetype eligibility filter (hs_archetype.h)
+        NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
+        bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
     };
 
-    // deliverAt lets one worker-thread turn queue two chat lines instead of
-    // one: the reply after its typing delay, and (§4.11's self-correction
-    // follow-up) a `*correction` a beat after that. Reflex/grounded/corpus-
-    // fallback replies (delivered via Hs_DeliverReflexReply, not this
-    // struct's other producer below) still use their own fixed 400-1500ms
-    // window regardless of text length.
+    // deliverAt lets one worker thread queue two chat lines instead of one:
+    // the reply after its typing delay, and a self-correction `*correction`
+    // a beat after that. Reflex/grounded/corpus-fallback replies (delivered
+    // via Hs_DeliverReflexReply, not this struct's other producer below)
+    // still use their own fixed 400-1500ms window regardless of text length.
     struct HsPendingReply
     {
         uint64_t    botGuid;
@@ -103,7 +93,7 @@ namespace
         bool        isWhisper;
         std::string text;
         Clock::time_point deliverAt;
-        bool        isFollowUp; // new 2026-08-21: cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
+        bool        isFollowUp; // cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
     };
 
     // ---- work queue: world thread pushes, the one worker thread pops ----
@@ -117,7 +107,7 @@ namespace
     std::mutex                     g_DeliveryMutex;
     std::deque<HsPendingReply>     g_DeliveryQueue;
 
-    // ---- token bucket. §4.3: the primary load ceiling. ----
+    // ---- token bucket: the primary load ceiling ----
     std::mutex          g_BucketMutex;
     double               g_BucketTokens = 0.0;
     Clock::time_point    g_BucketLastRefill;
@@ -128,9 +118,9 @@ namespace
     std::unordered_map<uint64_t, Clock::time_point>   g_LastEnqueueAt;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastReplyAt;
 
-    // ---- conversation history (§4.2): four lines per bot-player pair, held
-    // in memory only. Keyed by (botGuid, senderGuid); std::map's operator<
-    // on std::pair needs no custom hash. ----
+    // ---- conversation history: a few lines per bot-player pair, held in
+    // memory only. Keyed by (botGuid, senderGuid); std::map's operator< on
+    // std::pair needs no custom hash. ----
     std::mutex g_HistoryMutex;
     std::map<std::pair<uint64_t, uint64_t>, std::deque<HsHistoryTurn>> g_History;
 
@@ -147,8 +137,7 @@ namespace
         return { it->second.begin(), it->second.end() };
     }
 
-    // §4.2: "a turn's trigger becomes the next turn's first history line
-    // byte-for-byte" — store the exact trigger/reply just used, then evict
+    // Stores the exact trigger/reply just used, byte-for-byte, then evicts
     // from the front until at most g_HsLLMHistoryTurns pairs remain.
     void HistoryAppend(uint64_t botGuid, uint64_t senderGuid, const std::string& trigger, const std::string& reply)
     {
@@ -169,13 +158,12 @@ namespace
     Clock::time_point      g_LastProbeAt;
     bool                    g_HasProbedOnce = false;
 
-    // ---- §4.7 idle signal for the generator: true only while the worker
-    // thread is actually inside Hs_CallLLM. ----
+    // ---- idle signal for the generator: true only while the worker thread
+    // is actually inside Hs_CallLLM ----
     std::atomic<bool> g_ReactiveWorkerBusy{false};
 
-    // ---- §4.7 `.hearthside capture`: last pre-style reply per bot name.
-    // Overwritten on every successful reactive reply -- "the last one," not
-    // a history. ----
+    // ---- `.hearthside capture`: last pre-style reply per bot name.
+    // Overwritten on every successful reactive reply; not a history. ----
     std::mutex                                  g_LastPreStyleMutex;
     std::unordered_map<std::string, std::string> g_LastPreStyleReplyByBot;
 
@@ -201,8 +189,8 @@ namespace
     }
 
     // Updates the consecutive-failure count and flips the breaker open/closed
-    // as needed. Edge-triggered logging only — one line per transition, never
-    // per request (§4.3: "silent" while open, not a log line per rejection).
+    // as needed. Edge-triggered logging only -- one line per transition,
+    // never per request; the breaker stays silent while open.
     void RecordOutcome(bool success)
     {
         if (success)
@@ -243,22 +231,18 @@ namespace
                 continue;
             }
 
-            // §4.11 step 7 / §4.13 step 8: the bot's archetype, drawn
-            // deterministically from its GUID and restricted to the
-            // level-eligible pool (hs_archetype.h). Feeds both the LLM
-            // prompt's delta layer and the style pass's `care` baseline
-            // below.
+            // The bot's archetype, drawn deterministically from its GUID and
+            // restricted to the level-eligible pool (hs_archetype.h). Feeds
+            // both the LLM prompt's delta layer and the style pass's `care`
+            // baseline below.
             HsArchetype archetype = Hs_ArchetypeForBot(req.botGuid, req.botLevel);
             const HsArchetypeInfo& archetypeInfo = Hs_ArchetypeInfoFor(archetype);
 
-            // §4.12: the voice block is "the only card text that ever
-            // enters a prompt" -- appended after the archetype delta line
-            // and before history, same layer ordering PLAN.md specifies.
-            // Folded into the same archetypeLine parameter Hs_CallLLM
-            // already takes (rather than widening that function's
-            // signature) since the two are byte-adjacent in the assembled
-            // prompt either way; a no-op string concat for the ring 0-2
-            // majority with no active card.
+            // The voice block is the only card text that ever enters a
+            // prompt. Folded into the same personaLine string Hs_CallLLM
+            // already takes, after the archetype line and before history,
+            // rather than widening that function's signature -- a no-op
+            // concat for the majority of bots with no active card.
             HsCardSnapshot cardSnapshot = Hs_LookupCardSnapshot(req.botGuid);
             std::string personaLine = Hs_ArchetypePromptLine(archetype);
             if (cardSnapshot.active && !cardSnapshot.voiceBlock.empty())
@@ -273,8 +257,7 @@ namespace
             cfg.model         = g_HsLLMModel;
             cfg.apiKey        = g_HsLLMApiKey;
             cfg.timeoutSec    = static_cast<int>(g_HsLLMTimeoutSeconds);
-            // Per-archetype verbosity cap (§4.11 "terse archetypes get a
-            // 25-token cap, not 60") refines the operator's configured
+            // Per-archetype verbosity cap refines the operator's configured
             // ceiling downward; it never raises it above what
             // HearthsideChat.LLM.MaxTokens allows.
             cfg.maxTokens     = static_cast<int>(std::min(g_HsLLMMaxTokens, archetypeInfo.verbosityCap));
@@ -295,38 +278,31 @@ namespace
                 if (g_HsDebugEnabled)
                     LOG_INFO("server.loading", "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
                         req.botGuid, static_cast<int>(result.failure), result.httpStatus);
-                continue; // silence, not a canned fallback — §1 retreat rule
+                continue; // silence, not a canned fallback
             }
 
-            // §4.7 `.hearthside capture`: stash the *pre-style* text before
-            // the style pass below reshapes it -- "the honest version of the
-            // idea," so what a GM captures is the model's clean output, not
-            // this specific reply's typos (trap 12).
+            // `.hearthside capture`: stash the pre-style text before the
+            // style pass below reshapes it, so what a GM captures is the
+            // model's clean output, not this reply's injected typos.
             {
                 std::lock_guard<std::mutex> lock(g_LastPreStyleMutex);
                 g_LastPreStyleReplyByBot[req.botName] = result.text;
             }
 
-            // §4.11 style post-processor (step 6): caps/punctuation/abbrev
-            // reshaping and typo injection, applied before the text becomes
-            // either delivered chat or the next turn's history line — so a
-            // re-rendered history line and the one actually spoken always
-            // match byte-for-byte (§4.2's append-chain requirement). `care`'s
-            // baseline is the archetype's (step 7); TRADER is the only entry
-            // with an abbreviation override today.
+            // Caps/punctuation/abbrev reshaping and typo injection, applied
+            // before the text becomes either delivered chat or the next
+            // turn's history line -- so a re-rendered history line and the
+            // one actually spoken always match byte-for-byte. `care`'s
+            // baseline is the archetype's; TRADER is the only entry with an
+            // abbreviation override today.
             HsStyleContext styleCtx;
             styleCtx.baselineCare         = archetypeInfo.care;
             styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
             styleCtx.inCombat             = req.inCombat;
             styleCtx.verbalTic            = cardSnapshot.verbalTic;
-            // §7 new 2026-08-21: capture both the pre-style and post-style
-            // text for HearthsideChat.DebugChatLog before result.text is
-            // overwritten below -- one row per reactive-tier exchange, for
-            // an operator to review later and hand-pick examples that need
-            // improvement or belong in a training set. Off the critical
-            // path either way (CharacterDatabase.Execute is fire-and-forget,
-            // and this thread already calls it elsewhere -- Hs_BumpInteraction
-            // Score below does the same).
+            // Captured before result.text is overwritten below, so
+            // HearthsideChat.DebugChatLog can log both the pre-style and
+            // post-style text for an operator to review later.
             std::string preStyleForLog = result.text;
 
             HsStyleResult style = Hs_ApplyStyle(req.botGuid, req.botName, req.senderName, result.text, styleCtx);
@@ -351,46 +327,36 @@ namespace
             }
 
             // History stores only the primary reply, not the follow-up
-            // correction below — a bare "*healer" fragment isn't useful
-            // prior-turn context for the LLM, and the corrected meaning is
-            // already fully present in result.text (the typo is spelling
-            // noise, not a different word). An engagement follow-up
-            // (hs_engagement.h) gets the same non-write treatment and for
-            // the same reason -- its own "trigger" is a synthetic
-            // instruction, not something the player actually said, so
-            // replaying it as a prior turn would be confusing rather than
-            // useful context.
+            // correction below -- a bare "*healer" fragment isn't useful
+            // prior-turn context, and the corrected meaning is already
+            // fully present in result.text. An engagement follow-up
+            // (hs_engagement.h) is skipped for the same reason: its
+            // "trigger" is a synthetic instruction, not something the
+            // player actually said.
             if (!req.isFollowUp)
                 HistoryAppend(req.botGuid, req.senderGuid, req.prompt, result.text);
 
-            // §4.12 "count conversation, not groups": scores for exactly the
-            // bot the arbiter selected, exactly when the reply resolves to
-            // tier 2 -- this is the only point in the module where that's
-            // true. Reflex/grounded/corpus-fallback replies never reach
-            // here (§4.12/§4.15: "tier 0 stays completely free of identity
-            // side effects", and the corpus/grounded paths inherit that
-            // same "answer without the GPU" shape). An engagement follow-up
-            // is bot-initiated, not a scored player utterance -- same rule
-            // openers already follow (§4.12: "bot-initiated openers must
-            // not increment interaction_score").
+            // Scores the bot the arbiter selected, only when the reply
+            // resolves to tier 2 -- reflex/grounded/corpus-fallback replies
+            // never reach here. An engagement follow-up is bot-initiated,
+            // not a scored player utterance, same as bot-initiated openers.
             if (!req.isFollowUp)
             {
                 Hs_BumpInteractionScore(req.botGuid, req.botLevel,
                     req.isWhisper ? kHsScoreWeightWhisper : kHsScoreWeightSay);
             }
 
-            // New 2026-08-21: re-arms this (bot, player) pair's engagement-
-            // follow-up eligibility -- only a genuine direct reply does this,
-            // never a follow-up's own delivery (Claude/PLAN-engagement.md:
-            // a chain only continues as long as the player keeps replying).
+            // Re-arms this (bot, player) pair's engagement-follow-up
+            // eligibility -- only a genuine direct reply does this, never a
+            // follow-up's own delivery, so a chain only continues as long
+            // as the player keeps replying.
             if (!req.isFollowUp)
                 Hs_EngagementNoteDirectReply(req.botGuid, req.senderGuid, req.isWhisper);
 
-            // §4.12 step 16: ordinary chat is by far the most common way two
-            // people actually meet, so first-meeting is seeded here rather
-            // than only as a side effect of the rarer shared-experience
-            // events (dungeon/group/death/guild). Idempotent -- a no-op on
-            // every exchange after the pair's first.
+            // Ordinary chat is the most common way two people actually meet,
+            // so first-meeting is seeded here rather than only as a side
+            // effect of the rarer shared-experience events (dungeon/group/
+            // death/guild). Idempotent -- a no-op after the pair's first.
             Hs_EnsureFirstMeetingRecorded(req.botGuid, req.senderGuid);
 
             {
@@ -400,15 +366,12 @@ namespace
 
             Clock::time_point now = Clock::now();
 
-            // New 2026-08-21: typing delay for the tier-2 reply (PLAN.md
-            // §3/§4.11 decision flow's "typing delay, persona profile"
-            // step -- previously unbuilt for this path, see PROGRESS.md's
-            // known-gaps list). A residual on top of however long
-            // Hs_CallLLM already took, so the total (real generation
-            // latency + top-up) approximates a human typing the reply,
-            // without ever shortening what the LLM call itself already
-            // cost. A fast backend that would otherwise deliver same-tick
-            // still gets the full target delay.
+            // Typing delay for the tier-2 reply: a residual on top of
+            // however long Hs_CallLLM already took, so the total (real
+            // generation latency + top-up) approximates a human typing the
+            // reply without ever shortening what the LLM call itself cost.
+            // A fast backend that would otherwise deliver same-tick still
+            // gets the full target delay.
             Clock::time_point deliverAt = now;
             if (g_HsTypingDelayEnabled)
             {
@@ -423,12 +386,11 @@ namespace
                 std::lock_guard<std::mutex> lock(g_DeliveryMutex);
                 g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.isWhisper, result.text, deliverAt, req.isFollowUp });
 
-                // §4.11 self-correction follow-up, ~5% (decided): only
-                // eligible when a typo actually landed in this message. The
-                // `*` prefix is added here, after the style pass, and the
-                // corrected word is exempt from it — a plain literal fix,
-                // not another sloppy line. "A beat later" gets a short
-                // random delay measured from the primary reply's own
+                // Self-correction follow-up: only eligible when a typo
+                // actually landed in this message. The `*` prefix is added
+                // here, after the style pass, and the corrected word is
+                // exempt from it -- a plain literal fix, not another sloppy
+                // line. The delay is measured from the primary reply's own
                 // deliverAt (not `now`) so the correction can never arrive
                 // before the line it corrects.
                 if (!style.correction.empty() && urand(0, 99) < kSelfCorrectionChancePercent)
@@ -576,10 +538,10 @@ void Hs_DeliverPending()
         if (g_DeliveryQueue.empty())
             return;
 
-        // Almost everything has deliverAt == the tick it was queued, so
-        // this is a cheap partition, not a per-tick sort. Only §4.11's
-        // self-correction follow-up carries a real future deliverAt, and it
-        // stays in g_DeliveryQueue until its beat has passed.
+        // Almost everything has deliverAt == the tick it was queued, so this
+        // is a cheap partition, not a per-tick sort. Only a self-correction
+        // follow-up carries a real future deliverAt, and it stays in
+        // g_DeliveryQueue until its beat has passed.
         Clock::time_point now = Clock::now();
         auto notYetReady = std::stable_partition(g_DeliveryQueue.begin(), g_DeliveryQueue.end(),
             [now](const HsPendingReply& r) { return r.deliverAt <= now; });

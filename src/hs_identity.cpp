@@ -49,8 +49,8 @@ namespace
         return false;
     }
 
-    // Each main_focus value's plausible bands. Authored, not derived --
-    // see hs_identity.h's note that PLAN.md doesn't spell out this list.
+    // Each main_focus value's plausible bands -- authored by hand, not
+    // derived from an external spec.
     bool MainFocusAllowedInBand(const std::string& value, Band band)
     {
         if (value == "leveling")
@@ -63,9 +63,9 @@ namespace
             return band == Band::High || band == Band::Endgame;
         if (value == "achievements")
             return band == Band::High || band == Band::Endgame;
-        // pvp, professions, collecting -- credible at any level (§4.13's own
-        // reasoning for PVP_CASUAL/TRADER: bg brackets from 10, gold is a
-        // topic gate not an assignment gate).
+        // pvp, professions, collecting -- credible at any level (battlegrounds
+        // are available from level 10; gold is a topic gate, not an
+        // assignment gate).
         return value == "pvp" || value == "professions" || value == "collecting";
     }
 
@@ -77,8 +77,8 @@ namespace
     }
 
     // Format-only check for the two freeform fields (current_goal,
-    // held_opinion) -- see hs_identity.h's note that acore_world existence-
-    // checking is a named, accepted residual risk, not built here.
+    // held_opinion) -- checking their subject against acore_world is a
+    // named, accepted residual risk, not built here.
     bool IsPlausibleFreeform(const std::string& s)
     {
         if (s.empty() || s.size() > 120)

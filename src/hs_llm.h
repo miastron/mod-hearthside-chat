@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-// PLAN.md §4.3 "the failure mode is named, not generic" — distinguishable
-// causes get distinguishable handling, not one generic "LLM error".
+// Distinguishable failure causes get distinguishable handling, not one
+// generic "LLM error".
 enum class HsLLMFailure
 {
     None,
@@ -26,9 +26,9 @@ struct HsLLMResult
 };
 
 // Endpoint configuration for one LLM call. Populated from HearthsideChat.LLM.*
-// config keys (see hs_config.h). PLAN.md §4.1: the reactive path and the
-// (future) idle-time generator each get their own HsLLMConfig, so this struct
-// carries everything a call needs rather than reading globals directly.
+// config keys (see hs_config.h). The reactive path and the idle-time
+// generator each get their own HsLLMConfig, so this struct carries
+// everything a call needs rather than reading globals directly.
 struct HsLLMConfig
 {
     std::string apiType;      // "llamacpp" (native /completion), "openai", or "ollama"
@@ -38,15 +38,14 @@ struct HsLLMConfig
     std::string apiKey;       // optional bearer token (llama-server supports --api-key)
     std::string model;        // ignored by llamacpp native /completion, required by the others
     int         timeoutSec;
-    int         maxTokens;    // output cap, §4.2 — a GPU budget, not a hard chop (§4.11)
-    float       dryMultiplier; // §4.11 DRY retest — 0.0f leaves DRY off (llamacpp only)
+    int         maxTokens;    // output cap -- a GPU budget, not a hard chop
+    float       dryMultiplier; // DRY penalty multiplier -- 0.0f leaves DRY off (llamacpp only)
 };
 
 // One earlier exchange between this bot and this player: the line it was
-// replying to, and what it actually said back. PLAN.md §4.2 conversation
-// history — the caller (hs_queue) owns storage; this is just the shape
-// replayed as real prior turns so the shared prefix cache sees history
-// growth as an append, not a rewrite.
+// replying to, and what it actually said back. The caller (hs_queue) owns
+// storage; this is just the shape replayed as real prior turns so the
+// shared prefix cache sees history growth as an append, not a rewrite.
 struct HsHistoryTurn
 {
     std::string trigger;
@@ -57,20 +56,20 @@ struct HsHistoryTurn
 // AzerothCore game objects, so callers may run it off the world thread and
 // must marshal the result back before acting on it (see hs_handler.cpp).
 //
-// §4.1's "hold persistent keep-alive clients rather than constructing one
-// per request" is implemented internally: the underlying HTTP client is
-// cached thread_local, keyed by host:port, and reused across calls made
-// from the same thread. Since PLAN.md §4.3 fixes the worker pool at exactly
-// one thread, this gives one persistent connection for the module's whole
-// reactive tier with no locking needed.
+// Holds a persistent keep-alive HTTP client internally: cached thread_local,
+// keyed by host:port, and reused across calls made from the same thread.
+// The worker pool is fixed at exactly one thread, so this gives one
+// persistent connection for the module's whole reactive tier with no
+// locking needed.
+//
 // archetypeLine (hs_archetype.h, Hs_ArchetypePromptLine) is the per-bot
-// personality delta (§4.11 "baseline persona plus archetype delta"). It's a
-// distinct layer from systemPrompt: systemPrompt + the fixed few-shot block
-// are byte-identical across every bot regardless of archetype (that's the
-// cache-shared prefix), and archetypeLine is what actually differs, so it
-// is placed after the few-shot block and before history rather than folded
-// into systemPrompt itself. Pass an empty string for no delta (e.g. the
-// scripted-conversation path §4.16 generates against the baseline alone).
+// personality delta -- a distinct layer from systemPrompt: systemPrompt and
+// the fixed few-shot block are byte-identical across every bot regardless
+// of archetype (the cache-shared prefix), and archetypeLine is what
+// actually differs, so it's placed after the few-shot block and before
+// history rather than folded into systemPrompt itself. Pass an empty
+// string for no delta (e.g. the scripted-conversation path generates
+// against the baseline alone).
 HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg,
                         const std::string& systemPrompt,
                         const std::string& archetypeLine,

@@ -25,11 +25,10 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // §6 lists script fire rate and reserve behaviour as live-realm-only
-    // judgements, same reasoning as every other placeholder constant this
-    // module has shipped. kScanIntervalMs x kScanFireChancePercent targets
-    // roughly the "~10 minutes" burn-rate figure §4.16 itself uses to size
-    // the reserve, without claiming that figure is measured.
+    // Script fire rate and reserve behaviour are live-realm-only
+    // judgements, so these are placeholder constants, not config keys.
+    // kScanIntervalMs x kScanFireChancePercent targets roughly a 10-minute
+    // burn rate, without claiming that figure is measured.
     constexpr uint32_t kScanIntervalMs          = 30000; // how often we even look
     constexpr uint32_t kScanFireChancePercent   = 5;     // per eligible duo, per scan
     constexpr uint32_t kWitnessCooldownSeconds  = 300;   // don't re-fire near the same player too soon
@@ -103,13 +102,13 @@ namespace
     // Claims one available script (single consumer -- only this scan ever
     // writes hside_script.consumed_at -- so a plain SELECT-then-UPDATE has
     // no concurrent claimant to race against) and schedules its turns,
-    // staggered by a per-turn typing delay (§4.16: "not in a burst").
+    // staggered by a per-turn typing delay so they don't land in a burst.
     void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
     {
         QueryResult idResult = CharacterDatabase.Query(
             "SELECT id FROM hside_script WHERE consumed_at IS NULL ORDER BY id LIMIT 1");
         if (!idResult)
-            return; // reserve dry -- §4.16: "running dry is the correct failure mode"
+            return; // reserve dry -- running dry is the correct failure mode, not an error
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
 
         QueryResult turnResult = CharacterDatabase.Query(
@@ -190,8 +189,9 @@ namespace
 
     // Re-checks every abort condition immediately before sending -- schedule
     // time and delivery time can be minutes apart for a script's later
-    // turns, and §4.16 wants "a participant leaving range, entering combat,
-    // or dying" caught whenever it actually happens, not just at the start.
+    // turns, and a participant leaving range, entering combat, or dying
+    // needs to be caught whenever it actually happens, not just at the
+    // start.
     void DeliverOneTurn(const HsScheduledTurn& scheduled)
     {
         bool     aborted = false;
@@ -242,8 +242,8 @@ namespace
         if (!speakerAI)
             return;
 
-        // §4.16: "no archetypes, no casting" at generation time, but the
-        // style pass still runs per speaker at delivery -- the same script
+        // No archetype/persona goes into script generation, but the style
+        // pass still runs per speaker at delivery -- the same script
         // spoken by two different bots reads as two different people.
         HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
         const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
@@ -287,7 +287,7 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
     if (!g_HsEnable)
         return;
     HsTier ceiling = HsParseTier(g_HsMaxTierBotToBot);
-    if (!HsTierAllows(ceiling, HsTier::Corpus)) // §4.14: corpus-only in v1 (trap 17)
+    if (!HsTierAllows(ceiling, HsTier::Corpus)) // corpus-only in v1
         return;
 
     g_ScanAccumulatorMs += diff;

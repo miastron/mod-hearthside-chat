@@ -10,9 +10,9 @@
 
 namespace
 {
-    // §4.6: "weighted random that penalizes recently-used rows" -- rather
-    // than always taking the single least-exposed row (which would make a
-    // small pool perfectly predictable), the SQL side orders candidates by
+    // Weighted random that penalizes recently-used rows: rather than always
+    // taking the single least-exposed row (which would make a small pool
+    // perfectly predictable), the SQL side orders candidates by
     // exposure/recency and this caps how many of the freshest rows are in
     // play; the C++ side then picks uniformly among them.
     constexpr int kAntiRepeatPoolSize = 5;
@@ -20,8 +20,7 @@ namespace
     // Builds the WHERE-clause fragment that narrows hside_corpus rows to
     // this bot's tag value for a category's axis. Returns false for
     // faction/zone -- no seeded category uses either yet, and this fallback
-    // has no faction/zone signal wired through (same "don't build plumbing
-    // with no consumer" scoping as step 11.5).
+    // has no faction/zone signal wired through.
     bool TagWhereFor(const std::string& axis, uint8_t botClass, const std::string& band, std::string& out)
     {
         if (axis == "none")       { out = "";                                                return true; }
@@ -30,10 +29,10 @@ namespace
         return false;
     }
 
-    // §4.5 "seasonal rows go dormant, not evicted" -- a row with a non-null
-    // event_id is only selectable while its game event is active. Built as a
-    // WHERE fragment (rather than filtering the C++ pool after the fact) so
-    // the anti-repeat pool below is still filled from eligible rows only.
+    // Seasonal rows go dormant, not evicted: a row with a non-null event_id
+    // is only selectable while its game event is active. Built as a WHERE
+    // fragment (rather than filtering the C++ pool after the fact) so the
+    // anti-repeat pool below is still filled from eligible rows only.
     // sGameEventMgr's active-event set is small and in-memory, so this reads
     // it once per selection rather than querying the DB for it.
     std::string EventDormancyWhere()
@@ -52,7 +51,7 @@ namespace
         return "AND (event_id IS NULL OR event_id IN (" + ids + "))";
     }
 
-    // Shared anti-repeat pick + exposure bookkeeping (§4.6), used by both
+    // Shared anti-repeat pick + exposure bookkeeping, used by both
     // Hs_SelectCorpusLine and Hs_SelectOpenerLine below.
     std::string PickAntiRepeatRow(const std::string& categoryName, const std::string& tagWhere)
     {
@@ -116,9 +115,8 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
 {
     // card_gated categories are unconditionally excluded here -- no
     // is_opener=1 category is card_gated yet, so this is a defensive floor
-    // rather than plumbing for a real signal (§7 step 15's own "don't build
-    // for an unused consumer" discipline, same as the faction/zone skip
-    // below).
+    // rather than plumbing for a real signal, same as the faction/zone skip
+    // below.
     QueryResult catResult = CharacterDatabase.Query(
         "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}' AND is_opener = 1 AND card_gated = 0", categoryName);
     if (!catResult)

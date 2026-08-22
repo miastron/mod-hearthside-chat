@@ -78,11 +78,10 @@ namespace
         return true;
     }
 
-    // Mutating-half gate: valid token *and* HttpControlEnable (§4.19's
-    // "different risk surfaces" split). Checked after RequireAuth at each
-    // control route's own call site rather than folded into one combined
-    // helper, so a disabled-control 403 is distinguishable from an
-    // unauthenticated 401 in logs/clients.
+    // Mutating-half gate: valid token and HttpControlEnable. Checked after
+    // RequireAuth at each control route's own call site rather than folded
+    // into one combined helper, so a disabled-control 403 is distinguishable
+    // from an unauthenticated 401.
     bool RequireControlEnabled(hs_httplib::Response& res)
     {
         if (!g_HsHttpControlEnable)
@@ -331,12 +330,10 @@ void Hs_HttpServerStop()
         s_server->stop();
 
     // Detach rather than join, and deliberately do not reset s_server here
-    // -- matches mod-playerbots-characters' own PBC_HttpServerStop exactly.
-    // The detached thread's lambda still dereferences the global s_server
-    // to call listen_after_bind(); resetting it here would race the
-    // detached thread's own teardown of that same object. Left alive for
-    // the rest of the process's life is the same tradeoff PBC already made
-    // for this shutdown shape.
+    // -- the detached thread's lambda still dereferences the global
+    // s_server to call listen_after_bind(), so resetting it here would
+    // race that thread's own teardown of the same object. s_server is left
+    // alive for the rest of the process's life as a result.
     if (s_thread && s_thread->joinable())
         s_thread->detach();
     s_thread.reset();

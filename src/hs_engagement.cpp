@@ -22,11 +22,9 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // Claude/PLAN-engagement.md §3 (resolved 2026-08-21): starting-guess
-    // compiled constants, same "live-realm judgement, not a design-session
-    // one" reasoning as hs_opener.cpp's kOpenerCooldownSeconds/
-    // kOpenerFireChancePercent -- tuned later against evidence, not fixed
-    // here.
+    // Starting-guess compiled constants, same reasoning as hs_opener.cpp's
+    // kOpenerCooldownSeconds/kOpenerFireChancePercent -- tuned later
+    // against live-realm evidence, not fixed here.
     constexpr uint32_t kEngagementScanIntervalMs        = 30000; // matches hs_script.cpp's cadence
     constexpr int64_t  kEngagementFireWindowMinSec       = 60;
     constexpr int64_t  kEngagementFireWindowMaxSec       = 90;
@@ -97,9 +95,9 @@ namespace
     }
 
     // Marks a fired follow-up's outcome on its pair state -- eligible=false
-    // (the next follow-up in this chain needs another direct reply first,
-    // per the "capped by player engagement" design), depth+1, lastActivityAt
-    // refreshed so the pair doesn't immediately re-enter the fire window.
+    // (the next follow-up in this chain needs another direct reply first),
+    // depth+1, lastActivityAt refreshed so the pair doesn't immediately
+    // re-enter the fire window.
     void MarkFollowUpFired(uint64_t botGuid, uint64_t senderGuid)
     {
         std::lock_guard<std::mutex> lock(g_EngagementMutex);
@@ -220,6 +218,6 @@ void HsEngagementScanWorldScript::OnUpdate(uint32_t diff)
 
     // hs_opener.h's own named fifth trigger ("prolonged proximity") --
     // sharing this tick rather than running a second near-identical scan
-    // timer (Claude/PLAN-engagement.md §2).
+    // timer.
     Hs_ScanProximityOpeners();
 }

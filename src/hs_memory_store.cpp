@@ -21,10 +21,10 @@ namespace
         return ai && ai->IsBotAI();
     }
 
-    // §4.12's ~20-row cap, first_meeting exempt (pinned) -- deletes the
-    // oldest excess rows for this pair, if any. MySQL's single-table DELETE
-    // supports ORDER BY/LIMIT directly, so this is one statement rather than
-    // a select-then-delete-by-id round trip.
+    // Enforces the ~20-row cap (first_meeting exempt) by deleting the
+    // oldest excess rows for this pair. MySQL's single-table DELETE
+    // supports ORDER BY/LIMIT directly, so this is one statement rather
+    // than a select-then-delete-by-id round trip.
     void EvictOverflow(uint64_t botGuid, uint64_t playerGuid)
     {
         QueryResult countResult = CharacterDatabase.Query(

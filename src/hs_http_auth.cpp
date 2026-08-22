@@ -18,8 +18,7 @@ bool Hs_ValidateBearerToken(const std::string& token)
 
     // Constant-time comparison -- the token backs an admin control surface,
     // so a length/early-exit timing leak is worth closing even though this
-    // server binds loopback by default (§4.19: "anything on this box must
-    // assume it may end up reachable from something open").
+    // server binds loopback by default.
     if (token.size() != g_HsHttpServerPrivateKey.size())
         return false;
 

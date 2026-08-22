@@ -28,10 +28,8 @@ namespace
     std::atomic<uint32_t> g_RowsAddedThisSession{0};
     std::atomic<uint32_t> g_RowsEvictedThisSession{0};
 
-    // §7 step 14: "start at 4 [turns] and watch how often scripts complete"
-    // (§6). A compiled constant, not a config key -- an operator has no way
-    // to judge this number yet, same reasoning as every other §6 "needs a
-    // live realm" figure this module has shipped as a placeholder so far.
+    // A compiled constant, not a config key -- there's no data yet to judge
+    // the right turn count from, so this ships as a placeholder.
     constexpr int kScriptTurnCount = 4;
 
     // The 10 playable WotLK classes (id 10 is unused in the class enum).
@@ -40,10 +38,9 @@ namespace
         CLASS_DEATH_KNIGHT, CLASS_SHAMAN, CLASS_MAGE, CLASS_WARLOCK, CLASS_DRUID,
     };
 
-    // The four level_band_tag labels step 11 authored (hs_corpus.h's
-    // Hs_LevelBandFor maps a *level* to one of these; here the generator
-    // just needs the fixed label set to enumerate buckets, not a
-    // level->band lookup).
+    // The four level_band_tag labels (hs_corpus.h's Hs_LevelBandFor maps a
+    // *level* to one of these; here the generator just needs the fixed
+    // label set to enumerate buckets, not a level->band lookup).
     const std::vector<std::string> kLevelBands = { "low", "mid", "high", "endgame" };
 
     std::string ClassNameFor(uint8_t classId)
@@ -73,8 +70,8 @@ namespace
         bool        cardGated;
     };
 
-    // All rows in one exact bucket -- unlimited, since dedup (§4.7) has to
-    // check a candidate against every existing row, not a sample.
+    // All rows in one exact bucket -- unlimited, since dedup has to check a
+    // candidate against every existing row, not a sample.
     std::vector<std::string> AllRowsInBucket(const std::string& category, const std::string& tagColumn,
                                               const std::string& tagValueSql)
     {
@@ -266,16 +263,14 @@ namespace
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
 
-    // §4.16: baseline persona only, no archetype and no card -- personality
-    // is applied per speaker at delivery by the style pass (hs_script.cpp),
-    // so the generator's job is clean, neutral dialogue. Deliberately
-    // restricted to §4.13's two free rows (gripes, opinions, preferences --
-    // nothing checkable): that register is the *primary* defense against
-    // state drift (§4.16: "the answer is to keep scripts almost entirely in
-    // §4.13's two free rows"), so v1 doesn't build %my_level/%other_class
-    // placeholder substitution at all -- the secondary net, not the primary
-    // one, and real added machinery for a case the primary defense already
-    // covers.
+    // Baseline persona only, no archetype and no card -- personality is
+    // applied per speaker at delivery by the style pass (hs_script.cpp), so
+    // the generator's job is clean, neutral dialogue. Deliberately
+    // restricted to gripes, opinions, and preferences -- nothing checkable
+    // -- so v1 doesn't need %my_level/%other_class placeholder substitution
+    // at all: sticking to unfalsifiable topics is the primary defense
+    // against state drift, and building placeholder substitution would be
+    // machinery for a case that defense already covers.
     const std::string kScriptSystemPrompt =
         "You are an ordinary player in World of Warcraft: Wrath of the Lich King, making small "
         "talk with another player you don't know well. Keep it casual, brief, one short line at "
@@ -291,18 +286,17 @@ namespace
     // One full attempt: generate kScriptTurnCount lines as a single
     // continuous exchange (reusing the reactive tier's own history-append
     // mechanism, hs_llm.h's HsHistoryTurn -- turn N's trigger is turn N-1's
-    // text, so the model is always just "replying," the same shape as two
-    // real people alternating). Turns are labelled speaker_slot 0/1 by
-    // position after the fact; the model never needs to know there are two
-    // characters, since both share the identical baseline voice (§4.16: "no
-    // archetypes, no casting"). A single line per call is required, not a
-    // stylistic choice -- Hs_CallLLM stops generation at the first newline
-    // (hs_llm.cpp), so one call cannot produce a multi-turn script.
+    // text, so the model is always just replying, the same shape as two real
+    // people alternating). Turns are labelled speaker_slot 0/1 by position
+    // after the fact; the model never needs to know there are two
+    // characters, since both share the identical baseline voice. A single
+    // line per call is required, not a stylistic choice -- Hs_CallLLM stops
+    // generation at the first newline (hs_llm.cpp), so one call cannot
+    // produce a multi-turn script.
     //
     // Aborts (returns false, no partial script ever inserted) on the first
     // LLM failure or quality-gate rejection; the caller's backoff already
-    // handles "try again later" the same way it does for a failed corpus
-    // generation.
+    // handles retrying later, the same as a failed corpus generation.
     bool RunOneScriptGenerationCycle()
     {
         HsLLMConfig cfg;
@@ -343,8 +337,8 @@ namespace
             prevText = result.text;
         }
 
-        // §4.7's "insert a row with AUTO_INCREMENT, then use its new id
-        // right away" is unsafe over CharacterDatabase's pooled synchronous
+        // Inserting a row with AUTO_INCREMENT and then reading back its new
+        // id is unsafe over CharacterDatabase's pooled synchronous
         // connections (LAST_INSERT_ID() is session-scoped and the pool does
         // not guarantee two calls share a connection). Only this generator
         // thread ever writes to hside_script, so MAX(id)+1 has no concurrent
@@ -388,12 +382,12 @@ namespace
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
 
-    // §4.12/§7 step 15: one promoted-but-uncarded bot's row (archetype is
-    // recomputed from Hs_ArchetypeForBot(guid, lastKnownLevel) rather than
-    // parsed back from the stored name column -- that function is pure and
-    // already the source of truth hs_queue.cpp's WorkerLoop uses, so this
-    // avoids needing a second string->enum lookup that would exist only for
-    // this one call site).
+    // One promoted-but-uncarded bot's row (archetype is recomputed from
+    // Hs_ArchetypeForBot(guid, lastKnownLevel) rather than parsed back from
+    // the stored name column -- that function is pure and already the
+    // source of truth hs_queue.cpp's WorkerLoop uses, so this avoids
+    // needing a second string->enum lookup that would exist only for this
+    // one call site).
     struct PendingCard
     {
         uint64_t botGuid;
@@ -413,9 +407,9 @@ namespace
     }
 
     // hasGuild/guildName straight from the characters/guild_member/guild
-    // tables -- the generator thread never touches Player*, same "resolve
-    // it in SQL, not through a world-thread handoff" shape the rest of this
-    // file already uses for class/level bucket enumeration.
+    // tables -- the generator thread never touches Player*, resolving it in
+    // SQL instead, the same shape the rest of this file already uses for
+    // class/level bucket enumeration.
     struct GuildLookup
     {
         bool        hasGuild = false;
@@ -438,13 +432,13 @@ namespace
         return lookup;
     }
 
-    // One card, both halves, two LLM calls (§4.12: "a card is two artefacts,
-    // a voice block and a fact sheet"). Aborts (returns false, no partial
-    // card ever written) on the first LLM failure or validation rejection --
-    // same "try again next cycle" shape as script generation. On success:
-    // writes both halves, flips card_active, and pushes the bot's name into
-    // playerbots' recycling-exclusion vectors immediately (§4.13) rather
-    // than waiting for the next startup/reload reconcile.
+    // One card, both halves (a voice block and a fact sheet), two LLM
+    // calls. Aborts (returns false, no partial card ever written) on the
+    // first LLM failure or validation rejection, retrying next cycle the
+    // same as script generation. On success: writes both halves, flips
+    // card_active, and pushes the bot's name into playerbots' recycling-
+    // exclusion vectors immediately rather than waiting for the next
+    // startup/reload reconcile.
     bool RunOneCardGenerationCycle()
     {
         PendingCard pending;
@@ -518,11 +512,11 @@ namespace
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
         // archetype is written back here too -- it's recomputed above from
-        // (guid, lastKnownLevel) rather than trusted from the stored column
-        // (same "always correct for the level passed in" reasoning as
-        // hs_archetype.h's Hs_ArchetypeForBot), so without this the stored
-        // column can go stale relative to the card actually generated if
-        // the bot's level changed between promotion and this cycle running.
+        // (guid, lastKnownLevel) rather than trusted from the stored column,
+        // same as hs_archetype.h's Hs_ArchetypeForBot always recomputing for
+        // the level passed in. Without this the stored column can go stale
+        // relative to the card actually generated if the bot's level
+        // changed between promotion and this cycle running.
         CharacterDatabase.Execute(
             "UPDATE hside_identity SET archetype = '{}', card_voice = '{}', card_facts = '{}', "
             "card_model = {}, card_prompt_version = {}, card_active = 1 WHERE bot_guid = {}",
@@ -547,8 +541,8 @@ namespace
                 continue;
             }
 
-            // §4.7 priority order: "cards, then script reserve, then
-            // buckets." Cards are the highest priority as of step 15.
+            // Priority order: cards first, then the script reserve, then
+            // corpus buckets.
             bool added;
             if (PendingCardCount() > 0)
                 added = RunOneCardGenerationCycle();
@@ -705,10 +699,10 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
     std::string escapedVersion = promptVersion;
     CharacterDatabase.EscapeString(escapedVersion);
 
-    // NULL rather than an empty string for either -- §4.4's column comments
-    // read "NULL for hand-authored rows", and an empty string would read as
-    // a set-but-blank value instead of "not supplied" (e.g. a generator
-    // configured with no model name, or a GM capture's prompt_version).
+    // NULL rather than an empty string for either -- hand-authored rows use
+    // NULL, and an empty string would read as a set-but-blank value instead
+    // of "not supplied" (e.g. a generator configured with no model name, or
+    // a GM capture's prompt_version).
     std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
     std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 

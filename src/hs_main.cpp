@@ -17,14 +17,11 @@
 
 namespace
 {
-    // New 2026-08-21: loads the archetype table from hside_archetype (§4.11,
-    // moved out of a compiled constant so weights/care/reply/cap/talksAbout/
-    // profanity are retunable without a rebuild). Its own WorldScript, same
-    // "kept separate from HsConfigWorldScript so config loading stays
-    // config-only" reasoning the queue lifecycle script below already uses --
-    // registered right after it and before anything that could draw an
-    // archetype (the queue worker, reflex/grounded/corpus replies, all of
-    // which run only once a player is in the world, well after startup).
+    // Loads hside_archetype into memory so weights/care/reply/cap/talksAbout/
+    // profanity are retunable without a rebuild. Registered right after
+    // HsConfigWorldScript and before anything that could draw an archetype
+    // (queue worker, reflex/grounded/corpus replies), all of which only run
+    // once a player is in the world.
     class HsArchetypeLifecycleWorldScript : public WorldScript
     {
     public:
@@ -32,17 +29,14 @@ namespace
         void OnStartup() override { Hs_LoadArchetypesFromDb(); }
         void OnAfterConfigLoad(bool reload) override
         {
-            // `.reload config` doesn't touch hside_archetype, but an operator
-            // editing the table directly and wanting a live pick-up without a
-            // full restart is exactly what `.reload config` already means for
-            // every other HearthsideChat.* setting -- reusing that trigger
-            // rather than inventing a new GM command for one table.
+            // `.reload config` doesn't touch hside_archetype, but reusing it
+            // to also pick up table edits avoids a second GM command.
             if (reload)
                 Hs_LoadArchetypesFromDb();
         }
     };
 
-    // Starts/stops the §4.3 runtime queue's worker thread. Kept separate from
+    // Starts/stops the runtime queue's worker thread. Kept separate from
     // HsConfigWorldScript so config loading stays config-only; registered
     // after it so the worker never starts before HearthsideChat.* is loaded.
     class HsQueueLifecycleWorldScript : public WorldScript
@@ -53,10 +47,9 @@ namespace
         void OnShutdown() override { Hs_QueueShutdown(); }
     };
 
-    // Same lifecycle shape for the §4.7 idle-time generator's own
-    // background thread (step 12). Separate from the queue's -- the
-    // generator only ever *calls into* Hs_IsReactiveIdle(), it doesn't
-    // share the reactive worker thread.
+    // Same lifecycle shape for the idle-time generator's background thread.
+    // Kept separate from the queue's -- the generator only calls into
+    // Hs_IsReactiveIdle(), it doesn't share the reactive worker thread.
     class HsGeneratorLifecycleWorldScript : public WorldScript
     {
     public:
@@ -65,33 +58,19 @@ namespace
         void OnShutdown() override { Hs_GeneratorShutdown(); }
     };
 
-    // §4.13's exclusion-vector projection (trap 16): `hside_identity` is the
-    // source of truth, sPlayerbotAIConfig's two exclude vectors are a
-    // projection of it, re-applied at startup, on every `.reload config`,
-    // and periodically -- playerbots' own OnAfterConfigLoad handler
-    // unconditionally clears both vectors from playerbots.conf on every
-    // reload, which has no way to encode these names.
-    //
-    // §4.13's own decision framework named the test to run and the fix to
-    // ship if it failed: "promote a bot, confirm its name is in
-    // resetBotLevelExcludeNames, issue .reload config, and re-read the
-    // vector. Present -> ordering is favourable and the timer is
-    // unnecessary. Absent -> ... the periodic reconcile ships at 300s,
-    // aligned with the bracket check." Run live against the test realm
-    // (step 15): promoted+carded a real bot, confirmed via gdb that its
-    // name landed in both vectors, issued `.reload config`, and re-checked
-    // via gdb -- both vectors came back empty. Ordering is unfavorable on
-    // this build, so the periodic reconcile below is not a defensive
-    // extra; it's the specified outcome of a test that actually failed.
+    // hside_identity is the source of truth for playerbots' exclude vectors,
+    // but playerbots' own OnAfterConfigLoad handler unconditionally clears
+    // both vectors on every `.reload config` (it has no way to encode these
+    // names), so they need periodic reapplication rather than a one-time
+    // push. Confirmed live: promoting a bot and issuing `.reload config`
+    // leaves it out of both vectors until this reconcile runs again.
     constexpr uint32_t kIdentityReconcileIntervalMs = 300000;
 
-    // §4.12 decay/pinning/retirement (§7 step 17). Shares this WorldScript
-    // rather than getting its own -- the reconcile above already ticks on a
-    // timer, and decay/dormancy operate on day/week/season-scale windows
+    // Decay/pinning/retirement sweep. Shares this WorldScript rather than
+    // getting its own -- decay/dormancy operate on day/week-scale windows
     // (hs_identity.h's kHsScoreDecayGraceDays/kHsCardDormancyDays), so a
-    // once-daily cadence is the natural unit rather than the reconcile's
-    // 300s bracket-check alignment. See hs_identity_store.h's
-    // Hs_RunIdentityDailySweep for what the sweep does.
+    // once-daily cadence fits better than the reconcile's 300s interval.
+    // See Hs_RunIdentityDailySweep (hs_identity_store.h) for what it does.
     constexpr uint32_t kIdentitySweepIntervalMs = 86400000;
 
     class HsIdentityLifecycleWorldScript : public WorldScript
@@ -126,13 +105,12 @@ namespace
         uint32 _msSinceSweep     = 0;
     };
 
-    // §4.5/§4.6, §7 step 18: exposure-first corpus eviction. Its own
-    // WorldScript rather than folded into the identity one above -- corpus
-    // and identity are different subsystems that happen to both want a
-    // once-daily cadence, not one lifecycle. Runs unconditionally (not
-    // gated on g_HsGeneratorEnabled), since a bucket can go over quota via
-    // `.hearthside capture` or a lowered RowsPerBucket even while
-    // generation itself is off.
+    // Exposure-first corpus eviction. Its own WorldScript rather than folded
+    // into the identity one above -- corpus and identity are unrelated
+    // subsystems that happen to share a once-daily cadence. Runs
+    // unconditionally (not gated on g_HsGeneratorEnabled), since a bucket
+    // can go over quota via `.hearthside capture` or a lowered
+    // RowsPerBucket even while generation itself is off.
     constexpr uint32_t kCorpusEvictionIntervalMs = 86400000;
 
     class HsCorpusLifecycleWorldScript : public WorldScript
@@ -152,12 +130,11 @@ namespace
         uint32 _msSinceEviction = 0;
     };
 
-    // §4.19/§7 step 19: the authenticated HTTP control API's lifecycle.
-    // Registered after HsConfigWorldScript so g_HsHttpServer* is loaded
-    // before Start() reads it, same ordering reasoning as the queue/
-    // generator lifecycle scripts above. A bind failure or missing private
-    // key is logged and leaves the server off (hs_http_server.cpp) -- this
-    // WorldScript doesn't need to know which happened.
+    // The authenticated HTTP control API's lifecycle. Registered after
+    // HsConfigWorldScript so g_HsHttpServer* is loaded before Start() reads
+    // it. A bind failure or missing private key is logged and leaves the
+    // server off (hs_http_server.cpp) -- this WorldScript doesn't need to
+    // know which happened.
     class HsHttpServerWorldScript : public WorldScript
     {
     public:
@@ -166,10 +143,9 @@ namespace
         void OnShutdown() override { Hs_HttpServerStop(); }
     };
 
-    // §4.19/§7 step 19: the rolling metrics sampler. "~5 minutes" per §6 --
-    // its own accumulator on the same tick-driven shape as every other
-    // periodic sweep in this file, not folded into an existing WorldScript
-    // since none of them share this cadence.
+    // Rolling metrics sampler, on the same tick-driven shape as the other
+    // periodic sweeps in this file -- its own accumulator since none of
+    // them share its cadence.
     class HsMetricsWorldScript : public WorldScript
     {
     public:

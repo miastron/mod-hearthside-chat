@@ -35,7 +35,7 @@ namespace
         return h;
     }
 
-    // hash(botGuid, message text) -- §4.11 "seed per message, not per bot",
+    // hash(botGuid, message text) -- seeds per message rather than per bot,
     // same idiom hs_style.cpp's SeedFor uses.
     uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
     {
@@ -55,8 +55,8 @@ namespace
     // Trims outer whitespace and collapses internal whitespace runs to a
     // single space. Punctuation is left alone -- callers decide how much of
     // it to strip, since the BotQuestion family needs to keep a literal
-    // trailing '?' for the bare "bot?" case (trap 23) while the Plain
-    // family strips it freely.
+    // trailing '?' for the bare "bot?" case, while the Plain family strips
+    // it freely.
     std::string NormalizeWhitespace(const std::string& s)
     {
         std::string out;
@@ -84,8 +84,8 @@ namespace
     // Collapses any run of 3+ identical characters down to one ("loooool"
     // -> "lol", "tyyyy" -> "ty") and strips any trailing run of !?. -- the
     // Plain family's tolerance for how a one-word reflex actually gets
-    // typed. Not used by BotQuestion/PersonalProbe, which stay strict (§3:
-    // "a false positive here is far worse than a miss").
+    // typed. Not used by BotQuestion/PersonalProbe, which stay strict: a
+    // false positive there is far worse than a miss.
     std::string CompressForPlainMatch(const std::string& s)
     {
         static const std::regex kRepeatRun(R"((.)\1{2,})");
@@ -99,9 +99,8 @@ namespace
 
     // Strips at most one trailing '?', '!' or '.' -- BotQuestion/
     // PersonalProbe's tolerance for "how old are you?" vs "how old are
-    // you", without the Plain family's aggressive repeat-collapsing (which
-    // would turn "bot??" into "bot?" and blur the bare-`bot` line trap 23
-    // exists to keep sharp).
+    // you", without the Plain family's aggressive repeat-collapsing, which
+    // would turn "bot??" into "bot?" and blur the bare-"bot?" special case.
     std::string StripOneTrailingMark(const std::string& s)
     {
         if (!s.empty())
@@ -121,13 +120,10 @@ namespace
 
     const std::vector<PlainEntry>& PlainTable()
     {
-        // PLAN.md §3 line 89's exact trigger list: gz / ty / inv / sum /
-        // lol / wb. Response text is this module's own -- PLAN.md names the
-        // trigger vocabulary, not the reply wording. inv/sum are the two
-        // that ask the bot for an action (invite, summon) this module
-        // cannot actually perform (it governs speech only), so their
-        // replies stay honest and noncommittal rather than promising a
-        // follow-up the bot will never deliver.
+        // inv/sum are the two triggers that ask the bot for an action
+        // (invite, summon) this module cannot actually perform (it governs
+        // speech only), so their replies stay honest and noncommittal
+        // rather than promising a follow-up the bot will never deliver.
         static const std::vector<PlainEntry> table = {
             { "gz",  { "ty!", "thanks!", "appreciate it" } },
             { "ty",  { "np", "np!", "yw" } },
@@ -141,11 +137,11 @@ namespace
 
     const std::vector<std::string>& BotQuestionPhrases()
     {
-        // §4.18 trap 23: "must never match bare `bot`". Every entry here is
-        // multi-word; the single-word "bot?" case is handled separately in
-        // Hs_MatchReflex and requires the literal question mark. So a
-        // standalone "bot" / "ah bot" / "botting" can never equal any
-        // BotQuestion match under whole-message comparison.
+        // Must never match bare "bot". Every entry here is multi-word; the
+        // single-word "bot?" case is handled separately in Hs_MatchReflex
+        // and requires the literal question mark. So a standalone "bot" /
+        // "ah bot" / "botting" can never equal any BotQuestion match under
+        // whole-message comparison.
         static const std::vector<std::string> phrases = {
             "are you a bot", "r u a bot", "are u a bot", "u a bot", "u bot",
             "is this an npc", "is this a bot",
@@ -155,8 +151,8 @@ namespace
 
     const std::vector<std::string>& PersonalProbePhrases()
     {
-        // §4.20 / trap 28's named examples -- "where are you from", "what
-        // do you do", "how old are you", "m or f" -- plus close variants.
+        // Core personal-probe questions -- "where are you from", "what do
+        // you do", "how old are you", "m or f" -- plus close variants.
         static const std::vector<std::string> phrases = {
             "where are you from", "where you from", "where r u from",
             "what do you do", "what do you do irl", "what do you do for a living",
@@ -168,9 +164,9 @@ namespace
 
     const std::vector<const char*>& BotQuestionResponses(HsBotQuestionMode mode)
     {
-        // Wink is the honest non-answer (§4.18): neither confirms nor
-        // denies. Deflect is its more evasive subset ("huh?"/"what?" only).
-        // Admit is the operator's explicit opt-in to being straightforward.
+        // Wink is the honest non-answer: neither confirms nor denies.
+        // Deflect is its more evasive subset ("huh?"/"what?" only). Admit is
+        // the operator's explicit opt-in to being straightforward.
         static const std::vector<const char*> wink    = { "maybe!", "shh... don't tell anyone", "huh?", "what?" };
         static const std::vector<const char*> deflect = { "huh?", "what?" };
         static const std::vector<const char*> admit   = { "yeah, I'm a bot", "yep, this one's a bot" };
@@ -184,13 +180,12 @@ namespace
 
     const std::vector<const char*>& PersonalProbeResponses()
     {
-        // §4.20: "a vague deflection, a joke, a subject change, and an
-        // occasional no-reply -- reads as a person; a rule reads as a
-        // rule." One shared pool across every probe question rather than a
-        // set per question -- PLAN.md doesn't ask for per-question wording,
-        // and the honest non-answer is the same regardless of which
-        // personal question triggered it. The empty entry is the no-reply
-        // member: 1 of 7, "occasional", not "the rule".
+        // A vague deflection, a joke, a subject change, and an occasional
+        // no-reply reads as a person; a rule reads as a rule. One shared
+        // pool across every probe question -- the honest non-answer is the
+        // same regardless of which personal question triggered it. The
+        // empty entry is the no-reply member: 1 of 7, occasional, not the
+        // rule.
         static const std::vector<const char*> pool = {
             "eh, does it matter", "long story", "who's asking",
             "that's classified ;)", "anyway, so...", "next question",
@@ -214,7 +209,7 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
     std::string withPunct  = NormalizeWhitespace(ToLowerAscii(trigger));
     std::string corePhrase = StripOneTrailingMark(withPunct);
 
-    // ---- "are you a bot?" (§4.18) -- checked first: it is the module's
+    // ---- "are you a bot?" -- checked first: it is the module's
     // most-scrutinised line and the narrowest, most specific match. ----
     bool isBotQuestion = (withPunct == "bot?");
     if (!isBotQuestion)
@@ -241,7 +236,7 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
         return match;
     }
 
-    // ---- personal-probe deflection (§4.20, trap 28) ----
+    // ---- personal-probe deflection ----
     for (const std::string& phrase : PersonalProbePhrases())
     {
         if (corePhrase == phrase)
