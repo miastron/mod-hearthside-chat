@@ -1,3 +1,5 @@
+#include "hs_archetype.h"
+#include "hs_archetype_store.h"
 #include "hs_command.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -20,6 +22,7 @@
 #include "PlayerbotMgr.h"
 #include "QueryResult.h"
 
+#include <cctype>
 #include <string>
 #include <vector>
 
@@ -278,6 +281,61 @@ namespace
         return true;
     }
 
+    // Comma-separated list of every currently-loaded archetype's enum_name,
+    // for the error message below -- built from the live table so it never
+    // drifts from what hside_archetype actually has loaded.
+    std::string ListLoadedArchetypeNames()
+    {
+        std::string list;
+        for (size_t i = 0; i < kHsArchetypeCount; ++i)
+        {
+            if (i > 0)
+                list += ", ";
+            list += Hs_ArchetypeInfoFor(static_cast<HsArchetype>(i)).enumName;
+        }
+        return list;
+    }
+
+    // Pins a bot to one specific, already-existing archetype, bypassing
+    // Hs_ArchetypeForBot's normal GUID-weighted draw -- e.g. to test how an
+    // archetype reads without waiting for a bot to draw it naturally.
+    // `reset` clears the pin and returns the bot to the normal draw.
+    bool HandleHearthsideArchetype(ChatHandler* handler, std::string_view botNameArg, std::string_view archetypeArg)
+    {
+        std::string botName = std::string(botNameArg);
+        uint64_t botGuid = ResolveBotGuidByName(botName);
+        if (botGuid == 0)
+        {
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            return true;
+        }
+
+        // enum_name is always upper-snake-case, so uppercasing the GM's
+        // input means "trader" works the same as "TRADER".
+        std::string archetypeName = std::string(archetypeArg);
+        for (char& c : archetypeName)
+            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+
+        if (archetypeName == "RESET" || archetypeName == "CLEAR")
+        {
+            Hs_ClearArchetypeOverrideAndPersist(botGuid);
+            handler->PSendSysMessage("[HearthsideChat] '{}' archetype pin cleared -- back to the normal draw.", botName);
+            return true;
+        }
+
+        HsArchetype archetype;
+        if (!Hs_ArchetypeForName(archetypeName, archetype))
+        {
+            handler->PSendSysMessage("[HearthsideChat] Unknown archetype '{}'. Currently loaded: {}",
+                archetypeName, ListLoadedArchetypeNames());
+            return true;
+        }
+
+        Hs_SetArchetypeOverrideAndPersist(botGuid, archetype);
+        handler->PSendSysMessage("[HearthsideChat] '{}' pinned to {}.", botName, archetypeName);
+        return true;
+    }
+
     // Bulk-evicts by generation run; a run is identified by its
     // prompt_version tag.
     bool HandleHearthsideEvictRun(ChatHandler* handler, std::string_view promptVersionArg)
@@ -298,6 +356,7 @@ ChatCommandTable HsCommandScript::GetCommands() const
         { "status",     HandleHearthsideStatus,    SEC_GAMEMASTER, Console::Yes },
         { "capture",    HandleHearthsideCapture,   SEC_GAMEMASTER, Console::Yes },
         { "inspect",    HandleHearthsideInspect,   SEC_GAMEMASTER, Console::Yes },
+        { "archetype",  HandleHearthsideArchetype, SEC_GAMEMASTER, Console::Yes },
         { "review",     HandleHearthsideReview,    SEC_GAMEMASTER, Console::Yes },
         { "promote",    HandleHearthsidePromote,   SEC_GAMEMASTER, Console::Yes },
         { "demote",     HandleHearthsideDemote,    SEC_GAMEMASTER, Console::Yes },

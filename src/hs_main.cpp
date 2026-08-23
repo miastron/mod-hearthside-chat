@@ -26,7 +26,16 @@ namespace
     {
     public:
         HsArchetypeLifecycleWorldScript() : WorldScript("HsArchetypeLifecycleWorldScript") {}
-        void OnStartup() override { Hs_LoadArchetypesFromDb(); }
+        void OnStartup() override
+        {
+            Hs_LoadArchetypesFromDb();
+            // Overrides validate their enum_name against the table just
+            // loaded above, so this must come second. Startup-only -- a
+            // pin survives a `.reload config` untouched, since neither that
+            // reload nor Hs_SetArchetypeTable's replace touches the
+            // separate override map.
+            Hs_LoadArchetypeOverridesFromDb();
+        }
         void OnAfterConfigLoad(bool reload) override
         {
             // `.reload config` doesn't touch hside_archetype, but reusing it
@@ -105,7 +114,8 @@ namespace
         uint32 _msSinceSweep     = 0;
     };
 
-    // Exposure-first corpus eviction. Its own WorldScript rather than folded
+    // Corpus eviction: exposure-first over-quota trimming, then the
+    // age-based unused-row sweep. Its own WorldScript rather than folded
     // into the identity one above -- corpus and identity are unrelated
     // subsystems that happen to share a once-daily cadence. Runs
     // unconditionally (not gated on g_HsGeneratorEnabled), since a bucket
@@ -124,6 +134,7 @@ namespace
                 return;
             _msSinceEviction = 0;
             Hs_RunEvictionSweep();
+            Hs_RunUnusedRowEvictionSweep();
         }
 
     private:

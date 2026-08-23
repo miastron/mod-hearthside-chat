@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <memory>
 #include <regex>
 #include <utility>
@@ -84,6 +85,21 @@ namespace
         if (!url.empty() && url.back() == '/')
             url.pop_back();
         return url;
+    }
+
+    // A backend-agnostic proxy for assembled prompt length (§4.19/§4.2):
+    // sums the same content regardless of which apiType branch below turns
+    // it into a raw string (llamacpp) or a messages array (ollama/openai),
+    // so the metric is comparable across backends.
+    uint32_t PromptCharCount(const std::string& systemPrompt, const std::string& archetypeLine,
+                              const std::vector<HsHistoryTurn>& history, const std::string& trigger)
+    {
+        size_t total = systemPrompt.size() + archetypeLine.size() + trigger.size();
+        for (auto const& ex : Fewshot())
+            total += ex.first.size() + ex.second.size();
+        for (auto const& turn : history)
+            total += turn.trigger.size() + turn.reply.size();
+        return static_cast<uint32_t>(total);
     }
 
     HsLLMFailure ClassifyTransportError(hs_httplib::Error err)
@@ -213,7 +229,8 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
                         const std::string& archetypeLine,
                         const std::vector<HsHistoryTurn>& history, const std::string& trigger)
 {
-    HsLLMResult result{ false, "", HsLLMFailure::None, 0 };
+    HsLLMResult result{ false, "", HsLLMFailure::None, 0, 0, 0 };
+    result.promptChars = PromptCharCount(systemPrompt, archetypeLine, history, trigger);
 
     const bool isLlamaCpp = IEquals(cfg.apiType, "llamacpp");
     const bool isOllama   = IEquals(cfg.apiType, "ollama");
@@ -344,7 +361,10 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
             headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
     }
 
+    auto callStart = std::chrono::steady_clock::now();
     HsHttpOutcome outcome = HttpPost(url, body.dump(), headers, cfg.timeoutSec);
+    result.latencyMs = static_cast<uint32_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - callStart).count());
     result.httpStatus = outcome.httpStatus;
     if (outcome.failure != HsLLMFailure::None)
     {

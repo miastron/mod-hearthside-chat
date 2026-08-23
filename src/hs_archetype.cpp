@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstdint>
+#include <mutex>
+#include <unordered_map>
 
 namespace
 {
@@ -43,27 +45,33 @@ namespace
     // uninitialized data. hs_archetype_store.cpp logs an error on that path;
     // this file has no logging dependency of its own by design.
     std::array<HsArchetypeInfo, kHsArchetypeCount> g_Archetypes = {{
-        { kEnumNames[0],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[1],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[2],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[3],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[4],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[5],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.55f, 30, 100, false, 0.0f, 0, 255, 0 }, // CASUAL -- the one real fallback row, weight 100 so it's always drawn until the DB table loads
-        { kEnumNames[7],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[8],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[9],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[10], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[11], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[12], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 },
-        { kEnumNames[13], "", 0.5f, 0.5f, 25, 0, false, 0.0f, 0, 255, 1 },
-        { kEnumNames[14], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 2 },
+        { kEnumNames[0],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[1],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[2],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[3],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[4],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[5],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.55f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL -- the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[7],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[8],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[9],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[10], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[11], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[12], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[13], "", 0.5f, 0.5f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
+        { kEnumNames[14], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
     }};
 
     bool IsEligibleForLevel(const HsArchetypeInfo& info, uint8_t level)
     {
         return level >= info.minLevel && level <= info.maxLevel;
     }
+
+    // GM-set pins (hs_command.cpp's `.hearthside archetype`). Own mutex,
+    // separate from g_Archetypes, since this map is written on demand from
+    // the world thread and read from both the world and worker threads.
+    std::mutex                                  g_ArchetypeOverrideMutex;
+    std::unordered_map<uint64_t, HsArchetype>   g_ArchetypeOverrides;
 }
 
 void Hs_SetArchetypeTable(const std::array<HsArchetypeInfo, kHsArchetypeCount>& table)
@@ -76,8 +84,40 @@ const HsArchetypeInfo& Hs_ArchetypeInfoFor(HsArchetype a)
     return g_Archetypes[static_cast<size_t>(a)];
 }
 
+bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out)
+{
+    for (size_t i = 0; i < g_Archetypes.size(); ++i)
+    {
+        if (enumName == g_Archetypes[i].enumName)
+        {
+            out = static_cast<HsArchetype>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Hs_SetArchetypeOverride(uint64_t botGuid, HsArchetype archetype)
+{
+    std::lock_guard<std::mutex> lock(g_ArchetypeOverrideMutex);
+    g_ArchetypeOverrides[botGuid] = archetype;
+}
+
+void Hs_ClearArchetypeOverride(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_ArchetypeOverrideMutex);
+    g_ArchetypeOverrides.erase(botGuid);
+}
+
 HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level)
 {
+    {
+        std::lock_guard<std::mutex> lock(g_ArchetypeOverrideMutex);
+        auto it = g_ArchetypeOverrides.find(botGuid);
+        if (it != g_ArchetypeOverrides.end())
+            return it->second;
+    }
+
     uint64_t h = MixBits64(botGuid ^ kArchetypeSalt);
 
     uint32_t eligibleTotal = 0;

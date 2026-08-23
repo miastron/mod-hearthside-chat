@@ -9,7 +9,8 @@
 // running at all; the mutating subcommands (promote/demote/retire/pin/
 // unpin/evict-run) are the same actions the HTTP control API
 // (hs_http_server.h) exposes, reachable from the console even if
-// HttpServerPort is 0.
+// HttpServerPort is 0. `archetype` (pin/reset a bot's drawn archetype) is
+// this module's own, with no HTTP control API counterpart.
 class HsCommandScript : public CommandScript
 {
 public:

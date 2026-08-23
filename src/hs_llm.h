@@ -1,6 +1,7 @@
 #ifndef MOD_HS_LLM_H
 #define MOD_HS_LLM_H
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,9 @@ struct HsLLMResult
     std::string  text;        // trimmed, single-line, quote-stripped reply
     HsLLMFailure failure;      // HsLLMFailure::None when success is true
     int          httpStatus;  // 0 if the request never got an HTTP response
+    uint32_t     latencyMs;   // wall time of the backend call itself, set on every outcome (§4.19)
+    uint32_t     promptChars; // assembled prompt length -- §4.2's budget that fails silently, set
+                               // regardless of outcome since the prompt was still built and sent
 };
 
 // Endpoint configuration for one LLM call. Populated from HearthsideChat.LLM.*

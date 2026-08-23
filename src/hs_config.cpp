@@ -79,8 +79,6 @@ uint32_t g_HsBreakerFailureThreshold     = 3;
 uint32_t g_HsBreakerProbeIntervalSeconds = 15;
 
 bool     g_HsTypingDelayEnabled   = true;
-uint32_t g_HsTypingDelayBaseMs    = 800;
-uint32_t g_HsTypingDelayPerCharMs = 45;
 uint32_t g_HsTypingDelayMaxMs     = 6000;
 
 std::string g_HsMaxTierDirectReply = "inference";
@@ -146,8 +144,6 @@ void LoadHearthsideChatConfig()
     g_HsBreakerProbeIntervalSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.CircuitBreaker.ProbeIntervalSeconds", 15);
 
     g_HsTypingDelayEnabled   = sConfigMgr->GetOption<bool>("HearthsideChat.TypingDelay.Enable", true);
-    g_HsTypingDelayBaseMs    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.BaseMs", 800);
-    g_HsTypingDelayPerCharMs = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.PerCharMs", 45);
     g_HsTypingDelayMaxMs     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.MaxMs", 6000);
 
     g_HsMaxTierDirectReply = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.DirectReply", "inference");
@@ -186,4 +182,10 @@ HsConfigWorldScript::HsConfigWorldScript() : WorldScript("HsConfigWorldScript") 
 void HsConfigWorldScript::OnStartup()
 {
     LoadHearthsideChatConfig();
+}
+
+void HsConfigWorldScript::OnAfterConfigLoad(bool reload)
+{
+    if (reload)
+        LoadHearthsideChatConfig();
 }

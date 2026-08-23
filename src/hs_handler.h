@@ -4,21 +4,25 @@
 #include "ScriptMgr.h"
 #include <string>
 
-// Chat hooks -- /say gathers real-player-gated candidates and hands them to
-// the arbiter (hs_arbiter.h); whisper stays a simple 1:1 surface. Both route
-// through the tier-ceiling check and admission (hs_queue.h) rather than
-// dispatching an LLM call directly. Party/raid/guild/channel surfaces are
-// not yet implemented.
+// Chat hooks -- /say and party/raid gather real-player-gated candidates and
+// hand them to the arbiter (hs_arbiter.h); whisper and guild are simpler 1:1/
+// membership-scoped surfaces. All route through the tier-ceiling check and
+// admission (hs_queue.h) rather than dispatching an LLM call directly. The
+// global-channel surface (§4.17) is still not implemented.
 class HsChatHandler : public PlayerScript
 {
 public:
     HsChatHandler() : PlayerScript("HsChatHandler", {
         PLAYERHOOK_CAN_PLAYER_USE_CHAT,
         PLAYERHOOK_CAN_PLAYER_USE_PRIVATE_CHAT,
+        PLAYERHOOK_CAN_PLAYER_USE_GROUP_CHAT,
+        PLAYERHOOK_CAN_PLAYER_USE_GUILD_CHAT,
     }) {}
 
     bool OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg) override;
     bool OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Player* receiver) override;
+    bool OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Group* group) override;
+    bool OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Guild* guild) override;
 };
 
 // Drains the delivery queue once per world tick. All the actual work now

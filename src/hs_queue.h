@@ -2,9 +2,11 @@
 #define MOD_HS_QUEUE_H
 
 #include "PlayerbotAIConfig.h" // NewRpgStatus (rpgInfo.GetStatus()) -- live-activity fact
+#include "hs_topic_gate.h"     // HsTopicGateContext -- §4.13 gear/group/instance/gold/zone facts
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 // The runtime queue. A fixed worker pool of exactly one thread -- slots in
 // llama-server are a prompt cache, not a concurrency target, so requests are
@@ -12,6 +14,24 @@
 // token bucket as the primary load ceiling, a per-bot cooldown on top of it,
 // and a backend-down circuit breaker. This is the module's only stateful
 // runtime subsystem besides delivery.
+
+// Which surface a reply is delivered on -- selects both the PlayerbotAI send
+// method at delivery (Say/Whisper/SayToParty/SayToRaid/SayToGuild) and the
+// interaction_score weight (hs_identity.h). Party and Raid share one weight
+// (both small-group, deliberate address) but need separate delivery methods
+// since PlayerbotAI::SayToParty and ::SayToRaid are different calls.
+enum class HsReplyChannel : uint8_t
+{
+    Say,
+    Whisper,
+    Party,
+    Raid,
+    Guild,
+};
+
+// Lowercase name for logging/JSON, e.g. hs_metrics.cpp's per-channel
+// breakdown rows and hs_http_server.cpp's status output.
+const char* Hs_ReplyChannelName(HsReplyChannel channel);
 
 // Starts the worker thread. Call once at worldserver startup.
 void Hs_QueueStartup();
@@ -42,9 +62,15 @@ void Hs_QueueShutdown();
 // skips the interaction-score bump and the history write for these --
 // bot-initiated, not a scored player utterance, and not useful prior-turn
 // context.
+//
+// topicGate carries §4.13's remaining topic-gate facts (gear, group
+// membership/leadership, in-instance, gold, zone) -- read at the call site
+// like inCombat/botLevel/rpgStatus, then folded into the prompt as plain
+// facts (hs_topic_gate.h) rather than an instruction.
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
-                    const std::string& senderName, bool isWhisper, const std::string& userPrompt,
-                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus, bool isFollowUp);
+                    const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
+                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
+                    const HsTopicGateContext& topicGate, bool isFollowUp);
 
 // Delivers any replies the worker has finished since the last call. Must be
 // called once per world tick, from the world thread only -- this is the
@@ -71,7 +97,7 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 // (Hs_DeliverPending) rather than duplicating Say()/Whisper() dispatch. A
 // call with empty `text` is a no-op (e.g. Silent BotQuestion mode, or a
 // matched PersonalProbe pool entry with no reply).
-void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, bool isWhisper, const std::string& text);
+void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text);
 
 // Seconds since this bot's last *successfully delivered* reply, or
 // UINT32_MAX if never. Read-only query for hs_arbiter's recent-speaker
@@ -98,5 +124,55 @@ bool Hs_IsReactiveIdle();
 // reply, so "capture" always means the last one, never an accumulating
 // history.
 std::string Hs_LastPreStyleReply(const std::string& botName);
+
+// ---- §4.19 fuller metrics -------------------------------------------------
+// Recorded once per completed tier-2 request (replied or silent) from
+// WorkerLoop; read by hs_metrics.cpp on its periodic sample. In-memory only,
+// like the rest of this file's state -- hside_metrics is what gives these
+// history across restarts.
+
+// Percentiles over a rolling window of the most recent reactive-tier call
+// latencies (Hs_CallLLM's own wall time, not queue wait). All zero if no
+// samples have landed yet.
+struct HsLatencyPercentiles
+{
+    uint32_t p50Ms;
+    uint32_t p95Ms;
+    uint32_t p99Ms;
+};
+HsLatencyPercentiles Hs_ReactiveLatencyPercentiles();
+
+// Mean assembled-prompt character length by identity ring (1=stranger,
+// 2=known, 3=carded) -- ring is the dominant driver of injected persona
+// text (§4.12), so this is where a prefill-budget regression would show up
+// first. Zero for a ring with no samples yet.
+struct HsPromptCharsByRing
+{
+    uint32_t ring1Mean;
+    uint32_t ring2Mean;
+    uint32_t ring3Mean;
+};
+HsPromptCharsByRing Hs_PromptCharsByRing();
+
+// Reply-vs-silence counts since this worldserver process started, keyed by
+// archetype and by delivery channel. Not surfaced by `.hearthside status`
+// (too wide for a chat window, same reasoning hs_metrics.h already gives
+// for the metrics table itself) -- the HTTP /api/metrics route is the
+// consumer.
+struct HsArchetypeReplyCounts
+{
+    std::string enumName;
+    uint32_t    repliedCount;
+    uint32_t    silentCount;
+};
+std::vector<HsArchetypeReplyCounts> Hs_ArchetypeReplyCountsSnapshot();
+
+struct HsChannelReplyCounts
+{
+    HsReplyChannel channel;
+    uint32_t        repliedCount;
+    uint32_t        silentCount;
+};
+std::vector<HsChannelReplyCounts> Hs_ChannelReplyCountsSnapshot();
 
 #endif // MOD_HS_QUEUE_H

@@ -109,6 +109,19 @@ namespace
         if (line.empty())
             return;
 
+        // Same universal-placeholder pass as hs_handler.cpp's
+        // TryCorpusFallback -- an opener category is ordinary corpus
+        // content, so a row may carry %zone/%class/%level too. No card pass
+        // here, since is_opener categories are never card_gated
+        // (Hs_SelectOpenerLine enforces that); a card-only token surviving
+        // into an opener means a corrupt row, and the leftover check turns
+        // that into silence.
+        if (line.find('%') != std::string::npos)
+        {
+            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
+                return;
+        }
+
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
         const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
@@ -120,7 +133,7 @@ namespace
         if (style.text.empty())
             return;
 
-        Hs_DeliverReflexReply(botGuid, playerGuid, /*isWhisper=*/false, style.text);
+        Hs_DeliverReflexReply(botGuid, playerGuid, HsReplyChannel::Say, style.text);
         MarkOpenerFired(botGuid, playerGuid);
         g_OpenersFiredThisSession.fetch_add(1);
     }

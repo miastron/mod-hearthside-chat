@@ -60,10 +60,20 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
 // itself is off. Returns the number of rows evicted, for `.hearthside
 // status`/debug logging.
 //
-// Deliberately mechanical and exposure-only: age-based eviction (a row gone
-// unused for months) is a named gap, not built here, since there's no
-// concrete threshold to build it against yet.
+// Mechanical and exposure-only -- a row gone unused for months despite
+// staying under quota is a separate signal, not this sweep's job (see
+// Hs_RunUnusedRowEvictionSweep below).
 uint32_t Hs_RunEvictionSweep();
+
+// Age-based eviction, independent of bucket quota: a generator-authored row
+// unpicked for kHsGenUnusedRowEvictionDays isn't earning its place even
+// while its bucket stays under quota, so this runs as a second sweep rather
+// than folding into Hs_RunEvictionSweep's per-bucket overflow logic.
+// Hand-authored rows (generated_at NULL) are exempt -- losing seed content
+// isn't the same failure mode as losing an unwanted generator row. Starting
+// threshold, not yet tuned against a live realm (Claude/ISSUES.md). Returns
+// the number of rows evicted.
+uint32_t Hs_RunUnusedRowEvictionSweep();
 
 // Rows evicted since this worldserver process started -- `.hearthside
 // status`, same shape as Hs_GeneratorRowsAddedThisSession.

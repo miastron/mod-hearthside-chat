@@ -45,7 +45,7 @@ struct HsArchetypeInfo
     const char* enumName;       // e.g. "RAIDER_SERIOUS" -- the prompt line's label, and hside_archetype's key
     std::string talksAbout;     // verbatim archetype description text (owned string -- loaded from DB, not a literal)
     float       care;           // style-pass baseline, before combat offset/GUID jitter
-    float       replyChance;    // 0..1, starting value -- not yet consumed by the arbiter; stored but unwired
+    float       replyChance;    // 0..1; rolled per candidate by hs_arbiter.cpp's PassesReplyChance
     uint32_t    verbosityCap;   // tokens; feeds Hs_CallLLM's maxTokens, capped by HearthsideChat.LLM.MaxTokens (never raised above it)
     uint32_t    spawnWeight;    // out of 100 across all fifteen entries; used by Hs_ArchetypeForBot's weighted draw
     bool        hasAbbrevOverride; // only TRADER sets this
@@ -55,6 +55,9 @@ struct HsArchetypeInfo
     uint8_t     profanityLevel; // 0 = none, 1 = light (damn/hell/crap-tier), 2 = vulgar (TROLL_MILD/TROLL_AGGRESSIVE only)
                                  // Orthogonal to `care` -- a careful typer can still swear precisely; its own
                                  // independent axis, same as abbreviation/typo/caps.
+    uint32_t    typingBaseMs;     // hs_queue.cpp's tier-2 typing-delay formula: flat "notice and start typing" cost
+    uint32_t    typingPerCharMs;  // ms per character of the styled reply; a hasty archetype types faster, not just shorter
+                                   // (HearthsideChat.TypingDelay.Enable/MaxMs is the kill switch and ceiling, same relationship as verbosityCap/LLM.MaxTokens)
 };
 
 // Replaces the whole in-memory archetype table. Called once at startup by
@@ -65,13 +68,29 @@ void Hs_SetArchetypeTable(const std::array<HsArchetypeInfo, kHsArchetypeCount>& 
 
 const HsArchetypeInfo& Hs_ArchetypeInfoFor(HsArchetype a);
 
+// Reverse lookup by enum_name against whatever's currently loaded
+// (Hs_SetArchetypeTable), so a caller like hs_command.cpp's `.hearthside
+// archetype` GM command validates against live data instead of a second,
+// separately-maintained name list. Returns false (out untouched) if no
+// loaded entry's enumName matches.
+bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out);
+
+// GM override: pins a bot to one specific stock archetype, bypassing the
+// GUID-weighted draw entirely (Hs_ArchetypeForBot checks this first, no
+// level-eligibility filter -- an explicit pin is trusted as-is). In-memory
+// only and thread-safe; hs_archetype_store.cpp owns loading/persisting
+// these across restarts, same split as the archetype table itself.
+void Hs_SetArchetypeOverride(uint64_t botGuid, HsArchetype archetype);
+void Hs_ClearArchetypeOverride(uint64_t botGuid);
+
 // Deterministic weighted draw from the bot's GUID, restricted to the subset
 // of the fifteen stock archetypes whose level requirement `level` satisfies
 // -- a level-22 bot can never draw RAIDER_SERIOUS. Weights are renormalized
 // over just the eligible subset each call, so changing a bot's level band
 // changes what it can draw without any weight retuning. At least six of the
 // fifteen entries carry no level requirement, so the eligible pool is never
-// empty for any level 1-80.
+// empty for any level 1-80. Returns the GM override (above) first if one is
+// set for this bot, skipping the draw entirely.
 //
 // Pure and called fresh per request (hs_queue.cpp's WorkerLoop) from the
 // bot's current level, so redrawing on a level change is automatic and

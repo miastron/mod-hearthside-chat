@@ -1,14 +1,14 @@
 -- Metrics history table. In-memory counters (Hs_*ThisSession, Hs_*Count,
 -- etc.) already answer "what is true right now"; this table answers trend
--- questions ("promotions/day", "per-channel lines/min actual vs
--- configured") that a restart-resetting in-memory counter cannot.
+-- questions ("promotions/day", "latency creeping up") that a
+-- restart-resetting in-memory counter cannot.
 --
--- Scoped to metrics this module can already read without new
--- instrumentation. Request latency percentiles, assembled prompt length per
--- ring, replies-vs-silences per archetype, and per-channel lines/min are not
--- captured here -- they need timing/tracking machinery this module doesn't
--- have yet, and some describe surfaces (channel chat) that aren't built at
--- all.
+-- Request latency percentiles (rolling sample window, not full history) and
+-- mean assembled-prompt length by identity ring are flat per-interval
+-- columns here. Replies-vs-silences per archetype/channel are
+-- variable-cardinality and don't fit this row shape -- see
+-- hside_metrics_breakdown.sql. Per-channel lines/min stays unbuilt; it
+-- describes the global-channel surface (§4.17), which doesn't exist yet.
 --
 -- Sample interval (~5 min) and retention window are compiled constants
 -- (kHsMetricsSampleIntervalSeconds / kHsMetricsRetentionDays in
@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS `hside_metrics` (
   `retirements_session`          INT UNSIGNED NOT NULL,
   `memory_row_count`             INT UNSIGNED NOT NULL,
   `openers_fired_session`        INT UNSIGNED NOT NULL,
+  `latency_p50_ms`               INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'rolling-window reactive-tier call latency, hs_queue.cpp kMaxLatencySamples',
+  `latency_p95_ms`               INT UNSIGNED NOT NULL DEFAULT 0,
+  `latency_p99_ms`               INT UNSIGNED NOT NULL DEFAULT 0,
+  `prompt_chars_ring1_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'mean assembled-prompt length, stranger ring',
+  `prompt_chars_ring2_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'known ring',
+  `prompt_chars_ring3_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'carded ring',
   PRIMARY KEY (`id`),
   KEY `idx_sampled_at` (`sampled_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

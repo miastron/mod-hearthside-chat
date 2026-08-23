@@ -1,10 +1,21 @@
 #include "hs_corpus.h"
 
+#include "Bag.h"
+#include "DBCStores.h"
 #include "DatabaseEnv.h"
 #include "GameEventMgr.h"
+#include "Guild.h"
+#include "GuildMgr.h"
+#include "Item.h"
+#include "ItemTemplate.h"
+#include "ObjectMgr.h"
+#include "Player.h"
 #include "QueryResult.h"
+#include "QuestDef.h"
 #include "Random.h"
+#include "SharedDefines.h"
 
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -130,4 +141,135 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
         return ""; // faction/zone: not supported yet, same scoping as Hs_SelectCorpusLine
 
     return PickAntiRepeatRow(categoryName, tagWhere);
+}
+
+namespace
+{
+    // The exact hyperlink markup the core itself emits (see
+    // PlayerStorage.cpp's access-requirement report), not a hand-rolled
+    // approximation -- hs_style.cpp treats a full |c...|Hitem:...|h[...]|h|r
+    // run as a protected token, and only matching markup gets that treatment.
+    std::string BuildItemLink(ItemTemplate const* tmpl)
+    {
+        if (!tmpl)
+            return "";
+
+        std::ostringstream stream;
+        stream << "|c" << std::hex << ItemQualityColors[tmpl->Quality] << std::dec
+               << "|Hitem:" << tmpl->ItemId << ":0:0:0:0:0:0:0:0:0|h["
+               << tmpl->Name1 << "]|h|r";
+        return stream.str();
+    }
+
+    std::string BuildQuestLink(Quest const* quest)
+    {
+        if (!quest)
+            return "";
+
+        std::ostringstream stream;
+        stream << "|cffff7c0a|Hquest:" << quest->GetQuestId() << ":" << quest->GetQuestLevel()
+               << "|h[" << quest->GetTitle() << "]|h|r";
+        return stream.str();
+    }
+
+    // Collects every non-soulbound item the bot is carrying, then picks one
+    // at random -- picking the first found would make a bot's "WTS" line
+    // repeat the same stack until the bag shifted.
+    std::string RandomTradeableItemLink(Player* bot)
+    {
+        std::vector<ItemTemplate const*> carried;
+
+        auto consider = [&carried](Item* item)
+        {
+            if (!item || item->IsSoulBound())
+                return;
+            if (ItemTemplate const* tmpl = item->GetTemplate())
+                carried.push_back(tmpl);
+        };
+
+        // Backpack.
+        for (uint8_t slot = INVENTORY_SLOT_ITEM_START; slot < INVENTORY_SLOT_ITEM_END; ++slot)
+            consider(bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot));
+
+        // The four equipped bags.
+        for (uint8_t bagSlot = INVENTORY_SLOT_BAG_START; bagSlot < INVENTORY_SLOT_BAG_END; ++bagSlot)
+        {
+            Bag* bag = bot->GetBagByPos(bagSlot);
+            if (!bag)
+                continue;
+            for (uint32_t slot = 0; slot < bag->GetBagSize(); ++slot)
+                consider(bag->GetItemByPos(static_cast<uint8_t>(slot)));
+        }
+
+        if (carried.empty())
+            return "";
+
+        return BuildItemLink(carried[urand(0, static_cast<uint32_t>(carried.size()) - 1)]);
+    }
+
+    std::string RandomActiveQuestLink(Player* bot)
+    {
+        std::vector<Quest const*> active;
+        for (uint8_t slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
+        {
+            uint32_t questId = bot->GetQuestSlotQuestId(slot);
+            if (!questId)
+                continue;
+            if (Quest const* quest = sObjectMgr->GetQuestTemplate(questId))
+                active.push_back(quest);
+        }
+
+        if (active.empty())
+            return "";
+
+        return BuildQuestLink(active[urand(0, static_cast<uint32_t>(active.size()) - 1)]);
+    }
+}
+
+std::string Hs_ClassNameFor(uint8_t classId)
+{
+    switch (classId)
+    {
+        case CLASS_WARRIOR:      return "warrior";
+        case CLASS_PALADIN:      return "paladin";
+        case CLASS_HUNTER:       return "hunter";
+        case CLASS_ROGUE:        return "rogue";
+        case CLASS_PRIEST:       return "priest";
+        case CLASS_DEATH_KNIGHT: return "death knight";
+        case CLASS_SHAMAN:       return "shaman";
+        case CLASS_MAGE:         return "mage";
+        case CLASS_WARLOCK:      return "warlock";
+        case CLASS_DRUID:        return "druid";
+        default:                 return "";
+    }
+}
+
+HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot)
+{
+    HsPlaceholderContext ctx;
+    if (!bot)
+        return ctx;
+
+    ctx.className = Hs_ClassNameFor(bot->getClass());
+    ctx.level     = std::to_string(bot->GetLevel());
+
+    if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
+    {
+        const char* name = entry->area_name[0];
+        if (name && *name)
+            ctx.zone = name;
+    }
+
+    if (uint32_t guildId = bot->GetGuildId())
+    {
+        if (Guild* guild = sGuildMgr->GetGuildById(guildId))
+            ctx.guild = guild->GetName();
+    }
+
+    // Left empty when the bot has nothing to point at; Hs_ResolveUniversalPlaceholders
+    // turns that into "drop the line" -- an empty-bagged bot must not advertise stock.
+    ctx.itemLink  = RandomTradeableItemLink(bot);
+    ctx.questLink = RandomActiveQuestLink(bot);
+
+    return ctx;
 }

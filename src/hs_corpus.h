@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 
+class Player;
+
 // When a surface's MaxTier ceiling permits corpus but not inference, this
 // answers instead of falling straight to silence. Weighted anti-repeat pick
 // from a category the bot's class/level qualifies for, synchronous like
@@ -80,5 +82,129 @@ inline std::string Hs_ResolveCardPlaceholders(std::string text, const std::strin
     replaceAll(text, "%current_goal", currentGoal);
     return text;
 }
+
+// The universal corpus placeholders (hs_gen_validate.cpp's
+// kUniversalPlaceholders) that resolve off any bot's own character row, as
+// opposed to the two card-only tokens Hs_ResolveCardPlaceholders handles
+// above. An empty field means the bot has nothing true to put here (e.g.
+// unguilded, empty bags), which drops the line rather than inventing a
+// value (§4.13).
+struct HsPlaceholderContext
+{
+    std::string itemLink;   // chat hyperlink to an item actually in the bot's bags
+    std::string questLink;  // chat hyperlink to a quest actually in the bot's log
+    std::string className;  // "warrior" ... "death knight"; never empty for a real bot
+    std::string level;      // decimal, as text
+    std::string zone;       // the bot's current zone name
+    std::string guild;      // empty when the bot is unguilded
+};
+
+// Resolves every universal placeholder in `text` in place. Returns false if
+// a placeholder in the text has no value in `ctx`, or if a card-only token
+// is still standing afterwards (a card_gated line that reached an uncarded
+// bot); the caller must discard `text` rather than deliver it in that case
+// -- a line is either fully resolved or not delivered at all.
+//
+// The leftover check matches the two card-only tokens by name rather than
+// any `%`-shaped substring, since ordinary chat can contain a literal `%`
+// ("100% sure") and Hs_PlaceholderDiscipline already closes the set of
+// tokens that can reach here.
+//
+// Pure and header-only, no AzerothCore dependency, so the standalone
+// harness can cover it.
+inline bool Hs_ResolveUniversalPlaceholders(std::string& text, const HsPlaceholderContext& ctx)
+{
+    struct Entry { const char* token; const std::string* value; };
+    const Entry kEntries[] = {
+        { "%item_link",  &ctx.itemLink  },
+        { "%quest_link", &ctx.questLink },
+        { "%class",      &ctx.className },
+        { "%level",      &ctx.level     },
+        { "%zone",       &ctx.zone      },
+        { "%guild",      &ctx.guild     },
+    };
+
+    for (Entry const& entry : kEntries)
+    {
+        std::string token(entry.token);
+        size_t pos = text.find(token);
+        if (pos == std::string::npos)
+            continue;
+        if (entry.value->empty())
+            return false; // nothing true to substitute -- drop the line
+
+        while (pos != std::string::npos)
+        {
+            text.replace(pos, token.size(), *entry.value);
+            pos = text.find(token, pos + entry.value->size());
+        }
+    }
+
+    if (text.find("%main_focus") != std::string::npos || text.find("%current_goal") != std::string::npos)
+        return false;
+
+    return true;
+}
+
+// Builds the context above from live Player* state. Declared here but
+// defined in hs_corpus.cpp, the AzerothCore-dependent half; every caller
+// (hs_handler.cpp's TryCorpusFallback, hs_opener.cpp's FireOpener) is
+// already on the world thread, the only place a Player* may be touched.
+//
+// %item_link draws a random non-soulbound item from the bot's backpack and
+// equipped bags -- soulbound is excluded since an item the bot can't hand
+// over would be exactly the falsifiable claim §4.13 exists to prevent.
+HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot);
+
+// Scripted bot-to-bot dialogue's placeholder resolution (§4.16) --
+// %my_class/%my_level/%my_zone/%my_guild bind to whichever bot is speaking
+// this turn, %other_class/... to the other cast bot, resolved fresh per
+// turn from live state since a script isn't tied to a specific pair of
+// bots until two are actually cast together. Only the four personal-fact
+// fields are used; `mine`/`other`'s itemLink/questLink are ignored, since
+// scripts are casual small talk, not the trade content those tokens serve.
+//
+// Same "empty field drops the whole turn" contract as
+// Hs_ResolveUniversalPlaceholders. Pure and header-only, no AzerothCore
+// dependency, same reasoning as this file's other resolvers.
+inline bool Hs_ResolveScriptPlaceholders(std::string& text, const HsPlaceholderContext& mine,
+                                          const HsPlaceholderContext& other)
+{
+    struct Entry { const char* token; const std::string* value; };
+    const Entry kEntries[] = {
+        { "%my_class",     &mine.className  },
+        { "%my_level",     &mine.level      },
+        { "%my_zone",      &mine.zone       },
+        { "%my_guild",     &mine.guild      },
+        { "%other_class",  &other.className },
+        { "%other_level",  &other.level     },
+        { "%other_zone",   &other.zone      },
+        { "%other_guild",  &other.guild     },
+    };
+
+    for (Entry const& entry : kEntries)
+    {
+        std::string token(entry.token);
+        size_t pos = text.find(token);
+        if (pos == std::string::npos)
+            continue;
+        if (entry.value->empty())
+            return false; // nothing true to substitute -- drop the turn
+
+        while (pos != std::string::npos)
+        {
+            text.replace(pos, token.size(), *entry.value);
+            pos = text.find(token, pos + entry.value->size());
+        }
+    }
+
+    return true;
+}
+
+// Class id -> the lowercase class name this module uses in prompts, card
+// facts, and corpus text. Lives here rather than staying file-local in
+// hs_generator.cpp so the generator's prompt labels and the delivery path's
+// %class substitution can never drift apart.
+std::string Hs_ClassNameFor(uint8_t classId);
 
 #endif // MOD_HS_CORPUS_H

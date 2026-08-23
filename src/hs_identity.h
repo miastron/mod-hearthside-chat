@@ -15,12 +15,14 @@
 // AzerothCore-dependent and calls into this file rather than duplicating its
 // logic.
 
-// Weight table for the two signals this module has a hook for -- whisper and
-// /say -- plus the one event-based signal reachable through the existing
-// dungeon-completion opener hook. Guild(2) and party/raid say(3) are named
-// here but have no chat-surface hook in this module yet; adding them is a
-// hook problem, not a scoring problem, so they're not approximated.
+// Weight table for the four chat-surface signals plus one event-based signal
+// reachable through the existing dungeon-completion opener hook. Ordered by
+// how deliberately a bot was addressed: a whisper is 1:1 and unmissable, a
+// party/raid line is small-group, guild is larger and more ambient, /say is
+// the most incidental (anyone in range hears it, not just this bot).
 constexpr uint32_t kHsScoreWeightWhisper         = 4;
+constexpr uint32_t kHsScoreWeightPartyRaid       = 3;
+constexpr uint32_t kHsScoreWeightGuild           = 2;
 constexpr uint32_t kHsScoreWeightSay             = 1;
 constexpr uint32_t kHsScoreWeightDungeonComplete = 2;
 

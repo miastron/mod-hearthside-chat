@@ -1,6 +1,7 @@
 #include "hs_script.h"
 #include "hs_archetype.h"
 #include "hs_config.h"
+#include "hs_corpus.h"
 #include "hs_style.h"
 #include "hs_tier.h"
 
@@ -238,9 +239,22 @@ namespace
         }
 
         Player* speaker = (scheduled.speakerGuid == bot0Guid) ? bot0 : bot1;
+        Player* listener = (speaker == bot0) ? bot1 : bot0;
         PlayerbotAI* speakerAI = PlayerbotsMgr::instance().GetPlayerbotAI(speaker);
         if (!speakerAI)
             return;
+
+        // %my_*/%other_* resolution (§4.16), before the style pass so a
+        // typo/abbreviation transform never touches a still-live token.
+        // Skips just this turn, not the whole run, on an unresolvable field
+        // (e.g. the listener is unguilded) -- the same "no substitute"
+        // shape used elsewhere in the module.
+        std::string text = scheduled.text;
+        if (text.find('%') != std::string::npos)
+        {
+            if (!Hs_ResolveScriptPlaceholders(text, Hs_BuildPlaceholderContext(speaker), Hs_BuildPlaceholderContext(listener)))
+                return;
+        }
 
         // No archetype/persona goes into script generation, but the style
         // pass still runs per speaker at delivery -- the same script
@@ -251,7 +265,7 @@ namespace
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = false; // already confirmed not in combat above
-        HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), witness->GetName(), scheduled.text, styleCtx);
+        HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), witness->GetName(), text, styleCtx);
         if (style.text.empty())
             return;
 

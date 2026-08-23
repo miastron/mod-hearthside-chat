@@ -12,13 +12,16 @@
 #include "hs_script.h"
 #include "hs_style.h"
 #include "hs_tier.h"
+#include "hs_topic_gate.h"
 
 #include "DBCStores.h"
+#include "Group.h"
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "Log.h"
+#include "Map.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h" // NewRpgStatus -- rpgInfo.GetStatus()
@@ -44,6 +47,41 @@ namespace
         return ai && ai->IsBotAI();
     }
 
+    // §4.13's remaining topic-gate facts, read fresh per request like
+    // inCombat/botLevel -- gear, group, and instance are all as volatile as
+    // combat. hs_topic_gate.h stays pure/no-AC-dependency for standalone
+    // testing, so this Player*-reading half lives here (and is duplicated
+    // in hs_engagement.cpp's TryFireFollowUp) rather than there.
+    HsTopicGateContext BuildTopicGateContext(Player* bot)
+    {
+        HsTopicGateContext ctx;
+        ctx.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
+
+        if (Group* group = bot->GetGroup())
+        {
+            ctx.inGroup       = true;
+            ctx.isGroupLeader = group->IsLeader(bot->GetGUID());
+        }
+
+        if (Map* map = bot->GetMap())
+        {
+            ctx.inInstance = map->IsDungeon() || map->IsRaid();
+            if (ctx.inInstance)
+                ctx.instanceName = map->GetMapName();
+        }
+
+        ctx.goldCopper = bot->GetMoney();
+
+        if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
+        {
+            const char* name = entry->area_name[0];
+            if (name && *name)
+                ctx.zoneName = name;
+        }
+
+        return ctx;
+    }
+
     // Once a bot is selected, the reflex pattern table is checked before
     // anything else. A match is a complete answer, not a fallback trigger --
     // it never falls through to inference even when the trigger also
@@ -51,7 +89,7 @@ namespace
     // MaxTier.Reflex ceiling, independent of MaxTier.DirectReply below --
     // an operator can turn off canned replies without touching the LLM
     // ceiling, or vice versa.
-    void TryReflex(Player* bot, Player* sender, const std::string& msg, bool isWhisper,
+    void TryReflex(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel,
                     uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel, bool& handled)
     {
         handled = false;
@@ -80,7 +118,7 @@ namespace
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), match.text, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, isWhisper, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
     }
 
     // A fourth answer source, sitting between the reflex check and the tier
@@ -97,7 +135,7 @@ namespace
     // off. A bot claiming a mount that isn't observably there would be a
     // state-contradicting claim, so it's simpler to let the normal path
     // handle that case than to special-case a "not mounted" reply here.
-    bool TryGrounded(Player* bot, Player* sender, const std::string& msg, bool isWhisper,
+    bool TryGrounded(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel,
                       uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
         if (!g_HsGroundedAnswersEnabled)
@@ -266,7 +304,7 @@ namespace
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), reply, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, isWhisper, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
     }
 
@@ -278,7 +316,7 @@ namespace
     // does the weighted anti-repeat pick and its own exposure bookkeeping;
     // this just applies the style pass and delivers, identically to the
     // two tiers above it.
-    bool TryCorpusFallback(Player* bot, Player* sender, bool isWhisper,
+    bool TryCorpusFallback(Player* bot, Player* sender, HsReplyChannel channel,
                             uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
         bool hasActiveCard = Hs_HasActiveCard(botGuid);
@@ -297,6 +335,18 @@ namespace
             line = Hs_ResolveCardPlaceholders(line, mainFocus, currentGoal);
         }
 
+        // Universal placeholders (%item_link, %class, %level, %zone,
+        // %guild, %quest_link), after the card pass so the leftover check
+        // sees a fully-substituted line. Guarded on a bare '%' so the
+        // common no-placeholder case skips the bag/quest-log scans
+        // Hs_BuildPlaceholderContext does. An unresolvable placeholder
+        // drops the line into silence rather than an untrue claim (§4.13).
+        if (line.find('%') != std::string::npos)
+        {
+            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
+                return false;
+        }
+
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
         const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
@@ -305,21 +355,23 @@ namespace
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = snapshot.verbalTic;
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, isWhisper, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
     }
 
     // Once reflex/grounded have passed on the trigger, check the surface's
     // tier ceiling, then the real admission gates (bucket/cooldown/
     // breaker/queue depth) inside Hs_TryEnqueue. A ceiling is permission,
-    // not budget. Both /say and whisper are direct replies to player
-    // speech, so both read MaxTier.DirectReply.
+    // not budget. Say, whisper, party/raid, and guild all read
+    // MaxTier.DirectReply -- the ceiling is one surface-shaped concept ("a
+    // player addressed a bot"), not per-channel; only delivery and the
+    // interaction_score weight (hs_identity.h) vary by channel.
     //
     // A ceiling below inference but at or above corpus falls back to
     // TryCorpusFallback rather than silence. Below corpus, or if the
     // corpus pick comes back empty, the request is simply not admitted --
     // silence.
-    void TryDispatch(Player* bot, Player* sender, const std::string& msg, bool isWhisper)
+    void TryDispatch(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel)
     {
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
         uint64_t senderGuid = sender->GetGUID().GetRawValue();
@@ -336,22 +388,27 @@ namespace
             rpgStatus = botAI->rpgInfo.GetStatus();
 
         bool reflexHandled = false;
-        TryReflex(bot, sender, msg, isWhisper, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
+        TryReflex(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
         if (reflexHandled)
             return;
 
-        if (TryGrounded(bot, sender, msg, isWhisper, botGuid, senderGuid, inCombat, botLevel))
+        if (TryGrounded(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel))
             return;
 
         HsTier ceiling = HsParseTier(g_HsMaxTierDirectReply);
         if (!HsTierAllows(ceiling, HsTier::Inference))
         {
             if (HsTierAllows(ceiling, HsTier::Corpus))
-                TryCorpusFallback(bot, sender, isWhisper, botGuid, senderGuid, inCombat, botLevel);
+                TryCorpusFallback(bot, sender, channel, botGuid, senderGuid, inCombat, botLevel);
             return;
         }
 
-        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), isWhisper, msg, inCombat, botLevel, rpgStatus, /*isFollowUp=*/false) && g_HsDebugEnabled)
+        // §4.13's remaining topic-gate facts. Only read here, not for the
+        // reflex/grounded/corpus tiers above -- those never reach the LLM
+        // prompt this feeds, so the read would be wasted work.
+        HsTopicGateContext topicGate = BuildTopicGateContext(bot);
+
+        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false) && g_HsDebugEnabled)
             LOG_INFO("server.loading", "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
@@ -398,7 +455,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);
     for (Player* bot : selected)
-        TryDispatch(bot, player, msg, /*isWhisper=*/false);
+        TryDispatch(bot, player, msg, HsReplyChannel::Say);
 
     return true;
 }
@@ -427,7 +484,95 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     if (urand(0, 99) >= g_HsReplyChanceWhisper)
         return true;
 
-    TryDispatch(receiver, player, msg, /*isWhisper=*/true);
+    TryDispatch(receiver, player, msg, HsReplyChannel::Whisper);
+    return true;
+}
+
+// CHAT_MSG_PARTY/PARTY_LEADER stay within the sender's own subgroup even in
+// a raid (ChatHandler.cpp's HandleMessagechatOpcode broadcasts by subgroup,
+// not the whole group) -- a candidate outside it never heard the line, so
+// it can't "reply." CHAT_MSG_RAID/RAID_LEADER reach the whole raid, no
+// subgroup filter. RAID_WARNING and the battleground variants are
+// deliberately excluded: a leader broadcast or BG channel isn't something a
+// bot chimes into.
+bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Group* group)
+{
+    if (!g_HsEnable || msg.empty() || !player || !group)
+        return true;
+    if (type != CHAT_MSG_PARTY && type != CHAT_MSG_PARTY_LEADER &&
+        type != CHAT_MSG_RAID && type != CHAT_MSG_RAID_LEADER)
+        return true;
+    if (IsBot(player))
+        return true; // sender-aware (bot-initiated) chatter is not wired up yet
+
+    Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+
+    bool subgroupScoped = (type == CHAT_MSG_PARTY || type == CHAT_MSG_PARTY_LEADER);
+
+    std::vector<Player*> eligible;
+    for (auto const& itr : ObjectAccessor::GetPlayers())
+    {
+        Player* candidate = itr.second;
+        if (!candidate || candidate == player || !candidate->IsInWorld())
+            continue;
+        if (!IsBot(candidate))
+            continue;
+        if (candidate->GetGroup() != group)
+            continue;
+        if (subgroupScoped && !group->SameSubGroup(player, candidate))
+            continue;
+        if (Hs_IsExcludedBotName(candidate->GetName()))
+            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+        if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
+            continue;
+        eligible.push_back(candidate);
+    }
+    if (eligible.empty())
+        return true;
+
+    HsReplyChannel channel = (type == CHAT_MSG_RAID || type == CHAT_MSG_RAID_LEADER)
+        ? HsReplyChannel::Raid : HsReplyChannel::Party;
+
+    std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);
+    for (Player* bot : selected)
+        TryDispatch(bot, player, msg, channel);
+
+    return true;
+}
+
+bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Guild* guild)
+{
+    if (!g_HsEnable || type != CHAT_MSG_GUILD || msg.empty() || !player || !guild)
+        return true;
+    if (IsBot(player))
+        return true; // sender-aware (bot-initiated) chatter is not wired up yet
+
+    Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+
+    uint32_t guildId = guild->GetId();
+    std::vector<Player*> eligible;
+    for (auto const& itr : ObjectAccessor::GetPlayers())
+    {
+        Player* candidate = itr.second;
+        if (!candidate || candidate == player || !candidate->IsInWorld())
+            continue;
+        if (!IsBot(candidate))
+            continue;
+        if (candidate->GetGuildId() != guildId)
+            continue;
+        if (Hs_IsExcludedBotName(candidate->GetName()))
+            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+        if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
+            continue;
+        eligible.push_back(candidate);
+    }
+    if (eligible.empty())
+        return true;
+
+    std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);
+    for (Player* bot : selected)
+        TryDispatch(bot, player, msg, HsReplyChannel::Guild);
+
     return true;
 }
 

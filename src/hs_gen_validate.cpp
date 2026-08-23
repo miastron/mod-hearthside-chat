@@ -19,6 +19,14 @@ namespace
         "%main_focus", "%current_goal",
     };
 
+    // Scripted bot-to-bot dialogue's own token vocabulary -- disjoint from
+    // the corpus sets above, resolved per cast pair rather than per bot
+    // (see hs_corpus.h's Hs_ResolveScriptPlaceholders).
+    const std::unordered_set<std::string> kScriptPlaceholders = {
+        "%my_class", "%my_level", "%my_zone", "%my_guild",
+        "%other_class", "%other_level", "%other_zone", "%other_guild",
+    };
+
     // Deliberately short and low-collision: WoW chat legitimately uses
     // words like "cap" (level cap), and "based" would be too noisy to
     // trust as a single token, so the list sticks to slang with little
@@ -232,6 +240,14 @@ HsGenVerdict Hs_DedupCheck(const std::string& candidate, const std::vector<std::
     for (auto const& row : existingRows)
         if (Hs_JaccardSimilarity(candidate, row) > kDedupThreshold)
             return { false, "too_similar_to_existing" };
+    return { true, "" };
+}
+
+HsGenVerdict Hs_ScriptPlaceholderDiscipline(const std::string& candidate)
+{
+    for (auto const& ph : ExtractPlaceholders(candidate))
+        if (!kScriptPlaceholders.count(ph))
+            return { false, "unknown_script_placeholder" };
     return { true, "" };
 }
 

@@ -65,19 +65,47 @@ namespace
     constexpr uint32_t kReflexDelayMinMs = 400;
     constexpr uint32_t kReflexDelayMaxMs = 1500;
 
+    const char* ReplyChannelNameImpl(HsReplyChannel channel)
+    {
+        switch (channel)
+        {
+            case HsReplyChannel::Say:     return "say";
+            case HsReplyChannel::Whisper: return "whisper";
+            case HsReplyChannel::Party:   return "party";
+            case HsReplyChannel::Raid:    return "raid";
+            case HsReplyChannel::Guild:   return "guild";
+        }
+        return "say";
+    }
+
+    // hs_identity.h's weight table, keyed by delivery channel (§4.12).
+    uint32_t ScoreWeightForChannel(HsReplyChannel channel)
+    {
+        switch (channel)
+        {
+            case HsReplyChannel::Whisper: return kHsScoreWeightWhisper;
+            case HsReplyChannel::Party:
+            case HsReplyChannel::Raid:    return kHsScoreWeightPartyRaid;
+            case HsReplyChannel::Guild:   return kHsScoreWeightGuild;
+            case HsReplyChannel::Say:     return kHsScoreWeightSay;
+        }
+        return kHsScoreWeightSay;
+    }
+
     struct HsQueuedRequest
     {
         uint64_t     botGuid;
         std::string  botName;     // style pass: protected from typo injection
         uint64_t     senderGuid;
         std::string  senderName;  // style pass: protected from typo injection
-        bool         isWhisper;
+        HsReplyChannel channel;
         std::string  prompt;
         Clock::time_point enqueuedAt;
         bool         isProbe;
         bool         inCombat;    // style pass: combat `care` offset
         uint8_t      botLevel;    // archetype eligibility filter (hs_archetype.h)
         NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
+        HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
         bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
     };
 
@@ -90,7 +118,7 @@ namespace
     {
         uint64_t    botGuid;
         uint64_t    senderGuid;
-        bool        isWhisper;
+        HsReplyChannel channel;
         std::string text;
         Clock::time_point deliverAt;
         bool        isFollowUp; // cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
@@ -166,6 +194,56 @@ namespace
     // Overwritten on every successful reactive reply; not a history. ----
     std::mutex                                  g_LastPreStyleMutex;
     std::unordered_map<std::string, std::string> g_LastPreStyleReplyByBot;
+
+    // ---- §4.19 fuller metrics: rolling latency samples, prompt-char sums
+    // by ring, reply/silence counts by archetype and channel. One mutex
+    // covers all four -- updates are cheap and never contended against
+    // anything but this same worker thread's next request. ----
+    std::mutex           g_MetricsMutex;
+    std::deque<uint32_t> g_LatencySamplesMs;
+    constexpr size_t     kMaxLatencySamples = 500; // a rolling window, not a full history -- hside_metrics is the history
+
+    struct RingPromptStats { uint64_t sumChars = 0; uint32_t count = 0; };
+    RingPromptStats g_PromptStatsByRing[3]; // index 0 = ring 1, 1 = ring 2, 2 = ring 3
+
+    struct ReplyCounts { uint32_t replied = 0; uint32_t silent = 0; };
+    std::unordered_map<std::string, ReplyCounts> g_ReplyCountsByArchetype;
+    std::unordered_map<uint8_t, ReplyCounts>     g_ReplyCountsByChannel;
+
+    void RecordLatencySample(uint32_t ms)
+    {
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        g_LatencySamplesMs.push_back(ms);
+        while (g_LatencySamplesMs.size() > kMaxLatencySamples)
+            g_LatencySamplesMs.pop_front();
+    }
+
+    void RecordPromptChars(uint8_t ring, uint32_t chars)
+    {
+        if (ring < 1 || ring > 3)
+            return;
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        RingPromptStats& stats = g_PromptStatsByRing[ring - 1];
+        stats.sumChars += chars;
+        ++stats.count;
+    }
+
+    void RecordRequestOutcome(const std::string& archetypeName, HsReplyChannel channel, bool replied)
+    {
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        ReplyCounts& byArchetype = g_ReplyCountsByArchetype[archetypeName];
+        ReplyCounts& byChannel   = g_ReplyCountsByChannel[static_cast<uint8_t>(channel)];
+        if (replied)
+        {
+            ++byArchetype.replied;
+            ++byChannel.replied;
+        }
+        else
+        {
+            ++byArchetype.silent;
+            ++byChannel.silent;
+        }
+    }
 
     // Refills the bucket for elapsed time, capped at burst capacity. Caller
     // holds g_BucketMutex. Self-initializes on first call so the bucket
@@ -244,12 +322,21 @@ namespace
             // rather than widening that function's signature -- a no-op
             // concat for the majority of bots with no active card.
             HsCardSnapshot cardSnapshot = Hs_LookupCardSnapshot(req.botGuid);
+
+            // Ring, derived the same way hs_identity.h's table defines it
+            // (card_active -> 3, else has memory rows -> 2, else -> 1).
+            // Feeds only the §4.19 prompt-length-by-ring metric below; the
+            // prompt itself doesn't change shape by ring.
+            uint8_t ring = cardSnapshot.active ? 3
+                : (Hs_HasMetBefore(req.botGuid, req.senderGuid) ? 2 : 1);
+
             std::string personaLine = Hs_ArchetypePromptLine(archetype);
             if (cardSnapshot.active && !cardSnapshot.voiceBlock.empty())
                 personaLine += "\n" + cardSnapshot.voiceBlock;
             std::string rpgHint = RpgStatusHint(req.rpgStatus);
             if (!rpgHint.empty())
                 personaLine += "\n" + rpgHint;
+            personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
 
             HsLLMConfig cfg;
             cfg.apiType       = g_HsLLMApiType;
@@ -273,11 +360,19 @@ namespace
             if (req.isProbe)
                 g_ProbeInFlight.store(false);
 
+            // §4.19: latency and prompt length are meaningful on every
+            // outcome, not just a delivered reply -- a failing backend
+            // should show up in the latency percentiles, not silently drop
+            // out of them.
+            RecordLatencySample(result.latencyMs);
+            RecordPromptChars(ring, result.promptChars);
+
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
                     LOG_INFO("server.loading", "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
                         req.botGuid, static_cast<int>(result.failure), result.httpStatus);
+                RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/false);
                 continue; // silence, not a canned fallback
             }
 
@@ -308,7 +403,11 @@ namespace
             HsStyleResult style = Hs_ApplyStyle(req.botGuid, req.botName, req.senderName, result.text, styleCtx);
             result.text = style.text;
             if (result.text.empty())
+            {
+                RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/false);
                 continue;
+            }
+            RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/true);
 
             if (g_HsDebugChatLogEnabled)
             {
@@ -322,7 +421,8 @@ namespace
                     "INSERT INTO hside_chat_log (bot_guid, bot_name, sender_guid, sender_name, is_whisper, "
                     "archetype, trigger_text, pre_style_text, styled_text, created_at) "
                     "VALUES ({}, '{}', {}, '{}', {}, '{}', '{}', '{}', '{}', NOW())",
-                    req.botGuid, escapedBotName, req.senderGuid, escapedSenderName, req.isWhisper ? 1 : 0,
+                    req.botGuid, escapedBotName, req.senderGuid, escapedSenderName,
+                    req.channel == HsReplyChannel::Whisper ? 1 : 0, // party/raid/guild collapse to 0 -- debug log doesn't distinguish them from say yet
                     escapedArchetype, escapedTrigger, escapedPreStyle, escapedStyled);
             }
 
@@ -341,17 +441,16 @@ namespace
             // never reach here. An engagement follow-up is bot-initiated,
             // not a scored player utterance, same as bot-initiated openers.
             if (!req.isFollowUp)
-            {
-                Hs_BumpInteractionScore(req.botGuid, req.botLevel,
-                    req.isWhisper ? kHsScoreWeightWhisper : kHsScoreWeightSay);
-            }
+                Hs_BumpInteractionScore(req.botGuid, req.botLevel, ScoreWeightForChannel(req.channel));
 
             // Re-arms this (bot, player) pair's engagement-follow-up
             // eligibility -- only a genuine direct reply does this, never a
             // follow-up's own delivery, so a chain only continues as long
-            // as the player keeps replying.
-            if (!req.isFollowUp)
-                Hs_EngagementNoteDirectReply(req.botGuid, req.senderGuid, req.isWhisper);
+            // as the player keeps replying. Engagement follow-up is a
+            // whisper/say-only surface (§4.22); a party/raid/guild reply
+            // doesn't arm it.
+            if (!req.isFollowUp && (req.channel == HsReplyChannel::Say || req.channel == HsReplyChannel::Whisper))
+                Hs_EngagementNoteDirectReply(req.botGuid, req.senderGuid, req.channel == HsReplyChannel::Whisper);
 
             // Ordinary chat is the most common way two people actually meet,
             // so first-meeting is seeded here rather than only as a side
@@ -376,7 +475,7 @@ namespace
             if (g_HsTypingDelayEnabled)
             {
                 uint32_t targetMs = std::min(g_HsTypingDelayMaxMs,
-                    g_HsTypingDelayBaseMs + static_cast<uint32_t>(result.text.size()) * g_HsTypingDelayPerCharMs);
+                    archetypeInfo.typingBaseMs + static_cast<uint32_t>(result.text.size()) * archetypeInfo.typingPerCharMs);
                 int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.enqueuedAt).count();
                 if (elapsedMs < static_cast<int64_t>(targetMs))
                     deliverAt = now + std::chrono::milliseconds(static_cast<uint32_t>(targetMs) - static_cast<uint32_t>(elapsedMs));
@@ -384,7 +483,7 @@ namespace
 
             {
                 std::lock_guard<std::mutex> lock(g_DeliveryMutex);
-                g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.isWhisper, result.text, deliverAt, req.isFollowUp });
+                g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt, req.isFollowUp });
 
                 // Self-correction follow-up: only eligible when a typo
                 // actually landed in this message. The `*` prefix is added
@@ -397,7 +496,7 @@ namespace
                 {
                     uint32_t delaySec = urand(kSelfCorrectionMinDelaySeconds, kSelfCorrectionMaxDelaySeconds);
                     std::string followUp = "*" + style.correction;
-                    g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.isWhisper, followUp,
+                    g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, followUp,
                                                  deliverAt + std::chrono::seconds(delaySec), req.isFollowUp });
                 }
             }
@@ -425,8 +524,9 @@ void Hs_QueueShutdown()
 }
 
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
-                    const std::string& senderName, bool isWhisper, const std::string& userPrompt,
-                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus, bool isFollowUp)
+                    const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
+                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
+                    const HsTopicGateContext& topicGate, bool isFollowUp)
 {
     // 1. Token bucket — peek only; the spend is committed once the request
     // actually clears every later gate.
@@ -485,13 +585,14 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         req.botName    = botName;
         req.senderGuid = senderGuid;
         req.senderName = senderName;
-        req.isWhisper  = isWhisper;
+        req.channel    = channel;
         req.prompt     = userPrompt;
         req.enqueuedAt = Clock::now();
         req.isProbe    = isProbe;
         req.inCombat   = inCombat;
         req.botLevel   = botLevel;
         req.rpgStatus  = rpgStatus;
+        req.topicGate  = topicGate;
         req.isFollowUp = isFollowUp;
         g_Queue.push_back(std::move(req));
     }
@@ -511,14 +612,14 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
     return true;
 }
 
-void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, bool isWhisper, const std::string& text)
+void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text)
 {
     if (text.empty())
         return;
 
     Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kReflexDelayMinMs, kReflexDelayMaxMs));
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);
-    g_DeliveryQueue.push_back({ botGuid, senderGuid, isWhisper, text, deliverAt, /*isFollowUp=*/false });
+    g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false });
 }
 
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)
@@ -560,16 +661,20 @@ void Hs_DeliverPending()
         if (!botAI)
             continue;
 
-        if (reply.isWhisper)
+        switch (reply.channel)
         {
-            Player* sender = ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid));
-            if (!sender)
-                continue;
-            botAI->Whisper(reply.text, sender->GetName());
-        }
-        else
-        {
-            botAI->Say(reply.text);
+            case HsReplyChannel::Whisper:
+            {
+                Player* sender = ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid));
+                if (!sender)
+                    continue;
+                botAI->Whisper(reply.text, sender->GetName());
+                break;
+            }
+            case HsReplyChannel::Party: botAI->SayToParty(reply.text); break;
+            case HsReplyChannel::Raid:  botAI->SayToRaid(reply.text);  break;
+            case HsReplyChannel::Guild: botAI->SayToGuild(reply.text); break;
+            case HsReplyChannel::Say:   botAI->Say(reply.text);        break;
         }
 
         if (g_HsDebugEnabled)
@@ -612,4 +717,53 @@ std::string Hs_LastPreStyleReply(const std::string& botName)
     std::lock_guard<std::mutex> lock(g_LastPreStyleMutex);
     auto it = g_LastPreStyleReplyByBot.find(botName);
     return it == g_LastPreStyleReplyByBot.end() ? "" : it->second;
+}
+
+const char* Hs_ReplyChannelName(HsReplyChannel channel)
+{
+    return ReplyChannelNameImpl(channel);
+}
+
+HsLatencyPercentiles Hs_ReactiveLatencyPercentiles()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    if (g_LatencySamplesMs.empty())
+        return { 0, 0, 0 };
+
+    std::vector<uint32_t> sorted(g_LatencySamplesMs.begin(), g_LatencySamplesMs.end());
+    std::sort(sorted.begin(), sorted.end());
+    auto percentileAt = [&sorted](double p) {
+        size_t idx = static_cast<size_t>(p * static_cast<double>(sorted.size() - 1));
+        return sorted[idx];
+    };
+    return { percentileAt(0.50), percentileAt(0.95), percentileAt(0.99) };
+}
+
+HsPromptCharsByRing Hs_PromptCharsByRing()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    auto mean = [](const RingPromptStats& s) {
+        return s.count == 0 ? 0u : static_cast<uint32_t>(s.sumChars / s.count);
+    };
+    return { mean(g_PromptStatsByRing[0]), mean(g_PromptStatsByRing[1]), mean(g_PromptStatsByRing[2]) };
+}
+
+std::vector<HsArchetypeReplyCounts> Hs_ArchetypeReplyCountsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    std::vector<HsArchetypeReplyCounts> out;
+    out.reserve(g_ReplyCountsByArchetype.size());
+    for (auto const& entry : g_ReplyCountsByArchetype)
+        out.push_back({ entry.first, entry.second.replied, entry.second.silent });
+    return out;
+}
+
+std::vector<HsChannelReplyCounts> Hs_ChannelReplyCountsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    std::vector<HsChannelReplyCounts> out;
+    out.reserve(g_ReplyCountsByChannel.size());
+    for (auto const& entry : g_ReplyCountsByChannel)
+        out.push_back({ static_cast<HsReplyChannel>(entry.first), entry.second.replied, entry.second.silent });
+    return out;
 }

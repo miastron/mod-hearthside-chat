@@ -217,20 +217,13 @@ HearthsideChat.CircuitBreaker.ProbeIntervalSeconds = 15
 #     Default:     1 (true)
 HearthsideChat.TypingDelay.Enable = 1
 
-# HearthsideChat.TypingDelay.BaseMs
-#     Description: Flat milliseconds added before any per-character cost --
-#                  time to "notice" the message and start typing.
-#     Default:     800
-HearthsideChat.TypingDelay.BaseMs = 800
-
-# HearthsideChat.TypingDelay.PerCharMs
-#     Description: Milliseconds added per character of the styled reply.
-#     Default:     45
-HearthsideChat.TypingDelay.PerCharMs = 45
-
 # HearthsideChat.TypingDelay.MaxMs
-#     Description: Cap on the total target delay (Base + PerChar*length),
-#                  so a long reply can't stall delivery indefinitely.
+#     Description: Cap on the total target delay (archetype's typing_base_ms
+#                  + typing_per_char_ms*length, hside_archetype SQL), so a
+#                  long reply can't stall delivery indefinitely. The formula
+#                  itself is per-archetype, not an operator key -- this is
+#                  only the ceiling, same relationship LLM.MaxTokens has
+#                  with each archetype's verbosity cap.
 #     Default:     6000
 HearthsideChat.TypingDelay.MaxMs = 6000
 

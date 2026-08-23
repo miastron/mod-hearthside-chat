@@ -2,8 +2,10 @@
 -- plus ordered turns (hside_script_turn), single-use (consumed_at, not
 -- times_used -- the exposure/eviction/anti-repeat model used elsewhere does
 -- not apply here). speaker_slot is 0 or 1, never a bot GUID, so any two bots
--- in range can cast a script and %my_*/%other_* style binding (not built in
--- v1) stays resolvable per turn by flipping the slot.
+-- in range can cast a script and %my_*/%other_* placeholder binding
+-- (hs_corpus.h's Hs_ResolveScriptPlaceholders) stays resolvable per turn by
+-- flipping the slot -- a claim is only ever true of whichever pair actually
+-- performs it.
 CREATE TABLE IF NOT EXISTS `hside_script` (
   `id`               INT UNSIGNED NOT NULL,
   `turn_count`       TINYINT UNSIGNED NOT NULL,

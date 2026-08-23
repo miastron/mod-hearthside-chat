@@ -27,13 +27,14 @@ void Hs_LoadArchetypesFromDb()
 {
     QueryResult result = CharacterDatabase.Query(
         "SELECT enum_name, talks_about, care, reply_chance, verbosity_cap, spawn_weight, "
-        "has_abbrev_override, abbrev_override_chance, min_level, max_level, profanity_level "
+        "has_abbrev_override, abbrev_override_chance, min_level, max_level, profanity_level, "
+        "typing_base_ms, typing_per_char_ms "
         "FROM hside_archetype");
 
     std::array<HsArchetypeInfo, kHsArchetypeCount> table;
     std::array<bool, kHsArchetypeCount> found{};
     for (size_t i = 0; i < kHsArchetypeCount; ++i)
-        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0 };
+        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 };
 
     if (!result)
     {
@@ -75,6 +76,8 @@ void Hs_LoadArchetypesFromDb()
         info.minLevel              = (*result)[8].Get<uint8_t>();
         info.maxLevel              = (*result)[9].Get<uint8_t>();
         info.profanityLevel        = (*result)[10].Get<uint8_t>();
+        info.typingBaseMs          = (*result)[11].Get<uint32_t>();
+        info.typingPerCharMs       = (*result)[12].Get<uint32_t>();
         found[slot] = true;
         ++matched;
     } while (result->NextRow());
@@ -89,4 +92,50 @@ void Hs_LoadArchetypesFromDb()
 
     if (g_HsDebugEnabled)
         LOG_INFO("server.loading", "[HearthsideChat] Loaded {} of {} archetype row(s) from hside_archetype.", matched, kHsArchetypeCount);
+}
+
+void Hs_LoadArchetypeOverridesFromDb()
+{
+    QueryResult result = CharacterDatabase.Query("SELECT bot_guid, archetype FROM hside_archetype_override");
+    if (!result)
+        return;
+
+    uint32_t loaded = 0;
+    do
+    {
+        uint64_t    botGuid  = (*result)[0].Get<uint64_t>();
+        std::string enumName = (*result)[1].Get<std::string>();
+
+        HsArchetype archetype;
+        if (!Hs_ArchetypeForName(enumName, archetype))
+        {
+            LOG_ERROR("server.loading",
+                "[HearthsideChat] hside_archetype_override names unrecognized enum_name '{}' for bot {} -- skipped.",
+                enumName, botGuid);
+            continue;
+        }
+
+        Hs_SetArchetypeOverride(botGuid, archetype);
+        ++loaded;
+    } while (result->NextRow());
+
+    if (g_HsDebugEnabled)
+        LOG_INFO("server.loading", "[HearthsideChat] Loaded {} archetype override(s) from hside_archetype_override.", loaded);
+}
+
+void Hs_SetArchetypeOverrideAndPersist(uint64_t botGuid, HsArchetype archetype)
+{
+    Hs_SetArchetypeOverride(botGuid, archetype);
+
+    std::string enumName = Hs_ArchetypeInfoFor(archetype).enumName;
+    CharacterDatabase.Execute(
+        "INSERT INTO hside_archetype_override (bot_guid, archetype, set_at) VALUES ({}, '{}', NOW()) "
+        "ON DUPLICATE KEY UPDATE archetype = VALUES(archetype), set_at = VALUES(set_at)",
+        botGuid, enumName);
+}
+
+void Hs_ClearArchetypeOverrideAndPersist(uint64_t botGuid)
+{
+    Hs_ClearArchetypeOverride(botGuid);
+    CharacterDatabase.Execute("DELETE FROM hside_archetype_override WHERE bot_guid = {}", botGuid);
 }

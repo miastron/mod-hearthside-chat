@@ -15,8 +15,10 @@ class Player;
 // `speaker` is the player who spoke; `candidates` is the already-gated
 // eligible set (real-player/faction/range/combat gating happens in the
 // caller, hs_handler.cpp -- the arbiter only selects among what it is
-// given). Returns 0-2 bots. Does not touch tier ceilings, the token
-// bucket, or cooldowns -- those are applied by the caller, after selection.
+// given). Returns 0-2 bots. Archetype reply-chance is rolled here, dropping
+// candidates before the reply count is picked; tier ceilings, the token
+// bucket, and cooldowns are not touched -- those are applied by the caller,
+// after selection.
 std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& message, const std::vector<Player*>& candidates);
 
 #endif // MOD_HS_ARBITER_H

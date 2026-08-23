@@ -288,25 +288,26 @@ void Hs_RunIdentityDailySweep()
         } while (toDemote->NextRow());
     }
 
-    // 4. Retirement for currently-online carded bots whose level dropped
-    // while nobody was talking to them. Hs_BumpInteractionScore already
-    // catches this live for bots still being chatted with; this covers the
-    // bot-login / quiet-carded-bot gap. Only online bots can be checked here
-    // (needs a live Player* for the current level) -- an offline one is
-    // caught the next time it's talked to, or the next time this sweep
-    // finds it online, same lazy-not-instant tolerance as the friend poll
-    // above.
+    // 4. Retirement for carded bots whose level dropped while nobody was
+    // talking to them. Hs_BumpInteractionScore already catches this live for
+    // bots still being chatted with; this covers the quiet-carded-bot gap.
+    // Joined against `characters.level` (persisted on save/logout) so an
+    // offline bot is covered too; a live Player* is still preferred when
+    // available since it reflects a level-up not yet saved to the DB.
     QueryResult carded = CharacterDatabase.Query(
-        "SELECT bot_guid, last_known_level FROM hside_identity WHERE card_active = 1");
+        "SELECT hi.bot_guid, hi.last_known_level, c.level FROM hside_identity hi "
+        "JOIN characters c ON c.guid = hi.bot_guid WHERE hi.card_active = 1");
     if (carded)
     {
         do
         {
-            uint64_t botGuid     = (*carded)[0].Get<uint64_t>();
-            uint8_t  storedLevel = (*carded)[1].Get<uint8_t>();
-            Player*  bot         = ObjectAccessor::FindPlayer(ObjectGuid(botGuid));
-            if (bot && bot->IsInWorld() && bot->GetLevel() < storedLevel)
-                Hs_RetireCard(botGuid, bot->GetLevel());
+            uint64_t botGuid      = (*carded)[0].Get<uint64_t>();
+            uint8_t  storedLevel  = (*carded)[1].Get<uint8_t>();
+            uint8_t  persistedLevel = (*carded)[2].Get<uint8_t>();
+            Player*  bot          = ObjectAccessor::FindPlayer(ObjectGuid(botGuid));
+            uint8_t  currentLevel = (bot && bot->IsInWorld()) ? bot->GetLevel() : persistedLevel;
+            if (currentLevel < storedLevel)
+                Hs_RetireCard(botGuid, currentLevel);
         } while (carded->NextRow());
     }
 

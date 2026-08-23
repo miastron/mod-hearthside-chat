@@ -78,10 +78,10 @@ void Hs_RemoveBotFromExcludeVectors(uint64_t botGuid);
 // for this bot (a retired bot must not quote shared history back at a level
 // that contradicts it), redraws the archetype fresh for `newLevel`, and
 // releases the bot's name from the recycling-exclusion vectors. The identity
-// row itself survives -- bot_guid and style_flags carry on, so the bot can
-// earn a new card later as a new person. Called both from
+// row itself survives -- bot_guid carries on, so the bot can earn a new card
+// later as a new person. Called both from
 // Hs_BumpInteractionScore (a level drop caught live, mid-conversation) and
-// Hs_RunIdentityDailySweep (a carded, currently-online bot whose level
+// Hs_RunIdentityDailySweep (a carded bot, online or offline, whose level
 // changed while nobody was talking to it).
 void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel);
 
@@ -105,8 +105,9 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel);
 //   3. Card demotion -- dormant (kHsCardDormancyDays quiet), unpinned cards
 //      clear card_active and release the exclude-vector entry. Card text is
 //      untouched.
-//   4. Retirement -- currently-online carded bots whose level has dropped
-//      below their stored last_known_level are retired via Hs_RetireCard.
+//   4. Retirement -- carded bots (online or offline, checked against
+//      characters.level when offline) whose level has dropped below their
+//      stored last_known_level are retired via Hs_RetireCard.
 void Hs_RunIdentityDailySweep();
 
 // Read-only counters for `.hearthside status`.

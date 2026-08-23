@@ -1,6 +1,7 @@
 #include "hs_generator.h"
 #include "hs_archetype.h"
 #include "hs_config.h"
+#include "hs_corpus.h"
 #include "hs_gen_validate.h"
 #include "hs_identity.h"
 #include "hs_identity_store.h"
@@ -32,6 +33,12 @@ namespace
     // the right turn count from, so this ships as a placeholder.
     constexpr int kScriptTurnCount = 4;
 
+    // Same "compiled constant, no data yet" shape as kScriptTurnCount --
+    // three times hs_identity.h's kHsCardDormancyDays, since an unused
+    // corpus line costs nothing while it waits, and eviction should catch
+    // rows that are never picked, not ones that just haven't come up yet.
+    constexpr uint32_t kHsGenUnusedRowEvictionDays = 90;
+
     // The 10 playable WotLK classes (id 10 is unused in the class enum).
     const std::vector<uint8_t> kValidClassIds = {
         CLASS_WARRIOR, CLASS_PALADIN, CLASS_HUNTER, CLASS_ROGUE, CLASS_PRIEST,
@@ -42,24 +49,6 @@ namespace
     // *level* to one of these; here the generator just needs the fixed
     // label set to enumerate buckets, not a level->band lookup).
     const std::vector<std::string> kLevelBands = { "low", "mid", "high", "endgame" };
-
-    std::string ClassNameFor(uint8_t classId)
-    {
-        switch (classId)
-        {
-            case CLASS_WARRIOR:      return "warrior";
-            case CLASS_PALADIN:      return "paladin";
-            case CLASS_HUNTER:       return "hunter";
-            case CLASS_ROGUE:        return "rogue";
-            case CLASS_PRIEST:       return "priest";
-            case CLASS_DEATH_KNIGHT: return "death knight";
-            case CLASS_SHAMAN:       return "shaman";
-            case CLASS_MAGE:         return "mage";
-            case CLASS_WARLOCK:      return "warlock";
-            case CLASS_DRUID:        return "druid";
-            default:                 return "";
-        }
-    }
 
     struct HsGenBucket
     {
@@ -140,7 +129,7 @@ namespace
                 {
                     uint32_t count = 0;
                     for (auto const& c : counts) if (c.first == classId) { count = c.second; break; }
-                    result.push_back({ HsGenBucket{ category, "class_tag", std::to_string(classId), ClassNameFor(classId), cardGated }, count });
+                    result.push_back({ HsGenBucket{ category, "class_tag", std::to_string(classId), Hs_ClassNameFor(classId), cardGated }, count });
                 }
             }
             else if (axis == "level_band")
@@ -265,18 +254,25 @@ namespace
 
     // Baseline persona only, no archetype and no card -- personality is
     // applied per speaker at delivery by the style pass (hs_script.cpp), so
-    // the generator's job is clean, neutral dialogue. Deliberately
-    // restricted to gripes, opinions, and preferences -- nothing checkable
-    // -- so v1 doesn't need %my_level/%other_class placeholder substitution
-    // at all: sticking to unfalsifiable topics is the primary defense
-    // against state drift, and building placeholder substitution would be
-    // machinery for a case that defense already covers.
+    // the generator's job is clean, neutral dialogue: gripes, opinions, and
+    // preferences, nothing checkable. A live-fire test still produced one
+    // script naming a real dungeon under an earlier version with no escape
+    // hatch, so this version gives the model a safe, closed vocabulary for
+    // the one class of personal fact players actually mention in small talk
+    // (own/other's class, level, zone, guild): the eight %my_*/%other_*
+    // tokens, resolved per bot at delivery time (hs_corpus.h's
+    // Hs_ResolveScriptPlaceholders) so a claim is only ever true of
+    // whichever two bots end up cast. A specific item, quest, or invented
+    // biography still has no placeholder and stays flatly disallowed.
     const std::string kScriptSystemPrompt =
         "You are an ordinary player in World of Warcraft: Wrath of the Lich King, making small "
         "talk with another player you don't know well. Keep it casual, brief, one short line at "
         "a time -- the way real players actually chat. Stick to general opinions, feelings, and "
-        "gripes about the game -- never mention a specific level, item, quest, zone, or guild "
-        "name, and never anything the other person could check and find wrong. No roleplay "
+        "gripes about the game. If you want to mention your own class, level, current zone, or "
+        "guild, write exactly one of these tokens instead of naming one directly: %my_class, "
+        "%my_level, %my_zone, %my_guild. For the other player's, use: %other_class, "
+        "%other_level, %other_zone, %other_guild. Never invent or state a specific item, quest, "
+        "or any other detail the other person could check and find wrong. No roleplay "
         "narration, no asterisks, no mention of being an AI or a game.";
 
     const std::string kScriptOpeningTrigger =
@@ -324,6 +320,8 @@ namespace
             }
 
             HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true);
+            if (verdict.accepted)
+                verdict = Hs_ScriptPlaceholderDiscipline(result.text);
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
@@ -617,6 +615,33 @@ uint32_t Hs_RunEvictionSweep()
     }
 
     return evictedTotal;
+}
+
+uint32_t Hs_RunUnusedRowEvictionSweep()
+{
+    // COALESCE to generated_at: a row never selected has NULL last_used_at
+    // (the column is only ever set on actual selection), so its own
+    // creation time is the right reference point for "unused for months".
+    QueryResult countResult = CharacterDatabase.Query(
+        "SELECT COUNT(*) FROM hside_corpus WHERE generated_at IS NOT NULL "
+        "AND COALESCE(last_used_at, generated_at) < NOW() - INTERVAL {} DAY",
+        kHsGenUnusedRowEvictionDays);
+    uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
+    if (count == 0)
+        return 0;
+
+    CharacterDatabase.Execute(
+        "DELETE FROM hside_corpus WHERE generated_at IS NOT NULL "
+        "AND COALESCE(last_used_at, generated_at) < NOW() - INTERVAL {} DAY",
+        kHsGenUnusedRowEvictionDays);
+    g_RowsEvictedThisSession.fetch_add(count);
+
+    if (g_HsDebugEnabled)
+        LOG_INFO("server.loading",
+            "[HearthsideChat] Eviction: unused-row sweep removed {} row(s) unpicked for {}+ days.",
+            count, kHsGenUnusedRowEvictionDays);
+
+    return count;
 }
 
 uint32_t Hs_EvictGenerationRun(const std::string& promptVersion)

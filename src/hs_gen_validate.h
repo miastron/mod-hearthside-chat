@@ -42,6 +42,16 @@ HsGenVerdict Hs_PlaceholderDiscipline(const std::string& candidate,
 // the first near-duplicate found is the reason.
 HsGenVerdict Hs_DedupCheck(const std::string& candidate, const std::vector<std::string>& existingRows);
 
+// Scripted bot-to-bot dialogue's own placeholder discipline -- a smaller,
+// separate gate from Hs_PlaceholderDiscipline above, since scripts have no
+// `existingRows` exemplar set to key off of and use their own token
+// vocabulary (the %my_*/%other_* personal facts, resolved at delivery time
+// by hs_corpus.h's Hs_ResolveScriptPlaceholders). Rejects a turn using any
+// %-shaped token outside that vocabulary, since script turns have no
+// fallback "drop the line" path once the model has committed to a whole
+// exchange around it. A turn with no placeholder is always accepted.
+HsGenVerdict Hs_ScriptPlaceholderDiscipline(const std::string& candidate);
+
 // Runs all three gates in cost order (quality, placeholder, dedup) and stops
 // at the first failure -- what both callers actually call.
 HsGenVerdict Hs_EvaluateCandidate(const std::string& candidate,

@@ -68,14 +68,13 @@ extern uint32_t g_HsBreakerProbeIntervalSeconds;
 // --------------------------------------------
 // Typing delay for the tier-2 (inference) reply. Reflex/grounded/corpus-
 // fallback replies already get a fixed 400-1500ms delay via
-// Hs_DeliverReflexReply. This is a base+per-char formula (matching
-// mod-ollama-chat's own EnableTypingSimulation) computed as a residual on
-// top of the LLM call's own real latency rather than an unconditional
-// sleep, so a slow generation isn't double-charged.
+// Hs_DeliverReflexReply. The base+per-char formula is per-archetype
+// (hs_archetype.h's typingBaseMs/typingPerCharMs, hside_archetype SQL);
+// these two keys are just the kill switch and ceiling, same relationship
+// LLM.MaxTokens has with verbosityCap. Computed as a residual on top of the
+// LLM call's own real latency, so a slow generation isn't double-charged.
 // --------------------------------------------
 extern bool     g_HsTypingDelayEnabled;
-extern uint32_t g_HsTypingDelayBaseMs;
-extern uint32_t g_HsTypingDelayPerCharMs;
 extern uint32_t g_HsTypingDelayMaxMs;
 
 // --------------------------------------------
@@ -168,6 +167,10 @@ class HsConfigWorldScript : public WorldScript
 public:
     HsConfigWorldScript();
     void OnStartup() override;
+
+    // `.reload config` re-reads every HearthsideChat.* key. Gated on
+    // `reload` since OnStartup already covers the initial load.
+    void OnAfterConfigLoad(bool reload) override;
 };
 
 #endif // MOD_HS_CONFIG_H

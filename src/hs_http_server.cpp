@@ -188,6 +188,38 @@ namespace
                     {"retirements_session",         s.retirementsSession},
                     {"memory_row_count",            s.memoryRowCount},
                     {"openers_fired_session",       s.openersFiredSession},
+                    {"latency_p50_ms",               s.latencyP50Ms},
+                    {"latency_p95_ms",               s.latencyP95Ms},
+                    {"latency_p99_ms",               s.latencyP99Ms},
+                    {"prompt_chars_ring1_mean",      s.promptCharsRing1Mean},
+                    {"prompt_chars_ring2_mean",      s.promptCharsRing2Mean},
+                    {"prompt_chars_ring3_mean",      s.promptCharsRing3Mean},
+                });
+            }
+            SendJson(res, arr);
+        });
+
+        // Per-archetype/per-channel reply-vs-silence counts -- its own route
+        // rather than folded into /api/metrics, since it's a different row
+        // shape (one row per dimension/key per interval, not one row per
+        // interval) -- see hs_metrics.h's HsMetricsBreakdownRow doc comment.
+        svr.Get("/api/metrics/breakdown", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
+            if (!RequireAuth(req, res)) return;
+            uint32_t limit = 200;
+            if (req.has_param("limit"))
+            {
+                try { limit = std::min<uint32_t>(2000, std::stoul(req.get_param_value("limit"))); }
+                catch (...) { /* keep default */ }
+            }
+            hs_json arr = hs_json::array();
+            for (auto const& row : Hs_RecentMetricsBreakdown(limit))
+            {
+                arr.push_back({
+                    {"sampled_at",    row.sampledAt},
+                    {"dimension",     row.dimension},
+                    {"key",           row.key},
+                    {"replied_count", row.repliedCount},
+                    {"silent_count",  row.silentCount},
                 });
             }
             SendJson(res, arr);
