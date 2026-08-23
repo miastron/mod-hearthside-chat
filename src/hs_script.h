@@ -29,6 +29,15 @@
 // concept of "this queued item belongs to a cancellable multi-turn run,"
 // and retrofitting that would touch more of an already-tested file than
 // building an independent, self-contained one here.
+//
+// §4.17 channel scripts are a parallel, smaller mechanism in this same
+// file: 2 turns not 4, no proximity/combat abort (a channel cast needn't be
+// co-located), no witness/interrupt concept (the whole channel is the
+// audience, not one player), delivered via Channel::Say
+// (Hs_ResolveChannelForDelivery, hs_queue.h) instead of PlayerbotAI::Say.
+// Shares this file's WorldScript tick rather than running a second timer.
+// Not reflected in Hs_ActiveScriptRunCount below (that stays scoped to the
+// /say mechanism) -- a known small gap, not a functional one.
 
 class HsScriptRunnerWorldScript : public WorldScript
 {

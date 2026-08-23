@@ -1,6 +1,8 @@
 #ifndef MOD_HS_CORPUS_H
 #define MOD_HS_CORPUS_H
 
+#include "hs_channel.h"
+
 #include <cstdint>
 #include <string>
 
@@ -13,32 +15,49 @@ class Player;
 // bucket, no cooldown; only the ceiling->inference branch touches the token
 // bucket.
 //
-// Scoped to the tag axes the seeded content actually uses (none, class,
-// level_band) and to channel IS NULL categories -- the /say and
-// direct-reply set (channel_* categories are ambient content for a
-// channel-chat hook that doesn't exist yet, not this fallback).
-// faction/zone-axis categories are skipped until a category actually uses
-// one; no plumbing for a signal nothing reads yet.
+// Scoped to channel IS NULL categories -- the /say and direct-reply set
+// (channel_* categories are ambient content for the global-channel surface,
+// selected via Hs_SelectChannelLine below instead). Covers every tag axis a
+// seeded category now uses: none, class, level_band, faction, zone.
+//
+// `botFaction`: Player::GetTeamId() (0 = Alliance, 1 = Horde), the same
+// faction signal every other faction check in this module already uses
+// (hs_handler.cpp, hs_opener.cpp, hs_engagement.cpp, hs_script.cpp).
+// `botZoneId`: Player::GetZoneId(), the same id hs_corpus.cpp's own
+// Hs_BuildPlaceholderContext already resolves for %zone.
 //
 // Returns empty if no eligible category has a matching row (schema not
-// installed, or nothing fits this bot's class/level) -- caller falls
-// through to silence like any other "nothing to say" path.
+// installed, or nothing fits this bot's class/level/faction/zone) --
+// caller falls through to silence like any other "nothing to say" path.
 //
 // `hasActiveCard`: a card_gated=1 category is only eligible when true --
 // its rows use %main_focus/%current_goal, which only resolve for a carded
 // bot. False (the overwhelming majority of bots) simply removes those
-// categories from the eligible set, same as the class/level_band tag
-// filtering.
-std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, bool hasActiveCard);
+// categories from the eligible set, same as the other tag filtering.
+std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botFaction, uint32_t botZoneId, bool hasActiveCard);
 
 // An opener fires off a specific shared-context trigger (hs_opener.cpp)
 // that already knows which category applies -- "group formed" wants
 // opener_group_formed, not a random pick among all eligible categories.
 // Same anti-repeat pick and exposure bookkeeping as Hs_SelectCorpusLine,
 // scoped to one named category. Returns empty if the category doesn't
-// exist, isn't flagged is_opener, uses an unsupported tag axis (faction/
-// zone), or has no row matching this bot's class/level.
-std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel);
+// exist, isn't flagged is_opener, or has no row matching this bot's
+// class/level/faction/zone. No is_opener=1 category is faction/zone-axis
+// today, but the plumbing carries the signal regardless -- same shape as
+// the class/level_band tags an opener category doesn't use either.
+std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel,
+                                 uint8_t botFaction, uint32_t botZoneId);
+
+// §4.17: the channel_* categories' selection path (hs_corpus_category.sql's
+// `channel` column), previously unwired -- same anti-repeat pick and
+// exposure bookkeeping as Hs_SelectCorpusLine, scoped to categories tagged
+// for this channel instead of the channel-IS-NULL /say set. Only
+// Trade/General/World have any channel_* rows seeded today; a kind with none
+// simply returns empty, same as any other "nothing eligible" case. Called
+// from hs_handler.cpp's Channel* hook (§4.17), never for a channel whose
+// policy is Off.
+std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t botLevel,
+                                  uint8_t botFaction, uint32_t botZoneId);
 
 // The four level_band_tag labels used by chat_levelband_musing's seeded
 // rows: low 1-19, mid 20-59, high 60-79, endgame 80 (the level cap) --

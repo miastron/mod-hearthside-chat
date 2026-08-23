@@ -29,14 +29,15 @@ namespace
     constexpr int kAntiRepeatPoolSize = 5;
 
     // Builds the WHERE-clause fragment that narrows hside_corpus rows to
-    // this bot's tag value for a category's axis. Returns false for
-    // faction/zone -- no seeded category uses either yet, and this fallback
-    // has no faction/zone signal wired through.
-    bool TagWhereFor(const std::string& axis, uint8_t botClass, const std::string& band, std::string& out)
+    // this bot's tag value for a category's axis.
+    bool TagWhereFor(const std::string& axis, uint8_t botClass, const std::string& band,
+                      uint8_t botFaction, uint32_t botZoneId, std::string& out)
     {
         if (axis == "none")       { out = "";                                                return true; }
         if (axis == "class")      { out = "AND class_tag = " + std::to_string(botClass);      return true; }
         if (axis == "level_band") { out = "AND level_band_tag = '" + band + "'";               return true; }
+        if (axis == "faction")    { out = "AND faction_tag = " + std::to_string(botFaction);   return true; }
+        if (axis == "zone")       { out = "AND zone_tag = " + std::to_string(botZoneId);        return true; }
         return false;
     }
 
@@ -91,7 +92,7 @@ namespace
     }
 }
 
-std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, bool hasActiveCard)
+std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botFaction, uint32_t botZoneId, bool hasActiveCard)
 {
     QueryResult catResult = CharacterDatabase.Query(
         "SELECT name, tag_axis FROM hside_corpus_category WHERE channel IS NULL AND is_opener = 0 AND (card_gated = 0 OR {})",
@@ -110,9 +111,8 @@ std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, bool hasActi
         std::string axis = (*catResult)[1].Get<std::string>();
 
         std::string tagWhere;
-        if (TagWhereFor(axis, botClass, band, tagWhere))
+        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
             eligible.emplace_back(name, tagWhere);
-        // faction/zone: skipped, see TagWhereFor.
     } while (catResult->NextRow());
 
     if (eligible.empty())
@@ -122,12 +122,12 @@ std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, bool hasActi
     return PickAntiRepeatRow(chosen.first, chosen.second);
 }
 
-std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel)
+std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel,
+                                 uint8_t botFaction, uint32_t botZoneId)
 {
     // card_gated categories are unconditionally excluded here -- no
     // is_opener=1 category is card_gated yet, so this is a defensive floor
-    // rather than plumbing for a real signal, same as the faction/zone skip
-    // below.
+    // rather than plumbing for a real signal.
     QueryResult catResult = CharacterDatabase.Query(
         "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}' AND is_opener = 1 AND card_gated = 0", categoryName);
     if (!catResult)
@@ -137,10 +137,65 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
     std::string band = Hs_LevelBandFor(botLevel);
 
     std::string tagWhere;
-    if (!TagWhereFor(axis, botClass, band, tagWhere))
-        return ""; // faction/zone: not supported yet, same scoping as Hs_SelectCorpusLine
+    if (!TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
+        return "";
 
     return PickAntiRepeatRow(categoryName, tagWhere);
+}
+
+namespace
+{
+    // hside_corpus_category.channel's stored values -- lowercase, matching
+    // the seed rows in hside_corpus_category.sql. HsChannelKind's own name
+    // (Hs_ChannelKindName, hs_channel.h) is PascalCase to match the config
+    // key spelling instead, so this is a distinct mapping, not a case-fold
+    // of that one. LookingForGroup/GuildRecruitment/LocalDefense/
+    // WorldDefense have no channel_* rows seeded and no mapping here --
+    // Hs_SelectChannelLine returns empty for them, same as any other
+    // "nothing eligible" case.
+    bool ChannelColumnFor(HsChannelKind kind, std::string& out)
+    {
+        switch (kind)
+        {
+            case HsChannelKind::Trade:   out = "trade";   return true;
+            case HsChannelKind::General: out = "general"; return true;
+            case HsChannelKind::World:   out = "world";   return true;
+            default: return false;
+        }
+    }
+}
+
+std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t botLevel,
+                                  uint8_t botFaction, uint32_t botZoneId)
+{
+    std::string channelColumn;
+    if (!ChannelColumnFor(kind, channelColumn))
+        return "";
+
+    QueryResult catResult = CharacterDatabase.Query(
+        "SELECT name, tag_axis FROM hside_corpus_category WHERE channel = '{}' AND is_opener = 0 AND card_gated = 0",
+        channelColumn);
+    if (!catResult)
+        return "";
+
+    std::string band = Hs_LevelBandFor(botLevel);
+
+    std::vector<std::pair<std::string, std::string>> eligible;
+    do
+    {
+        std::string name = (*catResult)[0].Get<std::string>();
+        std::string axis = (*catResult)[1].Get<std::string>();
+
+        std::string tagWhere;
+        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
+            eligible.emplace_back(name, tagWhere);
+    } while (catResult->NextRow());
+
+    if (eligible.empty())
+        return "";
+
+    auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
+    return PickAntiRepeatRow(chosen.first, chosen.second);
 }
 
 namespace

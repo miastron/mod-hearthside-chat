@@ -227,6 +227,16 @@ HearthsideChat.TypingDelay.Enable = 1
 #     Default:     6000
 HearthsideChat.TypingDelay.MaxMs = 6000
 
+# HearthsideChat.MinDeliveryDelayMs
+#     Description: Unconditional floor on the tier-2 reply's total delay,
+#                  applied even when TypingDelay.Enable is off -- without it,
+#                  a fast backend could deliver a reply same-tick, which is
+#                  as unhuman as a four-minute one. Reflex/grounded/corpus-
+#                  fallback (400-1500ms) and scripted turns (800-2000ms+)
+#                  already have their own floors and are unaffected.
+#     Default:     400
+HearthsideChat.MinDeliveryDelayMs = 400
+
 # --------------------------------------------
 # TIER CEILINGS -- one GPU dial per surface
 # --------------------------------------------
@@ -290,6 +300,77 @@ HearthsideChat.MaxTier.Reflex = reflex
 HearthsideChat.MaxTier.EngagementFollowUp = off
 
 # --------------------------------------------
+# §4.17 GLOBAL-CHANNEL CHAT SURFACE
+# --------------------------------------------
+# mod-playerbots joins every bot to every one of these seven channels
+# unconditionally, with no config gate of its own. MaxTier reuses the same
+# off/reflex/corpus/inference enum as above but is capped at "corpus" in
+# practice -- speaking in a channel is corpus/script content only, never
+# tier-2 inference. RatePerMin is a per-channel token bucket (not per-bot --
+# a channel with most of the realm in it has no proximity bound to cap load
+# otherwise). MaxCandidates caps how many eligible bots are even considered
+# per triggering message (zone-local first, then a capped random sample) --
+# without this cap, a busy channel would roll reply-chance against every
+# member every message. LookingForGroup/GuildRecruitment/LocalDefense/
+# WorldDefense default off (soliciting a group/guild the bot can't honour,
+# or a system-shaped PvP alert, isn't something a bot conversationally
+# chimes into) but are operator-adjustable like every other MaxTier key.
+
+# HearthsideChat.Channel.Trade.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: Trade channel -- WTS/WTB flavor lines and live price
+#                  commentary (bag stock only, never AH listings).
+#     Default:     corpus / 3 / 8
+HearthsideChat.Channel.Trade.MaxTier = corpus
+HearthsideChat.Channel.Trade.RatePerMin = 3
+HearthsideChat.Channel.Trade.MaxCandidates = 8
+
+# HearthsideChat.Channel.General.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: General channel -- zone-flavor chatter.
+#     Default:     corpus / 3 / 8
+HearthsideChat.Channel.General.MaxTier = corpus
+HearthsideChat.Channel.General.RatePerMin = 3
+HearthsideChat.Channel.General.MaxCandidates = 8
+
+# HearthsideChat.Channel.World.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: World channel -- realm-wide, not zone-scoped.
+#     Default:     corpus / 3 / 8
+HearthsideChat.Channel.World.MaxTier = corpus
+HearthsideChat.Channel.World.RatePerMin = 3
+HearthsideChat.Channel.World.MaxCandidates = 8
+
+# HearthsideChat.Channel.LookingForGroup.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: LookingForGroup channel. Off by default -- soliciting a
+#                  group the bot can't honour is trap 14 in its purest form.
+#     Default:     off / 0 / 0
+HearthsideChat.Channel.LookingForGroup.MaxTier = off
+HearthsideChat.Channel.LookingForGroup.RatePerMin = 0
+HearthsideChat.Channel.LookingForGroup.MaxCandidates = 0
+
+# HearthsideChat.Channel.GuildRecruitment.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: GuildRecruitment channel. Off by default, same reasoning
+#                  as LookingForGroup.
+#     Default:     off / 0 / 0
+HearthsideChat.Channel.GuildRecruitment.MaxTier = off
+HearthsideChat.Channel.GuildRecruitment.RatePerMin = 0
+HearthsideChat.Channel.GuildRecruitment.MaxCandidates = 0
+
+# HearthsideChat.Channel.LocalDefense.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: LocalDefense channel. Off by default -- system-shaped
+#                  PvP alerts, nothing conversational belongs here.
+#     Default:     off / 0 / 0
+HearthsideChat.Channel.LocalDefense.MaxTier = off
+HearthsideChat.Channel.LocalDefense.RatePerMin = 0
+HearthsideChat.Channel.LocalDefense.MaxCandidates = 0
+
+# HearthsideChat.Channel.WorldDefense.MaxTier / .RatePerMin / .MaxCandidates
+#     Description: WorldDefense channel. Off by default, same reasoning as
+#                  LocalDefense.
+#     Default:     off / 0 / 0
+HearthsideChat.Channel.WorldDefense.MaxTier = off
+HearthsideChat.Channel.WorldDefense.RatePerMin = 0
+HearthsideChat.Channel.WorldDefense.MaxCandidates = 0
+
+# --------------------------------------------
 # TIER-0 REFLEX
 # --------------------------------------------
 # The plain gz/ty/inv/sum/lol/wb vocabulary and the personal-probe
@@ -328,6 +409,23 @@ HearthsideChat.BotQuestion = deflect
 #     Values:      0 | 1
 #     Default:     1
 HearthsideChat.GroundedAnswers = 1
+
+# HearthsideChat.GroundedAnswers.FuzzyMaxDistance
+#     Description: After an exact-phrase match fails, how many single-
+#                  character edits (Levenshtein distance) a player's message
+#                  may differ from a listed phrase and still match -- typo
+#                  tolerance only ("waht level are you" still hits Level),
+#                  not a looser reword/substring match. A phrase whose
+#                  length differs from the message by more than this many
+#                  characters is skipped outright. If two different
+#                  questions end up tied at the same distance, the match is
+#                  treated as ambiguous and dropped (falls through) rather
+#                  than guessed. 0 disables the fallback pass entirely
+#                  (exact match only).
+#     Values:      0+ (2-3 recommended; higher risks matching a genuinely
+#                  different, oddly-worded sentence rather than a typo)
+#     Default:     2
+HearthsideChat.GroundedAnswers.FuzzyMaxDistance = 2
 
 # --------------------------------------------
 # IDLE-TIME GENERATOR

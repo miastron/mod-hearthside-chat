@@ -65,8 +65,10 @@ namespace
     // Fixed, byte-identical for every bot -- teaches register (casual/
     // short/lowercase) rather than subject matter, which would leak answers
     // into unrelated replies. Deliberately off-topic from anything a bot
-    // will actually be asked. Only five exist, written to prove the
-    // mechanism works; a wider set is an open authoring item.
+    // will actually be asked. Widened from the original 5 (all short
+    // affirmative/compliant replies) to also cover the registers real chat
+    // needs and the model had never been shown: a non-answer, a question
+    // thrown back, a flat one-word brush-off, and a subject change.
     const std::vector<std::pair<std::string, std::string>>& Fewshot()
     {
         static const std::vector<std::pair<std::string, std::string>> examples =
@@ -76,6 +78,14 @@ namespace
             { "hey can i ask you something", "sure" },
             { "what do you think", "eh. not sure tbh" },
             { "thanks!!", "np" },
+            // non-answer
+            { "so what's the deal with that", "honestly couldn't tell you" },
+            // question thrown back
+            { "you doing anything fun this weekend", "eh not really, you?" },
+            // one-word reply
+            { "you good?", "yeah" },
+            // subject change
+            { "man that fight was rough", "yeah. anyway you selling that or keeping it" },
         };
         return examples;
     }

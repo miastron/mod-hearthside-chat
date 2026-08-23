@@ -2,6 +2,7 @@
 #include "hs_config.h"
 #include "hs_engagement.h"
 #include "hs_generator.h"
+#include "hs_grounded_store.h"
 #include "hs_handler.h"
 #include "hs_command.h"
 #include "hs_http_server.h"
@@ -42,6 +43,31 @@ namespace
             // to also pick up table edits avoids a second GM command.
             if (reload)
                 Hs_LoadArchetypesFromDb();
+        }
+    };
+
+    // Loads hside_grounded_question/hside_grounded_template into memory,
+    // same "SQL is the source of truth, retunable without a rebuild" shape
+    // and lifecycle as HsArchetypeLifecycleWorldScript above -- registered
+    // right after it, before anything that could call
+    // Hs_MatchGroundedQuestion/Hs_BuildGroundedReply (hs_handler.cpp's
+    // TryGrounded, reachable only once a player is in the world).
+    class HsGroundedLifecycleWorldScript : public WorldScript
+    {
+    public:
+        HsGroundedLifecycleWorldScript() : WorldScript("HsGroundedLifecycleWorldScript") {}
+        void OnStartup() override
+        {
+            Hs_LoadGroundedQuestionsFromDb();
+            Hs_LoadGroundedTemplatesFromDb();
+        }
+        void OnAfterConfigLoad(bool reload) override
+        {
+            if (reload)
+            {
+                Hs_LoadGroundedQuestionsFromDb();
+                Hs_LoadGroundedTemplatesFromDb();
+            }
         }
     };
 
@@ -180,6 +206,7 @@ void Addmod_hearthside_chatScripts()
     LOG_INFO("server.loading", "[HearthsideChat] Registering mod-hearthside-chat scripts.");
     new HsConfigWorldScript();
     new HsArchetypeLifecycleWorldScript();
+    new HsGroundedLifecycleWorldScript();
     new HsChatHandler();
     new HsDeliveryWorldScript();
     new HsCommandScript();

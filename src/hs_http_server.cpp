@@ -194,6 +194,10 @@ namespace
                     {"prompt_chars_ring1_mean",      s.promptCharsRing1Mean},
                     {"prompt_chars_ring2_mean",      s.promptCharsRing2Mean},
                     {"prompt_chars_ring3_mean",      s.promptCharsRing3Mean},
+                    {"ttl_dropped_session",          s.ttlDroppedSession},
+                    {"ttl_processed_session",        s.ttlProcessedSession},
+                    {"bucket_denied_session",        s.bucketDeniedSession},
+                    {"bucket_attempted_session",     s.bucketAttemptedSession},
                 });
             }
             SendJson(res, arr);

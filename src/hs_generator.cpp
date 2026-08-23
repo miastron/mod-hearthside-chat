@@ -1,5 +1,6 @@
 #include "hs_generator.h"
 #include "hs_archetype.h"
+#include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_gen_validate.h"
@@ -15,7 +16,9 @@
 #include "Random.h"
 #include "SharedDefines.h"
 
+#include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <string>
 #include <thread>
@@ -33,6 +36,11 @@ namespace
     // the right turn count from, so this ships as a placeholder.
     constexpr int kScriptTurnCount = 4;
 
+    // §4.17: 2 turns, not 4 -- a 4-turn exchange scrolling through a
+    // channel is conspicuous in a way the same script overheard in /say is
+    // not (PLAN.md §4.17).
+    constexpr int kChannelScriptTurnCount = 2;
+
     // Same "compiled constant, no data yet" shape as kScriptTurnCount --
     // three times hs_identity.h's kHsCardDormancyDays, since an unused
     // corpus line costs nothing while it waits, and eviction should catch
@@ -49,6 +57,38 @@ namespace
     // *level* to one of these; here the generator just needs the fixed
     // label set to enumerate buckets, not a level->band lookup).
     const std::vector<std::string> kLevelBands = { "low", "mid", "high", "endgame" };
+
+    // faction_tag's two values (0 = Alliance, 1 = Horde), matching
+    // Player::GetTeamId()'s own convention -- same values hs_corpus.cpp's
+    // TagWhereFor and every caller now thread through.
+    const std::vector<std::pair<uint8_t, std::string>> kFactionIds = {
+        { 0, "Alliance" }, { 1, "Horde" },
+    };
+
+    // A curated slice of zone ids, not every WotLK zone -- ids verified
+    // against azerothcore-wotlk-pb/data/sql/base/db_world/graveyard_zone.sql
+    // rather than guessed. Spans both factions' starting zones through a
+    // handful of classic leveling hubs and Northrend; the generator grows
+    // coverage from here over time rather than this list trying to be
+    // exhaustive up front.
+    const std::vector<std::pair<uint32_t, std::string>> kZoneIds = {
+        { 12,   "Elwynn Forest" },
+        { 1,    "Dun Morogh" },
+        { 141,  "Teldrassil" },
+        { 14,   "Durotar" },
+        { 85,   "Tirisfal Glades" },
+        { 215,  "Mulgore" },
+        { 44,   "Redridge Mountains" },
+        { 38,   "Loch Modan" },
+        { 130,  "Silverpine Forest" },
+        { 17,   "the Barrens" },
+        { 33,   "Stranglethorn Vale" },
+        { 15,   "Dustwallow Marsh" },
+        { 3537, "Borean Tundra" },
+        { 495,  "Howling Fjord" },
+        { 65,   "Dragonblight" },
+        { 210,  "Icecrown" },
+    };
 
     struct HsGenBucket
     {
@@ -89,10 +129,9 @@ namespace
         return rows;
     }
 
-    // Enumerates every (category, bucket) pair whose axis this generator
-    // understands (none/class/level_band -- faction/zone skipped, same
-    // scoping as hs_corpus.h's selection path: no seeded category uses
-    // either yet), each with its current row count.
+    // Enumerates every (category, bucket) pair for every tag axis a seeded
+    // category now uses (none/class/level_band/faction/zone), each with its
+    // current row count.
     std::vector<std::pair<HsGenBucket, uint32_t>> EnumerateBucketsWithCounts()
     {
         std::vector<std::pair<HsGenBucket, uint32_t>> result;
@@ -150,7 +189,42 @@ namespace
                     result.push_back({ HsGenBucket{ category, "level_band_tag", "'" + band + "'", band, cardGated }, count });
                 }
             }
-            // else: faction/zone axis -- no seeded category uses either, skipped.
+            else if (axis == "faction")
+            {
+                QueryResult countResult = CharacterDatabase.Query(
+                    "SELECT faction_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND faction_tag IS NOT NULL GROUP BY faction_tag",
+                    category);
+                std::vector<std::pair<uint8_t, uint32_t>> counts;
+                if (countResult)
+                {
+                    do { counts.emplace_back((*countResult)[0].Get<uint8_t>(), (*countResult)[1].Get<uint32_t>()); }
+                    while (countResult->NextRow());
+                }
+                for (auto const& faction : kFactionIds)
+                {
+                    uint32_t count = 0;
+                    for (auto const& c : counts) if (c.first == faction.first) { count = c.second; break; }
+                    result.push_back({ HsGenBucket{ category, "faction_tag", std::to_string(faction.first), faction.second, cardGated }, count });
+                }
+            }
+            else if (axis == "zone")
+            {
+                QueryResult countResult = CharacterDatabase.Query(
+                    "SELECT zone_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND zone_tag IS NOT NULL GROUP BY zone_tag",
+                    category);
+                std::vector<std::pair<uint32_t, uint32_t>> counts;
+                if (countResult)
+                {
+                    do { counts.emplace_back((*countResult)[0].Get<uint32_t>(), (*countResult)[1].Get<uint32_t>()); }
+                    while (countResult->NextRow());
+                }
+                for (auto const& zone : kZoneIds)
+                {
+                    uint32_t count = 0;
+                    for (auto const& c : counts) if (c.first == zone.first) { count = c.second; break; }
+                    result.push_back({ HsGenBucket{ category, "zone_tag", std::to_string(zone.first), zone.second, cardGated }, count });
+                }
+            }
         } while (catResult->NextRow());
 
         return result;
@@ -248,7 +322,20 @@ namespace
 
     uint32_t ScriptReserveDepthQuery()
     {
-        QueryResult result = CharacterDatabase.Query("SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL");
+        // channel IS NULL: a §4.17 channel script also has consumed_at IS
+        // NULL while unclaimed, but belongs to its own reserve
+        // (ChannelScriptReserveDepthQuery below), not this /say count.
+        QueryResult result = CharacterDatabase.Query("SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL");
+        return result ? (*result)[0].Get<uint32_t>() : 0;
+    }
+
+    uint32_t ChannelScriptReserveDepthQuery(HsChannelKind kind)
+    {
+        std::string channelColumn = std::string(Hs_ChannelKindName(kind));
+        std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL AND channel = '{}'", channelColumn);
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
 
@@ -368,6 +455,133 @@ namespace
 
         if (g_HsDebugEnabled)
             LOG_INFO("server.loading", "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
+
+        g_RowsAddedThisSession.fetch_add(1);
+        return true;
+    }
+
+    // §4.17: a channel variant of the exchange above -- shorter (2 turns),
+    // and swaps the neutral small-talk framing for one naming the channel
+    // itself, so the model's opening line reads as belonging there instead
+    // of a chance meeting. Trade still forbids AH-shaped price claims (same
+    // §4.13 rule TRADER's live-price commentary follows) since a generated
+    // line has no real item/price behind it the way a grounded lookup would.
+    // Same turn-by-turn call/quality-gate/placeholder-discipline shape as
+    // RunOneScriptGenerationCycle, just parameterized by kind and turn count.
+    std::string ChannelScriptSystemPromptFor(HsChannelKind kind)
+    {
+        switch (kind)
+        {
+            case HsChannelKind::Trade:
+                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
+                       "chatting in the Trade channel with another player you don't know well. Keep "
+                       "it casual and brief, one short line at a time. Talk about gearing up, "
+                       "professions, or gripes about prices in general terms -- never a specific "
+                       "item, quest, or exact gold price the other person could check and find "
+                       "wrong. If you want to mention your own class, level, current zone, or "
+                       "guild, write exactly one of these tokens instead of naming one directly: "
+                       "%my_class, %my_level, %my_zone, %my_guild. For the other player's, use: "
+                       "%other_class, %other_level, %other_zone, %other_guild. No roleplay "
+                       "narration, no asterisks, no mention of being an AI or a game.";
+            case HsChannelKind::General:
+                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
+                       "chatting in the General channel with another player you don't know well. "
+                       "Keep it casual and brief, one short line at a time -- zone flavor, quests, "
+                       "or general opinions about the game. If you want to mention your own class, "
+                       "level, current zone, or guild, write exactly one of these tokens instead of "
+                       "naming one directly: %my_class, %my_level, %my_zone, %my_guild. For the "
+                       "other player's, use: %other_class, %other_level, %other_zone, %other_guild. "
+                       "Never invent or state a specific item, quest, or any other detail the other "
+                       "person could check and find wrong. No roleplay narration, no asterisks, no "
+                       "mention of being an AI or a game.";
+            case HsChannelKind::World:
+            default:
+                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
+                       "chatting in the realm-wide World channel with another player you don't know "
+                       "well. Keep it casual and brief, one short line at a time -- general opinions "
+                       "or banter about the game, nothing tied to one zone. If you want to mention "
+                       "your own class, level, current zone, or guild, write exactly one of these "
+                       "tokens instead of naming one directly: %my_class, %my_level, %my_zone, "
+                       "%my_guild. For the other player's, use: %other_class, %other_level, "
+                       "%other_zone, %other_guild. Never invent or state a specific item, quest, or "
+                       "any other detail the other person could check and find wrong. No roleplay "
+                       "narration, no asterisks, no mention of being an AI or a game.";
+        }
+    }
+
+    bool RunOneChannelScriptGenerationCycle(HsChannelKind kind)
+    {
+        HsLLMConfig cfg;
+        cfg.apiType       = g_HsGeneratorLLMApiType;
+        cfg.baseUrl       = g_HsGeneratorLLMUrl;
+        cfg.model         = g_HsGeneratorLLMModel;
+        cfg.apiKey        = g_HsGeneratorLLMApiKey;
+        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
+        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.dryMultiplier = 0.0f;
+
+        std::string systemPrompt = ChannelScriptSystemPromptFor(kind);
+        std::vector<HsHistoryTurn> history;
+        std::string prevText = kScriptOpeningTrigger;
+        std::vector<std::pair<uint8_t, std::string>> turns;
+
+        for (int i = 0; i < kChannelScriptTurnCount; ++i)
+        {
+            HsLLMResult result = Hs_CallLLM(cfg, systemPrompt, "", history, prevText);
+            if (!result.success || result.text.empty())
+            {
+                if (g_HsDebugEnabled)
+                    LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
+                        i, static_cast<int>(result.failure));
+                return false;
+            }
+
+            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true);
+            if (verdict.accepted)
+                verdict = Hs_ScriptPlaceholderDiscipline(result.text);
+            if (!verdict.accepted)
+            {
+                if (g_HsDebugEnabled)
+                    LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
+                        i, verdict.reason, result.text);
+                return false;
+            }
+
+            turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
+            history.push_back({ prevText, result.text });
+            prevText = result.text;
+        }
+
+        QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
+        uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
+
+        std::string escapedModel = g_HsGeneratorLLMModel;
+        CharacterDatabase.EscapeString(escapedModel);
+        std::string escapedVersion = g_HsGeneratorPromptVersion;
+        CharacterDatabase.EscapeString(escapedVersion);
+        std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
+        std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
+
+        std::string channelColumn = std::string(Hs_ChannelKindName(kind));
+        std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        CharacterDatabase.Execute(
+            "INSERT INTO hside_script (id, turn_count, channel, generated_at, model, prompt_version) VALUES ({}, {}, '{}', NOW(), {}, {})",
+            scriptId, kChannelScriptTurnCount, channelColumn, modelSql, versionSql);
+
+        for (size_t i = 0; i < turns.size(); ++i)
+        {
+            std::string escapedText = turns[i].second;
+            CharacterDatabase.EscapeString(escapedText);
+            CharacterDatabase.Execute(
+                "INSERT INTO hside_script_turn (script_id, turn_no, speaker_slot, text) VALUES ({}, {}, {}, '{}')",
+                scriptId, static_cast<uint32_t>(i), turns[i].first, escapedText);
+        }
+
+        if (g_HsDebugEnabled)
+            LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
+                scriptId, channelColumn, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
@@ -539,13 +753,25 @@ namespace
                 continue;
             }
 
-            // Priority order: cards first, then the script reserve, then
-            // corpus buckets.
+            // Priority order: cards first, then the /say script reserve,
+            // then the three channel-script reserves (§4.17 -- Trade,
+            // General, World, in that order), then corpus buckets. Channel
+            // reserves reuse the same g_HsGeneratorScriptReserveTarget as
+            // the /say reserve rather than a separate per-channel config
+            // key (Claude/ISSUES.md's "separate generator reserve or a
+            // truncation rule" question, answered as "shared target" for
+            // now -- easy to split later against live-realm evidence).
             bool added;
             if (PendingCardCount() > 0)
                 added = RunOneCardGenerationCycle();
             else if (ScriptReserveDepthQuery() < g_HsGeneratorScriptReserveTarget)
                 added = RunOneScriptGenerationCycle();
+            else if (ChannelScriptReserveDepthQuery(HsChannelKind::Trade) < g_HsGeneratorScriptReserveTarget)
+                added = RunOneChannelScriptGenerationCycle(HsChannelKind::Trade);
+            else if (ChannelScriptReserveDepthQuery(HsChannelKind::General) < g_HsGeneratorScriptReserveTarget)
+                added = RunOneChannelScriptGenerationCycle(HsChannelKind::General);
+            else if (ChannelScriptReserveDepthQuery(HsChannelKind::World) < g_HsGeneratorScriptReserveTarget)
+                added = RunOneChannelScriptGenerationCycle(HsChannelKind::World);
             else
                 added = RunOneGenerationCycle();
 

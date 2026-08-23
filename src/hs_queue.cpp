@@ -8,10 +8,13 @@
 #include "hs_memory_store.h"
 #include "hs_style.h"
 
+#include "Channel.h"          // §4.17 channel delivery: Channel::Say
+#include "ChannelMgr.h"       // §4.17 channel delivery: ChannelMgr::forTeam/GetChannel
+#include "DBCStores.h"        // §4.17 channel delivery: sChatChannelsStore (zone-qualified channel name)
 #include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
 #include "Log.h"
 #include "Player.h"
-#include "PlayerbotAI.h"
+#include "PlayerbotAI.h"      // also mod-playerbots' ChatChannelId enum, reused for §4.17's DBC id mapping
 #include "PlayerbotMgr.h"
 #include "ObjectAccessor.h"
 #include "Random.h"
@@ -74,11 +77,14 @@ namespace
             case HsReplyChannel::Party:   return "party";
             case HsReplyChannel::Raid:    return "raid";
             case HsReplyChannel::Guild:   return "guild";
+            case HsReplyChannel::Channel: return "channel";
         }
         return "say";
     }
 
     // hs_identity.h's weight table, keyed by delivery channel (§4.12).
+    // Channel (§4.17) scores nothing -- ambient chatter, not addressed at a
+    // player, same rule openers/engagement follow-ups already get.
     uint32_t ScoreWeightForChannel(HsReplyChannel channel)
     {
         switch (channel)
@@ -88,6 +94,7 @@ namespace
             case HsReplyChannel::Raid:    return kHsScoreWeightPartyRaid;
             case HsReplyChannel::Guild:   return kHsScoreWeightGuild;
             case HsReplyChannel::Say:     return kHsScoreWeightSay;
+            case HsReplyChannel::Channel: return 0;
         }
         return kHsScoreWeightSay;
     }
@@ -122,6 +129,7 @@ namespace
         std::string text;
         Clock::time_point deliverAt;
         bool        isFollowUp; // cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
+        HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
     };
 
     // ---- work queue: world thread pushes, the one worker thread pops ----
@@ -140,6 +148,22 @@ namespace
     double               g_BucketTokens = 0.0;
     Clock::time_point    g_BucketLastRefill;
     bool                 g_BucketInitialized = false;
+
+    // ---- §4.17: one token bucket per channel, independent of the tier-2
+    // bucket above -- corpus-fallback channel replies never touch that one
+    // (zero GPU work). Burst capacity equals the channel's own RatePerMin
+    // (a channel can spend a full minute's budget at once, then waits), no
+    // separate config key. Same shape as the tier-2 bucket, keyed by channel
+    // instead of global, one shared mutex since writes are rare (one
+    // channel message at a time, never hot enough to need per-key locking).
+    struct HsChannelBucketState
+    {
+        double            tokens = 0.0;
+        Clock::time_point lastRefill;
+        bool              initialized = false;
+    };
+    std::mutex                                            g_ChannelBucketMutex;
+    std::unordered_map<HsChannelKind, HsChannelBucketState> g_ChannelBuckets;
 
     // ---- per-bot cooldown (gate) and last-successful-reply time (arbiter query) ----
     std::mutex                                        g_CooldownMutex;
@@ -210,6 +234,16 @@ namespace
     std::unordered_map<std::string, ReplyCounts> g_ReplyCountsByArchetype;
     std::unordered_map<uint8_t, ReplyCounts>     g_ReplyCountsByChannel;
 
+    // TTL-drop and token-bucket-saturation counts, session-cumulative like
+    // the reply/silence counts above -- an operator-visible answer to "is
+    // the queue going stale" / "is a rate limit actually binding", named as
+    // a gap in Claude/ISSUES.md while building the rest of §4.19's metrics.
+    uint64_t g_TtlDroppedSession    = 0;
+    uint64_t g_TtlProcessedSession  = 0; // dropped + handled -- the drop-rate denominator
+    uint64_t g_BucketDeniedSession   = 0;
+    uint64_t g_BucketAttemptedSession = 0;
+    std::unordered_map<HsChannelKind, ReplyCounts> g_ChannelBucketCountsByKind; // .replied = granted, .silent = denied
+
     void RecordLatencySample(uint32_t ms)
     {
         std::lock_guard<std::mutex> lock(g_MetricsMutex);
@@ -243,6 +277,32 @@ namespace
             ++byArchetype.silent;
             ++byChannel.silent;
         }
+    }
+
+    void RecordTtlOutcome(bool dropped)
+    {
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        ++g_TtlProcessedSession;
+        if (dropped)
+            ++g_TtlDroppedSession;
+    }
+
+    void RecordBucketAttempt(bool denied)
+    {
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        ++g_BucketAttemptedSession;
+        if (denied)
+            ++g_BucketDeniedSession;
+    }
+
+    void RecordChannelBucketAttempt(HsChannelKind kind, bool denied)
+    {
+        std::lock_guard<std::mutex> lock(g_MetricsMutex);
+        ReplyCounts& counts = g_ChannelBucketCountsByKind[kind];
+        if (denied)
+            ++counts.silent;
+        else
+            ++counts.replied;
     }
 
     // Refills the bucket for elapsed time, capped at burst capacity. Caller
@@ -301,6 +361,7 @@ namespace
             auto ageSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - req.enqueuedAt).count();
             if (ageSec > static_cast<int64_t>(g_HsQueueTTLSeconds))
             {
+                RecordTtlOutcome(/*dropped=*/true);
                 if (req.isProbe)
                     g_ProbeInFlight.store(false);
                 if (g_HsDebugEnabled)
@@ -308,6 +369,7 @@ namespace
                         req.botGuid, ageSec, g_HsQueueTTLSeconds);
                 continue;
             }
+            RecordTtlOutcome(/*dropped=*/false);
 
             // The bot's archetype, drawn deterministically from its GUID and
             // restricted to the level-eligible pool (hs_archetype.h). Feeds
@@ -395,6 +457,7 @@ namespace
             styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
             styleCtx.inCombat             = req.inCombat;
             styleCtx.verbalTic            = cardSnapshot.verbalTic;
+            styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(req.botGuid); // §4.17: no Player* needed, safe off-thread
             // Captured before result.text is overwritten below, so
             // HearthsideChat.DebugChatLog can log both the pre-style and
             // post-style text for an operator to review later.
@@ -471,14 +534,25 @@ namespace
             // reply without ever shortening what the LLM call itself cost.
             // A fast backend that would otherwise deliver same-tick still
             // gets the full target delay.
+            int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.enqueuedAt).count();
             Clock::time_point deliverAt = now;
             if (g_HsTypingDelayEnabled)
             {
                 uint32_t targetMs = std::min(g_HsTypingDelayMaxMs,
                     archetypeInfo.typingBaseMs + static_cast<uint32_t>(result.text.size()) * archetypeInfo.typingPerCharMs);
-                int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.enqueuedAt).count();
                 if (elapsedMs < static_cast<int64_t>(targetMs))
                     deliverAt = now + std::chrono::milliseconds(static_cast<uint32_t>(targetMs) - static_cast<uint32_t>(elapsedMs));
+            }
+
+            // Unconditional floor on top of whatever the block above produced
+            // -- closes the gap left when TypingDelay.Enable is off, where a
+            // fast backend could otherwise deliver same-tick (hs_config.h).
+            if (elapsedMs < static_cast<int64_t>(g_HsMinDeliveryDelayMs))
+            {
+                Clock::time_point floorAt = now + std::chrono::milliseconds(
+                    static_cast<uint32_t>(g_HsMinDeliveryDelayMs) - static_cast<uint32_t>(elapsedMs));
+                if (floorAt > deliverAt)
+                    deliverAt = floorAt;
             }
 
             {
@@ -534,8 +608,12 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         std::lock_guard<std::mutex> lock(g_BucketMutex);
         RefillBucketLocked();
         if (g_BucketTokens < 1.0)
+        {
+            RecordBucketAttempt(/*denied=*/true);
             return false;
+        }
     }
+    RecordBucketAttempt(/*denied=*/false);
 
     // 2. Per-bot cooldown.
     {
@@ -612,14 +690,93 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
     return true;
 }
 
-void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text)
+void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
+                            HsChannelKind channelKind)
 {
     if (text.empty())
         return;
 
     Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kReflexDelayMinMs, kReflexDelayMaxMs));
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);
-    g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false });
+    g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind });
+}
+
+bool Hs_ChannelBucketTake(HsChannelKind kind)
+{
+    uint32_t ratePerMin = Hs_ChannelPolicyFor(kind).ratePerMin;
+    if (ratePerMin == 0)
+        return false;
+
+    std::lock_guard<std::mutex> lock(g_ChannelBucketMutex);
+    HsChannelBucketState& state = g_ChannelBuckets[kind];
+
+    Clock::time_point now = Clock::now();
+    if (!state.initialized)
+    {
+        state.tokens      = static_cast<double>(ratePerMin);
+        state.lastRefill  = now;
+        state.initialized = true;
+    }
+    else
+    {
+        double elapsedSec = std::chrono::duration<double>(now - state.lastRefill).count();
+        state.lastRefill  = now;
+        double ratePerSec = static_cast<double>(ratePerMin) / 60.0;
+        state.tokens = std::min(static_cast<double>(ratePerMin), state.tokens + elapsedSec * ratePerSec);
+    }
+
+    if (state.tokens < 1.0)
+    {
+        RecordChannelBucketAttempt(kind, /*denied=*/true);
+        return false;
+    }
+
+    state.tokens -= 1.0;
+    RecordChannelBucketAttempt(kind, /*denied=*/false);
+    return true;
+}
+
+Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
+{
+    ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
+    if (!cMgr)
+        return nullptr;
+
+    if (kind == HsChannelKind::World)
+        return cMgr->GetChannel("World", bot);
+
+    uint32 chatChannelId = 0;
+    bool   isCityScoped  = false; // Trade/GuildRecruitment always use AreaID 3459's "City" label
+    bool   isGlobal      = false; // LookingForGroup/WorldDefense: pattern used as-is, no zone substitution
+    switch (kind)
+    {
+        case HsChannelKind::Trade:            chatChannelId = ChatChannelId::TRADE;             isCityScoped = true; break;
+        case HsChannelKind::GuildRecruitment:  chatChannelId = ChatChannelId::GUILD_RECRUITMENT;  isCityScoped = true; break;
+        case HsChannelKind::General:           chatChannelId = ChatChannelId::GENERAL;                                break;
+        case HsChannelKind::LocalDefense:      chatChannelId = ChatChannelId::LOCAL_DEFENSE;                          break;
+        case HsChannelKind::LookingForGroup:   chatChannelId = ChatChannelId::LOOKING_FOR_GROUP;  isGlobal = true;    break;
+        case HsChannelKind::WorldDefense:      chatChannelId = ChatChannelId::WORLD_DEFENSE;      isGlobal = true;    break;
+        default: return nullptr; // World handled above
+    }
+
+    ChatChannelsEntry const* entry = sChatChannelsStore.LookupEntry(chatChannelId);
+    if (!entry)
+        return nullptr;
+
+    uint8 locale = sWorld->GetDefaultDbcLocale();
+    if (isGlobal)
+        return cMgr->GetChannel(entry->pattern[locale], bot);
+
+    AreaTableEntry const* areaEntry = isCityScoped
+        ? GetAreaEntryByAreaID(3459) // "City" -- matches PlayerbotMgr.cpp's own join-time substitution
+        : sAreaTableStore.LookupEntry(bot->GetZoneId());
+    if (!areaEntry)
+        return nullptr;
+
+    std::string areaName = PlayerbotAI::GetLocalizedAreaName(areaEntry);
+    char nameBuf[100];
+    snprintf(nameBuf, sizeof(nameBuf), entry->pattern[locale], areaName.c_str());
+    return cMgr->GetChannel(nameBuf, bot);
 }
 
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)
@@ -675,6 +832,14 @@ void Hs_DeliverPending()
             case HsReplyChannel::Raid:  botAI->SayToRaid(reply.text);  break;
             case HsReplyChannel::Guild: botAI->SayToGuild(reply.text); break;
             case HsReplyChannel::Say:   botAI->Say(reply.text);        break;
+            case HsReplyChannel::Channel:
+            {
+                Channel* channel = Hs_ResolveChannelForDelivery(bot, reply.channelKind);
+                if (!channel)
+                    continue; // bot no longer resolves to that channel instance (e.g. moved zones) -- drop, don't misdeliver
+                channel->Say(bot->GetGUID(), reply.text, LANG_UNIVERSAL);
+                break;
+            }
         }
 
         if (g_HsDebugEnabled)
@@ -765,5 +930,27 @@ std::vector<HsChannelReplyCounts> Hs_ChannelReplyCountsSnapshot()
     out.reserve(g_ReplyCountsByChannel.size());
     for (auto const& entry : g_ReplyCountsByChannel)
         out.push_back({ static_cast<HsReplyChannel>(entry.first), entry.second.replied, entry.second.silent });
+    return out;
+}
+
+HsTtlDropStats Hs_TtlDropStatsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    return { g_TtlDroppedSession, g_TtlProcessedSession };
+}
+
+HsBucketSaturationStats Hs_GlobalBucketSaturationSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    return { g_BucketDeniedSession, g_BucketAttemptedSession };
+}
+
+std::vector<HsChannelBucketSaturationStats> Hs_ChannelBucketSaturationSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    std::vector<HsChannelBucketSaturationStats> out;
+    out.reserve(g_ChannelBucketCountsByKind.size());
+    for (auto const& entry : g_ChannelBucketCountsByKind)
+        out.push_back({ entry.first, entry.second.replied, entry.second.silent });
     return out;
 }

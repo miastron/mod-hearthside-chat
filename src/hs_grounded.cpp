@@ -1,5 +1,6 @@
 #include "hs_grounded.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 #include <vector>
@@ -73,349 +74,103 @@ namespace
         return s;
     }
 
-    struct KindPhrases
+    // Iterative two-row Levenshtein distance -- no recursion, no library.
+    // Only ever called on short chat phrases (a handful of words), so the
+    // O(len(a) * len(b)) cost is negligible; Hs_MatchGroundedQuestion also
+    // skips a candidate outright when its length differs from the trigger
+    // by more than the caller's distance cap, so this rarely runs at all.
+    uint32_t LevenshteinDistance(const std::string& a, const std::string& b)
     {
-        HsGroundedKind                  kind;
-        const std::vector<const char*>* phrases;
-    };
+        std::vector<uint32_t> prev(b.size() + 1), curr(b.size() + 1);
+        for (size_t j = 0; j <= b.size(); ++j)
+            prev[j] = static_cast<uint32_t>(j);
 
-    const std::vector<const char*>& MountPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "nice mount", "nice mount, where from", "nice mount where from",
-            "where'd you get that mount", "where did you get that mount",
-            "what mount is that", "what's that mount", "whats that mount",
-            "cool mount", "sweet mount", "what are you riding",
-        };
-        return phrases;
+        for (size_t i = 1; i <= a.size(); ++i)
+        {
+            curr[0] = static_cast<uint32_t>(i);
+            for (size_t j = 1; j <= b.size(); ++j)
+            {
+                uint32_t cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+                curr[j] = std::min({ prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost });
+            }
+            std::swap(prev, curr);
+        }
+        return prev[b.size()];
     }
 
-    const std::vector<const char*>& LevelPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what level are you", "what lvl are you", "what level r u", "what lvl r u",
-            "ur level", "your level", "what's your level", "whats your level",
-            "how strong are you",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& ZonePhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "where are you", "where you at", "what zone are you in", "what zone is this",
-            "where's this", "wheres this", "where is this", "what zone r u in",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& GuildPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what guild are you in", "you in a guild", "your guild", "what guild",
-            "you guilded", "are you in a guild",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& ProfessionPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what professions do you have", "what professions you got",
-            "what's your profession", "whats your profession", "any professions",
-            "what do you craft", "you got any professions",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& GearPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what are you wearing", "nice gear", "what's that gear", "whats that gear",
-            "where'd you get that gear", "sweet gear", "nice armor",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& CurrentGoalPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what are you working on", "what are you up to", "what're you working on",
-            "whatcha working on", "what are you doing tonight", "what's the plan",
-            "whats the plan",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& PlayedSincePhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "how long have you played", "how long you been playing", "how long have you been playing",
-            "when did you start playing", "how long you played this game",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& AltPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what do you main", "what's your main", "whats your main",
-            "you got any alts", "what alts do you have", "what do you play besides this",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& RecallMetPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "do you remember me", "remember me", "do you know me",
-            "have we met before", "have we met", "do we know each other",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& RecallDungeonPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "what did we run", "what did we run together", "what dungeon did we run",
-            "what instance did we run", "what did we do together", "what have we run together",
-        };
-        return phrases;
-    }
-
-    const std::vector<const char*>& RecallGroupedPhrases()
-    {
-        static const std::vector<const char*> phrases = {
-            "have we grouped before", "have we grouped up before", "have we grouped together before",
-            "have we run together before", "have we played together before",
-        };
-        return phrases;
-    }
-
-    struct TemplatePart
-    {
-        const char* prefix;
-        const char* suffix;
-    };
-
-    const std::vector<TemplatePart>& MountTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "it's a ", "" }, { "just my ", "" }, { "", ", nothing special" },
-            { "picked up my ", " a while back" },
-        };
-        return t;
-    }
-
-    const std::vector<TemplatePart>& LevelTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "level ", "" }, { "I'm level ", "" }, { "", ", why" }, { "just hit ", "" },
-        };
-        return t;
-    }
-
-    const std::vector<TemplatePart>& ZoneTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "", "" }, { "", ", you?" }, { "just in ", "" }, { "hanging around ", "" },
-        };
-        return t;
-    }
-
-    const std::vector<TemplatePart>& GuildHasTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "I'm in ", "" }, { "", ", why" }, { "running with ", "" },
-        };
-        return t;
-    }
-
-    const std::vector<const char*>& GuildLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "nah, no guild atm", "not guilded right now", "solo for now",
-        };
-        return r;
-    }
-
-    const std::vector<TemplatePart>& ProfessionHasTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "", "" }, { "just ", "" }, { "picked up ", "" },
-        };
-        return t;
-    }
-
-    const std::vector<const char*>& ProfessionLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "haven't picked one up yet", "nothing right now", "nope, none atm",
-        };
-        return r;
-    }
-
-    const std::vector<TemplatePart>& GearHasTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "just this ", "" }, { "", ", nothing fancy" }, { "picked up this ", " a while back" },
-        };
-        return t;
-    }
-
-    const std::vector<const char*>& GearLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "not much really", "still gearing up",
-        };
-        return r;
-    }
-
-    const std::vector<TemplatePart>& CurrentGoalTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "", "" }, { "mostly ", "" }, { "honestly, ", "" }, { "right now, ", "" },
-        };
-        return t;
-    }
-
-    // `fact` here is one of the three enum values in
-    // HsCardFacts::kPlayedSinceValues ("vanilla" | "bc" | "wrath") --
-    // templated into natural phrasing rather than echoed as the raw
-    // lowercase token.
-    const std::vector<TemplatePart>& PlayedSinceTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "since ", "" }, { "playing since ", "" }, { "started back in ", "" }, { "", " baby" },
-        };
-        return t;
-    }
-
-    const std::vector<TemplatePart>& AltTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "I've got a ", " on the side" }, { "mostly this, but I dabble on a ", "" },
-            { "a ", " when I need a break" }, { "", ", mostly" },
-        };
-        return t;
-    }
-
-    // Recall kinds -- `fact` unused for RecallMet/RecallGrouped (canned pool
-    // on both sides, like Guild's lacks set); RecallDungeon wraps the
-    // hside_memory row's own already-clean sentence (hs_memory.h's
-    // Hs_BuildDungeonCompletedText), same "wrap the looked-up fact" shape as
-    // Mount/Zone above.
-    const std::vector<const char*>& RecallMetHasResponses()
-    {
-        static const std::vector<const char*> r = {
-            "yeah, we've talked before", "of course I remember you", "we go back a bit",
-        };
-        return r;
-    }
-
-    const std::vector<const char*>& RecallMetLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "don't think we've met", "can't say I remember, sorry", "not that I recall",
-        };
-        return r;
-    }
-
-    const std::vector<TemplatePart>& RecallDungeonHasTemplates()
-    {
-        static const std::vector<TemplatePart> t = {
-            { "", "" }, { "yeah, ", "" }, { "iirc, ", "" },
-        };
-        return t;
-    }
-
-    const std::vector<const char*>& RecallDungeonLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "can't think of anything we've run together", "don't remember running anything with you",
-            "nothing comes to mind",
-        };
-        return r;
-    }
-
-    const std::vector<const char*>& RecallGroupedHasResponses()
-    {
-        static const std::vector<const char*> r = {
-            "yeah, we have", "we have, actually", "yeah, a couple times",
-        };
-        return r;
-    }
-
-    const std::vector<const char*>& RecallGroupedLacksResponses()
-    {
-        static const std::vector<const char*> r = {
-            "don't think so", "not that I recall", "not yet, I don't think",
-        };
-        return r;
-    }
+    std::vector<HsGroundedQuestionRow> g_Questions;
+    std::vector<HsGroundedTemplateRow> g_Templates;
 }
 
-HsGroundedKind Hs_MatchGroundedQuestion(const std::string& trigger)
+void Hs_SetGroundedQuestionTable(const std::vector<HsGroundedQuestionRow>& rows)
 {
-    std::string withPunct  = NormalizeWhitespace(ToLowerAscii(trigger));
-    std::string corePhrase = StripOneTrailingMark(withPunct);
+    g_Questions = rows;
+}
 
-    static const std::vector<KindPhrases> table = {
-        { HsGroundedKind::Mount,      &MountPhrases() },
-        { HsGroundedKind::Level,      &LevelPhrases() },
-        { HsGroundedKind::Zone,       &ZonePhrases() },
-        { HsGroundedKind::Guild,      &GuildPhrases() },
-        { HsGroundedKind::Profession, &ProfessionPhrases() },
-        { HsGroundedKind::Gear,       &GearPhrases() },
-        { HsGroundedKind::CurrentGoal, &CurrentGoalPhrases() },
-        { HsGroundedKind::PlayedSince, &PlayedSincePhrases() },
-        { HsGroundedKind::Alt,         &AltPhrases() },
-        { HsGroundedKind::RecallMet,      &RecallMetPhrases() },
-        { HsGroundedKind::RecallDungeon,  &RecallDungeonPhrases() },
-        { HsGroundedKind::RecallGrouped,  &RecallGroupedPhrases() },
-    };
+void Hs_SetGroundedTemplateTable(const std::vector<HsGroundedTemplateRow>& rows)
+{
+    g_Templates = rows;
+}
 
-    for (const KindPhrases& entry : table)
+HsGroundedKind Hs_MatchGroundedQuestion(const std::string& trigger, uint32_t fuzzyMaxDistance)
+{
+    std::string corePhrase = StripOneTrailingMark(NormalizeWhitespace(ToLowerAscii(trigger)));
+
+    for (auto const& q : g_Questions)
+        if (corePhrase == q.phrase)
+            return q.kind;
+
+    if (fuzzyMaxDistance == 0)
+        return HsGroundedKind::None;
+
+    // Typo-tolerance fallback: closest phrase within fuzzyMaxDistance wins;
+    // a tie between two different kinds is ambiguous, not a guess.
+    HsGroundedKind best         = HsGroundedKind::None;
+    uint32_t       bestDistance = fuzzyMaxDistance + 1;
+    bool           ambiguous    = false;
+
+    for (auto const& q : g_Questions)
     {
-        for (const char* phrase : *entry.phrases)
+        size_t lenDiff = corePhrase.size() > q.phrase.size()
+                              ? corePhrase.size() - q.phrase.size()
+                              : q.phrase.size() - corePhrase.size();
+        if (lenDiff > fuzzyMaxDistance)
+            continue;
+
+        uint32_t d = LevenshteinDistance(corePhrase, q.phrase);
+        if (d > fuzzyMaxDistance)
+            continue;
+
+        if (d < bestDistance)
         {
-            if (corePhrase == phrase)
-                return entry.kind;
+            bestDistance = d;
+            best         = q.kind;
+            ambiguous    = false;
+        }
+        else if (d == bestDistance && q.kind != best)
+        {
+            ambiguous = true;
         }
     }
-    return HsGroundedKind::None;
+
+    return ambiguous ? HsGroundedKind::None : best;
 }
 
 std::string Hs_BuildGroundedReply(HsGroundedKind kind, bool hasFact, const std::string& fact,
                                     uint64_t botGuid, const std::string& trigger)
 {
+    if (kind == HsGroundedKind::None)
+        return "";
+
+    std::vector<const HsGroundedTemplateRow*> matches;
+    for (auto const& t : g_Templates)
+        if (t.kind == kind && t.hasFact == hasFact)
+            matches.push_back(&t);
+
+    if (matches.empty())
+        return "";
+
     uint64_t seed = SeedForMessage(botGuid, trigger);
-
-    auto pickTemplate = [&](const std::vector<TemplatePart>& templates) -> std::string
-    {
-        const TemplatePart& t = templates[seed % templates.size()];
-        return t.prefix + fact + t.suffix;
-    };
-    auto pickResponse = [&](const std::vector<const char*>& responses) -> std::string
-    {
-        return responses[seed % responses.size()];
-    };
-
-    switch (kind)
-    {
-        case HsGroundedKind::Mount:      return pickTemplate(MountTemplates());
-        case HsGroundedKind::Level:      return pickTemplate(LevelTemplates());
-        case HsGroundedKind::Zone:       return pickTemplate(ZoneTemplates());
-        case HsGroundedKind::Guild:      return hasFact ? pickTemplate(GuildHasTemplates()) : pickResponse(GuildLacksResponses());
-        case HsGroundedKind::Profession: return hasFact ? pickTemplate(ProfessionHasTemplates()) : pickResponse(ProfessionLacksResponses());
-        case HsGroundedKind::Gear:       return hasFact ? pickTemplate(GearHasTemplates()) : pickResponse(GearLacksResponses());
-        case HsGroundedKind::CurrentGoal: return hasFact ? pickTemplate(CurrentGoalTemplates()) : "";
-        case HsGroundedKind::PlayedSince: return hasFact ? pickTemplate(PlayedSinceTemplates()) : "";
-        case HsGroundedKind::Alt:         return hasFact ? pickTemplate(AltTemplates()) : "";
-        case HsGroundedKind::RecallMet:      return hasFact ? pickResponse(RecallMetHasResponses()) : pickResponse(RecallMetLacksResponses());
-        case HsGroundedKind::RecallDungeon:  return hasFact ? pickTemplate(RecallDungeonHasTemplates()) : pickResponse(RecallDungeonLacksResponses());
-        case HsGroundedKind::RecallGrouped:  return hasFact ? pickResponse(RecallGroupedHasResponses()) : pickResponse(RecallGroupedLacksResponses());
-        case HsGroundedKind::None:       return "";
-    }
-    return "";
+    const HsGroundedTemplateRow& t = *matches[seed % matches.size()];
+    return t.usesFact ? (t.prefix + fact + t.suffix) : t.prefix;
 }

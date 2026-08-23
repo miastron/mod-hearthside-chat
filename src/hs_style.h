@@ -9,11 +9,10 @@
 // reshapes caps/terminal-punctuation/abbreviation and injects typos
 // according to a per-bot `care` scalar (0.0 sloppy - 1.0 careful).
 //
-// Scope note: combat-based `care` modulation and the self-correction
-// follow-up are built. Two related cases are not, for lack of a hook to read
-// them from: a positive `care` offset for trade/recruitment posts, and
-// party chat during an encounter -- this module only hooks /say and whisper
-// (hs_config.h).
+// Scope note: combat-based `care` modulation, the self-correction follow-up,
+// and (§4.17) a positive `care` offset for Trade-channel WTS/WTB sightings
+// are built. Party chat during an encounter remains unbuilt for lack of a
+// hook -- see hs_config.h.
 
 // Result of one style pass. `correction` is empty unless InjectTypos
 // actually altered a word, in which case it holds that word's pre-typo
@@ -29,19 +28,33 @@ struct HsStyleResult
 
 // `baselineCare` comes from the bot's archetype (hs_archetype.h,
 // Hs_ArchetypeInfoFor(...).care). A +/-0.20 GUID jitter applies on top, then
-// `inCombat`'s fixed negative offset.
-float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat);
+// `inCombat`'s fixed negative offset, then `tradeCareOffset` -- a small
+// time-decayed positive magnitude (0 if the bot hasn't recently witnessed a
+// WTS/WTB Trade-channel message, hs_channel.h's Hs_IsWtsWtb) computed at the
+// call site, not here -- this function stays pure addition.
+float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat, float tradeCareOffset = 0.0f);
+
+// §4.17: called from hs_handler.cpp's Trade-channel hook whenever a real
+// player's message matches Hs_IsWtsWtb (hs_channel.h), for every bot
+// currently a member of that channel instance -- independent of whether any
+// of them end up replying. Hs_TradeCareOffsetFor reads it back as a linearly
+// decaying magnitude (0 once kTradeSightingWindowSeconds has elapsed, or if
+// the bot has no recorded sighting), called at each HsStyleContext
+// construction site the same way ctx.inCombat already is.
+void  Hs_NoteTradeSighting(uint64_t botGuid);
+float Hs_TradeCareOffsetFor(uint64_t botGuid);
 
 // Per-call context that isn't per-word: the archetype's baseline `care`, an
 // abbreviation-chance override (some archetypes, e.g. TRADER, write heavy
 // abbreviation regardless of what their `care` band would otherwise pick;
-// -1.0f means "no override, use the care band"), and whether the bot is in
-// combat.
+// -1.0f means "no override, use the care band"), whether the bot is in
+// combat, and the §4.17 Trade WTS/WTB `care` offset magnitude (0.0f if none).
 struct HsStyleContext
 {
     float baselineCare;
     float abbrevOverrideChance;
     bool  inCombat;
+    float tradeCareOffset = 0.0f;
 
     // A carded bot's verbal tic, protected from the style pass -- empty for
     // an uncarded (or dormant-carded) bot, in which case this is a no-op.

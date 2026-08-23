@@ -22,6 +22,8 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 ('chat_gripe_general',    'none',       0, NULL, 0),
 ('chat_class_banter',     'class',      0, NULL, 0),
 ('chat_levelband_musing', 'level_band', 0, NULL, 0),
+('chat_faction_banter',   'faction',    0, NULL, 0),
+('chat_zone_musing',      'zone',       0, NULL, 0),
 ('channel_trade_wts',     'none',       0, 'trade', 0),
 ('channel_general_chat',  'none',       0, 'general', 0),
 ('channel_world_chat',    'none',       0, 'world', 0),

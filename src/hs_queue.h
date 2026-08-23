@@ -2,11 +2,15 @@
 #define MOD_HS_QUEUE_H
 
 #include "PlayerbotAIConfig.h" // NewRpgStatus (rpgInfo.GetStatus()) -- live-activity fact
+#include "hs_channel.h"        // HsChannelKind -- §4.17 channel delivery/rate-limiting
 #include "hs_topic_gate.h"     // HsTopicGateContext -- §4.13 gear/group/instance/gold/zone facts
 
 #include <cstdint>
 #include <string>
 #include <vector>
+
+class Channel;
+class Player;
 
 // The runtime queue. A fixed worker pool of exactly one thread -- slots in
 // llama-server are a prompt cache, not a concurrency target, so requests are
@@ -27,6 +31,7 @@ enum class HsReplyChannel : uint8_t
     Party,
     Raid,
     Guild,
+    Channel, // §4.17 global-channel chat; the specific channel is HsPendingReply::channelKind
 };
 
 // Lowercase name for logging/JSON, e.g. hs_metrics.cpp's per-channel
@@ -97,7 +102,38 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 // (Hs_DeliverPending) rather than duplicating Say()/Whisper() dispatch. A
 // call with empty `text` is a no-op (e.g. Silent BotQuestion mode, or a
 // matched PersonalProbe pool entry with no reply).
-void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text);
+//
+// `channelKind` is only meaningful when `channel == HsReplyChannel::Channel`
+// (§4.17's corpus-fallback channel reply, hs_handler.cpp's Channel* hook) --
+// ignored otherwise, default value arbitrary.
+void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
+                            HsChannelKind channelKind = HsChannelKind::Trade);
+
+// §4.17: attempts to spend one token from this channel's own rate-limit
+// bucket (HearthsideChat.Channel.<name>.RatePerMin), independent of the
+// tier-2 GPU bucket Hs_TryEnqueue gates above -- corpus-fallback channel
+// replies never reach Hs_TryEnqueue at all (zero GPU work, same reasoning
+// hs_corpus.h gives for Hs_SelectCorpusLine), so without this a channel with
+// no proximity bound would have nothing capping reply volume. Returns false
+// (spend nothing, caller does no further work) if that channel's bucket is
+// empty. Checked by hs_handler.cpp's Channel* hook before building any
+// candidate list -- a cheap early-out on a throttled channel.
+bool Hs_ChannelBucketTake(HsChannelKind kind);
+
+// §4.17: resolves the live Channel* a bot should speak into for delivery,
+// mirroring mod-playerbots' own join-time name construction (PlayerbotMgr.cpp's
+// bot-login channel join) rather than the core's player-facing
+// Player::UpdateLocalChannels -- the two can disagree on the exact
+// zone-qualified name for Trade/GuildRecruitment (a documented core quirk
+// mod-playerbots works around by always using AreaID 3459's "City" label),
+// and a mismatch here means ChannelMgr::GetChannel finds no member match and
+// silently drops the reply. Called fresh at delivery time from the bot's
+// *then-current* zone by both Hs_DeliverPending (a corpus-fallback channel
+// reply) and hs_script.cpp's channel-script delivery, not a name captured
+// earlier -- the bot may have moved zones during the typing delay for a
+// zone-scoped channel (General/LocalDefense). Returns nullptr if the bot no
+// longer resolves to that channel instance; caller must not misdeliver.
+Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind);
 
 // Seconds since this bot's last *successfully delivered* reply, or
 // UINT32_MAX if never. Read-only query for hs_arbiter's recent-speaker
@@ -174,5 +210,39 @@ struct HsChannelReplyCounts
     uint32_t        silentCount;
 };
 std::vector<HsChannelReplyCounts> Hs_ChannelReplyCountsSnapshot();
+
+// ---- TTL drop rate / token-bucket saturation ------------------------------
+// Session-cumulative counts (since worldserver process start, like the
+// reply/silence counts above), not a rolling window -- named as a gap in
+// Claude/ISSUES.md ("TTL drop rate and per-surface token-bucket saturation
+// still aren't tracked anywhere") while building the rest of §4.19's fuller
+// metrics; built as a follow-up once the operator asked for it explicitly.
+
+// droppedCount of processedCount total dequeued requests were stale
+// (age > HearthsideChat.Queue.TTLSeconds) when the worker reached them.
+struct HsTtlDropStats
+{
+    uint64_t droppedCount;
+    uint64_t processedCount;
+};
+HsTtlDropStats Hs_TtlDropStatsSnapshot();
+
+// deniedCount of attemptCount admission attempts found the bucket empty.
+// Global (tier-2) bucket only -- see Hs_ChannelBucketSaturationSnapshot for
+// §4.17's per-channel buckets, which are independent of this one.
+struct HsBucketSaturationStats
+{
+    uint64_t deniedCount;
+    uint64_t attemptCount;
+};
+HsBucketSaturationStats Hs_GlobalBucketSaturationSnapshot();
+
+struct HsChannelBucketSaturationStats
+{
+    HsChannelKind kind;
+    uint32_t       grantedCount;
+    uint32_t       deniedCount;
+};
+std::vector<HsChannelBucketSaturationStats> Hs_ChannelBucketSaturationSnapshot();
 
 #endif // MOD_HS_QUEUE_H

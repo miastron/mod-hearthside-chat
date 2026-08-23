@@ -145,6 +145,11 @@ namespace
         static const std::vector<std::string> phrases = {
             "are you a bot", "r u a bot", "are u a bot", "u a bot", "u bot",
             "is this an npc", "is this a bot",
+            "are you an npc", "r u an npc",
+            "you a bot", "you're a bot", "ur a bot",
+            "are you human", "r u human", "are you a real person",
+            "bot or human", "human or bot",
+            "are you real", "r u real",
         };
         return phrases;
     }
@@ -158,6 +163,11 @@ namespace
             "what do you do", "what do you do irl", "what do you do for a living",
             "how old are you", "how old r u", "ur age", "your age", "age",
             "m or f", "male or female", "boy or girl",
+            "whats your name", "what's your name", "ur real name", "your real name",
+            "whats ur discord", "what's your discord", "got discord", "add me on discord",
+            "where do you live", "where u live",
+            "you got a mic", "can you voice chat",
+            "how tall are you", "what do you look like",
         };
         return phrases;
     }
@@ -167,9 +177,9 @@ namespace
         // Wink is the honest non-answer: neither confirms nor denies.
         // Deflect is its more evasive subset ("huh?"/"what?" only). Admit is
         // the operator's explicit opt-in to being straightforward.
-        static const std::vector<const char*> wink    = { "maybe!", "shh... don't tell anyone", "huh?", "what?" };
-        static const std::vector<const char*> deflect = { "huh?", "what?" };
-        static const std::vector<const char*> admit   = { "yeah, I'm a bot", "yep, this one's a bot" };
+        static const std::vector<const char*> wink    = { "maybe!", "shh... don't tell anyone", "huh?", "what?", "who's asking", "wouldn't you like to know" };
+        static const std::vector<const char*> deflect = { "huh?", "what?", "hm?" };
+        static const std::vector<const char*> admit   = { "yeah, I'm a bot", "yep, this one's a bot", "yep, bot confirmed" };
         switch (mode)
         {
             case HsBotQuestionMode::Deflect: return deflect;
@@ -184,11 +194,12 @@ namespace
         // no-reply reads as a person; a rule reads as a rule. One shared
         // pool across every probe question -- the honest non-answer is the
         // same regardless of which personal question triggered it. The
-        // empty entry is the no-reply member: 1 of 7, occasional, not the
+        // empty entry is the no-reply member: 1 of 9, occasional, not the
         // rule.
         static const std::vector<const char*> pool = {
             "eh, does it matter", "long story", "who's asking",
             "that's classified ;)", "anyway, so...", "next question",
+            "ask me later", "focus, we've got mobs to kill",
             "",
         };
         return pool;

@@ -53,6 +53,16 @@ struct HsMetricsSample
     uint32_t    promptCharsRing1Mean;
     uint32_t    promptCharsRing2Mean;
     uint32_t    promptCharsRing3Mean;
+
+    // Session-cumulative (since worldserver process start, not a per-interval
+    // delta) -- hs_queue.h's Hs_TtlDropStatsSnapshot/Hs_GlobalBucketSaturationSnapshot.
+    // A consumer wanting a rate divides droppedCount/processedCount (or
+    // deniedCount/attemptCount) itself; storing the raw running totals lets a
+    // dashboard also see whether either denominator is even moving.
+    uint64_t    ttlDroppedSession;
+    uint64_t    ttlProcessedSession;
+    uint64_t    bucketDeniedSession;
+    uint64_t    bucketAttemptedSession;
 };
 
 // Most-recent samples first, capped at `limit`. Backs the HTTP
@@ -63,10 +73,15 @@ struct HsMetricsSample
 std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit);
 
 // One row per (dimension, key) pair sampled alongside HsMetricsSample --
-// dimension is "archetype" or "channel", key is the archetype enum name or
-// Hs_ReplyChannelName(channel). Its own table (hside_metrics_breakdown)
-// rather than columns on hside_metrics, since archetype/channel counts are
-// variable-cardinality and don't fit that table's flat per-interval row.
+// dimension is "archetype", "channel", or "channel_bucket" (§4.17's
+// per-channel token buckets, hs_queue.h's Hs_ChannelBucketSaturationSnapshot);
+// key is the archetype enum name, Hs_ReplyChannelName(channel), or
+// Hs_ChannelKindName(kind). Its own table (hside_metrics_breakdown) rather
+// than columns on hside_metrics, since these are variable-cardinality and
+// don't fit that table's flat per-interval row. For "channel_bucket" rows,
+// repliedCount/silentCount hold granted/denied token-bucket takes rather
+// than a reply/silence outcome -- same two-counter shape, different meaning,
+// not worth a second table for.
 struct HsMetricsBreakdownRow
 {
     std::string sampledAt;

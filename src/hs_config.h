@@ -68,14 +68,23 @@ extern uint32_t g_HsBreakerProbeIntervalSeconds;
 // --------------------------------------------
 // Typing delay for the tier-2 (inference) reply. Reflex/grounded/corpus-
 // fallback replies already get a fixed 400-1500ms delay via
-// Hs_DeliverReflexReply. The base+per-char formula is per-archetype
+// Hs_DeliverReflexReply, and scripted turns (hs_script.cpp) their own
+// 800-2000ms first-turn delay plus 4-7s inter-turn gaps -- both already
+// floored. The base+per-char formula is per-archetype
 // (hs_archetype.h's typingBaseMs/typingPerCharMs, hside_archetype SQL);
 // these two keys are just the kill switch and ceiling, same relationship
 // LLM.MaxTokens has with verbosityCap. Computed as a residual on top of the
 // LLM call's own real latency, so a slow generation isn't double-charged.
+//
+// MinDeliveryDelayMs is a separate, unconditional floor on that same
+// residual: TypingDelay.Enable=false leaves tier-2 with nothing bounding how
+// early a reply can land (TTL only bounds how late), so a fast backend could
+// otherwise deliver same-tick. Applies regardless of the Enable toggle
+// (Claude/ISSUES.md's "minimum delivery delay" open question).
 // --------------------------------------------
 extern bool     g_HsTypingDelayEnabled;
 extern uint32_t g_HsTypingDelayMaxMs;
+extern uint32_t g_HsMinDeliveryDelayMs;
 
 // --------------------------------------------
 // Tier ceilings -- one enum, six keys, one shared parse and resolve helper
@@ -101,6 +110,46 @@ extern std::string g_HsMaxTierReflex;
 extern std::string g_HsMaxTierEngagementFollowUp;
 
 // --------------------------------------------
+// §4.17 global-channel chat surface -- one MaxTier/RatePerMin/MaxCandidates
+// triple per channel, same "off | reflex | corpus | inference" enum as the
+// MaxTier.* family above, capped at Corpus in practice the same way Openers
+// already is (hs_channel.cpp has no generated-content path). No existing
+// precedent in this module for a parameterized key family, so these are 21
+// explicit keys rather than a loop-driven one, matching how every other
+// HearthsideChat.* key is declared. Parsed here, then folded into an
+// HsChannelPolicy table (hs_channel.h) by LoadHearthsideChatConfig so the
+// hot path (hs_handler.cpp's Channel* hook) never touches config strings
+// directly.
+// --------------------------------------------
+extern std::string g_HsChannelTradeMaxTier;
+extern uint32_t     g_HsChannelTradeRatePerMin;
+extern uint32_t     g_HsChannelTradeMaxCandidates;
+
+extern std::string g_HsChannelGeneralMaxTier;
+extern uint32_t     g_HsChannelGeneralRatePerMin;
+extern uint32_t     g_HsChannelGeneralMaxCandidates;
+
+extern std::string g_HsChannelWorldMaxTier;
+extern uint32_t     g_HsChannelWorldRatePerMin;
+extern uint32_t     g_HsChannelWorldMaxCandidates;
+
+extern std::string g_HsChannelLookingForGroupMaxTier;
+extern uint32_t     g_HsChannelLookingForGroupRatePerMin;
+extern uint32_t     g_HsChannelLookingForGroupMaxCandidates;
+
+extern std::string g_HsChannelGuildRecruitmentMaxTier;
+extern uint32_t     g_HsChannelGuildRecruitmentRatePerMin;
+extern uint32_t     g_HsChannelGuildRecruitmentMaxCandidates;
+
+extern std::string g_HsChannelLocalDefenseMaxTier;
+extern uint32_t     g_HsChannelLocalDefenseRatePerMin;
+extern uint32_t     g_HsChannelLocalDefenseMaxCandidates;
+
+extern std::string g_HsChannelWorldDefenseMaxTier;
+extern uint32_t     g_HsChannelWorldDefenseRatePerMin;
+extern uint32_t     g_HsChannelWorldDefenseMaxCandidates;
+
+// --------------------------------------------
 // Tier-0 reflex. The "are you a bot?" reflex is the only reflex behavior
 // with an operator knob; the plain gz/ty/inv/sum/lol/wb vocabulary and the
 // personal-probe deflection set are hardcoded content (hs_reflex.h), not
@@ -112,10 +161,12 @@ extern std::string g_HsBotQuestionMode; // wink | deflect | silent | admit
 // --------------------------------------------
 // Grounded answers. Not a tier -- the branch sits beside the reflex/ceiling
 // system, so a plain on/off switch is the right-sized dial rather than a
-// sixth ordered tier value. The six question->template mappings stay
-// hardcoded content, same reasoning as the reflex table.
+// sixth ordered tier value. The question/template content itself lives in
+// hside_grounded_question/hside_grounded_template (hs_grounded_store.cpp),
+// not here -- these two keys are the matcher's own tuning, not content.
 // --------------------------------------------
-extern bool g_HsGroundedAnswersEnabled;
+extern bool     g_HsGroundedAnswersEnabled;
+extern uint32_t g_HsGroundedFuzzyMaxDistance; // max Levenshtein distance for the typo-tolerance fallback pass; 0 disables it (exact match only)
 
 // --------------------------------------------
 // Idle-time generator. Its own LLM endpoint, kept separate from the

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <random>
 #include <regex>
 #include <sstream>
@@ -668,26 +670,69 @@ namespace
     }
 }
 
-float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat)
+namespace
+{
+    using TradeClock = std::chrono::steady_clock;
+
+    // §4.17: last time each bot witnessed a WTS/WTB Trade-channel message.
+    // Own mutex, separate from every other piece of style-pass state --
+    // written from the world thread (hs_handler.cpp's Trade hook) and read
+    // from both the world and worker threads (HsStyleContext construction
+    // sites), same split as hs_archetype.cpp's override map.
+    std::mutex                                    g_TradeSightingMutex;
+    std::unordered_map<uint64_t, TradeClock::time_point> g_LastTradeSighting;
+
+    // Linear decay to 0 over two minutes -- a starting guess, same footing
+    // as every other unmeasured constant in this module (Claude/ISSUES.md).
+    constexpr float                    kTradeCareMaxOffset          = 0.10f;
+    constexpr std::chrono::seconds     kTradeSightingWindowSeconds{120};
+}
+
+void Hs_NoteTradeSighting(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_TradeSightingMutex);
+    g_LastTradeSighting[botGuid] = TradeClock::now();
+}
+
+float Hs_TradeCareOffsetFor(uint64_t botGuid)
+{
+    TradeClock::time_point seenAt;
+    {
+        std::lock_guard<std::mutex> lock(g_TradeSightingMutex);
+        auto it = g_LastTradeSighting.find(botGuid);
+        if (it == g_LastTradeSighting.end())
+            return 0.0f;
+        seenAt = it->second;
+    }
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(TradeClock::now() - seenAt);
+    if (elapsed >= kTradeSightingWindowSeconds || elapsed.count() < 0)
+        return 0.0f;
+
+    float remaining = 1.0f - (static_cast<float>(elapsed.count()) / static_cast<float>(kTradeSightingWindowSeconds.count()));
+    return kTradeCareMaxOffset * remaining;
+}
+
+float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat, float tradeCareOffset)
 {
     // baselineCare comes from the bot's archetype (hs_archetype.h). A
     // +/-0.20 GUID jitter applies on top, so bots sharing an archetype still
     // sound like different people rather than reading identically.
     constexpr float kJitterWidth = 0.20f;
 
-    // Negative offset in combat. Party chat during an encounter and a
-    // positive offset for trade/recruitment posts are related cases with no
-    // hook to read them from yet (this module only hooks /say and whisper --
-    // hs_config.h). Combat is the one signal already reachable at the call
-    // site (hs_handler.cpp's TryDispatch has the bot's Player*). -0.15 is a
-    // starting guess, same footing as the rest of the archetype care table.
+    // Negative offset in combat. Party chat during an encounter is a related
+    // case with no hook to read it from yet (this module only hooks /say and
+    // whisper -- hs_config.h). Combat is the one signal already reachable at
+    // the call site (hs_handler.cpp's TryDispatch has the bot's Player*).
+    // -0.15 is a starting guess, same footing as the rest of the archetype
+    // care table.
     constexpr float kCombatCareOffset = -0.15f;
 
     uint64_t h = MixBits64(botGuid ^ 0x9E3779B97F4A7C15ULL);
     float unit   = static_cast<float>(h % 100000ULL) / 100000.0f; // [0,1)
     float jitter = (unit * 2.0f - 1.0f) * kJitterWidth;            // [-0.20, 0.20)
 
-    float care = baselineCare + jitter + (inCombat ? kCombatCareOffset : 0.0f);
+    float care = baselineCare + jitter + (inCombat ? kCombatCareOffset : 0.0f) + tradeCareOffset;
     return std::clamp(care, 0.0f, 1.0f);
 }
 
@@ -706,7 +751,7 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
     if (working.empty())
         return { RestoreProtectedSpans(working, spans), "" };
 
-    float care = Hs_StyleCareForBot(botGuid, ctx.baselineCare, ctx.inCombat);
+    float care = Hs_StyleCareForBot(botGuid, ctx.baselineCare, ctx.inCombat, ctx.tradeCareOffset);
     StyleBand band = BandForCare(care);
 
     std::mt19937 rng(static_cast<std::mt19937::result_type>(SeedFor(botGuid, text)));

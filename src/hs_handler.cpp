@@ -1,6 +1,7 @@
 #include "hs_handler.h"
 #include "hs_arbiter.h"
 #include "hs_archetype.h"
+#include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_engagement.h"
@@ -14,6 +15,7 @@
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
 
+#include "Channel.h"    // §4.17 channel hook: Channel::GetChannelId()/GetName()
 #include "DBCStores.h"
 #include "Group.h"
 #include "Guild.h"
@@ -117,21 +119,23 @@ namespace
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
+        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), match.text, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
     }
 
     // A fourth answer source, sitting between the reflex check and the tier
-    // ceiling. Six questions the realm can already answer truthfully from
-    // live Player* state -- mount, level, zone, guild, profession, gear --
-    // each a direct lookup and a short template, no GPU work and no chance
-    // of invention. Same "no identity state" shape as TryReflex above:
-    // style pass applies, nothing is scored or written to history,
+    // ceiling. Questions the realm can already answer truthfully from live
+    // Player*/DB state -- mount, level, gold, zone, guild, profession, gear,
+    // card facts, and shared-history recall (hs_grounded.h's HsGroundedKind)
+    // -- each a direct lookup and a short template, no GPU work and no
+    // chance of invention. Same "no identity state" shape as TryReflex
+    // above: style pass applies, nothing is scored or written to history,
     // delivered through the same short-delay path.
     //
     // Returns false (falls through to the normal ceiling/LLM path) when the
-    // trigger doesn't match any of the six, when it matches Mount but the
-    // bot isn't currently mounted, or when g_HsGroundedAnswersEnabled is
+    // trigger doesn't match any loaded question, when it matches Mount but
+    // the bot isn't currently mounted, or when g_HsGroundedAnswersEnabled is
     // off. A bot claiming a mount that isn't observably there would be a
     // state-contradicting claim, so it's simpler to let the normal path
     // handle that case than to special-case a "not mounted" reply here.
@@ -141,7 +145,7 @@ namespace
         if (!g_HsGroundedAnswersEnabled)
             return false;
 
-        HsGroundedKind kind = Hs_MatchGroundedQuestion(msg);
+        HsGroundedKind kind = Hs_MatchGroundedQuestion(msg, g_HsGroundedFuzzyMaxDistance);
         if (kind == HsGroundedKind::None)
             return false;
 
@@ -164,6 +168,18 @@ namespace
             case HsGroundedKind::Level:
             {
                 fact = std::to_string(bot->GetLevel());
+                break;
+            }
+            case HsGroundedKind::Gold:
+            {
+                // Same gold/silver split hs_topic_gate.cpp uses for the
+                // persona-line fact. Rounds to whatever denomination a
+                // player would actually say ("47g", "12s"), not an exact
+                // copper count; always resolvable, even at 0 gold.
+                uint32_t copper = bot->GetMoney();
+                uint32_t gold   = copper / 10000;
+                uint32_t silver = (copper / 100) % 100;
+                fact = gold > 0 ? (std::to_string(gold) + "g") : (std::to_string(silver) + "s");
                 break;
             }
             case HsGroundedKind::Zone:
@@ -303,6 +319,7 @@ namespace
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
+        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), reply, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
@@ -320,7 +337,8 @@ namespace
                             uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
         bool hasActiveCard = Hs_HasActiveCard(botGuid);
-        std::string line = Hs_SelectCorpusLine(bot->getClass(), botLevel, hasActiveCard);
+        std::string line = Hs_SelectCorpusLine(bot->getClass(), botLevel, static_cast<uint8_t>(bot->GetTeamId()),
+                                                bot->GetZoneId(), hasActiveCard);
         if (line.empty())
             return false;
 
@@ -354,9 +372,74 @@ namespace
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = inCombat;
         styleCtx.verbalTic            = snapshot.verbalTic;
+        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
+    }
+
+    // §4.17: maps a live Channel* to one of the seven kinds this module
+    // knows about, via mod-playerbots' own ChatChannelId enum (PlayerbotAI.h
+    // -- the same ids mod-playerbots itself joins bots to, PlayerbotMgr.cpp)
+    // rather than parsing Channel::GetName()'s zone-suffixed display string.
+    // World has no ChatChannels.dbc entry in this build (mod-playerbots
+    // joins it via a raw CMSG_JOIN_CHANNEL with id 0), so it's matched by
+    // name instead. Returns false for any other channel (a GM/custom
+    // channel, or a DBC id this module doesn't have a policy for) -- the
+    // hook passes those through untouched.
+    bool ChannelKindFor(Channel* channel, HsChannelKind& out)
+    {
+        if (channel->GetName() == "World")
+        {
+            out = HsChannelKind::World;
+            return true;
+        }
+
+        switch (channel->GetChannelId())
+        {
+            case ChatChannelId::TRADE:              out = HsChannelKind::Trade;            return true;
+            case ChatChannelId::GENERAL:             out = HsChannelKind::General;          return true;
+            case ChatChannelId::LOOKING_FOR_GROUP:   out = HsChannelKind::LookingForGroup;  return true;
+            case ChatChannelId::GUILD_RECRUITMENT:   out = HsChannelKind::GuildRecruitment; return true;
+            case ChatChannelId::LOCAL_DEFENSE:       out = HsChannelKind::LocalDefense;     return true;
+            case ChatChannelId::WORLD_DEFENSE:       out = HsChannelKind::WorldDefense;     return true;
+            default: return false;
+        }
+    }
+
+    // §4.17's corpus-only channel reply -- deliberately not a call into
+    // TryDispatch: channel content is corpus/script only by design (never
+    // tier-2 inference, never reflex/grounded, which are direct-address
+    // concepts that don't fit ambient channel chatter), so this mirrors only
+    // TryCorpusFallback's shape, scoped to Hs_SelectChannelLine instead of
+    // Hs_SelectCorpusLine and HsReplyChannel::Channel instead of `channel`.
+    void TryChannelCorpusReply(Player* bot, Player* sender, HsChannelKind kind,
+                                uint64_t botGuid, uint64_t senderGuid, uint8_t botLevel)
+    {
+        std::string line = Hs_SelectChannelLine(kind, bot->getClass(), botLevel,
+                                                 static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId());
+        if (line.empty())
+            return;
+
+        // Universal placeholders only -- channel_* categories are never
+        // card_gated (hs_corpus.cpp's ChannelColumnFor query), so no card
+        // placeholder pass is needed here, unlike TryCorpusFallback.
+        if (line.find('%') != std::string::npos)
+        {
+            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
+                return;
+        }
+
+        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
+        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsStyleContext styleCtx;
+        styleCtx.baselineCare         = archetypeInfo.care;
+        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
+        styleCtx.inCombat             = bot->IsInCombat();
+        styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
+        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
+        Hs_DeliverReflexReply(botGuid, senderGuid, HsReplyChannel::Channel, style.text, kind);
     }
 
     // Once reflex/grounded have passed on the trigger, check the surface's
@@ -572,6 +655,98 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);
     for (Player* bot : selected)
         TryDispatch(bot, player, msg, HsReplyChannel::Guild);
+
+    return true;
+}
+
+// §4.17: mod-playerbots joins every bot to every one of these channels
+// unconditionally (trap 20) -- this is the only gate deciding whether any of
+// them ever speaks. Corpus-only by design (TryChannelCorpusReply above,
+// never TryDispatch), rate-limited per channel (Hs_ChannelBucketTake, checked
+// before any candidate scan so a throttled channel costs nothing), and
+// sampled rather than enumerated (Hs_OrderChannelCandidates, trap 21) -- a
+// channel with most of the realm in it has no proximity bound the way /say
+// does, so nothing else here caps how many bots could otherwise be rolled
+// against reply chance on one message.
+bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Channel* channel)
+{
+    if (!g_HsEnable || type != CHAT_MSG_CHANNEL || msg.empty() || !player || !channel)
+        return true;
+    if (IsBot(player))
+        return true; // sender-aware (bot-initiated) chatter is not wired up yet
+
+    HsChannelKind kind;
+    if (!ChannelKindFor(channel, kind))
+        return true; // a GM/custom channel, or a DBC id this module has no policy for
+
+    HsChannelPolicy policy = Hs_ChannelPolicyFor(kind);
+    if (!HsTierAllows(policy.maxTier, HsTier::Corpus))
+        return true;
+
+    // §4.17's Trade `care` offset trigger: stamps every bot currently a
+    // member of this channel instance, independent of whether any of them
+    // go on to reply below -- "recently witnessed WTS/WTB activity" is true
+    // for the whole channel, not just whichever bot happens to answer.
+    if (kind == HsChannelKind::Trade && Hs_IsWtsWtb(msg))
+    {
+        for (auto const& itr : ObjectAccessor::GetPlayers())
+        {
+            Player* candidate = itr.second;
+            if (candidate && candidate->IsInWorld() && IsBot(candidate) && candidate->IsInChannel(channel))
+                Hs_NoteTradeSighting(candidate->GetGUID().GetRawValue());
+        }
+    }
+
+    Hs_AbortScriptsWitnessedBy(player->GetGUID().GetRawValue());
+    Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+
+    if (!Hs_ChannelBucketTake(kind))
+        return true; // throttled -- no candidate scan at all on a busy channel
+
+    std::vector<Player*> eligible;
+    for (auto const& itr : ObjectAccessor::GetPlayers())
+    {
+        Player* candidate = itr.second;
+        if (!candidate || candidate == player || !candidate->IsInWorld())
+            continue;
+        if (!IsBot(candidate))
+            continue;
+        if (Hs_IsExcludedBotName(candidate->GetName()))
+            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+        if (candidate->GetTeamId() != player->GetTeamId())
+            continue; // opposing faction can't read this channel
+        if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
+            continue;
+        if (!candidate->IsInChannel(channel))
+            continue; // Channel's own member list is private; this is the public membership check
+        eligible.push_back(candidate);
+    }
+    if (eligible.empty())
+        return true;
+
+    std::vector<HsChannelCandidate> candidates;
+    candidates.reserve(eligible.size());
+    for (Player* candidate : eligible)
+        candidates.push_back({ candidate->GetGUID().GetRawValue(), candidate->GetZoneId() });
+
+    uint64_t seed = (static_cast<uint64_t>(urand(0, 0xFFFFFFFFu)) << 32) | urand(0, 0xFFFFFFFFu);
+    candidates = Hs_OrderChannelCandidates(candidates, player->GetZoneId(), policy.maxCandidates, seed);
+
+    std::vector<Player*> capped;
+    capped.reserve(candidates.size());
+    for (HsChannelCandidate const& c : candidates)
+        for (Player* candidate : eligible)
+            if (candidate->GetGUID().GetRawValue() == c.guid)
+            {
+                capped.push_back(candidate);
+                break;
+            }
+    if (capped.empty())
+        return true;
+
+    std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, capped);
+    for (Player* bot : selected)
+        TryChannelCorpusReply(bot, player, kind, bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(), bot->GetLevel());
 
     return true;
 }

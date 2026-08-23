@@ -105,7 +105,8 @@ namespace
         if (urand(0, 99) >= kOpenerFireChancePercent)
             return;
 
-        std::string line = Hs_SelectOpenerLine(categoryName, bot->getClass(), bot->GetLevel());
+        std::string line = Hs_SelectOpenerLine(categoryName, bot->getClass(), bot->GetLevel(),
+                                                static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId());
         if (line.empty())
             return;
 

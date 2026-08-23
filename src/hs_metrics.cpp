@@ -20,8 +20,10 @@ namespace
 
 void Hs_SampleMetrics()
 {
-    HsLatencyPercentiles latency = Hs_ReactiveLatencyPercentiles();
-    HsPromptCharsByRing  promptByRing = Hs_PromptCharsByRing();
+    HsLatencyPercentiles     latency      = Hs_ReactiveLatencyPercentiles();
+    HsPromptCharsByRing      promptByRing = Hs_PromptCharsByRing();
+    HsTtlDropStats           ttlDrops     = Hs_TtlDropStatsSnapshot();
+    HsBucketSaturationStats  bucketSat    = Hs_GlobalBucketSaturationSnapshot();
 
     CharacterDatabase.Execute(
         "INSERT INTO hside_metrics (backend_down, queue_depth, corpus_row_count, "
@@ -29,14 +31,16 @@ void Hs_SampleMetrics()
         "script_active_runs, script_consumed_24h, identity_row_count, card_active_count, "
         "promotions_session, demotions_session, retirements_session, memory_row_count, "
         "openers_fired_session, latency_p50_ms, latency_p95_ms, latency_p99_ms, "
-        "prompt_chars_ring1_mean, prompt_chars_ring2_mean, prompt_chars_ring3_mean) "
-        "VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
+        "prompt_chars_ring1_mean, prompt_chars_ring2_mean, prompt_chars_ring3_mean, "
+        "ttl_dropped_session, ttl_processed_session, bucket_denied_session, bucket_attempted_session) "
+        "VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
         Hs_IsBackendDown() ? 1 : 0, Hs_PendingQueueDepth(), CorpusRowCount(),
         Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession(), Hs_ScriptReserveDepth(),
         Hs_ActiveScriptRunCount(), Hs_ScriptsConsumedLast24h(), Hs_IdentityRowCount(), Hs_CardActiveCount(),
         Hs_PromotionsThisSession(), Hs_DemotionsThisSession(), Hs_RetirementsThisSession(), Hs_MemoryRowCount(),
         Hs_OpenersFiredThisSession(), latency.p50Ms, latency.p95Ms, latency.p99Ms,
-        promptByRing.ring1Mean, promptByRing.ring2Mean, promptByRing.ring3Mean);
+        promptByRing.ring1Mean, promptByRing.ring2Mean, promptByRing.ring3Mean,
+        ttlDrops.droppedCount, ttlDrops.processedCount, bucketSat.deniedCount, bucketSat.attemptCount);
 
     CharacterDatabase.Execute(
         "DELETE FROM hside_metrics WHERE sampled_at < NOW() - INTERVAL {} DAY", kHsMetricsRetentionDays);
@@ -60,6 +64,13 @@ void Hs_SampleMetrics()
             "VALUES ('channel', '{}', {}, {})",
             Hs_ReplyChannelName(row.channel), row.repliedCount, row.silentCount);
     }
+    for (auto const& row : Hs_ChannelBucketSaturationSnapshot())
+    {
+        CharacterDatabase.Execute(
+            "INSERT INTO hside_metrics_breakdown (dimension, dim_key, replied_count, silent_count) "
+            "VALUES ('channel_bucket', '{}', {}, {})",
+            Hs_ChannelKindName(row.kind), row.grantedCount, row.deniedCount);
+    }
 
     CharacterDatabase.Execute(
         "DELETE FROM hside_metrics_breakdown WHERE sampled_at < NOW() - INTERVAL {} DAY", kHsMetricsRetentionDays);
@@ -74,7 +85,8 @@ std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit)
         "corpus_rows_evicted_session, script_reserve_depth, script_active_runs, script_consumed_24h, "
         "identity_row_count, card_active_count, promotions_session, demotions_session, "
         "retirements_session, memory_row_count, openers_fired_session, latency_p50_ms, latency_p95_ms, "
-        "latency_p99_ms, prompt_chars_ring1_mean, prompt_chars_ring2_mean, prompt_chars_ring3_mean "
+        "latency_p99_ms, prompt_chars_ring1_mean, prompt_chars_ring2_mean, prompt_chars_ring3_mean, "
+        "ttl_dropped_session, ttl_processed_session, bucket_denied_session, bucket_attempted_session "
         "FROM hside_metrics ORDER BY sampled_at DESC LIMIT {}", limit);
     if (!result)
         return samples;
@@ -104,6 +116,10 @@ std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit)
         s.promptCharsRing1Mean     = (*result)[19].Get<uint32_t>();
         s.promptCharsRing2Mean     = (*result)[20].Get<uint32_t>();
         s.promptCharsRing3Mean     = (*result)[21].Get<uint32_t>();
+        s.ttlDroppedSession        = (*result)[22].Get<uint64_t>();
+        s.ttlProcessedSession      = (*result)[23].Get<uint64_t>();
+        s.bucketDeniedSession      = (*result)[24].Get<uint64_t>();
+        s.bucketAttemptedSession  = (*result)[25].Get<uint64_t>();
         samples.push_back(s);
     } while (result->NextRow());
 

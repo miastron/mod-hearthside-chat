@@ -1,5 +1,6 @@
 #include "hs_config.h"
 #include "Config.h"
+#include "hs_channel.h"
 
 #include <set>
 #include <sstream>
@@ -80,6 +81,7 @@ uint32_t g_HsBreakerProbeIntervalSeconds = 15;
 
 bool     g_HsTypingDelayEnabled   = true;
 uint32_t g_HsTypingDelayMaxMs     = 6000;
+uint32_t g_HsMinDeliveryDelayMs   = 400;
 
 std::string g_HsMaxTierDirectReply = "inference";
 std::string g_HsMaxTierAmbient     = "corpus";
@@ -88,9 +90,43 @@ std::string g_HsMaxTierBotToBot    = "corpus";
 std::string g_HsMaxTierReflex      = "reflex";
 std::string g_HsMaxTierEngagementFollowUp = "off";
 
+// Trade/General/World are on by default at a deliberately low starting
+// rate (§4.17's "a too-quiet channel is recoverable, a too-noisy one has
+// already cost the illusion"); the remaining four default off, matching
+// PLAN.md §4.17's table, but stay operator-adjustable via config like every
+// other MaxTier.* key rather than a hardcoded block.
+std::string g_HsChannelTradeMaxTier            = "corpus";
+uint32_t     g_HsChannelTradeRatePerMin         = 3;
+uint32_t     g_HsChannelTradeMaxCandidates      = 8;
+
+std::string g_HsChannelGeneralMaxTier          = "corpus";
+uint32_t     g_HsChannelGeneralRatePerMin       = 3;
+uint32_t     g_HsChannelGeneralMaxCandidates    = 8;
+
+std::string g_HsChannelWorldMaxTier            = "corpus";
+uint32_t     g_HsChannelWorldRatePerMin         = 3;
+uint32_t     g_HsChannelWorldMaxCandidates      = 8;
+
+std::string g_HsChannelLookingForGroupMaxTier         = "off";
+uint32_t     g_HsChannelLookingForGroupRatePerMin      = 0;
+uint32_t     g_HsChannelLookingForGroupMaxCandidates   = 0;
+
+std::string g_HsChannelGuildRecruitmentMaxTier        = "off";
+uint32_t     g_HsChannelGuildRecruitmentRatePerMin     = 0;
+uint32_t     g_HsChannelGuildRecruitmentMaxCandidates  = 0;
+
+std::string g_HsChannelLocalDefenseMaxTier     = "off";
+uint32_t     g_HsChannelLocalDefenseRatePerMin  = 0;
+uint32_t     g_HsChannelLocalDefenseMaxCandidates = 0;
+
+std::string g_HsChannelWorldDefenseMaxTier     = "off";
+uint32_t     g_HsChannelWorldDefenseRatePerMin  = 0;
+uint32_t     g_HsChannelWorldDefenseMaxCandidates = 0;
+
 std::string g_HsBotQuestionMode = "wink";
 
-bool g_HsGroundedAnswersEnabled = true;
+bool     g_HsGroundedAnswersEnabled  = true;
+uint32_t g_HsGroundedFuzzyMaxDistance = 2;
 
 bool        g_HsGeneratorEnabled              = false;
 std::string g_HsGeneratorLLMApiType           = "llamacpp";
@@ -145,6 +181,7 @@ void LoadHearthsideChatConfig()
 
     g_HsTypingDelayEnabled   = sConfigMgr->GetOption<bool>("HearthsideChat.TypingDelay.Enable", true);
     g_HsTypingDelayMaxMs     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.MaxMs", 6000);
+    g_HsMinDeliveryDelayMs   = sConfigMgr->GetOption<uint32_t>("HearthsideChat.MinDeliveryDelayMs", 400);
 
     g_HsMaxTierDirectReply = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.DirectReply", "inference");
     g_HsMaxTierAmbient     = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Ambient", "corpus");
@@ -153,9 +190,57 @@ void LoadHearthsideChatConfig()
     g_HsMaxTierReflex      = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Reflex", "reflex");
     g_HsMaxTierEngagementFollowUp = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.EngagementFollowUp", "off");
 
+    g_HsChannelTradeMaxTier            = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.Trade.MaxTier", "corpus");
+    g_HsChannelTradeRatePerMin          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.Trade.RatePerMin", 3);
+    g_HsChannelTradeMaxCandidates        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.Trade.MaxCandidates", 8);
+
+    g_HsChannelGeneralMaxTier           = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.General.MaxTier", "corpus");
+    g_HsChannelGeneralRatePerMin         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.RatePerMin", 3);
+    g_HsChannelGeneralMaxCandidates       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.MaxCandidates", 8);
+
+    g_HsChannelWorldMaxTier             = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.World.MaxTier", "corpus");
+    g_HsChannelWorldRatePerMin           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.World.RatePerMin", 3);
+    g_HsChannelWorldMaxCandidates         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.World.MaxCandidates", 8);
+
+    g_HsChannelLookingForGroupMaxTier          = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.LookingForGroup.MaxTier", "off");
+    g_HsChannelLookingForGroupRatePerMin        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LookingForGroup.RatePerMin", 0);
+    g_HsChannelLookingForGroupMaxCandidates      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LookingForGroup.MaxCandidates", 0);
+
+    g_HsChannelGuildRecruitmentMaxTier         = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.GuildRecruitment.MaxTier", "off");
+    g_HsChannelGuildRecruitmentRatePerMin       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.GuildRecruitment.RatePerMin", 0);
+    g_HsChannelGuildRecruitmentMaxCandidates     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.GuildRecruitment.MaxCandidates", 0);
+
+    g_HsChannelLocalDefenseMaxTier      = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.LocalDefense.MaxTier", "off");
+    g_HsChannelLocalDefenseRatePerMin    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LocalDefense.RatePerMin", 0);
+    g_HsChannelLocalDefenseMaxCandidates  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LocalDefense.MaxCandidates", 0);
+
+    g_HsChannelWorldDefenseMaxTier      = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.WorldDefense.MaxTier", "off");
+    g_HsChannelWorldDefenseRatePerMin    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.WorldDefense.RatePerMin", 0);
+    g_HsChannelWorldDefenseMaxCandidates  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.WorldDefense.MaxCandidates", 0);
+
+    {
+        HsChannelPolicy table[kHsChannelKindCount] = {};
+        table[static_cast<size_t>(HsChannelKind::Trade)] =
+            { HsParseTier(g_HsChannelTradeMaxTier), g_HsChannelTradeRatePerMin, g_HsChannelTradeMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::General)] =
+            { HsParseTier(g_HsChannelGeneralMaxTier), g_HsChannelGeneralRatePerMin, g_HsChannelGeneralMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::World)] =
+            { HsParseTier(g_HsChannelWorldMaxTier), g_HsChannelWorldRatePerMin, g_HsChannelWorldMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::LookingForGroup)] =
+            { HsParseTier(g_HsChannelLookingForGroupMaxTier), g_HsChannelLookingForGroupRatePerMin, g_HsChannelLookingForGroupMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::GuildRecruitment)] =
+            { HsParseTier(g_HsChannelGuildRecruitmentMaxTier), g_HsChannelGuildRecruitmentRatePerMin, g_HsChannelGuildRecruitmentMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::LocalDefense)] =
+            { HsParseTier(g_HsChannelLocalDefenseMaxTier), g_HsChannelLocalDefenseRatePerMin, g_HsChannelLocalDefenseMaxCandidates };
+        table[static_cast<size_t>(HsChannelKind::WorldDefense)] =
+            { HsParseTier(g_HsChannelWorldDefenseMaxTier), g_HsChannelWorldDefenseRatePerMin, g_HsChannelWorldDefenseMaxCandidates };
+        Hs_SetChannelPolicyTable(table);
+    }
+
     g_HsBotQuestionMode = sConfigMgr->GetOption<std::string>("HearthsideChat.BotQuestion", "wink");
 
-    g_HsGroundedAnswersEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.GroundedAnswers", true);
+    g_HsGroundedAnswersEnabled  = sConfigMgr->GetOption<bool>("HearthsideChat.GroundedAnswers", true);
+    g_HsGroundedFuzzyMaxDistance = sConfigMgr->GetOption<uint32_t>("HearthsideChat.GroundedAnswers.FuzzyMaxDistance", 2);
 
     g_HsGeneratorEnabled                    = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Enable", false);
     g_HsGeneratorLLMApiType                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiType", "llamacpp");
