@@ -32,9 +32,13 @@ namespace
     std::atomic<uint32_t> g_RowsAddedThisSession{0};
     std::atomic<uint32_t> g_RowsEvictedThisSession{0};
 
-    // A compiled constant, not a config key -- there's no data yet to judge
-    // the right turn count from, so this ships as a placeholder.
-    constexpr int kScriptTurnCount = 4;
+    // Compiled constants, not config keys -- there's no data yet to judge
+    // the right turn count from, so this ships as a placeholder range.
+    // Randomized per script (RunOneScriptGenerationCycle) rather than fixed,
+    // so consecutive /say exchanges don't all read as the same fixed-length
+    // shape.
+    constexpr int kScriptTurnCountMin = 2;
+    constexpr int kScriptTurnCountMax = 6;
 
     // §4.17: 2 turns, not 4 -- a 4-turn exchange scrolling through a
     // channel is conspicuous in a way the same script overheard in /say is
@@ -235,13 +239,30 @@ namespace
     {
         std::string prompt =
             "You are helping write ambient background chat lines for an ordinary World of "
-            "Warcraft: Wrath of the Lich King player. Write exactly ONE short, casual, "
-            "grammatically clean sentence of in-character commentary or flavor text -- not a "
-            "question, not addressed to anyone, first person. No markdown, no emoji, no "
-            "quotation marks around the line itself, no modern internet slang.";
+            "Warcraft: Wrath of the Lich King player -- the way real players actually type "
+            "in /say or general chat, not narration or descriptive prose. Write exactly ONE "
+            "short, casual, grammatically clean sentence: a concrete opinion, gripe, or "
+            "observation about actual gameplay (a quest, a fight, gear, a class/spec choice, "
+            "grouping, professions, travel time) -- not a question, not addressed to anyone, "
+            "first person. Never describe scenery for its own sake (no 'the way the "
+            "light...', no calling something peaceful/breathtaking/beautiful) -- if a place "
+            "comes up, talk about what's actually happening there for a player, not what it "
+            "looks like. Never compare to how things usually are or used to be ('more than "
+            "usual', 'lately', 'these days', 'still') -- this line is written once and reused "
+            "for any player at any time, so it can't reference a real trend. No markdown, no "
+            "emoji, no quotation marks around the line itself, no modern internet slang.";
 
         if (!bucket.tagValueLabel.empty())
-            prompt += " Write this one as something a " + bucket.tagValueLabel + " player specifically would say.";
+        {
+            if (bucket.tagColumn == "zone_tag")
+                prompt += " Write this one as something a player currently in " + bucket.tagValueLabel +
+                          " would say about being there -- not a description of the zone itself.";
+            else if (bucket.tagColumn == "level_band_tag")
+                prompt += " Write this one as something a player around the " + bucket.tagValueLabel +
+                          " level range would say.";
+            else
+                prompt += " Write this one as something a " + bucket.tagValueLabel + " player specifically would say.";
+        }
 
         if (requiresPlaceholder)
             prompt += " This category's lines always include a game placeholder token like "
@@ -366,16 +387,16 @@ namespace
         "(You've just noticed another player standing nearby. Say something casual to strike up "
         "a short conversation.)";
 
-    // One full attempt: generate kScriptTurnCount lines as a single
-    // continuous exchange (reusing the reactive tier's own history-append
-    // mechanism, hs_llm.h's HsHistoryTurn -- turn N's trigger is turn N-1's
-    // text, so the model is always just replying, the same shape as two real
-    // people alternating). Turns are labelled speaker_slot 0/1 by position
-    // after the fact; the model never needs to know there are two
-    // characters, since both share the identical baseline voice. A single
-    // line per call is required, not a stylistic choice -- Hs_CallLLM stops
-    // generation at the first newline (hs_llm.cpp), so one call cannot
-    // produce a multi-turn script.
+    // One full attempt: generate a randomized-length (kScriptTurnCountMin..
+    // kScriptTurnCountMax) run of lines as a single continuous exchange
+    // (reusing the reactive tier's own history-append mechanism, hs_llm.h's
+    // HsHistoryTurn -- turn N's trigger is turn N-1's text, so the model is
+    // always just replying, the same shape as two real people alternating).
+    // Turns are labelled speaker_slot 0/1 by position after the fact; the
+    // model never needs to know there are two characters, since both share
+    // the identical baseline voice. A single line per call is required, not
+    // a stylistic choice -- Hs_CallLLM stops generation at the first newline
+    // (hs_llm.cpp), so one call cannot produce a multi-turn script.
     //
     // Aborts (returns false, no partial script ever inserted) on the first
     // LLM failure or quality-gate rejection; the caller's backoff already
@@ -391,11 +412,13 @@ namespace
         cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
         cfg.dryMultiplier = 0.0f;
 
+        int turnCount = static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax));
+
         std::vector<HsHistoryTurn> history;
         std::string prevText = kScriptOpeningTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns; // slot, text
 
-        for (int i = 0; i < kScriptTurnCount; ++i)
+        for (int i = 0; i < turnCount; ++i)
         {
             HsLLMResult result = Hs_CallLLM(cfg, kScriptSystemPrompt, "", history, prevText);
             if (!result.success || result.text.empty())
@@ -442,7 +465,7 @@ namespace
 
         CharacterDatabase.Execute(
             "INSERT INTO hside_script (id, turn_count, generated_at, model, prompt_version) VALUES ({}, {}, NOW(), {}, {})",
-            scriptId, kScriptTurnCount, modelSql, versionSql);
+            scriptId, turnCount, modelSql, versionSql);
 
         for (size_t i = 0; i < turns.size(); ++i)
         {
