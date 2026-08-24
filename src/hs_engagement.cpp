@@ -129,7 +129,7 @@ namespace
             // no longer actually be heard on doesn't get to fire regardless.
             if (bot->GetTeamId() != sender->GetTeamId())
                 return;
-            if (bot->GetDistance(sender) > g_HsSayDistance)
+            if (!bot->IsWithinDistInMap(sender, g_HsSayDistance))
                 return;
         }
 
@@ -239,7 +239,14 @@ void HsEngagementScanWorldScript::OnUpdate(uint32_t diff)
     s_AccumulatorMs += diff;
     if (s_AccumulatorMs < kEngagementScanIntervalMs)
         return;
-    s_AccumulatorMs = 0;
+    // Subtract rather than reset: the fire window
+    // [kEngagementFireWindowMinSec, kEngagementFireWindowMaxSec) is exactly
+    // one scan interval wide, so it only reliably catches every pair while
+    // the scan period stays exactly kEngagementScanIntervalMs. Discarding the
+    // per-cycle overshoot (up to one world tick) would drift the period past
+    // 30s and eventually step a pair's window entirely -- the follow-up would
+    // never fire and nothing would record why.
+    s_AccumulatorMs -= kEngagementScanIntervalMs;
 
     if (!g_HsEnable)
         return;

@@ -68,24 +68,38 @@ namespace
     }
 
     // GM-set pins (hs_command.cpp's `.hearthside archetype`). Own mutex,
-    // separate from g_Archetypes, since this map is written on demand from
-    // the world thread and read from both the world and worker threads.
+    // separate from g_ArchetypeTableMutex, since this map is written on
+    // demand from the world thread and read from both the world and worker
+    // threads.
     std::mutex                                  g_ArchetypeOverrideMutex;
     std::unordered_map<uint64_t, HsArchetype>   g_ArchetypeOverrides;
+
+    // Guards every access to g_Archetypes. `.reload config` replaces the
+    // whole table from the world thread (hs_main.cpp's
+    // HsArchetypeLifecycleWorldScript) while the queue-worker and generator
+    // threads are reading it -- and each HsArchetypeInfo owns a
+    // std::string talksAbout, so an unguarded replace frees a buffer a
+    // reader may be mid-way through. Hs_ArchetypeInfoFor returns by value
+    // for the same reason: its callers hold the result across a
+    // multi-second Hs_CallLLM, long after any lock could still be held.
+    std::mutex                                  g_ArchetypeTableMutex;
 }
 
 void Hs_SetArchetypeTable(const std::array<HsArchetypeInfo, kHsArchetypeCount>& table)
 {
+    std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
     g_Archetypes = table;
 }
 
-const HsArchetypeInfo& Hs_ArchetypeInfoFor(HsArchetype a)
+HsArchetypeInfo Hs_ArchetypeInfoFor(HsArchetype a)
 {
+    std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
     return g_Archetypes[static_cast<size_t>(a)];
 }
 
 bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out)
 {
+    std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
     for (size_t i = 0; i < g_Archetypes.size(); ++i)
     {
         if (enumName == g_Archetypes[i].enumName)
@@ -120,6 +134,8 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level)
 
     uint64_t h = MixBits64(botGuid ^ kArchetypeSalt);
 
+    std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
+
     uint32_t eligibleTotal = 0;
     for (auto const& info : g_Archetypes)
         if (IsEligibleForLevel(info, level))
@@ -150,7 +166,7 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level)
 
 std::string Hs_ArchetypePromptLine(HsArchetype a)
 {
-    const HsArchetypeInfo& info = Hs_ArchetypeInfoFor(a);
+    HsArchetypeInfo const info = Hs_ArchetypeInfoFor(a);
     std::string line = std::string("You mostly talk about: ") + info.talksAbout + ".";
 
     // TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. Scoped to the game

@@ -73,7 +73,7 @@ namespace
     bool PassesReplyChance(Player* bot)
     {
         uint64_t botGuid = bot->GetGUID().GetRawValue();
-        const HsArchetypeInfo& info =
+        HsArchetypeInfo const info =
             Hs_ArchetypeInfoFor(Hs_ArchetypeForBot(botGuid, static_cast<uint8_t>(bot->GetLevel())));
 
         // 1.0 always passes, 0.0 always fails -- manual_only/mute is a legitimate table value.

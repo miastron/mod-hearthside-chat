@@ -18,7 +18,10 @@
 // kHsPromotionThreshold, if not already promoted. Card generation itself is
 // the generator's job (hs_generator.h), picking up rows with promoted_at set
 // and card_voice still NULL -- this function only flips the flag. Safe to
-// call from any thread; only touches CharacterDatabase.
+// call from any thread: it touches CharacterDatabase, and its level-drop
+// branch reaches Hs_RetireCard, whose exclude-vector release is queued for
+// the world thread rather than applied inline (see
+// Hs_DrainExcludeVectorQueue below).
 void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight);
 
 // One query's worth of what the reactive tier (hs_queue.cpp's WorkerLoop)
@@ -61,16 +64,28 @@ bool Hs_HasActiveCard(uint64_t botGuid);
 // re-apply.
 void Hs_ApplyExcludeVectorsFromIdentityTable();
 
-// Pushes exactly one bot's name into both vectors -- called right after a
-// card finishes generating (hs_generator.cpp), so the bot is protected
-// immediately rather than waiting for the next startup/reload. Idempotent,
-// same as the bulk version above.
+// Applies every exclude-vector push/remove queued since the last call, on
+// the calling thread. World-thread-only, driven every tick from hs_main.cpp's
+// HsIdentityLifecycleWorldScript::OnUpdate.
+//
+// mod-playerbots' two exclude vectors are unsynchronized std::vectors that it
+// reads from the world thread, so this module must not write them from the
+// generator, queue-worker, or HTTP-server threads. Every single-bot
+// push/remove below therefore only records intent; this drain is what
+// actually mutates the vectors. Cheap when idle (one mutex + empty check).
+void Hs_DrainExcludeVectorQueue();
+
+// Queues exactly one bot's name for pushing into both vectors -- called right
+// after a card finishes generating (hs_generator.cpp), so the bot is
+// protected from the next world tick rather than waiting for the next
+// startup/reload. Callable from any thread; the write itself happens in
+// Hs_DrainExcludeVectorQueue. Idempotent, same as the bulk version above.
 void Hs_PushBotIntoExcludeVectors(uint64_t botGuid);
 
 // The reverse of the above: exclusion tracks card_active and is released on
 // demotion. Called on both demotion (dormancy) and retirement (invalidation)
 // -- either way the bot is no longer somebody's known bot and rejoins the
-// recycling pool.
+// recycling pool. Queued for the world thread, same as the push.
 void Hs_RemoveBotFromExcludeVectors(uint64_t botGuid);
 
 // A carded bot whose level drops is retired, not repaired. Clears both card

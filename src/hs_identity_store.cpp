@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 #include <set>
 #include <vector>
 
@@ -43,7 +44,35 @@ namespace
         return result ? (*result)[0].Get<std::string>() : "";
     }
 
-    void PushNameIntoExcludeVectors(const std::string& botName)
+    // ---- Exclude-vector writes are world-thread-only ----
+    //
+    // sPlayerbotAIConfig.levelBracketsExcludeNames/resetBotLevelExcludeNames
+    // are plain std::vectors with no synchronization of their own, and
+    // mod-playerbots walks them from the world thread (RandomBotLevelMgr's
+    // IsNameInExcludeList sites). A mutex on this side alone would not close
+    // the race, because that reader takes no lock -- so the only correct fix
+    // is to never touch the vectors off the world thread at all.
+    //
+    // The two Apply* functions below therefore write directly and are
+    // world-thread-only; every other entry point (the generator finishing a
+    // card, the queue worker retiring one, the HTTP control API's
+    // pin/unpin/promote/demote routes) queues its intent here instead, and
+    // Hs_DrainExcludeVectorQueue() applies it on the next world tick from
+    // hs_main.cpp's HsIdentityLifecycleWorldScript::OnUpdate -- the same
+    // thread the existing 300s reconcile already writes them from. A push
+    // and a remove for the same name stay in submission order, since the
+    // queue is a FIFO vector.
+    struct PendingExcludeOp
+    {
+        std::string name;
+        bool        push; // false = remove
+    };
+
+    std::mutex                    g_PendingExcludeMutex;
+    std::vector<PendingExcludeOp> g_PendingExcludeOps;
+
+    // World-thread-only: writes sPlayerbotAIConfig's vectors directly.
+    void ApplyPushNameIntoExcludeVectors(const std::string& botName)
     {
         if (botName.empty())
             return;
@@ -51,12 +80,32 @@ namespace
         AppendIfMissing(sPlayerbotAIConfig.resetBotLevelExcludeNames, botName);
     }
 
-    void RemoveNameFromExcludeVectors(const std::string& botName)
+    // World-thread-only: writes sPlayerbotAIConfig's vectors directly.
+    void ApplyRemoveNameFromExcludeVectors(const std::string& botName)
     {
         if (botName.empty())
             return;
         EraseIfPresent(sPlayerbotAIConfig.levelBracketsExcludeNames, botName);
         EraseIfPresent(sPlayerbotAIConfig.resetBotLevelExcludeNames, botName);
+    }
+
+    // Callable from any thread.
+    void QueueExcludeVectorOp(const std::string& botName, bool push)
+    {
+        if (botName.empty())
+            return;
+        std::lock_guard<std::mutex> lock(g_PendingExcludeMutex);
+        g_PendingExcludeOps.push_back(PendingExcludeOp{ botName, push });
+    }
+
+    void PushNameIntoExcludeVectors(const std::string& botName)
+    {
+        QueueExcludeVectorOp(botName, true);
+    }
+
+    void RemoveNameFromExcludeVectors(const std::string& botName)
+    {
+        QueueExcludeVectorOp(botName, false);
     }
 
     // Every hside_identity row is created exclusively by
@@ -185,12 +234,36 @@ void Hs_ApplyExcludeVectorsFromIdentityTable()
     uint32_t count = 0;
     do
     {
-        PushNameIntoExcludeVectors((*result)[0].Get<std::string>());
+        // Direct, not queued: this function is world-thread-only (startup,
+        // `.reload config`, and the 300s reconcile, all from hs_main.cpp).
+        ApplyPushNameIntoExcludeVectors((*result)[0].Get<std::string>());
         ++count;
     } while (result->NextRow());
 
     if (g_HsDebugEnabled)
         LOG_INFO("server.loading", "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
+}
+
+void Hs_DrainExcludeVectorQueue()
+{
+    std::vector<PendingExcludeOp> ops;
+    {
+        std::lock_guard<std::mutex> lock(g_PendingExcludeMutex);
+        if (g_PendingExcludeOps.empty())
+            return;
+        ops.swap(g_PendingExcludeOps);
+    }
+
+    // Applied in submission order, so a push followed by a remove for the
+    // same name lands the same way it would have if each had been applied
+    // inline.
+    for (auto const& op : ops)
+    {
+        if (op.push)
+            ApplyPushNameIntoExcludeVectors(op.name);
+        else
+            ApplyRemoveNameFromExcludeVectors(op.name);
+    }
 }
 
 void Hs_PushBotIntoExcludeVectors(uint64_t botGuid)
@@ -363,18 +436,25 @@ bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
     HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
+    // Read the prior state *before* the upsert. Reading it afterwards cannot
+    // distinguish the two cases: the ON DUPLICATE KEY clause leaves
+    // promoted_at non-null either way, so an already-promoted bot would
+    // report a fresh promotion and re-increment the session counter.
+    QueryResult before = CharacterDatabase.Query(
+        "SELECT promoted_at FROM hside_identity WHERE bot_guid = {}", botGuid);
+    if (before && !(*before)[0].IsNull())
+        return false; // already promoted -- nothing to write, nothing to count
+
+    // The ON DUPLICATE KEY clause still matters: the row may exist and be
+    // unpromoted, which is exactly the case that reaches here.
     CharacterDatabase.Execute(
         "INSERT INTO hside_identity (bot_guid, archetype, last_known_level, level_checked_at, promoted_at) "
         "VALUES ({}, '{}', {}, NOW(), NOW()) "
         "ON DUPLICATE KEY UPDATE promoted_at = IFNULL(promoted_at, NOW())",
         botGuid, archetypeName, static_cast<uint32_t>(botLevel));
 
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT promoted_at FROM hside_identity WHERE bot_guid = {}", botGuid);
-    bool nowPromoted = result && !(*result)[0].IsNull();
-    if (nowPromoted)
-        g_PromotionsThisSession.fetch_add(1);
-    return nowPromoted;
+    g_PromotionsThisSession.fetch_add(1);
+    return true;
 }
 
 bool Hs_ForceDemote(uint64_t botGuid)

@@ -124,7 +124,7 @@ namespace
         }
 
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -306,7 +306,9 @@ void Hs_ScanProximityOpeners()
                 continue;
             if (!bot->IsAlive() || bot->IsInCombat())
                 continue;
-            if (bot->GetDistance(player) > g_HsSayDistance)
+            // Map- and phase-aware; see hs_handler.cpp's /say eligibility
+            // filter for why the bare GetDistance is wrong here.
+            if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
                 continue;
             currentlyObserved.insert({ bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue() });
         }

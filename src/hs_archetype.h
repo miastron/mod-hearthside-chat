@@ -66,7 +66,12 @@ struct HsArchetypeInfo
 // way, without any AzerothCore dependency entering this file.
 void Hs_SetArchetypeTable(const std::array<HsArchetypeInfo, kHsArchetypeCount>& table);
 
-const HsArchetypeInfo& Hs_ArchetypeInfoFor(HsArchetype a);
+// Returns a *copy*, not a reference into the in-memory table: the table is
+// replaced wholesale on every `.reload config` (Hs_SetArchetypeTable) while
+// the queue-worker and generator threads hold their lookup across a
+// multi-second LLM call, and HsArchetypeInfo::talksAbout is an owned string
+// whose buffer that replace would free under them.
+HsArchetypeInfo Hs_ArchetypeInfoFor(HsArchetype a);
 
 // Reverse lookup by enum_name against whatever's currently loaded
 // (Hs_SetArchetypeTable), so a caller like hs_command.cpp's `.hearthside

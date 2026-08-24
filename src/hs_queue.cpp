@@ -376,7 +376,7 @@ namespace
             // both the LLM prompt's delta layer and the style pass's `care`
             // baseline below.
             HsArchetype archetype = Hs_ArchetypeForBot(req.botGuid, req.botLevel);
-            const HsArchetypeInfo& archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+            HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
 
             // The voice block is the only card text that ever enters a
             // prompt. Folded into the same personaLine string Hs_CallLLM

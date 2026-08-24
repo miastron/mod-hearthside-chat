@@ -15,6 +15,7 @@
 
 #include <cctype>
 #include <chrono>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -165,9 +166,23 @@ namespace
     // relies on.
     std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> g_lastRequestAt;
 
+    // Nothing else erases from that map -- not logout, not a sweep -- so
+    // without this it retains one entry per character that ever sent an
+    // inspect, for the life of the worldserver process. An entry older than
+    // the window already fails the test below, so dropping it gives the same
+    // answer as finding it; prune opportunistically on the call that is
+    // walking the map anyway, once it is big enough to be worth the pass.
+    std::size_t constexpr kPruneWhenLargerThan = 256;
+
     bool IsRateLimited(uint64_t requesterGuid)
     {
         auto now = std::chrono::steady_clock::now();
+        if (g_lastRequestAt.size() > kPruneWhenLargerThan)
+        {
+            for (auto it = g_lastRequestAt.begin(); it != g_lastRequestAt.end(); )
+                it = (now - it->second >= kRateLimitWindow) ? g_lastRequestAt.erase(it) : std::next(it);
+        }
+
         auto it  = g_lastRequestAt.find(requesterGuid);
         if (it != g_lastRequestAt.end() && now - it->second < kRateLimitWindow)
             return true;
@@ -224,7 +239,7 @@ namespace
         // that field is only populated once hasIdentityRow is true, and
         // would leave freshly-met bots showing nothing at all.
         HsArchetype const       archetype = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
-        HsArchetypeInfo const& info      = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   info      = Hs_ArchetypeInfoFor(archetype);
         HsIdentityInspection    insp      = Hs_InspectIdentity(botGuid);
 
         SendHsiPacket(player, "INSPECT",
@@ -273,10 +288,15 @@ bool HsBridgePlayerScript::OnPlayerCanUseChat(Player* player, uint32_t /*type*/,
     if (msg.size() < envelopeLength || msg.compare(0, envelopeLength, kAddonEnvelope) != 0)
         return true; // not ours -- let it (and every other addon's prefix) through untouched
 
-    if (msg.size() > kMaxWireLength || HasControlCharacter(msg))
+    std::string const body = msg.substr(envelopeLength);
+
+    // Scanned over the body only, never the whole message: the envelope's own
+    // separator is a tab (0x09), which HasControlCharacter would reject --
+    // that is what this check is guarding the name/token fields against, not
+    // the framing the client is required to send.
+    if (msg.size() > kMaxWireLength || HasControlCharacter(body))
         return false; // ours, but malformed -- consume it, answer nothing
 
-    std::string const body = msg.substr(envelopeLength);
     auto const [opcode, afterOpcode] = SplitOnce(body, kFieldSeparator);
     if (opcode != "GET")
         return false;

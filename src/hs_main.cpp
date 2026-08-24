@@ -121,6 +121,12 @@ namespace
         }
         void OnUpdate(uint32 diff) override
         {
+            // Every tick: apply exclude-vector pushes/removes queued by the
+            // generator, queue-worker, and HTTP-server threads. Those vectors
+            // belong to mod-playerbots and are read from this thread with no
+            // locking, so this is the only place they may be written.
+            Hs_DrainExcludeVectorQueue();
+
             _msSinceReconcile += diff;
             if (_msSinceReconcile >= kIdentityReconcileIntervalMs)
             {

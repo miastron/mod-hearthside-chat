@@ -221,7 +221,9 @@ namespace
                 continue;
             if (candidate->IsInCombat() || !candidate->IsAlive())
                 continue;
-            if (candidate->GetDistance(player) > g_HsSayDistance)
+            // Map- and phase-aware; see hs_handler.cpp's /say eligibility
+            // filter for why the bare GetDistance is wrong here.
+            if (!candidate->IsWithinDistInMap(player, g_HsSayDistance))
                 continue;
             if (IsBotInActiveRun(candidate->GetGUID().GetRawValue()))
                 continue;
@@ -273,8 +275,8 @@ namespace
         bool ok = bot0 && bot0->IsInWorld() && bot0->IsAlive() && !bot0->IsInCombat()
                && bot1 && bot1->IsInWorld() && bot1->IsAlive() && !bot1->IsInCombat()
                && witness && witness->IsInWorld() && witness->IsAlive()
-               && bot0->GetDistance(witness) <= g_HsSayDistance
-               && bot1->GetDistance(witness) <= g_HsSayDistance;
+               && bot0->IsWithinDistInMap(witness, g_HsSayDistance)
+               && bot1->IsWithinDistInMap(witness, g_HsSayDistance);
 
         if (!ok)
         {
@@ -310,7 +312,7 @@ namespace
         // pass still runs per speaker at delivery -- the same script
         // spoken by two different bots reads as two different people.
         HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -486,7 +488,7 @@ namespace
         }
 
         HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;

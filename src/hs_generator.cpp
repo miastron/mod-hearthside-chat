@@ -109,9 +109,16 @@ namespace
     std::vector<std::string> AllRowsInBucket(const std::string& category, const std::string& tagColumn,
                                               const std::string& tagValueSql)
     {
+        // `category` can originate from GM console input (`.hearthside
+        // capture <bot> <category>`), and DatabaseWorkerPool::Query is a plain
+        // StringFormat substitution with no escaping of its own. tagColumn and
+        // tagValueSql are module-generated (a column name from a fixed set, an
+        // integer, or a fixed band label) and need none.
+        std::string escapedCategory = category;
+        CharacterDatabase.EscapeString(escapedCategory);
         QueryResult result = CharacterDatabase.Query(
             "SELECT text FROM hside_corpus WHERE name = '{}' {}",
-            category, tagColumn.empty() ? "" : ("AND " + tagColumn + " = " + tagValueSql));
+            escapedCategory, tagColumn.empty() ? "" : ("AND " + tagColumn + " = " + tagValueSql));
         std::vector<std::string> rows;
         if (!result)
             return rows;
@@ -124,9 +131,11 @@ namespace
     std::vector<std::string> SampleRows(const std::string& category, const std::string& tagColumn,
                                          const std::string& tagValueSql, int limit)
     {
+        std::string escapedCategory = category;
+        CharacterDatabase.EscapeString(escapedCategory);
         QueryResult result = CharacterDatabase.Query(
             "SELECT text FROM hside_corpus WHERE name = '{}' {} ORDER BY RAND() LIMIT {}",
-            category, tagColumn.empty() ? "" : ("AND " + tagColumn + " = " + tagValueSql), limit);
+            escapedCategory, tagColumn.empty() ? "" : ("AND " + tagColumn + " = " + tagValueSql), limit);
         std::vector<std::string> rows;
         if (!result)
             return rows;
@@ -732,7 +741,7 @@ namespace
             return false;
 
         HsArchetype archetype = Hs_ArchetypeForBot(pending.botGuid, pending.lastKnownLevel);
-        const HsArchetypeInfo& archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         GuildLookup guild = LookupGuildFor(pending.botGuid);
 
         HsLLMConfig cfg;
@@ -997,8 +1006,10 @@ std::vector<HsCorpusReviewRow> Hs_ReviewCorpusRows(const std::string& category, 
 
 std::string Hs_LookupCategoryAxis(const std::string& category)
 {
+    std::string escapedCategory = category;
+    CharacterDatabase.EscapeString(escapedCategory);
     QueryResult result = CharacterDatabase.Query(
-        "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}'", category);
+        "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}'", escapedCategory);
     return result ? (*result)[0].Get<std::string>() : "";
 }
 
@@ -1006,8 +1017,11 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
                                     const std::string& tagValueSql, const std::string& candidateText,
                                     const std::string& model, const std::string& promptVersion)
 {
+    std::string escapedCategory = category;
+    CharacterDatabase.EscapeString(escapedCategory);
+
     QueryResult catResult = CharacterDatabase.Query(
-        "SELECT card_gated FROM hside_corpus_category WHERE name = '{}'", category);
+        "SELECT card_gated FROM hside_corpus_category WHERE name = '{}'", escapedCategory);
     if (!catResult)
         return { false, "unknown_category" };
     bool cardGated = (*catResult)[0].Get<uint8_t>() != 0;
@@ -1036,13 +1050,13 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
     {
         CharacterDatabase.Execute(
             "INSERT INTO hside_corpus (name, text, generated_at, model, prompt_version) VALUES ('{}', '{}', NOW(), {}, {})",
-            category, escapedText, modelSql, versionSql);
+            escapedCategory, escapedText, modelSql, versionSql);
     }
     else
     {
         CharacterDatabase.Execute(
             "INSERT INTO hside_corpus (name, text, {}, generated_at, model, prompt_version) VALUES ('{}', '{}', {}, NOW(), {}, {})",
-            tagColumn, category, escapedText, tagValueSql, modelSql, versionSql);
+            tagColumn, escapedCategory, escapedText, tagValueSql, modelSql, versionSql);
     }
 
     return { true, "" };

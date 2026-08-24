@@ -113,7 +113,7 @@ namespace
         // no cooldown/last-reply bump -- tier 0 writes no identity state at
         // all.
         HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
-        const HsArchetypeInfo& archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -313,7 +313,7 @@ namespace
         // Same style pass and delivery path as TryReflex -- both answer
         // without touching the GPU.
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -366,7 +366,7 @@ namespace
         }
 
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -431,7 +431,7 @@ namespace
         }
 
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
-        const HsArchetypeInfo&  archetypeInfo = Hs_ArchetypeInfoFor(archetype);
+        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
@@ -529,7 +529,12 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
             continue; // opposing faction can't read /say
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
-        if (candidate->GetDistance(player) > g_HsSayDistance)
+        // IsWithinDistInMap, not GetDistance: the candidate loop walks
+        // ObjectAccessor::GetPlayers(), which is realm-wide, and GetDistance
+        // is purely positional -- no map, no phase. Two instances of the same
+        // dungeon share one coordinate space, so the bare distance would make
+        // a bot in another instance "nearby".
+        if (!candidate->IsWithinDistInMap(player, g_HsSayDistance))
             continue;
         eligible.push_back(candidate);
     }
