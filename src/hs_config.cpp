@@ -1,5 +1,6 @@
 #include "hs_config.h"
 #include "Config.h"
+#include "Log.h"
 #include "hs_channel.h"
 
 #include <set>
@@ -84,6 +85,11 @@ uint32_t g_HsBreakerProbeIntervalSeconds = 15;
 bool     g_HsTypingDelayEnabled   = true;
 uint32_t g_HsTypingDelayMaxMs     = 6000;
 uint32_t g_HsMinDeliveryDelayMs   = 400;
+
+bool     g_HsDistractedEnabled         = true;
+uint32_t g_HsDistractedMinDelaySeconds = 25;
+uint32_t g_HsDistractedMaxDelaySeconds = 60;
+uint32_t g_HsDistractedCooldownSeconds = 600;
 
 std::string g_HsMaxTierDirectReply = "inference";
 std::string g_HsMaxTierAmbient     = "corpus";
@@ -187,6 +193,23 @@ void LoadHearthsideChatConfig()
     g_HsTypingDelayEnabled   = sConfigMgr->GetOption<bool>("HearthsideChat.TypingDelay.Enable", true);
     g_HsTypingDelayMaxMs     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.MaxMs", 6000);
     g_HsMinDeliveryDelayMs   = sConfigMgr->GetOption<uint32_t>("HearthsideChat.MinDeliveryDelayMs", 400);
+
+    g_HsDistractedEnabled         = sConfigMgr->GetOption<bool>("HearthsideChat.Distracted.Enable", true);
+    g_HsDistractedMinDelaySeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Distracted.MinDelaySeconds", 25);
+    g_HsDistractedMaxDelaySeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Distracted.MaxDelaySeconds", 60);
+    g_HsDistractedCooldownSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Distracted.CooldownSeconds", 600);
+
+    // Normalized here rather than at the draw site: hs_queue.cpp feeds these
+    // straight to urand(), whose underlying uniform_int_distribution is
+    // undefined when min > max -- an inverted pair in a hand-edited conf
+    // would be a crash, not a misbehavior.
+    if (g_HsDistractedMinDelaySeconds > g_HsDistractedMaxDelaySeconds)
+    {
+        LOG_ERROR("server.loading",
+            "[HearthsideChat] Distracted.MinDelaySeconds ({}) exceeds MaxDelaySeconds ({}) -- clamping max up to min.",
+            g_HsDistractedMinDelaySeconds, g_HsDistractedMaxDelaySeconds);
+        g_HsDistractedMaxDelaySeconds = g_HsDistractedMinDelaySeconds;
+    }
 
     g_HsMaxTierDirectReply = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.DirectReply", "inference");
     g_HsMaxTierAmbient     = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Ambient", "corpus");

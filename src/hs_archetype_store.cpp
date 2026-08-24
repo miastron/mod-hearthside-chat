@@ -18,15 +18,15 @@ namespace
     // one function in this file that matches DB rows to enum slots.
     constexpr std::array<const char*, kHsArchetypeCount> kEnumNames = {{
         "RAIDER_SERIOUS", "RAIDER_CASUAL", "PVP_SERIOUS", "PVP_CASUAL", "TRADER",
-        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "LONE_WOLF", "MENTOR",
-        "YOUNG_APPRENTICE", "SOCIALITE", "DISTRACTED", "TROLL_MILD", "TROLL_AGGRESSIVE",
+        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "MENTOR",
+        "YOUNG_APPRENTICE", "SOCIALITE", "TROLL_MILD", "TROLL_AGGRESSIVE",
     }};
 }
 
 void Hs_LoadArchetypesFromDb()
 {
     QueryResult result = CharacterDatabase.Query(
-        "SELECT enum_name, talks_about, care, reply_chance, verbosity_cap, spawn_weight, "
+        "SELECT enum_name, talks_about, care, distracted_chance, verbosity_cap, spawn_weight, "
         "has_abbrev_override, abbrev_override_chance, min_level, max_level, profanity_level, "
         "typing_base_ms, typing_per_char_ms "
         "FROM hside_archetype");
@@ -34,7 +34,9 @@ void Hs_LoadArchetypesFromDb()
     std::array<HsArchetypeInfo, kHsArchetypeCount> table;
     std::array<bool, kHsArchetypeCount> found{};
     for (size_t i = 0; i < kHsArchetypeCount; ++i)
-        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 };
+        // distracted_chance defaults to 0.0f, not a midpoint: a row that failed
+        // to load should never invent an "afk" pause it has no configured basis for.
+        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 };
 
     if (!result)
     {
@@ -68,7 +70,7 @@ void Hs_LoadArchetypesFromDb()
         HsArchetypeInfo& info = table[slot];
         info.talksAbout            = (*result)[1].Get<std::string>();
         info.care                  = (*result)[2].Get<float>();
-        info.replyChance           = (*result)[3].Get<float>();
+        info.distractedChance      = (*result)[3].Get<float>();
         info.verbosityCap          = (*result)[4].Get<uint32_t>();
         info.spawnWeight           = (*result)[5].Get<uint32_t>();
         info.hasAbbrevOverride     = (*result)[6].Get<bool>();

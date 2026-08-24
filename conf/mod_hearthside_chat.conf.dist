@@ -211,7 +211,7 @@ HearthsideChat.Bucket.BurstCapacity = 8
 #     Description: Minimum seconds between two admitted requests for the
 #                  same bot, regardless of bucket state.
 #     Default:     8
-HearthsideChat.Bot.CooldownSeconds = 8
+HearthsideChat.Bot.CooldownSeconds = 3
 
 # HearthsideChat.CircuitBreaker.FailureThreshold
 #     Description: Consecutive LLM call failures before the breaker opens
@@ -260,6 +260,57 @@ HearthsideChat.TypingDelay.MaxMs = 6000
 #                  already have their own floors and are unaffected.
 #     Default:     400
 HearthsideChat.MinDeliveryDelayMs = 400
+
+# --------------------------------------------
+# DISTRACTED REPLY -- the "sorry, was afk" flavor
+# --------------------------------------------
+# Occasionally a bot answers late and says so: it sends a short canned line
+# ("sorry, was afk", "back", ...) after a delay, then the real reply a full
+# typing delay after that. The odds are per-archetype
+# (hside_archetype.distracted_chance), which replaced the old reply_chance
+# column -- a personality that simply doesn't answer reads as being ignored,
+# or as a broken module, on a realm that is almost entirely bots, so the same
+# half-present trait is expressed as a late reply instead of a missing one.
+#
+# Note this is characterization, not backpressure: it is deliberately NOT
+# driven by real backend latency or Queue.TTLSeconds. A TTL expiry means the
+# request was dropped before inference ever ran, and on a GPU that is never
+# stressed a latency-triggered version would simply never fire.
+#
+# The filler lines themselves are compiled in (hs_queue.cpp), like the tier-0
+# reflex vocabulary -- editing them costs a rebuild.
+
+# HearthsideChat.Distracted.Enable
+#     Description: Master toggle. Off means no bot ever sends the filler
+#                  line, whatever distracted_chance says.
+#     Default:     1 (true)
+HearthsideChat.Distracted.Enable = 1
+
+# HearthsideChat.Distracted.MinDelaySeconds
+#     Description: Floor on how long the bot appears to have been away before
+#                  the "sorry, was afk" line lands. This is the setting that
+#                  makes or breaks the illusion: apologizing for stepping
+#                  away only five seconds ago is a transparent lie, so the
+#                  floor has to be long enough to justify the apology.
+#     Default:     25
+HearthsideChat.Distracted.MinDelaySeconds = 25
+
+# HearthsideChat.Distracted.MaxDelaySeconds
+#     Description: Ceiling on that same gap -- long enough to be believable,
+#                  short enough that the player doesn't conclude the bot is
+#                  broken and walk away. Clamped up to MinDelaySeconds if set
+#                  below it.
+#     Default:     60
+HearthsideChat.Distracted.MaxDelaySeconds = 60
+
+# HearthsideChat.Distracted.CooldownSeconds
+#     Description: Minimum seconds before the same bot can be "distracted"
+#                  again, regardless of its archetype's chance. Without this,
+#                  a player unlucky enough to be talking to a high-chance bot
+#                  would experience it as one that constantly replies late.
+#                  Keyed per bot, not per conversation.
+#     Default:     600
+HearthsideChat.Distracted.CooldownSeconds = 600
 
 # --------------------------------------------
 # TIER CEILINGS -- one GPU dial per surface
@@ -332,7 +383,12 @@ HearthsideChat.MaxTier.EngagementFollowUp = off
 # practice -- speaking in a channel is corpus/script content only, never
 # tier-2 inference. RatePerMin is a per-channel token bucket (not per-bot --
 # a channel with most of the realm in it has no proximity bound to cap load
-# otherwise). MaxCandidates caps how many eligible bots are even considered
+# otherwise). A token is spent per *triggering player message*, not per bot
+# reply: the take happens before the candidate scan, so a throttled channel
+# costs nothing, but the arbiter that runs afterwards decides no one answers
+# roughly half the time. Actual chatter therefore lands near half this
+# number -- RatePerMin = 6 is about 3 bot lines a minute, not 6.
+# MaxCandidates caps how many eligible bots are even considered
 # per triggering message (zone-local first, then a capped random sample) --
 # without this cap, a busy channel would roll reply-chance against every
 # member every message. LookingForGroup/GuildRecruitment/LocalDefense/

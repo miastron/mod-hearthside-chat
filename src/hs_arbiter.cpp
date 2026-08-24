@@ -1,5 +1,4 @@
 #include "hs_arbiter.h"
-#include "hs_archetype.h"
 #include "hs_config.h"
 #include "hs_queue.h"
 
@@ -62,25 +61,6 @@ namespace
         return minFactor + (1.0 - minFactor) * t;
     }
 
-    // Archetype reply-chance (hside_archetype.reply_chance), applied as a
-    // candidacy roll rather than a weight factor: with one bot in range, a
-    // scaled weight wouldn't change anything, but rolling candidates out
-    // before the count is picked still makes a low-chance archetype win the
-    // crowd lottery less often (§4.11, §4.15 step 4) without double-counting
-    // the trait. Applied *after* the named-address check -- ignoring a
-    // player who named the bot is worse than answering out of character
-    // (§4.15 step 2).
-    bool PassesReplyChance(Player* bot)
-    {
-        uint64_t botGuid = bot->GetGUID().GetRawValue();
-        HsArchetypeInfo const info =
-            Hs_ArchetypeInfoFor(Hs_ArchetypeForBot(botGuid, static_cast<uint8_t>(bot->GetLevel())));
-
-        // 1.0 always passes, 0.0 always fails -- manual_only/mute is a legitimate table value.
-        uint32_t chancePct = static_cast<uint32_t>(std::clamp(info.replyChance, 0.0f, 1.0f) * 100.0f);
-        return urand(1, 100) <= chancePct;
-    }
-
     // Falls back to the beyond-range floor for a cross-map candidate --
     // party/raid/guild chat can span maps, and GetDistance() across
     // unrelated coordinate spaces is meaningless, not just "far" (§4.15).
@@ -111,26 +91,22 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
         }
     }
 
-    // Filter to willing candidates before picking a count -- an empty
-    // result is silence, not a fallback to the full candidate set (§4.11).
-    std::vector<Player*> willing;
-    willing.reserve(candidates.size());
-    for (Player* bot : candidates)
-    {
-        if (PassesReplyChance(bot))
-            willing.push_back(bot);
-    }
-    if (willing.empty())
-        return selected;
-
-    // Pick a reply count, which may be zero.
-    uint32_t replyCount = PickReplyCount(willing.size());
+    // Pick a reply count, which may be zero. No per-candidate willingness
+    // filter runs ahead of this any more: hside_archetype.reply_chance was
+    // replaced outright by distracted_chance on 2026-08-24 (hs_archetype.h).
+    // A personality that often just doesn't answer is true to a real player
+    // but reads as being ignored -- or as a broken module -- on a realm that
+    // is almost entirely bots, so the trait is now expressed as a *late*
+    // reply (hs_queue.cpp's "sorry, was afk" line) rather than a missing one.
+    // PickReplyCount's own weighting is still what keeps a crowd from
+    // answering in chorus.
+    uint32_t replyCount = PickReplyCount(candidates.size());
     if (replyCount == 0)
         return selected;
 
     // Weighted select without replacement -- proximity and recency, not
     // uniform.
-    std::vector<Player*> pool = willing;
+    std::vector<Player*> pool = candidates;
     std::random_device   rd;
     std::mt19937          gen(rd());
 

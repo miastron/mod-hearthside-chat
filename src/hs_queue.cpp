@@ -20,6 +20,7 @@
 #include "Random.h"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -67,6 +68,26 @@ namespace
     // would itself be a tell, so tier 0 still gets a short randomized delay.
     constexpr uint32_t kReflexDelayMinMs = 400;
     constexpr uint32_t kReflexDelayMaxMs = 1500;
+
+    // The distracted-reply filler pool (hs_config.h's Distracted.* section).
+    // Hardcoded content rather than a config key or an SQL table, following
+    // the same reasoning hs_reflex.h's gz/ty/inv vocabulary already gets:
+    // editing costs a rebuild, which is the right price for a fixed set this
+    // small. Written lowercase/uncapitalized as neutral raw input -- each
+    // pick still goes through the same style pass (WorkerLoop below, same
+    // HsStyleContext as the real reply) before delivery, so a careful
+    // archetype's casing/punctuation and a carded verbal tic still apply;
+    // this pool is not what a player actually sees verbatim.
+    constexpr std::array<const char*, 8> kDistractedFillers = {{
+        "sorry, was afk",
+        "back",
+        "sorry, back",
+        "back, sorry",
+        "sry was afk",
+        "ok im back",
+        "was away",
+        "was afk"
+    }};
 
     const char* ReplyChannelNameImpl(HsReplyChannel channel)
     {
@@ -169,6 +190,52 @@ namespace
     std::mutex                                        g_CooldownMutex;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastEnqueueAt;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastReplyAt;
+
+    // ---- distracted-reply cooldown ----
+    // Its own mutex rather than sharing g_CooldownMutex: that one is taken on
+    // the world thread by every admission attempt (Hs_TryEnqueue), and this
+    // one only by the single worker thread after a completed generation --
+    // no reason to make an admission wait behind a flavor roll.
+    //
+    // Keyed by bot, not by (bot, player) pair: the frustration this bounds is
+    // "this particular bot keeps replying late," and per-bot is also what the
+    // per-bot reply cooldown above already keys on. A player talking to many
+    // bots can still see two distracted replies close together from two
+    // different bots, which is the intended read -- two people happened to
+    // step away, not one flaky bot.
+    std::mutex                                        g_DistractedMutex;
+    std::unordered_map<uint64_t, Clock::time_point>   g_LastDistractedAt;
+
+    // Rolls this reply's distracted flavor and, on a hit, claims the bot's
+    // cooldown window in the same call -- returning true means the caller
+    // *will* deliver a filler line, so the claim can't be deferred.
+    //
+    // The chance roll runs before the cooldown check so the cheap test
+    // short-circuits ahead of the lock; a roll that hits while the bot is
+    // still cooling down is simply discarded, not banked.
+    bool TryClaimDistractedReply(uint64_t botGuid, float chance)
+    {
+        if (!g_HsDistractedEnabled)
+            return false;
+
+        uint32_t chancePct = static_cast<uint32_t>(std::clamp(chance, 0.0f, 1.0f) * 100.0f);
+        if (chancePct == 0 || urand(1, 100) > chancePct)
+            return false;
+
+        Clock::time_point now = Clock::now();
+
+        std::lock_guard<std::mutex> lock(g_DistractedMutex);
+        auto it = g_LastDistractedAt.find(botGuid);
+        if (it != g_LastDistractedAt.end())
+        {
+            auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
+            if (elapsedSec < static_cast<int64_t>(g_HsDistractedCooldownSeconds))
+                return false;
+        }
+
+        g_LastDistractedAt[botGuid] = now;
+        return true;
+    }
 
     // ---- conversation history: a few lines per bot-player pair, held in
     // memory only. Keyed by (botGuid, senderGuid); std::map's operator< on
@@ -536,14 +603,20 @@ namespace
             // A fast backend that would otherwise deliver same-tick still
             // gets the full target delay.
             int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.enqueuedAt).count();
-            Clock::time_point deliverAt = now;
+
+            // Hoisted out of the block below because the distracted path
+            // needs the *full* target, not the residual: once the bot has
+            // said "sorry, was afk" it is back at the keyboard typing the
+            // whole reply from scratch, so none of the generation latency it
+            // spent while "away" should count against that typing time.
+            uint32_t typingTargetMs = 0;
             if (g_HsTypingDelayEnabled)
-            {
-                uint32_t targetMs = std::min(g_HsTypingDelayMaxMs,
+                typingTargetMs = std::min(g_HsTypingDelayMaxMs,
                     archetypeInfo.typingBaseMs + static_cast<uint32_t>(result.text.size()) * archetypeInfo.typingPerCharMs);
-                if (elapsedMs < static_cast<int64_t>(targetMs))
-                    deliverAt = now + std::chrono::milliseconds(static_cast<uint32_t>(targetMs) - static_cast<uint32_t>(elapsedMs));
-            }
+
+            Clock::time_point deliverAt = now;
+            if (elapsedMs < static_cast<int64_t>(typingTargetMs))
+                deliverAt = now + std::chrono::milliseconds(typingTargetMs - static_cast<uint32_t>(elapsedMs));
 
             // Unconditional floor on top of whatever the block above produced
             // -- closes the gap left when TypingDelay.Enable is off, where a
@@ -556,8 +629,71 @@ namespace
                     deliverAt = floorAt;
             }
 
+            // Distracted reply: the bot "was away" for a stretch, says so,
+            // then answers properly. Skipped for an engagement follow-up --
+            // that line is bot-initiated, so apologizing for a delay to a
+            // player who never asked anything reads as a non sequitur.
+            //
+            // Rolled here in the worker rather than in hs_arbiter.cpp (where
+            // the retired reply_chance was rolled) for two reasons: whisper
+            // never passes through the arbiter at all -- it is gated by a
+            // plain chance roll in hs_handler.cpp -- and whisper is the
+            // surface where this flavor reads best, so an arbiter-side roll
+            // would miss it entirely; and archetypeInfo is already in hand
+            // here, so nothing has to be threaded through HsQueuedRequest.
+            std::string       distractedFiller;
+            Clock::time_point distractedFillerAt = now;
+            if (!req.isFollowUp && TryClaimDistractedReply(req.botGuid, archetypeInfo.distractedChance))
+            {
+                std::string rawFiller = kDistractedFillers[urand(0, static_cast<uint32_t>(kDistractedFillers.size()) - 1)];
+
+                // Same styleCtx as the real reply, so a careful/precise
+                // archetype's filler stays properly capitalized and
+                // punctuated instead of reading as sloppier than the bot
+                // actually is, and a carded verbal tic/typo rate still
+                // applies. Independently seeded from the real reply (the
+                // hash includes the text), so the two lines don't roll
+                // identically. Falls back to the raw line only in the
+                // theoretical case StripLLMTells empties it.
+                HsStyleResult styledFiller = Hs_ApplyStyle(req.botGuid, req.botName, req.senderName, rawFiller, styleCtx);
+                distractedFiller   = styledFiller.text.empty() ? rawFiller : styledFiller.text;
+                distractedFillerAt = now + std::chrono::seconds(
+                    urand(g_HsDistractedMinDelaySeconds, g_HsDistractedMaxDelaySeconds));
+
+                // The real reply lands a full typing delay after the filler,
+                // never before it. MinDeliveryDelayMs still applies as the
+                // floor for the case where TypingDelay.Enable is off, so the
+                // two lines can never arrive on the same tick.
+                deliverAt = distractedFillerAt +
+                    std::chrono::milliseconds(std::max(typingTargetMs, g_HsMinDeliveryDelayMs));
+
+                // Hold the bot's admission cooldown open until the delayed
+                // reply has actually landed, by dating its last-enqueue stamp
+                // into the future. Without this, Bot.CooldownSeconds (8s by
+                // default) expires long before a 25-60s away window does, and
+                // a second question to the same bot would be generated and
+                // delivered *ahead* of the pair still sitting in the delivery
+                // queue -- the bot would answer the newer question normally,
+                // then say "sorry, was afk" and answer the older one. It also
+                // happens to be what the fiction already claims: someone who
+                // is away from the keyboard isn't answering anyone else
+                // either. The gate reads `now - stamp < cooldown`, so a
+                // future stamp yields a negative elapsed and stays closed.
+                {
+                    std::lock_guard<std::mutex> cooldownLock(g_CooldownMutex);
+                    g_LastEnqueueAt[req.botGuid] = deliverAt;
+                }
+            }
+
             {
                 std::lock_guard<std::mutex> lock(g_DeliveryMutex);
+
+                // Pushed ahead of the reply so the queue reads in delivery
+                // order; Hs_DeliverPending drains by deliverAt regardless.
+                if (!distractedFiller.empty())
+                    g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, distractedFiller,
+                                                 distractedFillerAt, req.isFollowUp });
+
                 g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt, req.isFollowUp });
 
                 // Self-correction follow-up: only eligible when a typo
@@ -799,8 +935,11 @@ void Hs_DeliverPending()
 
         // Almost everything has deliverAt == the tick it was queued, so this
         // is a cheap partition, not a per-tick sort. Only a self-correction
-        // follow-up carries a real future deliverAt, and it stays in
-        // g_DeliveryQueue until its beat has passed.
+        // follow-up and a distracted reply's pair (the "sorry, was afk"
+        // filler and the real reply behind it) carry a real future
+        // deliverAt, and they stay in g_DeliveryQueue until their beat has
+        // passed. The partition is stable, so a pair queued together still
+        // drains in the order it was pushed.
         Clock::time_point now = Clock::now();
         auto notYetReady = std::stable_partition(g_DeliveryQueue.begin(), g_DeliveryQueue.end(),
             [now](const HsPendingReply& r) { return r.deliverAt <= now; });

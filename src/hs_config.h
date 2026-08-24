@@ -94,6 +94,30 @@ extern uint32_t g_HsTypingDelayMaxMs;
 extern uint32_t g_HsMinDeliveryDelayMs;
 
 // --------------------------------------------
+// Distracted reply -- the "sorry, was afk" flavor. Rolled per completed
+// tier-2 reply against the bot archetype's own distracted_chance
+// (hside_archetype SQL); on a hit the bot sends a canned filler line after
+// MinDelaySeconds..MaxDelaySeconds, then the real reply a full typing delay
+// after that. Same kill-switch-plus-per-archetype-formula relationship
+// TypingDelay.Enable has with typing_base_ms.
+//
+// Deliberately not tied to real backend latency or Queue.TTLSeconds: a TTL
+// expiry means the request was dropped before inference, not delivered late,
+// and on an unstressed GPU a latency-triggered version would never fire at
+// all. This is characterization, not backpressure.
+//
+// MinDelaySeconds is the load-bearing knob: "sorry, was afk" five seconds
+// later is a transparent lie, so the floor has to be long enough to justify
+// the apology while staying short of reading as a broken bot. CooldownSeconds
+// is the anti-frustration bound -- one bot cannot pull this on a player again
+// until it elapses, however high its archetype's chance is.
+// --------------------------------------------
+extern bool     g_HsDistractedEnabled;
+extern uint32_t g_HsDistractedMinDelaySeconds;
+extern uint32_t g_HsDistractedMaxDelaySeconds;
+extern uint32_t g_HsDistractedCooldownSeconds;
+
+// --------------------------------------------
 // Tier ceilings -- one enum, six keys, one shared parse and resolve helper
 // (hs_tier.h). DirectReply and EngagementFollowUp are the only two whose
 // consumer ever requests HsTier::Inference; the other four are parsed and

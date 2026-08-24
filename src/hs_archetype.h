@@ -29,25 +29,29 @@ enum class HsArchetype
     Lootgoblin,
     Casual,
     GrumpyVeteran,
-    LoneWolf,
     Mentor,
     YoungApprentice,
     Socialite,
-    Distracted,
     TrollMild,        // rare, sarcastic/backhanded, light profanity
     TrollAggressive,  // very rare, openly hostile about gameplay, vulgar
 };
 
-constexpr size_t kHsArchetypeCount = 15;
+constexpr size_t kHsArchetypeCount = 13;
 
 struct HsArchetypeInfo
 {
     const char* enumName;       // e.g. "RAIDER_SERIOUS" -- the prompt line's label, and hside_archetype's key
     std::string talksAbout;     // verbatim archetype description text (owned string -- loaded from DB, not a literal)
     float       care;           // style-pass baseline, before combat offset/GUID jitter
-    float       replyChance;    // 0..1; rolled per candidate by hs_arbiter.cpp's PassesReplyChance
+    float       distractedChance; // 0..1; rolled per completed tier-2 reply by hs_queue.cpp's WorkerLoop.
+                                 // On a hit the bot delivers a canned "sorry, was afk" line first, then the
+                                 // real reply a full typing delay later -- a per-reply behavior every
+                                 // personality shows occasionally, which is why the DISTRACTED archetype
+                                 // was retired in favor of this column. Replaced the old `replyChance`
+                                 // (2026-08-24): a reply-chance roll reads as being ignored on a realm
+                                 // that is mostly bots, where a late reply beats silence.
     uint32_t    verbosityCap;   // tokens; feeds Hs_CallLLM's maxTokens, capped by HearthsideChat.LLM.MaxTokens (never raised above it)
-    uint32_t    spawnWeight;    // out of 100 across all fifteen entries; used by Hs_ArchetypeForBot's weighted draw
+    uint32_t    spawnWeight;    // out of 100 across all thirteen entries; used by Hs_ArchetypeForBot's weighted draw
     bool        hasAbbrevOverride; // only TRADER sets this
     float       abbrevOverrideChance; // meaningful only if hasAbbrevOverride
     uint8_t     minLevel;       // 0 = no lower bound

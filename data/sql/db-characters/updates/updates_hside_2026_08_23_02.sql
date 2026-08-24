@@ -15,10 +15,8 @@ UPDATE `hside_archetype` SET typing_base_ms = 650,  typing_per_char_ms = 35 WHER
 UPDATE `hside_archetype` SET typing_base_ms = 600,  typing_per_char_ms = 35 WHERE enum_name = 'LOOTGOBLIN';
 UPDATE `hside_archetype` SET typing_base_ms = 800,  typing_per_char_ms = 45 WHERE enum_name = 'CASUAL';
 UPDATE `hside_archetype` SET typing_base_ms = 900,  typing_per_char_ms = 50 WHERE enum_name = 'GRUMPY_VETERAN';
-UPDATE `hside_archetype` SET typing_base_ms = 1400, typing_per_char_ms = 50 WHERE enum_name = 'LONE_WOLF';
 UPDATE `hside_archetype` SET typing_base_ms = 1000, typing_per_char_ms = 55 WHERE enum_name = 'MENTOR';
 UPDATE `hside_archetype` SET typing_base_ms = 900,  typing_per_char_ms = 60 WHERE enum_name = 'YOUNG_APPRENTICE';
 UPDATE `hside_archetype` SET typing_base_ms = 550,  typing_per_char_ms = 35 WHERE enum_name = 'SOCIALITE';
-UPDATE `hside_archetype` SET typing_base_ms = 1600, typing_per_char_ms = 60 WHERE enum_name = 'DISTRACTED';
 UPDATE `hside_archetype` SET typing_base_ms = 700,  typing_per_char_ms = 40 WHERE enum_name = 'TROLL_MILD';
 UPDATE `hside_archetype` SET typing_base_ms = 500,  typing_per_char_ms = 35 WHERE enum_name = 'TROLL_AGGRESSIVE';

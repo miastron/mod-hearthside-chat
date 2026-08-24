@@ -5,12 +5,35 @@
 -- configurable. Loaded once into memory at startup by
 -- hs_archetype_store.cpp's Hs_LoadArchetypesFromDb() -- `.reload config`
 -- re-reads it too. enum_name must match hs_archetype.cpp's kEnumNames
--- exactly; the fifteen rows below are that fixed set, values from PLAN.md's
+-- exactly; the thirteen rows below are that fixed set, values from PLAN.md's
 -- archetype table rebalanced 2026-08-21 (CASUAL narrowed from 28 to 13,
--- the rest widened a little, two new TROLL entries added).
+-- the rest widened a little, two new TROLL entries added), then twice more
+-- on 2026-08-24: DISTRACTED and LONE_WOLF were both dropped -- "half-present"
+-- and "answers reluctantly" are per-reply behaviors every personality should
+-- show occasionally, not personalities of their own -- and their combined
+-- weight of 22 was redistributed across the remaining rows (largest share to
+-- CASUAL and SOCIALITE, the two archetypes closest in spirit to what was
+-- removed). No `updates/` delta was needed for either drop: the test realm's
+-- character DB was wiped before this edit landed, so `base/` alone reaches
+-- it fresh on the next boot -- see CLAUDE.md's `base/`-vs-`updates/` section
+-- if a *populated* realm ever needs this same change applied as a delta.
 --
--- talks_about, care, reply_chance, verbosity_cap, spawn_weight, min_level,
--- max_level carry PLAN.md §4.11/§4.13's meaning unchanged. profanity_level
+-- talks_about, care, verbosity_cap, spawn_weight, min_level, max_level carry
+-- PLAN.md §4.11/§4.13's meaning unchanged.
+--
+-- distracted_chance replaced reply_chance outright on 2026-08-24 (same edit
+-- that dropped DISTRACTED/LONE_WOLF above). reply_chance modelled "this
+-- personality often doesn't answer," which is true of a real player but reads
+-- as being ignored -- or as a broken module -- on a realm that is almost
+-- entirely bots; every row had already been raised to 1.00 for live testing,
+-- making the arbiter's roll a no-op gate. The replacement expresses the same
+-- half-present trait as a *late* reply instead of a missing one: on a hit,
+-- hs_queue.cpp delivers a canned "sorry, was afk" line, then the real reply a
+-- full typing delay after it. Values are deliberately low single digits --
+-- HearthsideChat.Distracted.CooldownSeconds bounds how often one bot can do
+-- this to the same player regardless of what is set here.
+--
+-- profanity_level
 -- (0 none, 1 light, 2 vulgar) is new: TROLL_MILD/TROLL_AGGRESSIVE only,
 -- consumed by hs_archetype.cpp's Hs_ArchetypePromptLine to append a
 -- profanity directive that is explicitly scoped to the game -- gear,
@@ -21,9 +44,9 @@ CREATE TABLE IF NOT EXISTS `hside_archetype` (
   `enum_name`              VARCHAR(32) NOT NULL COMMENT 'must match hs_archetype.cpp''s fixed enum -- unrecognized names are logged and ignored',
   `talks_about`            VARCHAR(255) NOT NULL COMMENT 'PLAN.md §4.11 "Talks about" column, verbatim',
   `care`                   FLOAT NOT NULL COMMENT '§4.11 style-pass baseline, 0.0-1.0, before combat offset/GUID jitter',
-  `reply_chance`           FLOAT NOT NULL COMMENT '0.0-1.0 -- stored, not wired to a consumer yet (§4.15 doesn''t read archetype)',
+  `distracted_chance`      FLOAT NOT NULL COMMENT '0.0-1.0 -- per-reply odds of a "sorry, was afk" line before the real reply (hs_queue.cpp); 0.0 disables for this archetype',
   `verbosity_cap`          SMALLINT UNSIGNED NOT NULL COMMENT 'tokens -- a GPU budget, not a hard chop (§4.11)',
-  `spawn_weight`           SMALLINT UNSIGNED NOT NULL COMMENT 'out of 100 across all fifteen rows',
+  `spawn_weight`           SMALLINT UNSIGNED NOT NULL COMMENT 'out of 100 across all thirteen rows',
   `has_abbrev_override`    TINYINT(1) NOT NULL DEFAULT 0,
   `abbrev_override_chance` FLOAT NOT NULL DEFAULT 0.0 COMMENT 'meaningful only when has_abbrev_override = 1',
   `min_level`              TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '§4.13 eligibility -- 0 = no lower bound',
@@ -33,21 +56,24 @@ CREATE TABLE IF NOT EXISTS `hside_archetype` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `hside_archetype`
-  (`enum_name`, `talks_about`, `care`, `reply_chance`, `verbosity_cap`, `spawn_weight`,
+  (`enum_name`, `talks_about`, `care`, `distracted_chance`, `verbosity_cap`, `spawn_weight`,
    `has_abbrev_override`, `abbrev_override_chance`, `min_level`, `max_level`, `profanity_level`)
 VALUES
-('RAIDER_SERIOUS',   'progression, parses, consumables; corrects others harshly, dismisses casuals, contemptuous',                               0.90, 1.00, 30, 4,  0, 0.0,  60,  255, 1),
-('RAIDER_CASUAL',    'raid nights, wipes, loot, guild turnover/drama; cynical about officers, grumbles about teammates, never self-deprecating', 0.75, 1.00, 30, 5,  0, 0.0,  60,  255, 0),
-('PVP_SERIOUS',      'rating, comps, matchups; contemptuous of bad players, condescending about skill, never doubts own skill',                  0.55, 1.00, 25, 4,  0, 0.0,  70,  255, 2),
-('PVP_CASUAL',       'bgs, gearing up, light trash talk, winning; competitive edge, confident trash talk instead of self-doubt',                 0.35, 1.00, 25, 6,  0, 0.0,  10,  255, 1),
-('TRADER',           'AH prices, mats, flips',                                                                                                   0.55, 1.00, 25, 7,  1, 0.70, 30,  255, 0),
-('LOOTGOBLIN',       'drops, rolls, gold, need-vs-greed',                                                                                        0.30, 1.00, 20, 7,  0, 0.0,   0,  255, 0),
-('CASUAL',           'whatever is in front of them - quests, alts, patch talk, other games',                                                     0.45, 1.00, 30, 13, 0, 0.0,   0,  255, 0),
-('GRUMPY_VETERAN',   'vanilla was better, complains, corrects people',                                                                           0.70, 1.00, 25, 6,  0, 0.0,  60,  255, 1),
-('LONE_WOLF',        'little; answers reluctantly, never opens',                                                                                 0.50, 0.75, 20, 9,  0, 0.0,   0,  255, 0),
-('MENTOR',           'explains mechanics, answers new players',                                                                                  0.85, 1.00, 40, 5,  0, 0.0,  60,  255, 0),
-('YOUNG_APPRENTICE', 'asks questions, excited, lost',                                                                                            0.25, 1.00, 25, 10, 0, 0.0,   0,  29,  0),
-('SOCIALITE',        'greets, small talk, guild-chat glue',                                                                                      0.45, 1.00, 30, 8,  0, 0.0,   0,  255, 0),
-('DISTRACTED',       'half-present - "brb", "sorry was afk"',                                                                                    0.30, 0.60, 15, 13, 0, 0.0,   0,  255, 0),
-('TROLL_MILD',       'sarcastic, backhanded compliments, contrarian nitpicking about gameplay',                                                  0.50, 1.00, 25, 2,  0, 0.0,   0,  255, 1),
-('TROLL_AGGRESSIVE', 'openly hostile about specs, rotations, loot decisions; picks fights, dismissive',                                          0.25, 1.00, 30, 1,  0, 0.0,   0,  255, 2);
+-- distracted_chance rationale: focus is the axis. RAIDER_SERIOUS/PVP_SERIOUS/
+-- MENTOR are attentive by definition and barely step away; CASUAL and
+-- SOCIALITE sit highest, being the two rows that absorbed the retired
+-- DISTRACTED/LONE_WOLF weight; TRADER and LOOTGOBLIN are plausibly alt-tabbed
+-- (AH, loot tables) and YOUNG_APPRENTICE is simply scattered.
+('RAIDER_SERIOUS',   'progression, parses, consumables; corrects others harshly, dismisses casuals, contemptuous',                               0.90, 0.02, 30, 4,  0, 0.0,  60,  255, 1),
+('RAIDER_CASUAL',    'raid nights, wipes, loot, guild turnover/drama; cynical about officers, grumbles about teammates, never self-deprecating', 0.75, 0.05, 30, 5,  0, 0.0,  60,  255, 0),
+('PVP_SERIOUS',      'rating, comps, matchups; contemptuous of bad players, condescending about skill, never doubts own skill',                  0.55, 0.02, 25, 4,  0, 0.0,  70,  255, 2),
+('PVP_CASUAL',       'bgs, gearing up, light trash talk, winning; competitive edge, confident trash talk instead of self-doubt',                 0.35, 0.05, 25, 9,  0, 0.0,  10,  255, 1),
+('TRADER',           'AH prices, mats, flips',                                                                                                   0.55, 0.08, 25, 9,  1, 0.70, 30,  255, 0),
+('LOOTGOBLIN',       'drops, rolls, gold, need-vs-greed',                                                                                        0.30, 0.07, 20, 10, 0, 0.0,   0,  255, 0),
+('CASUAL',           'whatever is in front of them - quests, alts, patch talk, other games',                                                     0.45, 0.10, 30, 17, 0, 0.0,   0,  255, 0),
+('GRUMPY_VETERAN',   'vanilla was better, complains, corrects people',                                                                           0.70, 0.05, 25, 8,  0, 0.0,  60,  255, 1),
+('MENTOR',           'explains mechanics, answers new players',                                                                                  0.85, 0.02, 40, 5,  0, 0.0,  60,  255, 0),
+('YOUNG_APPRENTICE', 'asks questions, excited, lost',                                                                                            0.25, 0.08, 25, 12, 0, 0.0,   0,  29,  0),
+('SOCIALITE',        'greets, small talk, guild-chat glue',                                                                                      0.45, 0.09, 30, 12, 0, 0.0,   0,  255, 0),
+('TROLL_MILD',       'sarcastic, backhanded compliments, contrarian nitpicking about gameplay',                                                  0.50, 0.03, 25, 3,  0, 0.0,   0,  255, 1),
+('TROLL_AGGRESSIVE', 'immature, openly hostile, rotations, loot decisions; picks fights, dismissive',                                            0.25, 0.01, 30, 2,  0, 0.0,   0,  255, 2);

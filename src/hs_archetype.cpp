@@ -33,8 +33,8 @@ namespace
     // of truth for "which index is which archetype."
     constexpr std::array<const char*, kHsArchetypeCount> kEnumNames = {{
         "RAIDER_SERIOUS", "RAIDER_CASUAL", "PVP_SERIOUS", "PVP_CASUAL", "TRADER",
-        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "LONE_WOLF", "MENTOR",
-        "YOUNG_APPRENTICE", "SOCIALITE", "DISTRACTED", "TROLL_MILD", "TROLL_AGGRESSIVE",
+        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "MENTOR",
+        "YOUNG_APPRENTICE", "SOCIALITE", "TROLL_MILD", "TROLL_AGGRESSIVE",
     }};
 
     // Populated by Hs_SetArchetypeTable, normally called once at startup by
@@ -45,21 +45,19 @@ namespace
     // uninitialized data. hs_archetype_store.cpp logs an error on that path;
     // this file has no logging dependency of its own by design.
     std::array<HsArchetypeInfo, kHsArchetypeCount> g_Archetypes = {{
-        { kEnumNames[0],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[1],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[2],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[3],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[4],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[5],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.55f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL -- the one real fallback row, weight 100 so it's always drawn until the DB table loads
-        { kEnumNames[7],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[8],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[9],  "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[10], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[11], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[12], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[13], "", 0.5f, 0.5f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
-        { kEnumNames[14], "", 0.5f, 0.5f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
+        { kEnumNames[0],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[1],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[2],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[3],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[4],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[5],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL -- the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[7],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[8],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[9],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[10], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
+        { kEnumNames[11], "", 0.5f, 0.0f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
+        { kEnumNames[12], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
     }};
 
     bool IsEligibleForLevel(const HsArchetypeInfo& info, uint8_t level)
