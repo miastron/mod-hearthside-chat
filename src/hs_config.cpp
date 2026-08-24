@@ -7,14 +7,16 @@
 
 bool g_HsEnable       = true;
 bool g_HsDebugEnabled = false;
+bool g_HsBridgeEnable = true;
 bool g_HsDebugChatLogEnabled = false;
 
-std::string g_HsLLMApiType = "llamacpp";
-std::string g_HsLLMUrl     = "http://127.0.0.1:8080";
-std::string g_HsLLMModel   = "";
-std::string g_HsLLMApiKey  = "";
+std::string g_HsLLMApiType  = "llamacpp";
+std::string g_HsLLMUrl      = "http://127.0.0.1:8080";
+std::string g_HsLLMModel    = "";
+std::string g_HsLLMApiKey   = "";
 uint32_t     g_HsLLMTimeoutSeconds = 20;
 uint32_t     g_HsLLMMaxTokens      = 60;
+std::string g_HsLLMTemplate = "llama3";
 
 // A "player, not character" frame -- avoids the terse "Hmph."-collapse
 // failure mode seen with an in-fiction frame. This is a placeholder
@@ -135,6 +137,7 @@ std::string g_HsGeneratorLLMModel             = "";
 std::string g_HsGeneratorLLMApiKey            = "";
 uint32_t     g_HsGeneratorLLMTimeoutSeconds    = 30;
 uint32_t     g_HsGeneratorLLMMaxTokens         = 60;
+std::string g_HsGeneratorLLMTemplate           = "llama3";
 uint32_t     g_HsGeneratorRowsPerBucket        = 20;
 uint32_t     g_HsGeneratorPollIntervalSeconds  = 5;
 uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds = 300;
@@ -151,6 +154,7 @@ void LoadHearthsideChatConfig()
 {
     g_HsEnable       = sConfigMgr->GetOption<bool>("HearthsideChat.Enable", true);
     g_HsDebugEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugEnabled", false);
+    g_HsBridgeEnable = sConfigMgr->GetOption<bool>("HearthsideChat.Bridge.Enable", true);
 
     g_HsLLMApiType         = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiType", "llamacpp");
     g_HsLLMUrl              = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Url", "http://127.0.0.1:8080");
@@ -158,6 +162,7 @@ void LoadHearthsideChatConfig()
     g_HsLLMApiKey           = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiKey", "");
     g_HsLLMTimeoutSeconds   = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.TimeoutSeconds", 20);
     g_HsLLMMaxTokens        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.MaxTokens", 60);
+    g_HsLLMTemplate         = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Template", "llama3");
     g_HsLLMSystemPrompt     = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.SystemPrompt", g_HsLLMSystemPrompt);
     g_HsLLMHistoryTurns     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.HistoryTurns", 2);
     g_HsLLMDryMultiplier    = sConfigMgr->GetOption<float>("HearthsideChat.LLM.DryMultiplier", 0.0f);
@@ -249,6 +254,7 @@ void LoadHearthsideChatConfig()
     g_HsGeneratorLLMApiKey                   = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiKey", "");
     g_HsGeneratorLLMTimeoutSeconds           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.LLM.TimeoutSeconds", 30);
     g_HsGeneratorLLMMaxTokens                = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.LLM.MaxTokens", 60);
+    g_HsGeneratorLLMTemplate                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.Template", "llama3");
     g_HsGeneratorRowsPerBucket               = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.RowsPerBucket", 20);
     g_HsGeneratorPollIntervalSeconds         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.PollIntervalSeconds", 5);
     g_HsGeneratorQuotaSatisfiedBackoffSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds", 300);

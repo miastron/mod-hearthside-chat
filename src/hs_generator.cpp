@@ -101,6 +101,7 @@ namespace
         std::string tagValueSql;   // "" | "2" | "'mid'" -- ready for a WHERE clause
         std::string tagValueLabel; // "" | "warrior" | "mid" -- for the prompt
         bool        cardGated;
+        std::string channel;       // "" | "trade" | "general" | "world" -- broadcast framing (§4.17)
     };
 
     // All rows in one exact bucket -- unlimited, since dedup has to check a
@@ -140,7 +141,7 @@ namespace
     {
         std::vector<std::pair<HsGenBucket, uint32_t>> result;
 
-        QueryResult catResult = CharacterDatabase.Query("SELECT name, tag_axis, card_gated FROM hside_corpus_category");
+        QueryResult catResult = CharacterDatabase.Query("SELECT name, tag_axis, card_gated, channel FROM hside_corpus_category");
         if (!catResult)
             return result;
 
@@ -149,13 +150,14 @@ namespace
             std::string category  = (*catResult)[0].Get<std::string>();
             std::string axis      = (*catResult)[1].Get<std::string>();
             bool        cardGated = (*catResult)[2].Get<uint8_t>() != 0;
+            std::string channel   = (*catResult)[3].IsNull() ? "" : (*catResult)[3].Get<std::string>();
 
             if (axis == "none")
             {
                 QueryResult countResult = CharacterDatabase.Query(
                     "SELECT COUNT(*) FROM hside_corpus WHERE name = '{}'", category);
                 uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
-                result.push_back({ HsGenBucket{ category, "", "", "", cardGated }, count });
+                result.push_back({ HsGenBucket{ category, "", "", "", cardGated, channel }, count });
             }
             else if (axis == "class")
             {
@@ -172,7 +174,7 @@ namespace
                 {
                     uint32_t count = 0;
                     for (auto const& c : counts) if (c.first == classId) { count = c.second; break; }
-                    result.push_back({ HsGenBucket{ category, "class_tag", std::to_string(classId), Hs_ClassNameFor(classId), cardGated }, count });
+                    result.push_back({ HsGenBucket{ category, "class_tag", std::to_string(classId), Hs_ClassNameFor(classId), cardGated, channel }, count });
                 }
             }
             else if (axis == "level_band")
@@ -190,7 +192,7 @@ namespace
                 {
                     uint32_t count = 0;
                     for (auto const& c : counts) if (c.first == band) { count = c.second; break; }
-                    result.push_back({ HsGenBucket{ category, "level_band_tag", "'" + band + "'", band, cardGated }, count });
+                    result.push_back({ HsGenBucket{ category, "level_band_tag", "'" + band + "'", band, cardGated, channel }, count });
                 }
             }
             else if (axis == "faction")
@@ -208,7 +210,7 @@ namespace
                 {
                     uint32_t count = 0;
                     for (auto const& c : counts) if (c.first == faction.first) { count = c.second; break; }
-                    result.push_back({ HsGenBucket{ category, "faction_tag", std::to_string(faction.first), faction.second, cardGated }, count });
+                    result.push_back({ HsGenBucket{ category, "faction_tag", std::to_string(faction.first), faction.second, cardGated, channel }, count });
                 }
             }
             else if (axis == "zone")
@@ -226,7 +228,7 @@ namespace
                 {
                     uint32_t count = 0;
                     for (auto const& c : counts) if (c.first == zone.first) { count = c.second; break; }
-                    result.push_back({ HsGenBucket{ category, "zone_tag", std::to_string(zone.first), zone.second, cardGated }, count });
+                    result.push_back({ HsGenBucket{ category, "zone_tag", std::to_string(zone.first), zone.second, cardGated, channel }, count });
                 }
             }
         } while (catResult->NextRow());
@@ -234,17 +236,55 @@ namespace
         return result;
     }
 
+    // Channel-tagged buckets (§4.17: trade/general/world) are read by
+    // strangers scattered across the realm, not someone standing next to
+    // you -- the opposite framing from the default /say-and-direct-reply
+    // intro below, which assumes a proximate listener. Same distinction
+    // ChannelScriptSystemPromptFor draws for the 2-turn channel scripts;
+    // this is the single-line corpus path's equivalent so LLM-generated
+    // rows for these buckets don't drift back into "here"/"this place"
+    // local framing the way the hand-written seed rows originally did.
+    std::string BroadcastChannelPromptIntro(const std::string& channel)
+    {
+        if (channel == "trade")
+            return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of "
+                   "the Lich King player would post in the realm-wide Trade channel -- read by "
+                   "strangers scattered across the realm, not someone standing nearby. Write "
+                   "exactly ONE short, casual, grammatically clean sentence about gearing up, "
+                   "professions, or gripes about prices in general terms -- never a specific "
+                   "item, quest, or exact gold price the other person could check and find "
+                   "wrong, and nothing that assumes the reader is in the same place as you.";
+        if (channel == "general")
+            return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of "
+                   "the Lich King player would post in the realm-wide General channel -- read by "
+                   "strangers who could be in any zone, not someone standing nearby. Write "
+                   "exactly ONE short, casual, grammatically clean sentence: zone flavor, "
+                   "quests, or a general opinion about the game, phrased as true no matter where "
+                   "the reader is -- never 'here'/'this place'/anything implying the reader can "
+                   "see what you see.";
+        // world
+        return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of the "
+               "Lich King player would post in the realm-wide World channel -- read by strangers "
+               "anywhere on the realm. Write exactly ONE short, casual, grammatically clean "
+               "sentence: general opinions or banter about the game, nothing tied to one zone or "
+               "place, nothing that assumes the reader is nearby.";
+    }
+
     std::string BuildGenerationPrompt(const HsGenBucket& bucket, const std::vector<std::string>& promptSampleRows,
                                        bool sampleIsSiblingFallback, bool requiresPlaceholder)
     {
-        std::string prompt =
-            "You are helping write ambient background chat lines for an ordinary World of "
-            "Warcraft: Wrath of the Lich King player -- the way real players actually type "
-            "in /say or general chat, not narration or descriptive prose. Write exactly ONE "
-            "short, casual, grammatically clean sentence: a concrete opinion, gripe, or "
-            "observation about actual gameplay (a quest, a fight, gear, a class/spec choice, "
-            "grouping, professions, travel time) -- not a question, not addressed to anyone, "
-            "first person. Never describe scenery for its own sake (no 'the way the "
+        std::string prompt = bucket.channel.empty()
+            ? "You are helping write ambient background chat lines for an ordinary World of "
+              "Warcraft: Wrath of the Lich King player -- the way real players actually type "
+              "in /say or general chat, not narration or descriptive prose. Write exactly ONE "
+              "short, casual, grammatically clean sentence: a concrete opinion, gripe, or "
+              "observation about actual gameplay (a quest, a fight, gear, a class/spec choice, "
+              "grouping, professions, travel time) -- not a question, not addressed to anyone, "
+              "first person."
+            : BroadcastChannelPromptIntro(bucket.channel);
+
+        prompt +=
+            " Never describe scenery for its own sake (no 'the way the "
             "light...', no calling something peaceful/breathtaking/beautiful) -- if a place "
             "comes up, talk about what's actually happening there for a player, not what it "
             "looks like. Never compare to how things usually are or used to be ('more than "
@@ -317,6 +357,7 @@ namespace
         cfg.apiKey        = g_HsGeneratorLLMApiKey;
         cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
         cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.templateKind  = g_HsGeneratorLLMTemplate;
         cfg.dryMultiplier = 0.0f;
 
         HsLLMResult result = Hs_CallLLM(cfg, prompt, "", {}, "Write one new line now. Reply with only the line itself.");
@@ -387,6 +428,14 @@ namespace
         "(You've just noticed another player standing nearby. Say something casual to strike up "
         "a short conversation.)";
 
+    // §4.17: the channel-script equivalent of kScriptOpeningTrigger above --
+    // deliberately not proximity-framed. ChannelScriptSystemPromptFor already
+    // tells the model which broadcast channel it's posting in; a "standing
+    // nearby" trigger on top of that produced turns that read like /say
+    // despite the correctly-scoped system prompt.
+    const std::string kChannelScriptOpeningTrigger =
+        "(Say something casual to open a short back-and-forth in this channel.)";
+
     // One full attempt: generate a randomized-length (kScriptTurnCountMin..
     // kScriptTurnCountMax) run of lines as a single continuous exchange
     // (reusing the reactive tier's own history-append mechanism, hs_llm.h's
@@ -410,6 +459,7 @@ namespace
         cfg.apiKey        = g_HsGeneratorLLMApiKey;
         cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
         cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.templateKind  = g_HsGeneratorLLMTemplate;
         cfg.dryMultiplier = 0.0f;
 
         int turnCount = static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax));
@@ -541,11 +591,12 @@ namespace
         cfg.apiKey        = g_HsGeneratorLLMApiKey;
         cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
         cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.templateKind  = g_HsGeneratorLLMTemplate;
         cfg.dryMultiplier = 0.0f;
 
         std::string systemPrompt = ChannelScriptSystemPromptFor(kind);
         std::vector<HsHistoryTurn> history;
-        std::string prevText = kScriptOpeningTrigger;
+        std::string prevText = kChannelScriptOpeningTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns;
 
         for (int i = 0; i < kChannelScriptTurnCount; ++i)
@@ -691,6 +742,7 @@ namespace
         cfg.apiKey        = g_HsGeneratorLLMApiKey;
         cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
         cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.templateKind  = g_HsGeneratorLLMTemplate;
         cfg.dryMultiplier = 0.0f;
 
         std::string voicePrompt = Hs_BuildVoiceBlockPrompt(archetypeInfo.talksAbout);

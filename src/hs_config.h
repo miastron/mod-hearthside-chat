@@ -11,6 +11,12 @@
 extern bool g_HsEnable;
 extern bool g_HsDebugEnabled;
 
+// Gates HsBridgePlayerScript (hs_bridge.h) -- the read-only HSI addon-
+// message bridge the HearthsideInspect client addon talks to. Independent
+// of g_HsEnable: a realm could run the bridge for the Inspect-tab feature
+// while the chat/reply pipeline itself is off, or vice versa.
+extern bool g_HsBridgeEnable;
+
 // Logs every reactive-tier (LLM) exchange -- trigger, pre-style reply,
 // styled reply, archetype -- to hside_chat_log for later human review. This
 // is a raw log an operator reads and manually promotes via `.hearthside
@@ -28,6 +34,7 @@ extern std::string g_HsLLMModel;
 extern std::string g_HsLLMApiKey;
 extern uint32_t     g_HsLLMTimeoutSeconds;
 extern uint32_t     g_HsLLMMaxTokens;
+extern std::string g_HsLLMTemplate;  // llama3 | chatml -- only meaningful when ApiType=llamacpp (see hs_llm.h's HsLLMConfig::templateKind)
 extern std::string g_HsLLMSystemPrompt;
 extern uint32_t     g_HsLLMHistoryTurns;   // trigger/reply pairs kept per bot-player pair; 0 disables history
 extern float         g_HsLLMDryMultiplier;  // 0.0 leaves DRY off
@@ -182,6 +189,7 @@ extern std::string g_HsGeneratorLLMModel;
 extern std::string g_HsGeneratorLLMApiKey;
 extern uint32_t     g_HsGeneratorLLMTimeoutSeconds;
 extern uint32_t     g_HsGeneratorLLMMaxTokens;
+extern std::string g_HsGeneratorLLMTemplate; // llama3 | chatml -- same as g_HsLLMTemplate, generator's own endpoint
 extern uint32_t     g_HsGeneratorRowsPerBucket;          // per-bucket quota, never global
 extern uint32_t     g_HsGeneratorPollIntervalSeconds;     // recheck cadence while reactive is busy
 extern uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds; // backoff once nothing is under quota

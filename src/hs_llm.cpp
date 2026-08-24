@@ -258,9 +258,10 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         url += "/completion";
 
         // Native /completion bypasses the server's chat template entirely,
-        // so the module must reproduce the model's dialect itself.
-        // Llama-3.1-Instruct uses header-tagged turns with <|eot_id|>
-        // stops, not ChatML.
+        // so the module must reproduce the model's dialect itself --
+        // cfg.templateKind (HearthsideChat.LLM.Template /
+        // Generator.LLM.Template) picks which one, since the reactive and
+        // generator endpoints can point at differently-tuned models.
         //
         // Layer order matters for prompt caching: system rules, then the
         // fixed few-shot block (byte-identical for every bot -- this whole
@@ -270,21 +271,53 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         // inside it), then this bot-player pair's history as real prior
         // turns so a later turn's prompt is a strict byte extension of an
         // earlier one, then the new trigger.
-        std::string prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
-        for (auto const& ex : Fewshot())
+        const bool isChatMl = IEquals(cfg.templateKind, "chatml");
+
+        std::string prompt;
+        json        stopSequences;
+        if (isChatMl)
         {
-            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + ex.first + "<|eot_id|>";
-            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + ex.second + "<|eot_id|>";
+            auto turn = [](const std::string& role, const std::string& content)
+            { return "<|im_start|>" + role + "\n" + content + "<|im_end|>\n"; };
+
+            prompt = turn("system", systemPrompt);
+            for (auto const& ex : Fewshot())
+            {
+                prompt += turn("user", ex.first);
+                prompt += turn("assistant", ex.second);
+            }
+            if (!archetypeLine.empty())
+                prompt += turn("system", archetypeLine);
+            for (auto const& h : history)
+            {
+                prompt += turn("user", h.trigger);
+                prompt += turn("assistant", h.reply);
+            }
+            prompt += turn("user", trigger);
+            prompt += "<|im_start|>assistant\n";
+
+            stopSequences = json::array({ "<|im_end|>", "\n" });
         }
-        if (!archetypeLine.empty())
-            prompt += "<|start_header_id|>system<|end_header_id|>\n\n" + archetypeLine + "<|eot_id|>";
-        for (auto const& turn : history)
+        else // "llama3" (default) -- Llama-3.1-Instruct's header-tagged turns
         {
-            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + turn.trigger + "<|eot_id|>";
-            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + turn.reply + "<|eot_id|>";
+            prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
+            for (auto const& ex : Fewshot())
+            {
+                prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + ex.first + "<|eot_id|>";
+                prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + ex.second + "<|eot_id|>";
+            }
+            if (!archetypeLine.empty())
+                prompt += "<|start_header_id|>system<|end_header_id|>\n\n" + archetypeLine + "<|eot_id|>";
+            for (auto const& h : history)
+            {
+                prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + h.trigger + "<|eot_id|>";
+                prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + h.reply + "<|eot_id|>";
+            }
+            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + trigger + "<|eot_id|>";
+            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n";
+
+            stopSequences = json::array({ "<|eot_id|>", "\n" });
         }
-        prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + trigger + "<|eot_id|>";
-        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n";
 
         body["prompt"]       = prompt;
         body["n_predict"]    = cfg.maxTokens;
@@ -293,7 +326,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["top_k"]        = 0;
         body["min_p"]        = 0.05;
         body["cache_prompt"] = true;
-        body["stop"]         = json::array({ "<|eot_id|>", "\n" });
+        body["stop"]         = stopSequences;
 
         // Only meaningful now that history gives DRY a cross-turn window to
         // look back through (dry_penalty_last_n: 64, never -1 -- that

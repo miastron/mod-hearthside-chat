@@ -93,32 +93,36 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_trade_wts', 'WTS %item_link, first come first served'),
 ('channel_trade_wts', 'have a spare %item_link if anyone''s after one'),
 ('channel_trade_wts', '%item_link up for grabs, pst'),
--- channel_general_chat: General channel; zone flavour, questions, gripes, nothing checkable
-('channel_general_chat', 'anyone else think this zone is bigger than it looks'),
-('channel_general_chat', 'is it just me or has it been quiet today'),
-('channel_general_chat', 'does anyone know a good spot to farm around here'),
-('channel_general_chat', 'this place always feels a little eerie at night'),
-('channel_general_chat', 'kind of a slow day so far'),
-('channel_general_chat', 'always something new to see around every corner'),
-('channel_general_chat', 'anyone else losing track of what day it is'),
-('channel_general_chat', 'server''s felt busier than usual lately'),
-('channel_general_chat', 'does this zone ever feel like a maze to anyone else'),
-('channel_general_chat', 'nice change of pace out here today'),
-('channel_general_chat', 'anyone know if there''s a shortcut through here'),
-('channel_general_chat', 'been a pretty chill session so far'),
--- channel_world_chat: World channel; same register as General
-('channel_world_chat', 'world feels pretty alive today'),
-('channel_world_chat', 'anyone else just wandering around right now'),
-('channel_world_chat', 'always someone doing something interesting somewhere'),
-('channel_world_chat', 'feels like a good day to explore'),
-('channel_world_chat', 'quiet out here, kind of nice for a change'),
-('channel_world_chat', 'world''s a big place, still finding new corners of it'),
-('channel_world_chat', 'never gets old seeing new places out here'),
-('channel_world_chat', 'lot going on across the realm today'),
-('channel_world_chat', 'always somewhere new worth checking out'),
-('channel_world_chat', 'good day to just take it all in'),
-('channel_world_chat', 'feels like everyone''s out doing something today'),
-('channel_world_chat', 'still finding spots I''ve never seen before');
+-- channel_general_chat: General channel; zone flavour phrased as a general
+-- statement (not "here"/"this place" -- readers are scattered across the
+-- realm and have no idea where the speaker actually is), questions, gripes,
+-- nothing checkable
+('channel_general_chat', 'anyone else think some of these zones are way bigger than the map makes them look'),
+('channel_general_chat', 'feels like professions never get enough love from anybody'),
+('channel_general_chat', 'some questlines really drag once you''re past the halfway point'),
+('channel_general_chat', 'gearing up an alt always takes longer than i remember'),
+('channel_general_chat', 'bag space is never enough, no matter how many bags you buy'),
+('channel_general_chat', 'leveling a second character always goes faster than the first one did'),
+('channel_general_chat', 'some zones just have way better music than others'),
+('channel_general_chat', 'flight paths could really use a rework'),
+('channel_general_chat', 'professions feel like a second job some days'),
+('channel_general_chat', 'some fights just aren''t fun no matter how many times you run them'),
+('channel_general_chat', 'funny how one class always ends up over-represented in every group'),
+('channel_general_chat', 'never really understood why some zones get so little traffic'),
+-- channel_world_chat: World channel; general opinions/banter only, nothing
+-- tied to a zone or place, nothing that assumes the reader is nearby
+('channel_world_chat', 'feels like there''s always something going on somewhere on the server'),
+('channel_world_chat', 'never gets old finding a new questline to dig into'),
+('channel_world_chat', 'some days this game just clicks and other days it just doesn''t'),
+('channel_world_chat', 'hard to beat a group that actually knows what it''s doing'),
+('channel_world_chat', 'still surprises me how much content there is to get through'),
+('channel_world_chat', 'some builds just feel better than others no matter what the numbers say'),
+('channel_world_chat', 'never underestimate a good addon setup'),
+('channel_world_chat', 'always another goal worth chasing in this game'),
+('channel_world_chat', 'some nights everything just goes right'),
+('channel_world_chat', 'funny how a slow session can turn into a good one out of nowhere'),
+('channel_world_chat', 'still finding mechanics in this game that surprise me'),
+('channel_world_chat', 'always somebody grinding something a little unusual');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- opener_*: fired only by hs_opener.cpp's shared-context triggers

@@ -406,6 +406,7 @@ namespace
             cfg.model         = g_HsLLMModel;
             cfg.apiKey        = g_HsLLMApiKey;
             cfg.timeoutSec    = static_cast<int>(g_HsLLMTimeoutSeconds);
+            cfg.templateKind  = g_HsLLMTemplate;
             // Per-archetype verbosity cap refines the operator's configured
             // ceiling downward; it never raises it above what
             // HearthsideChat.LLM.MaxTokens allows.

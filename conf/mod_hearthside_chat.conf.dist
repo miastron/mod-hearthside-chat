@@ -29,6 +29,15 @@ HearthsideChat.Enable = 1
 #     Default:     0 (false)
 HearthsideChat.DebugEnabled = 0
 
+# HearthsideChat.Bridge.Enable
+#     Description: Enables the read-only HSI addon-message bridge that answers
+#                  the HearthsideInspect client addon's Inspect-tab requests
+#                  (bot archetype/personality/memory-flavor data). Independent
+#                  of HearthsideChat.Enable. Disable if you don't want players
+#                  reading this data client-side.
+#     Default:     1 (true)
+HearthsideChat.Bridge.Enable = 1
+
 # --------------------------------------------
 # LLM ENDPOINT
 # --------------------------------------------
@@ -43,6 +52,21 @@ HearthsideChat.DebugEnabled = 0
 #     Values:      llamacpp | openai | ollama
 #     Default:     llamacpp
 HearthsideChat.LLM.ApiType = llamacpp
+
+# HearthsideChat.LLM.Template
+#     Description: Which chat-markup dialect to hand-assemble for
+#                  ApiType=llamacpp's native /completion -- that endpoint
+#                  bypasses llama.cpp's own template handling entirely, so
+#                  the module must speak the model's exact dialect itself.
+#                  Ignored by ApiType=openai/ollama, which send a structured
+#                  messages array and let the server apply whatever template
+#                  its own tokenizer_config declares. Get this wrong and the
+#                  model receives markup it never saw in training -- degraded
+#                  style at best, runaway generation at worst (the stop
+#                  sequence a mismatched template needs never appears).
+#     Values:      llama3 | chatml
+#     Default:     llama3
+HearthsideChat.LLM.Template = llama3
 
 # HearthsideChat.LLM.Url
 #     Description: Server root. Expected shape depends on ApiType:
@@ -446,13 +470,17 @@ HearthsideChat.GroundedAnswers.FuzzyMaxDistance = 2
 #     Default:     0 (false)
 HearthsideChat.Generator.Enable = 0
 
-# HearthsideChat.Generator.LLM.ApiType / Url / Model / ApiKey / TimeoutSeconds / MaxTokens
+# HearthsideChat.Generator.LLM.ApiType / Template / Url / Model / ApiKey / TimeoutSeconds / MaxTokens
 #     Description: The generator's own LLM endpoint, kept separate from the
 #                  reactive path's HearthsideChat.LLM.* -- whether or not
 #                  they currently point at the same container. Same shape
-#                  as the reactive keys above.
-#     Defaults:    llamacpp / http://127.0.0.1:8080 / (empty) / (empty) / 30 / 60
+#                  as the reactive keys above, including Template (see
+#                  HearthsideChat.LLM.Template) -- meaningful independently
+#                  since the generator can point at a differently-tuned
+#                  model than the reactive endpoint.
+#     Defaults:    llamacpp / llama3 / http://127.0.0.1:8080 / (empty) / (empty) / 30 / 60
 HearthsideChat.Generator.LLM.ApiType = llamacpp
+HearthsideChat.Generator.LLM.Template = llama3
 HearthsideChat.Generator.LLM.Url = http://127.0.0.1:8080
 HearthsideChat.Generator.LLM.Model =
 HearthsideChat.Generator.LLM.ApiKey =

@@ -1,4 +1,5 @@
 #include "hs_archetype_store.h"
+#include "hs_bridge.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
 #include "hs_generator.h"
@@ -208,6 +209,7 @@ void Addmod_hearthside_chatScripts()
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();
     new HsChatHandler();
+    new HsBridgePlayerScript();
     new HsDeliveryWorldScript();
     new HsCommandScript();
     new HsOpenerGroupHandler();

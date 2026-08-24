@@ -44,6 +44,16 @@ struct HsLLMConfig
     int         timeoutSec;
     int         maxTokens;    // output cap -- a GPU budget, not a hard chop
     float       dryMultiplier; // DRY penalty multiplier -- 0.0f leaves DRY off (llamacpp only)
+
+    // Which chat-markup dialect to hand-assemble for apiType=llamacpp's
+    // native /completion (that endpoint bypasses llama.cpp's own template
+    // handling entirely, so the module must speak the model's exact
+    // dialect itself -- see Hs_CallLLM). Ignored by openai/ollama, which
+    // send a structured messages array and let the server apply whatever
+    // template its own tokenizer_config declares.
+    // "llama3" (default): <|start_header_id|>role<|end_header_id|>\n\ncontent<|eot_id|>
+    // "chatml":            <|im_start|>role\ncontent<|im_end|>\n  (Qwen and others)
+    std::string templateKind = "llama3";
 };
 
 // One earlier exchange between this bot and this player: the line it was
