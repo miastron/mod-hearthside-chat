@@ -147,6 +147,122 @@ namespace
         return out;
     }
 
+    // ---- emphatic-caps protection ----
+
+    // An ALL-CAPS run is prosody, not a typing-hygiene artifact. `care`
+    // models whether a bot bothers with the shift key at a sentence start;
+    // whether it shouts is a separate axis the fine-tune already decides per
+    // archetype (Claude/finetune/matrix). Left unmasked, ApplyCasing's
+    // low-care ToLowerAscii deletes every shout from exactly the archetypes
+    // whose character is shouting (TROLL_AGGRESSIVE and YOUNG_APPRENTICE at
+    // care 0.25) while sparing the meticulous RAIDER_SERIOUS at 0.90 -- the
+    // inverse of what the training data teaches. So a caps run is masked as
+    // a protected span, the same scheme ExtractProtectedSpans and
+    // MaskLiteralPhrase already use, and restored verbatim at the end of the
+    // pass. Orthogonal to `care`, exactly as profanityLevel is
+    // (hs_archetype.h).
+    //
+    // A caps word is 2+ uppercase letters, optionally continued through an
+    // apostrophe or hyphen ("LET'S"); a run is one or more of them joined by
+    // single spaces. A run counts as emphasis only if it spans 2+ words
+    // ("GET OVER IT", "WE WON") or is a single word of 4+ letters ("YEARS",
+    // "FINALLY"). That threshold deliberately leaves the chat acronyms (wts,
+    // dps, lfg, brb, pst) to be lowercased by `care` as before -- a sloppy
+    // typer writes "dps", not "DPS".
+    bool IsUpperAlpha(char c)
+    {
+        return std::isupper(static_cast<unsigned char>(c)) != 0;
+    }
+
+    // Scans one caps word starting at `pos`. Returns false if there isn't
+    // one there; otherwise advances `pos` past it and reports its letter
+    // count (apostrophes/hyphens excluded).
+    bool ScanCapsWord(const std::string& text, size_t& pos, size_t& letterCountOut)
+    {
+        size_t i       = pos;
+        size_t letters = 0;
+        while (i < text.size())
+        {
+            if (IsUpperAlpha(text[i]))
+            {
+                ++letters;
+                ++i;
+                continue;
+            }
+            // An intra-word apostrophe/hyphen continues the word only when
+            // another uppercase letter follows ("LET'S", "ALL-IN"); a
+            // trailing one ends it.
+            if ((text[i] == '\'' || text[i] == '-') && i + 1 < text.size() && IsUpperAlpha(text[i + 1]))
+            {
+                ++i;
+                continue;
+            }
+            break;
+        }
+
+        if (letters < 2)
+            return false;
+        // "DPSing", "WTS3" -- a lowercase letter or digit butted up against
+        // the run means it was never a shout to begin with.
+        if (i < text.size() && std::isalnum(static_cast<unsigned char>(text[i])))
+            return false;
+
+        pos            = i;
+        letterCountOut = letters;
+        return true;
+    }
+
+    std::string MaskCapsRuns(const std::string& text, std::vector<std::string>& spans)
+    {
+        std::string out;
+        out.reserve(text.size());
+
+        size_t i = 0;
+        while (i < text.size())
+        {
+            // A run may only start at a word boundary, so the tail of a
+            // mixed-case token ("McRAGE") never qualifies.
+            bool   atBoundary = (i == 0) || !std::isalnum(static_cast<unsigned char>(text[i - 1]));
+            size_t cursor     = i;
+            size_t letters    = 0;
+            if (!atBoundary || !IsUpperAlpha(text[i]) || !ScanCapsWord(text, cursor, letters))
+            {
+                out += text[i];
+                ++i;
+                continue;
+            }
+
+            size_t runEnd     = cursor;
+            size_t wordCount  = 1;
+            size_t maxLetters = letters;
+            while (cursor + 1 < text.size() && text[cursor] == ' ' && IsUpperAlpha(text[cursor + 1]))
+            {
+                size_t next        = cursor + 1;
+                size_t nextLetters = 0;
+                if (!ScanCapsWord(text, next, nextLetters))
+                    break;
+                cursor     = next;
+                runEnd     = next;
+                maxLetters = std::max(maxLetters, nextLetters);
+                ++wordCount;
+            }
+
+            if (wordCount < 2 && maxLetters < 4)
+            {
+                out += text[i];
+                ++i;
+                continue;
+            }
+
+            out += kPlaceholderMark;
+            out += std::to_string(spans.size());
+            out += kPlaceholderMark;
+            spans.push_back(text.substr(i, runEnd - i));
+            i = runEnd;
+        }
+        return out;
+    }
+
     std::string RestoreProtectedSpans(const std::string& text, const std::vector<std::string>& spans)
     {
         std::string out = text;
@@ -755,6 +871,11 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
     StyleBand band = BandForCare(care);
 
     std::mt19937 rng(static_cast<std::mt19937::result_type>(SeedFor(botGuid, text)));
+
+    // Emphatic caps are masked here rather than at the top of the pass so
+    // StripLLMTells still sees real text; everything after this point is
+    // free to lowercase, abbreviate and typo whatever is left.
+    working = MaskCapsRuns(working, spans);
 
     working = ApplyCasing(working, band, rng);
     working = ApplyTerminalPunctuation(working, band, rng);

@@ -9,6 +9,11 @@
 // reshapes caps/terminal-punctuation/abbreviation and injects typos
 // according to a per-bot `care` scalar (0.0 sloppy - 1.0 careful).
 //
+// One thing `care` deliberately does not touch: an emphatic ALL-CAPS run
+// ("GET OVER IT", "YEARS") is masked as a protected span and restored
+// verbatim. Shouting is prosody the fine-tune decides per archetype, not a
+// shift-key-hygiene artifact -- see MaskCapsRuns in hs_style.cpp.
+//
 // Scope note: combat-based `care` modulation, the self-correction follow-up,
 // and (§4.17) a positive `care` offset for Trade-channel WTS/WTB sightings
 // are built. Party chat during an encounter remains unbuilt for lack of a
