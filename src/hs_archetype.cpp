@@ -167,15 +167,16 @@ std::string Hs_ArchetypePromptLine(HsArchetype a)
     HsArchetypeInfo const info = Hs_ArchetypeInfoFor(a);
     std::string line = std::string("You mostly talk about: ") + info.talksAbout + ".";
 
-    // TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. Scoped to the game
-    // deliberately -- gear, rotations, loot, other players' choices --
-    // never the real person on the other end. That boundary is part of the
-    // generated prompt text itself so it travels with every request, not
-    // left to the model's judgement or a post-hoc filter.
+    // TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. No longer scoped away
+    // from the person being talked to (dropped 2026-08-24 -- the archetype
+    // voices already keep this in range on their own, and the arbiter's
+    // rate limits/cooldowns make a sustained pile-on structurally
+    // impossible, so the old boundary text was buying nothing). See
+    // Claude/PLAN-TUNING.md §3's profanity bullet for the full reasoning.
     if (info.profanityLevel == 1)
-        line += " You swear lightly and casually when annoyed (damn, hell, crap-tier) -- about the game, never at the person you're talking to.";
+        line += " You swear lightly and casually when annoyed (damn, hell, crap-tier).";
     else if (info.profanityLevel == 2)
-        line += " You swear openly and vulgarly when annoyed or mocking someone's gameplay -- about the game, gear, or choices, never about the real person you're talking to.";
+        line += " You swear openly and vulgarly when annoyed or mocking someone's gameplay.";
 
     return line;
 }

@@ -36,9 +36,10 @@
 -- profanity_level
 -- (0 none, 1 light, 2 vulgar) is new: TROLL_MILD/TROLL_AGGRESSIVE only,
 -- consumed by hs_archetype.cpp's Hs_ArchetypePromptLine to append a
--- profanity directive that is explicitly scoped to the game -- gear,
--- rotations, loot, other players' choices -- and never the real person on
--- the other end of the conversation.
+-- profanity directive. Was scoped to "never at the real person you're
+-- talking to" originally; that scoping was dropped 2026-08-24 -- see
+-- Claude/PLAN-TUNING.md §3 -- profanity may now be aimed at the listener,
+-- gated only by profanity_level's intensity.
 
 CREATE TABLE IF NOT EXISTS `hside_archetype` (
   `enum_name`              VARCHAR(32) NOT NULL COMMENT 'must match hs_archetype.cpp''s fixed enum -- unrecognized names are logged and ignored',
