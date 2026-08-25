@@ -4,16 +4,19 @@
 # mod-hearthside-chat configuration
 ########################################
 #
-# Gives playerbots LLM-driven chat. A real player's /say or whisper is
-# answered by a live call to an LLM endpoint (the reactive tier), arbitrated
-# so at most 0-2 bots answer one /say instead of every eligible bot rolling
-# independently. A bounded queue, token bucket, per-bot cooldown and
-# backend-down circuit breaker protect the LLM backend. Tier-0 reflex
-# replies, grounded (DB-lookup) answers, an idle-time generator that fills
-# the corpus/script content used for openers and bot-to-bot chatter, and
-# per-surface tier ceilings are all live and configured below. Identity
-# rings (per-player social memory) also exist in the module but are not
-# configured through this file.
+# Gives playerbots chat replies powered by a local AI (LLM) server. When a
+# real player talks to a bot -- /say, whisper, or naming it by name -- at
+# most 1-2 bots answer, never every bot in range at once. Settings below
+# protect your AI server from being overloaded and control what happens if
+# it goes down (bots just go quiet, they don't send broken replies).
+#
+# Bots also have three ways to "talk" that don't need a live AI call: quick
+# canned reactions (gz, ty, lol...), fact-based answers looked up straight
+# from game data (mount, level, zone...), and pre-written ambient chatter /
+# bot-to-bot conversations that an idle-time background process writes
+# ahead of time. All of this is configured below, section by section. Bot
+# "personality" (talkativeness, typing sloppiness, etc.) is set up in the
+# database instead of this file.
 
 # --------------------------------------------
 # CORE MODULE TOGGLES & DEBUGGING
@@ -30,11 +33,12 @@ HearthsideChat.Enable = 1
 HearthsideChat.DebugEnabled = 0
 
 # HearthsideChat.Bridge.Enable
-#     Description: Enables the read-only HSI addon-message bridge that answers
-#                  the HearthsideInspect client addon's Inspect-tab requests
-#                  (bot archetype/personality/memory-flavor data). Independent
-#                  of HearthsideChat.Enable. Disable if you don't want players
-#                  reading this data client-side.
+#     Description: Lets the optional "HearthsideInspect" player addon ask the
+#                  server for a bot's personality info (archetype, memory
+#                  flavor, etc.) to show players in-game. Read-only -- it
+#                  can't change anything. Works independently of
+#                  HearthsideChat.Enable above; turn off if you don't want
+#                  players able to see this info.
 #     Default:     1 (true)
 HearthsideChat.Bridge.Enable = 1
 
@@ -43,52 +47,52 @@ HearthsideChat.Bridge.Enable = 1
 # --------------------------------------------
 
 # HearthsideChat.LLM.ApiType
-#     Description: Which wire format to speak. "llamacpp" uses llama.cpp's
-#                  native /completion endpoint (preferred -- exposes
-#                  cache_prompt for prefix caching). "openai" uses
-#                  /v1/chat/completions (works against llama-server with
-#                  --jinja, or any OpenAI-compatible endpoint). "ollama"
-#                  uses Ollama's native /api/chat.
+#     Description: Which API style your AI server speaks. "llamacpp" talks to
+#                  llama.cpp's own API directly -- recommended, it's the
+#                  fastest and lets replies reuse work from earlier requests.
+#                  "openai" works with llama-server started using --jinja, or
+#                  any other OpenAI-compatible AI server. "ollama" talks to
+#                  Ollama.
 #     Values:      llamacpp | openai | ollama
 #     Default:     llamacpp
 HearthsideChat.LLM.ApiType = llamacpp
 
 # HearthsideChat.LLM.Template
-#     Description: Which chat-markup dialect to hand-assemble for
-#                  ApiType=llamacpp's native /completion -- that endpoint
-#                  bypasses llama.cpp's own template handling entirely, so
-#                  the module must speak the model's exact dialect itself.
-#                  Ignored by ApiType=openai/ollama, which send a structured
-#                  messages array and let the server apply whatever template
-#                  its own tokenizer_config declares. Get this wrong and the
-#                  model receives markup it never saw in training -- degraded
-#                  style at best, runaway generation at worst (the stop
-#                  sequence a mismatched template needs never appears).
+#     Description: Only matters for ApiType=llamacpp. In that mode the
+#                  module has to format the conversation itself in exactly
+#                  the style the model was trained on -- pick the wrong one
+#                  and replies come out garbled, or the model never stops
+#                  talking. Check your model's page/README for which format
+#                  it expects. Ignored for ApiType=openai/ollama, since those
+#                  servers format the conversation themselves.
 #     Values:      llama3 | chatml
 #     Default:     llama3
 HearthsideChat.LLM.Template = llama3
 
 # HearthsideChat.LLM.Url
-#     Description: Server root. Expected shape depends on ApiType:
-#                    llamacpp -> http://host:port          (module appends /completion)
-#                    openai   -> http://host:port/v1        (module appends /chat/completions)
-#                    ollama   -> http://host:port           (module appends /api/chat)
-#                  llama-server typically runs remote and containerized --
-#                  bind it beyond loopback only behind a firewall rule or a
-#                  dedicated Docker network; never publish it to 0.0.0.0.
+#     Description: Address of your AI server, with no path on the end -- the
+#                  module adds that itself:
+#                    llamacpp -> http://host:port
+#                    openai   -> http://host:port/v1
+#                    ollama   -> http://host:port
+#                  If the AI server runs on another machine or in a
+#                  container, only expose it through a firewall rule or a
+#                  private network. Never make it reachable from the open
+#                  internet.
 #     Default:     http://127.0.0.1:8080
 HearthsideChat.LLM.Url = http://127.0.0.1:8080
 
 # HearthsideChat.LLM.Model
-#     Description: Model identifier. Ignored by ApiType=llamacpp's native
-#                  /completion (the server has exactly one model loaded);
-#                  required by openai/ollama.
+#     Description: Which model to use. Ignored for ApiType=llamacpp (that
+#                  server only ever has one model loaded at a time); required
+#                  for ApiType=openai/ollama.
 #     Default:     (empty)
 HearthsideChat.LLM.Model =
 
 # HearthsideChat.LLM.ApiKey
-#     Description: Optional bearer token. llama-server supports --api-key;
-#                  set the same value here if it's enabled.
+#     Description: Password/token for the AI server, only needed if you
+#                  started it with one set (llama-server's --api-key flag).
+#                  Leave blank if your AI server doesn't require one.
 #     Default:     (empty)
 HearthsideChat.LLM.ApiKey =
 
@@ -98,9 +102,11 @@ HearthsideChat.LLM.ApiKey =
 HearthsideChat.LLM.TimeoutSeconds = 20
 
 # HearthsideChat.LLM.MaxTokens
-#     Description: Output token cap -- a GPU budget, not a hard chop; the
-#                  model's own stop token normally ends a reply first. A
-#                  reply that hits this cap can end abruptly mid-sentence.
+#     Description: Upper limit on reply length (roughly, word-pieces). This
+#                  is a safety ceiling, not a target -- the model normally
+#                  stops well before it on its own. A reply that does hit the
+#                  cap gets cut off mid-sentence, so raising this trades GPU
+#                  time for rarely-needed extra length.
 #     Default:     60
 HearthsideChat.LLM.MaxTokens = 60
 
@@ -119,9 +125,12 @@ HearthsideChat.LLM.SystemPrompt = You are an ordinary player in World of Warcraf
 HearthsideChat.LLM.HistoryTurns = 2
 
 # HearthsideChat.LLM.DryMultiplier
-#     Description: DRY repetition penalty strength (llamacpp ApiType only).
-#                  0.0 leaves DRY off. Costs roughly 85ms per reply when
-#                  enabled.
+#     Description: Strength of a setting that discourages the model from
+#                  repeating itself (llamacpp ApiType only; the setting is
+#                  called "DRY" in llama.cpp). 0.0 turns it off. Testing on
+#                  this module made replies *less* varied with it on, not
+#                  more, so it ships off; enabling it also costs roughly
+#                  85ms per reply.
 #     Default:     0.0
 HearthsideChat.LLM.DryMultiplier = 0.0
 
@@ -176,10 +185,12 @@ HearthsideChat.DebugChatLog.Enable = 0
 # --------------------------------------------
 # RUNTIME QUEUE
 # --------------------------------------------
-# Fixed worker pool of exactly one thread -- llama-server's slots are a
-# prompt cache, not a concurrency target, so requests are dispatched
-# serially. The token bucket is the primary load ceiling; the per-bot
-# cooldown and circuit breaker sit on top of it.
+# AI requests are sent to the server one at a time, never several at once --
+# llama-server's parallel "slots" exist to keep recent conversations cached
+# for speed, not to handle multiple requests simultaneously. The settings
+# below are the real limits on how much load reaches your AI server: a
+# per-minute request budget, a per-bot cooldown on top of it, and an
+# automatic pause if the server stops responding.
 
 # HearthsideChat.Queue.TTLSeconds
 #     Description: A queued request older than this when the worker reaches
@@ -195,15 +206,17 @@ HearthsideChat.Queue.TTLSeconds = 15
 HearthsideChat.Queue.MaxDepth = 20
 
 # HearthsideChat.Bucket.RepliesPerMinute
-#     Description: Global token bucket refill rate -- the primary load
-#                  ceiling across all bots. Measured warm serial reply
-#                  ceiling is about 104/min; default sits a little under so
-#                  the bucket binds before the backend would queue.
+#     Description: The main limit on AI usage -- how many AI replies are
+#                  allowed per minute, total across every bot combined. The
+#                  server can sustain about 104/min flat out; the default
+#                  sits a little under that so this limit kicks in before
+#                  the AI server itself starts queuing requests.
 #     Default:     90
 HearthsideChat.Bucket.RepliesPerMinute = 90
 
 # HearthsideChat.Bucket.BurstCapacity
-#     Description: Max tokens the bucket can bank for a burst.
+#     Description: How many replies can fire back-to-back in a short burst,
+#                  above the steady per-minute rate above.
 #     Default:     8
 HearthsideChat.Bucket.BurstCapacity = 8
 
@@ -313,16 +326,21 @@ HearthsideChat.Distracted.MaxDelaySeconds = 60
 HearthsideChat.Distracted.CooldownSeconds = 600
 
 # --------------------------------------------
-# TIER CEILINGS -- one GPU dial per surface
+# TIER CEILINGS -- one AI-usage dial per kind of chat
 # --------------------------------------------
-# Values: off | reflex | corpus | inference. MaxTier.DirectReply (LLM
-# replies), MaxTier.Reflex (canned pattern replies), MaxTier.Openers
-# (shared-context-triggered openers), MaxTier.BotToBot (scripted
-# bot-to-bot replay) and MaxTier.EngagementFollowUp (self-initiated
-# follow-ups) all have consumers today; only Ambient is parsed and stored
-# but inert until it has a trigger mechanism of its own. DirectReply and
-# EngagementFollowUp are the only two that ever actually reach
-# "inference" -- the other three's consumers only ever request "corpus".
+# Every "MaxTier" key below caps how far that kind of chat is allowed to go:
+#   off       - never speaks
+#   reflex    - only quick canned reactions (gz, ty, lol, etc.)
+#   corpus    - reflex, plus pre-written lines a background process authors
+#               ahead of time -- no live AI call, no extra GPU cost
+#   inference - all of the above, plus live AI-generated replies
+# A bot falls back to the highest tier its ceiling allows rather than going
+# silent -- "off" is the only value that silences a surface outright.
+# MaxTier.DirectReply, .Reflex, .Openers, .BotToBot, .EngagementFollowUp and
+# .Events are all live; only Ambient is stored but does nothing yet -- it has
+# no trigger mechanism wired up to use it. DirectReply, EngagementFollowUp
+# and Events request "inference" by default; BotToBot only does if you raise
+# it from the "corpus" default (see the live-chains section further down).
 
 # HearthsideChat.MaxTier.DirectReply
 #     Description: Ceiling for replies directly addressed to a bot (/say,
@@ -692,37 +710,37 @@ HearthsideChat.Generator.ScriptReserveTarget = 15
 # --------------------------------------------
 # OBSERVABILITY AND THE CONTROL API
 # --------------------------------------------
-# An authenticated HTTP server, lifted structurally from
-# mod-playerbots-characters' own (Unlicense) implementation, plus a rolling
-# hside_metrics history table. Disabled by default -- uses a single shared
-# bearer token rather than a per-account OTP/session system, since this is
-# a single-operator admin tool, not a multi-user web app. Read routes need
-# only the token; mutating routes additionally require HttpControlEnable (a
-# separate risk surface -- acore-web-reg, this realm's actual frontend, has
-# no authentication layer at all, so anything on this box must assume it
-# may end up reachable from something open). The `.hearthside` GM commands
-# (inspect/review/promote/demote/retire/pin/unpin/evict-run) work with the
-# HTTP server off -- neither depends on the other.
+# An optional web API for checking module status and (if you choose) making
+# admin changes remotely, instead of typing GM commands in-game. Off by
+# default. It uses one shared password for the whole server, not per-account
+# logins -- this is a single-operator admin tool, not a multi-user site.
+# Read-only requests (status/metrics/inspect) only need that password;
+# requests that change anything (promote/demote/retire/pin/unpin/evict-run)
+# additionally require HttpControlEnable below. The `.hearthside` in-game GM
+# commands do everything this API can and work whether or not the API is
+# turned on.
 
 # HearthsideChat.HttpServerPort
-#     Description: TCP port for the HTTP control API. 0 disables the server
-#                  entirely (default) -- the module's own GM commands cover
-#                  the same actions without it.
+#     Description: Port to run the web API on. 0 turns it off entirely
+#                  (default) -- the in-game GM commands cover the same
+#                  actions without it.
 #     Default:     0
 HearthsideChat.HttpServerPort = 0
 
 # HearthsideChat.HttpServerBind
-#     Description: Bind address. Loopback by default -- the intended
-#                  deployment is behind the existing nginx proxy manager,
-#                  the same way this realm's other web services are exposed,
-#                  not a direct public bind.
+#     Description: Which network address to listen on. Loopback
+#                  (127.0.0.1) means only this machine can reach it directly
+#                  -- put a reverse proxy (nginx, etc.) in front if you want
+#                  it reachable from elsewhere, rather than exposing it
+#                  directly.
 #     Default:     127.0.0.1
 HearthsideChat.HttpServerBind = 127.0.0.1
 
 # HearthsideChat.HttpServerPrivateKey
-#     Description: Shared bearer token. Required whenever HttpServerPort is
-#                  non-zero -- the server logs an error and stays off rather
-#                  than start unauthenticated if this is empty.
+#     Description: Shared password for the web API. Required whenever
+#                  HttpServerPort above is non-zero -- if this is left
+#                  blank, the server refuses to start rather than run
+#                  unprotected.
 #     Default:     (empty)
 HearthsideChat.HttpServerPrivateKey =
 
@@ -732,9 +750,11 @@ HearthsideChat.HttpServerPrivateKey =
 HearthsideChat.HttpServerTimeoutSeconds = 10
 
 # HearthsideChat.HttpControlEnable
-#     Description: Second gate for the HTTP API's mutating routes
-#                  (promote/demote/retire/pin/unpin/evict-run) on top of the
-#                  bearer token -- the read routes (status/metrics/inspect/
-#                  review) only need the token. Off by default.
+#     Description: A second switch that must also be on before the web API
+#                  will accept change-making requests (promote/demote/
+#                  retire/pin/unpin/evict-run) -- the password alone isn't
+#                  enough. Read-only requests (status/metrics/inspect/
+#                  review) don't need this, only the password. Off by
+#                  default.
 #     Default:     0 (false)
 HearthsideChat.HttpControlEnable = 0

@@ -23,11 +23,15 @@ different costs, so they run through different mechanisms. Only one of them ever
   decision and strictly more truthful than inference.
 - **Tier 2 — Reactive** (`hs_llm.*`, `hs_queue.*`). Live inference through a bounded queue: single
   worker, TTL, global token bucket, per-bot cooldown, and a circuit breaker for backend-down.
-  Low volume by construction (proximity plus real-player gating). Also covers **engagement
-  follow-ups** (`hs_engagement.*`): a bot can continue a conversation on its own initiative after
-  answering a player once, through a second inference pass gated by its own
-  `MaxTier.EngagementFollowUp` ceiling, with fire-chance decaying per chain depth rather than a
-  single fixed reply.
+  Low volume by construction (proximity plus real-player gating). Also covers three self-initiated
+  extensions, each its own tier ceiling and each gated separately from a direct reply:
+  **engagement follow-ups** (`hs_engagement.*`, `MaxTier.EngagementFollowUp`) — a bot continuing a
+  conversation on its own initiative after answering a player once, fire-chance decaying per chain
+  depth; **event reactions** (`hs_event*.*`, `MaxTier.Events`) — a bot reacting to something that
+  *happened* (a death, a ding, a duel) rather than something said, arbitrated by involvement and
+  per-archetype affinity, own token bucket; and **live bot-to-bot chains** (`hs_botchain.*`,
+  `MaxTier.BotToBot = inference`) — one bot's delivered line seeding another's reply on party, raid,
+  or World, depth-capped and decayed per hop.
 
 Openers' fifth trigger and engagement follow-ups both run off one shared periodic scan
 (`HsEngagementScanWorldScript`, 30s tick) rather than a per-utterance chat hook — see below.
@@ -99,6 +103,8 @@ lookup rather than injected text, and the cache economics that make a "carded" b
 
 - `Claude/PLAN.md` — the design decisions behind every mechanism above, and why the alternatives were
   rejected.
+- `Claude/PLAN-ARBITER.md` / `Claude/PLAN-TRADE.md` — event-reaction arbitration and trade-price
+  grounding, two newer efforts layered on top of `PLAN.md`'s design, tracked separately.
 - `conf/mod_hearthside_chat.conf.dist` — every `HearthsideChat.*` config key, commented.
 - `data/sql/db-characters/base/` — the authoritative schema for every `hside_*` table.
 - `hs_main.cpp` — startup/shutdown order for every `WorldScript`/`PlayerScript`, with comments on why
