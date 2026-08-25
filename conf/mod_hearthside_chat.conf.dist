@@ -172,7 +172,7 @@ HearthsideChat.ReplyCount.TwoPercent = 10
 # HearthsideChat.DisableRepliesInCombat
 #     Description: Suppress replies while the sender or the candidate bot is in combat.
 #     Default:     1 (true)
-HearthsideChat.DisableRepliesInCombat = 0
+HearthsideChat.DisableRepliesInCombat = 1
 
 # HearthsideChat.ExcludeNames
 #     Description: Comma-separated bot character names this module never
@@ -240,7 +240,7 @@ HearthsideChat.Bucket.BurstCapacity = 8
 #     Description: Minimum seconds between two admitted requests for the
 #                  same bot, regardless of bucket state.
 #     Default:     8
-HearthsideChat.Bot.CooldownSeconds = 3
+HearthsideChat.Bot.CooldownSeconds = 8
 
 # HearthsideChat.CircuitBreaker.FailureThreshold
 #     Description: Consecutive LLM call failures before the breaker opens
@@ -437,7 +437,7 @@ HearthsideChat.MaxTier.Reflex = reflex
 #                  follow-up, so unlike Openers/BotToBot this defaults off
 #                  rather than corpus -- opt in deliberately.
 #     Default:     off
-HearthsideChat.MaxTier.EngagementFollowUp = inference
+HearthsideChat.MaxTier.EngagementFollowUp = off
 
 # HearthsideChat.MaxTier.Events
 #     Description: Ceiling for event reactions -- a bot reacting to
@@ -751,7 +751,7 @@ HearthsideChat.Channel.WorldDefense.MaxCandidates = 0
 #                  rather their realm be straightforward about it.
 #     Values:      wink | deflect | silent | admit
 #     Default:     wink
-HearthsideChat.BotQuestion = deflect
+HearthsideChat.BotQuestion = wink
 
 # --------------------------------------------
 # GROUNDED ANSWERS -- the fourth answer source
