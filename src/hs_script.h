@@ -54,6 +54,18 @@ public:
 // this call).
 void Hs_AbortScriptsWitnessedBy(uint64_t playerGuid);
 
+// True while this bot is cast in a script run of either kind (/say or
+// channel) that hasn't finished or aborted. Exposed for hs_ambient.cpp,
+// which must not have a bot break its own scene by musing to itself
+// mid-exchange -- the two mechanisms share the same speakers and the same
+// 30-second cadence, so without this they would collide regularly rather
+// than rarely.
+//
+// Both run maps are checked because a bot cast in a channel scene is just as
+// busy as one cast in a /say scene, even though only the latter counts
+// toward Hs_ActiveScriptRunCount below.
+bool Hs_IsBotInAnyScriptRun(uint64_t botGuid);
+
 // Read-only status for `.hearthside status` -- reserve depth already lives
 // on hs_generator.h (Hs_ScriptReserveDepth); this is the runtime half.
 uint32_t Hs_ActiveScriptRunCount();

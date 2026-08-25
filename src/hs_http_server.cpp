@@ -1,4 +1,5 @@
 #include "hs_http_server.h"
+#include "hs_ambient.h"
 #include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_event.h"
@@ -122,6 +123,18 @@ namespace
         j["openers_fired_session"]         = Hs_OpenersFiredThisSession();
         j["events_fired_session"]          = Hs_EventsFiredThisSession();
         j["botchain_hops_fired_session"]   = Hs_BotChainHopsFiredThisSession();
+        {
+            // Reported as one object because the budget is one thing: all
+            // three unprompted producers (ambient, openers, scripted scenes)
+            // spend from it, so a denial here is not attributable to any one
+            // of them.
+            HsAmbientBucketStats ambientBucket = Hs_AmbientBucketStatsSnapshot();
+            j["ambient"] = {
+                {"lines_fired_session",       Hs_AmbientLinesFiredThisSession()},
+                {"shared_budget_granted",     ambientBucket.grantedCount},
+                {"shared_budget_denied",      ambientBucket.deniedCount},
+            };
+        }
         j["script"] = {
             {"reserve_depth",     Hs_ScriptReserveDepth()},
             {"active_runs",       Hs_ActiveScriptRunCount()},

@@ -27,9 +27,11 @@
 #include "Map.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus -- rpgInfo.GetStatus()
+#include "PlayerbotAIConfig.h" // NewRpgStatus, enableRandomBotTrading (grounded TradePrice)
 #include "PlayerbotMgr.h"
+#include "RandomPlayerbotMgr.h" // GetSellMultiplier/IsRandomBot -- grounded TradePrice
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h"          // GetItemTemplate -- grounded TradePrice
 #include "Random.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
@@ -48,6 +50,31 @@ namespace
             return false;
         PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
         return ai && ai->IsBotAI();
+    }
+
+    // Copper -> the way a player writes a price: "2g50s", "80s", "35c".
+    // Trailing zero denominations are dropped, so a round 5 gold is "5g" and
+    // not "5g0s0c".
+    //
+    // Deliberately more precise than the Gold grounded answer's formatter,
+    // which rounds to a single denomination ("47g") because it is answering
+    // "are you rich". This one is a price someone is about to be held to, so
+    // silver matters. Copper only appears when it is the whole price --
+    // nobody haggles over coppers on top of gold.
+    std::string FormatMoney(uint32_t copper)
+    {
+        uint32_t gold   = copper / 10000;
+        uint32_t silver = (copper / 100) % 100;
+        uint32_t coppers = copper % 100;
+
+        std::string out;
+        if (gold > 0)
+            out += std::to_string(gold) + "g";
+        if (silver > 0)
+            out += std::to_string(silver) + "s";
+        if (out.empty())
+            out = std::to_string(coppers) + "c";
+        return out;
     }
 
     // §4.13's remaining topic-gate facts, read fresh per request like
@@ -301,6 +328,90 @@ namespace
             case HsGroundedKind::RecallGrouped:
             {
                 hasFact = Hs_HasGroupedBefore(botGuid, senderGuid);
+                break;
+            }
+            // PLAN-TRADE.md: the asking price for something the bot is
+            // actually carrying, computed with mod-playerbots' own selling
+            // arithmetic rather than invented -- the whole point is that the
+            // number said in chat is the number the trade window will then
+            // demand.
+            case HsGroundedKind::TradePrice:
+            {
+                // Selling has to be possible at all before quoting a number.
+                // enableRandomBotTrading 0 disables trading outright and 2
+                // disables selling specifically (TradeStatusAction::Execute);
+                // in either case the bot would quote a price and then refuse
+                // the trade, which is worse than not answering. Falls through
+                // to the normal path rather than answering "not selling",
+                // because the reason is a server setting rather than
+                // anything true about this bot's bags.
+                //
+                // Both modes gate on IsRandomBot/IsAddclassBot in
+                // mod-playerbots, so the check is scoped the same way -- an
+                // account-controlled bot is unaffected by either mode.
+                if (sPlayerbotAIConfig.enableRandomBotTrading == 0 ||
+                    sPlayerbotAIConfig.enableRandomBotTrading == 2)
+                {
+                    if (sRandomPlayerbotMgr.IsRandomBot(bot) || sRandomPlayerbotMgr.IsAddclassBot(bot))
+                        return false;
+                }
+
+                HsTradeableItem item;
+                if (!Hs_PickTradeableItem(bot, item))
+                {
+                    hasFact = false; // carrying nothing tradeable -- a true answer, not an invented one
+                    break;
+                }
+
+                ItemTemplate const* tmpl = sObjectMgr->GetItemTemplate(item.itemId);
+                if (!tmpl)
+                {
+                    hasFact = false;
+                    break;
+                }
+
+                // Both guards lifted from CalculateCost/Execute: an item
+                // below normal quality prices the whole trade at 0, and an
+                // item with no SellPrice is refused outright as "not for
+                // sale" rather than quoted. Quoting either would be a number
+                // the trade window then contradicts.
+                if (tmpl->Quality < ITEM_QUALITY_NORMAL || tmpl->SellPrice == 0)
+                {
+                    hasFact = false;
+                    break;
+                }
+
+                // Mirrors CalculateCost(bot, sell=true) exactly:
+                //   count * SellPrice * GetSellMultiplier(bot)
+                // Priced per stack, not per unit, which is why the reply
+                // says the count when there is more than one.
+                //
+                // GetTradeDiscount is deliberately NOT folded in. It is a
+                // running per-pair credit applied to the whole trade's money
+                // *delta* at accept time, not to any item's price -- for a
+                // plain item-for-gold trade there is no delta for it to
+                // discount, so the undiscounted figure is what the window
+                // demands. It only diverges once items also flow back from
+                // the player, which is not the trade this question is about.
+                uint32_t price = static_cast<uint32_t>(
+                    static_cast<double>(item.count) * static_cast<double>(tmpl->SellPrice) *
+                    sRandomPlayerbotMgr.GetSellMultiplier(bot));
+                if (price == 0)
+                {
+                    hasFact = false; // multiplier rounded it away -- don't quote "0c"
+                    break;
+                }
+
+                // "2g50s for [Bolt of Mageweave]", or with a stack,
+                // "5g for 20x [Bolt of Mageweave]". The item is named in the
+                // fact rather than left implicit because the module does not
+                // record which item a past WTS line advertised -- naming
+                // what is being quoted makes the answer coherent on its own
+                // terms instead of a non-sequitur about some other item.
+                fact = FormatMoney(price) + " for ";
+                if (item.count > 1)
+                    fact += std::to_string(item.count) + "x ";
+                fact += item.link;
                 break;
             }
             case HsGroundedKind::None:

@@ -199,15 +199,12 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 // gated but only ever at HsTier::Corpus and HsTier::Reflex respectively, so
 // setting either to "inference" has no additional effect.
 //
-// Ambient is the exception, and not in that sense: it has NO consumer at all.
-// Nothing reads g_HsMaxTierAmbient except the two operator-facing status
-// surfaces that echo it back (hs_command.cpp, hs_http_server.cpp), because
-// there is no unprompted-ambient producer for it to gate -- every other
-// surface in the module needs a trigger (an utterance, a game event, a shared
-// context, a prior reply). Setting it to "off" to quiet a realm therefore
-// does nothing while `.hearthside status` reports "off" as though it took.
-// The producer is designed but unbuilt: see Claude/PLAN-AMBIENT.md, which is
-// also where the decision to keep the key rather than delete it is recorded.
+// Ambient (hs_ambient.h, Claude/PLAN-AMBIENT.md) is unprompted chatter with
+// no trigger at all -- a bot speaks because there is dead air near a real
+// player, not because anything happened. Checked as
+// HsTierAllows(ceiling, HsTier::Corpus), same as Openers -- corpus-only,
+// deliberately: unprompted GPU spend against no question is the worst
+// cost-per-value in the module.
 //
 // BotToBot is the one key with two consumers at different tiers, and it works
 // because a ceiling is permissive rather than a mode switch: at "corpus"
@@ -219,10 +216,45 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 // BotToBot setting.
 // --------------------------------------------
 extern std::string g_HsMaxTierDirectReply;
-extern std::string g_HsMaxTierAmbient; // NOT WIRED -- see above and Claude/PLAN-AMBIENT.md
+extern std::string g_HsMaxTierAmbient;
 extern std::string g_HsMaxTierOpeners;
 extern std::string g_HsMaxTierBotToBot;
 extern std::string g_HsMaxTierReflex;
+
+// --------------------------------------------
+// Ambient (hs_ambient.h). Ambient has no natural rate limiter -- every other
+// unprompted surface is bounded by how often its trigger fires (a player
+// speaks, a game event happens); ambient is bounded only by the clock. So
+// its bucket below is deliberately shared with the other two unprompted-
+// speech producers, hs_opener.cpp's FireOpener and hs_script.cpp's scene
+// claims (Hs_AmbientBucketTake, hs_queue.h) -- three independent producers
+// each individually tuned to "reasonable" could otherwise still stack into
+// constant noise. Sized well under Events.Bucket.RepliesPerMinute: ambient's
+// failure mode (a realm that reads as a bot farm) is worse than the event
+// surface's, and a too-noisy realm is not recoverable the way a too-quiet
+// one is.
+// --------------------------------------------
+extern uint32_t g_HsAmbientBucketRepliesPerMinute;
+extern uint32_t g_HsAmbientBucketBurstCapacity;
+
+// How long a bot waits after speaking ambiently before it may again --
+// independent of the shared bucket above, which bounds the whole realm's
+// ambient output, not any one bot's.
+extern uint32_t g_HsAmbientBotCooldownSeconds;
+
+// Same gate BotChain.RequireRealPlayer uses: off only makes sense for
+// load-testing an empty realm. Party/raid need no such flag -- SayToParty/
+// SayToRaid only reach real group members already (PlayerbotAI.cpp), so an
+// all-bot group generates no packets regardless of this setting.
+extern bool g_HsAmbientRequireRealPlayer;
+
+// Per-surface enable. Trade/General/World reuse each channel's own MaxTier
+// and RatePerMin bucket (HearthsideChat.Channel.<name>.*) rather than a
+// third set of keys -- ambient on those three is gated by the shared bucket
+// above plus that channel's own policy, nothing new to configure.
+extern bool g_HsAmbientSayEnable;
+extern bool g_HsAmbientPartyEnable;
+extern bool g_HsAmbientRaidEnable;
 
 // Gates the engagement follow-up feature (hs_engagement.h). Deliberately its
 // own key rather than reusing MaxTier.Openers -- Openers is checked as

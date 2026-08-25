@@ -59,6 +59,32 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
 std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t botLevel,
                                   uint8_t botFaction, uint32_t botZoneId);
 
+// PLAN-AMBIENT.md §4: party/raid ambient content. A third selection scope
+// alongside the two above, and it needs to be its own function rather than
+// an HsChannelKind added to Hs_SelectChannelLine -- party and raid are not
+// global channels. They have no Channel* to resolve, no per-channel policy
+// row, and no membership beyond the bot's own Group, so folding them into
+// HsChannelKind would put two values into that enum that every other
+// consumer of it (the policy table, Hs_ResolveChannelForDelivery,
+// hs_handler.cpp's Channel* hook) would have to special-case away.
+//
+// Reuses hside_corpus_category's existing `channel` column, whose values
+// extend from trade|general|world to also include party|raid. Nothing else
+// has to change for that: Hs_SelectCorpusLine's `channel IS NULL` filter
+// already excludes every non-NULL value, so the new rows stay out of the
+// /say and direct-reply pool by the same mechanism the channel_* categories
+// already do.
+//
+// The register is genuinely different from a /say musing, which is why these
+// get their own categories rather than reusing the five chat_* ones: a /say
+// line is overheard by whoever happens to be nearby, while a party line is
+// addressed to four specific people who are doing something together.
+//
+// `isRaid` selects the raid categories over the party ones. Returns empty
+// if nothing is eligible, same contract as the two functions above.
+std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t botLevel,
+                                       uint8_t botFaction, uint32_t botZoneId);
+
 // The four level_band_tag labels used by chat_levelband_musing's seeded
 // rows: low 1-19, mid 20-59, high 60-79, endgame 80 (the level cap) --
 // lined up with WotLK's own pacing (Outland opens at 58, Northrend at 68,
@@ -164,6 +190,40 @@ inline bool Hs_ResolveUniversalPlaceholders(std::string& text, const HsPlacehold
 
     return true;
 }
+
+// One tradeable item out of a bot's bags, for the grounded TradePrice
+// answer (Claude/PLAN-TRADE.md). Deliberately primitives plus the ready-made
+// link rather than an `Item*`/`ItemTemplate const*`, so this header stays
+// free of the core's item headers the way it already stays free of the rest
+// of AzerothCore.
+//
+// `count` is the stack size, which the price depends on: mod-playerbots'
+// TradeStatusAction::CalculateCost charges per stack, not per unit, so a
+// quote for a stack of 20 has to say 20.
+struct HsTradeableItem
+{
+    uint32_t    itemId = 0;
+    uint32_t    count  = 0;
+    std::string link;   // the same |cff...|Hitem:...|h[...]|h|r markup %item_link produces
+};
+
+// Picks one non-soulbound item from the bot's backpack and equipped bags --
+// the exact same selection %item_link uses (they share one implementation),
+// so a WTS line and a price quote are drawn from the same pool and by the
+// same rule. Soulbound is excluded because an item the bot cannot hand over
+// is exactly the falsifiable claim §4.13 exists to prevent, and that applies
+// at least as strongly to quoting a price for one.
+//
+// Returns false when the bot is carrying nothing tradeable, which the caller
+// turns into the "not selling anything" answer rather than a fabricated
+// price.
+//
+// Note this picks *a* tradeable item, not necessarily the one the bot last
+// advertised -- the module does not record which item a past WTS line named.
+// That is why the TradePrice reply interpolates the item link into the text:
+// the bot says what it is quoting, so the answer is coherent on its own
+// terms even when it is not the item the player had in mind.
+bool Hs_PickTradeableItem(Player* bot, HsTradeableItem& out);
 
 // Builds the context above from live Player* state. Declared here but
 // defined in hs_corpus.cpp, the AzerothCore-dependent half; every caller

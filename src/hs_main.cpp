@@ -1,3 +1,4 @@
+#include "hs_ambient.h"
 #include "hs_archetype_store.h"
 #include "hs_bridge.h"
 #include "hs_config.h"
@@ -255,6 +256,14 @@ void Addmod_hearthside_chatScripts()
     new HsEventDuelHandler();
     new HsScriptRunnerWorldScript();
     new HsEngagementScanWorldScript();
+    // Registered after the script runner deliberately: both scan on the same
+    // 30s cadence and draw from the same speakers, and ambient asks the
+    // script runner whether a bot is already mid-scene
+    // (Hs_IsBotInAnyScriptRun). Neither depends on the other's registration
+    // order for correctness -- both are tick-driven, and the query reads a
+    // mutex-guarded map -- but keeping them adjacent keeps the pairing
+    // visible to whoever reads this list next.
+    new HsAmbientScanWorldScript();
     new HsQueueLifecycleWorldScript();
     new HsGeneratorLifecycleWorldScript();
     new HsIdentityLifecycleWorldScript();

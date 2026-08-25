@@ -119,6 +119,27 @@ std::string g_HsMaxTierEvents             = "inference";
 uint32_t g_HsEventBucketRepliesPerMinute = 15;
 uint32_t g_HsEventBucketBurstCapacity    = 4;
 
+// Deliberately under the event bucket's 15/min: this budget is shared by all
+// three unprompted-speech producers (ambient, openers, scripted scenes), and
+// unlike an event reaction none of them fires on anything that happened. Six
+// a minute realm-wide is roughly one unprompted line every ten seconds
+// somewhere on the realm, with two bankable for a burst. Starting guesses,
+// not measurements -- and per hs_config.h's asymmetry note, the direction to
+// tune this from live evidence is up, never down.
+uint32_t g_HsAmbientBucketRepliesPerMinute = 6;
+uint32_t g_HsAmbientBucketBurstCapacity    = 2;
+
+// 30 minutes: a given bot speaks unprompted at most twice an hour. Much
+// longer than the opener's own 10-minute per-pair cooldown, because that one
+// is scoped to a pair and this one is scoped to the bot across every player
+// who might hear it.
+uint32_t g_HsAmbientBotCooldownSeconds = 1800;
+bool     g_HsAmbientRequireRealPlayer  = true;
+
+bool g_HsAmbientSayEnable   = true;
+bool g_HsAmbientPartyEnable = true;
+bool g_HsAmbientRaidEnable  = true;
+
 // Starting guesses, not measurements -- the same footing hs_script.cpp's
 // kScanFireChancePercent is on. 55% decaying at 60% gives roughly a 1.4-hop
 // average chain (0.55 + 0.55*0.33 + 0.55*0.20 over the three permitted
@@ -287,6 +308,14 @@ void LoadHearthsideChatConfig()
 
     g_HsEventBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.RepliesPerMinute", 15);
     g_HsEventBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.BurstCapacity", 4);
+
+    g_HsAmbientBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.Bucket.RepliesPerMinute", 6);
+    g_HsAmbientBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.Bucket.BurstCapacity", 2);
+    g_HsAmbientBotCooldownSeconds     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.BotCooldownSeconds", 1800);
+    g_HsAmbientRequireRealPlayer      = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.RequireRealPlayer", true);
+    g_HsAmbientSayEnable              = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.Say.Enable", true);
+    g_HsAmbientPartyEnable            = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.Party.Enable", true);
+    g_HsAmbientRaidEnable             = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.Raid.Enable", true);
 
     g_HsBotChainMaxDepth             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.MaxDepth", 3);
     g_HsBotChainBaseChancePercent    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.BaseChancePercent", 55);

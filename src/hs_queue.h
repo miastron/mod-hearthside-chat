@@ -119,6 +119,43 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
 // Hs_TryEnqueue's own gates per bot on top of this.
 bool Hs_EventBucketTake();
 
+// PLAN-AMBIENT.md §2: the shared *unprompted-speech* budget
+// (HearthsideChat.Ambient.Bucket.*). Unlike every other bucket in this file,
+// this one is not owned by a single surface -- all three producers that
+// speak on no trigger at all spend from it:
+//
+//   - hs_ambient.cpp's scan (dead air near a player)
+//   - hs_opener.cpp's FireOpener (shared-context greeting)
+//   - hs_script.cpp's two scene claims (/say and channel)
+//
+// One budget rather than three because ambient speech has no natural rate
+// limiter. Every other surface is bounded by how often its trigger fires --
+// players only talk so much, mobs only die so often -- so a per-surface
+// bucket there is a ceiling on something already self-limiting. These three
+// are bounded only by the clock and the bot population, and three producers
+// each individually tuned to "reasonable" still stack into constant noise.
+// A realm's tolerance for bots talking to themselves is one quantity, so it
+// gets one knob.
+//
+// Spent once per *line about to be spoken* (a script scene spends once at
+// claim time for the whole multi-turn run, not per turn -- the run is the
+// unit a listener perceives). Returns false when the budget is empty; the
+// caller falls silent rather than queuing, exactly as with the other
+// buckets. Deliberately checked late, after the cheap eligibility filters
+// but before the corpus query, so a denied line costs no DB work.
+bool Hs_AmbientBucketTake();
+
+// Session-cumulative grant/deny counts for the shared bucket above, for
+// `.hearthside status` and the HTTP metrics route. Saturation here is the
+// signal that the three producers are competing rather than coexisting --
+// the number to look at before raising Ambient.Bucket.RepliesPerMinute.
+struct HsAmbientBucketStats
+{
+    uint64_t grantedCount;
+    uint64_t deniedCount;
+};
+HsAmbientBucketStats Hs_AmbientBucketStatsSnapshot();
+
 // Delivers any replies the worker has finished since the last call. Must be
 // called once per world tick, from the world thread only -- this is the
 // only place a Player*/PlayerbotAI* is ever touched for this subsystem,

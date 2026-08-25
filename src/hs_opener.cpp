@@ -141,6 +141,21 @@ namespace
         if (urand(0, 99) >= kOpenerFireChancePercent)
             return;
 
+        // PLAN-AMBIENT.md §2: the shared unprompted-speech budget
+        // (hs_queue.h). An opener is one of three producers that speaks
+        // without anyone having said anything, so it now spends from the
+        // same budget ambient chatter and scripted scenes do rather than
+        // relying only on its own per-pair cooldown -- that cooldown bounds
+        // how often *this pair* hears an opener, not how much unprompted
+        // speech the realm produces in total.
+        //
+        // Deliberately after the cooldown and chance roll, both of which are
+        // in-memory, and before Hs_SelectOpenerLine's DB query: a token
+        // should be spent on a line that is actually about to be attempted,
+        // not burned by a bot that was going to stay quiet anyway.
+        if (!Hs_AmbientBucketTake())
+            return;
+
         std::string line = Hs_SelectOpenerLine(categoryName, bot->getClass(), bot->GetLevel(),
                                                 static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId());
         if (line.empty())

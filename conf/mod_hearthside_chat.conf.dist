@@ -352,11 +352,9 @@ HearthsideChat.Distracted.CooldownSeconds = 600
 #   inference - all of the above, plus live AI-generated replies
 # A bot falls back to the highest tier its ceiling allows rather than going
 # silent -- "off" is the only value that silences a surface outright.
-# MaxTier.DirectReply, .Reflex, .Openers, .BotToBot, .EngagementFollowUp and
-# .Events are all live; only Ambient is stored but does nothing yet -- it has
-# no trigger mechanism wired up to use it. DirectReply, EngagementFollowUp
-# and Events request "inference" by default; BotToBot only does if you raise
-# it from the "corpus" default (see the live-chains section further down).
+# All seven keys are live. DirectReply, EngagementFollowUp and Events request
+# "inference" by default; BotToBot only does if you raise it from the
+# "corpus" default (see the live-chains section further down).
 
 # HearthsideChat.MaxTier.DirectReply
 #     Description: Ceiling for replies directly addressed to a bot (/say,
@@ -365,8 +363,26 @@ HearthsideChat.Distracted.CooldownSeconds = 600
 HearthsideChat.MaxTier.DirectReply = inference
 
 # HearthsideChat.MaxTier.Ambient
-#     Description: Ceiling for unprompted ambient chatter near a player.
-#                  Not wired to any generator yet.
+#     Description: Ceiling for unprompted ambient chatter -- a bot speaking
+#                  because there is dead air, not because anything happened.
+#                  This is the only surface with no trigger at all; every
+#                  other one needs an utterance, a game event, a shared
+#                  context, or a prior reply.
+#
+#                  Corpus-only by design: "corpus" and "inference" behave
+#                  identically, and "reflex" or "off" silence the surface.
+#                  There is no generated ambient path and no plan for one --
+#                  unprompted GPU spend against no question is the worst
+#                  cost-per-value in the module, and the idle generator
+#                  already writes this content offline for free.
+#
+#                  Speaks on /say, party, raid, and the Trade/General/World
+#                  channels. See the Ambient.* keys below for volume, which
+#                  is where the real tuning is -- and note this key is a
+#                  ceiling, not the volume control: setting it to "off"
+#                  silences ambient chatter but does NOT quiet openers or
+#                  scripted scenes. Ambient.Bucket.RepliesPerMinute = 0 is
+#                  the lever that quiets all three at once.
 #     Default:     corpus
 HearthsideChat.MaxTier.Ambient = corpus
 
@@ -457,6 +473,132 @@ HearthsideChat.Events.Bucket.RepliesPerMinute = 15
 #                  shape this exists for. Also a kill switch at 0.
 #     Default:     4
 HearthsideChat.Events.Bucket.BurstCapacity = 4
+
+# --------------------------------------------
+# UNPROMPTED SPEECH (AMBIENT, OPENERS, SCRIPTED SCENES)
+# --------------------------------------------
+# Read this section before tuning any of it, because the first key is not
+# what it looks like.
+#
+# Three producers in this module speak without anyone having said anything:
+#
+#   - ambient chatter  -- a bot muses because there is dead air (MaxTier.Ambient)
+#   - openers          -- a bot greets off a shared context (MaxTier.Openers)
+#   - scripted scenes  -- two bots replay a written exchange (MaxTier.BotToBot)
+#
+# They share ONE budget: Ambient.Bucket.* below. It is named for ambient
+# because ambient is the surface that forced the issue, but it governs all
+# three.
+#
+# The reason they share it rather than each having their own: every other
+# surface in this module is bounded by how often its trigger fires. Players
+# only talk so much, mobs only die so often, so a per-surface cap there is a
+# ceiling on something already self-limiting. These three are bounded only by
+# the clock and the bot population -- and three producers each individually
+# tuned to something reasonable still stack into constant noise, because
+# nothing was ever measuring their sum. A realm's tolerance for bots talking
+# among themselves is one quantity, so it gets one knob.
+#
+# Tune this UPWARD from live evidence, never downward. A too-quiet realm is
+# recoverable; a too-noisy one has already spent the player's patience.
+# Volume also scales with bot count, not player count, so a rate that felt
+# right on a 200-bot test realm is not the same rate at 5000.
+
+# HearthsideChat.Ambient.Bucket.RepliesPerMinute
+#     Description: Shared token bucket for all three unprompted producers
+#                  above. One token per line about to be spoken -- except a
+#                  scripted scene, which spends one token for the whole
+#                  multi-turn run rather than one per turn, since a scene is
+#                  one thing a listener perceives.
+#
+#                  Deliberately below Events.Bucket.RepliesPerMinute (15):
+#                  an event reaction at least fires on something that
+#                  actually happened, and none of these three do. 6/min is
+#                  roughly one unprompted line every ten seconds somewhere
+#                  on the realm.
+#
+#                  Set to 0 to silence ambient chatter, openers and scripted
+#                  scenes together -- this is the "quiet the realm" lever,
+#                  not MaxTier.Ambient (which only covers the first of the
+#                  three).
+#     Default:     6
+HearthsideChat.Ambient.Bucket.RepliesPerMinute = 6
+
+# HearthsideChat.Ambient.Bucket.BurstCapacity
+#     Description: Max unprompted tokens bankable, so a quiet stretch can be
+#                  followed by a couple of lines close together rather than
+#                  a metronome. Kept small on purpose: a burst of bots
+#                  talking to themselves is exactly the thing that reads as
+#                  a bot farm. Also a kill switch at 0.
+#     Default:     2
+HearthsideChat.Ambient.Bucket.BurstCapacity = 2
+
+# HearthsideChat.Ambient.BotCooldownSeconds
+#     Description: How long one bot waits after speaking ambiently before it
+#                  may again. Independent of the shared bucket, which bounds
+#                  the realm's total output rather than any one bot's -- both
+#                  apply. At the default a given bot muses at most twice an
+#                  hour, so the same character is never the one you keep
+#                  hearing from.
+#
+#                  Applies to ambient chatter only. Openers keep their own
+#                  per-(bot, player) cooldown, which asks a different
+#                  question: an opener is addressed to someone, so what
+#                  matters there is how recently this bot greeted THAT
+#                  player.
+#     Default:     1800
+HearthsideChat.Ambient.BotCooldownSeconds = 1800
+
+# HearthsideChat.Ambient.RequireRealPlayer
+#     Description: Only speak where a real player can actually hear it -- in
+#                  /say range, or a member of the same channel instance.
+#                  Turning this off only makes sense when load-testing an
+#                  empty realm.
+#
+#                  Party and raid ignore this key and always require a human
+#                  in the group, because they get the guarantee for free:
+#                  mod-playerbots' SayToParty/SayToRaid only send to real
+#                  group members, so a bot-only group generates no packets at
+#                  all. A line nobody receives would still spend a token from
+#                  a realm-wide budget and still burn the speaker's cooldown,
+#                  so it is never worth letting through.
+#     Default:     1
+HearthsideChat.Ambient.RequireRealPlayer = 1
+
+# HearthsideChat.Ambient.Say.Enable
+#     Description: Ambient chatter in /say, to whoever is standing nearby.
+#                  Draws from the five chat_* corpus categories, the same
+#                  pool the direct-reply corpus fallback uses.
+#     Default:     1
+HearthsideChat.Ambient.Say.Enable = 1
+
+# HearthsideChat.Ambient.Party.Enable
+#     Description: Ambient chatter in party chat -- between-pulls small talk
+#                  and travel remarks addressed to the group, from the
+#                  ambient_party_* corpus categories.
+#     Default:     1
+HearthsideChat.Ambient.Party.Enable = 1
+
+# HearthsideChat.Ambient.Raid.Enable
+#     Description: Ambient chatter in raid chat. Its own category
+#                  (ambient_raid_downtime) rather than reusing the party
+#                  one: a line that assumes it will be noticed reads wrong
+#                  at twenty-five people.
+#     Default:     1
+HearthsideChat.Ambient.Raid.Enable = 1
+
+# Trade, General and World ambient have no Enable key of their own -- they
+# are gated by each channel's existing Channel.<name>.MaxTier and paced by
+# that channel's own RatePerMin, on top of the shared bucket above. Set
+# Channel.Trade.MaxTier = off to silence ambient there along with everything
+# else this module says in Trade.
+#
+# Battleground ambient is deliberately not implemented. It would need a new
+# delivery path (mod-playerbots has no SayToBG, and SayToRaid hardcodes
+# CHAT_MSG_RAID, so a BG line would land in the wrong client tab), and a
+# battleground is the one place where chat is overwhelmingly tactical --
+# corpus-authored musing landing mid-fight would likely read worse than
+# silence.
 
 # --------------------------------------------
 # LIVE BOT-TO-BOT CHAINS

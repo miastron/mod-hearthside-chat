@@ -212,6 +212,19 @@ namespace
     Clock::time_point g_EventBucketLastRefill;
     bool              g_EventBucketInitialized = false;
 
+    // ---- PLAN-AMBIENT.md §2: the shared unprompted-speech budget. Same
+    // lazy-init/refill shape as the three buckets above; its own mutex for
+    // the same reason the event bucket has one. The distinguishing property
+    // is not the mechanism but who spends it -- three separate producers
+    // (hs_ambient.cpp, hs_opener.cpp, hs_script.cpp) rather than one, which
+    // is the whole point (see Hs_AmbientBucketTake in hs_queue.h).
+    std::mutex        g_AmbientBucketMutex;
+    double            g_AmbientBucketTokens = 0.0;
+    Clock::time_point g_AmbientBucketLastRefill;
+    bool              g_AmbientBucketInitialized = false;
+    uint64_t          g_AmbientBucketGranted     = 0;
+    uint64_t          g_AmbientBucketDenied      = 0;
+
     // ---- staleness windows for the opportunistic prunes below (hs_prune.h).
     // Every one of these maps is read only through a window far shorter than
     // the constant here -- the per-bot cooldown defaults to 8s, the
@@ -983,6 +996,53 @@ bool Hs_EventBucketTake()
 
     g_EventBucketTokens -= 1.0;
     return true;
+}
+
+bool Hs_AmbientBucketTake()
+{
+    if (g_HsAmbientBucketRepliesPerMinute == 0 || g_HsAmbientBucketBurstCapacity == 0)
+    {
+        // A budget of zero silences all three unprompted producers at once,
+        // which is exactly the "quiet the realm" lever MaxTier.Ambient was
+        // reported as being but never was. Not counted as a denial: a kill
+        // switch is not saturation, and conflating the two would make the
+        // status line read as pressure on a realm that simply turned this
+        // off.
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
+    Clock::time_point now = Clock::now();
+    if (!g_AmbientBucketInitialized)
+    {
+        g_AmbientBucketTokens      = static_cast<double>(g_HsAmbientBucketBurstCapacity);
+        g_AmbientBucketLastRefill  = now;
+        g_AmbientBucketInitialized = true;
+    }
+    else
+    {
+        double elapsedSec = std::chrono::duration<double>(now - g_AmbientBucketLastRefill).count();
+        g_AmbientBucketLastRefill = now;
+        double ratePerSec = static_cast<double>(g_HsAmbientBucketRepliesPerMinute) / 60.0;
+        g_AmbientBucketTokens = std::min(static_cast<double>(g_HsAmbientBucketBurstCapacity),
+                                          g_AmbientBucketTokens + elapsedSec * ratePerSec);
+    }
+
+    if (g_AmbientBucketTokens < 1.0)
+    {
+        ++g_AmbientBucketDenied;
+        return false;
+    }
+
+    g_AmbientBucketTokens -= 1.0;
+    ++g_AmbientBucketGranted;
+    return true;
+}
+
+HsAmbientBucketStats Hs_AmbientBucketStatsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
+    return { g_AmbientBucketGranted, g_AmbientBucketDenied };
 }
 
 bool Hs_ChannelBucketTake(HsChannelKind kind)

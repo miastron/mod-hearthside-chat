@@ -198,6 +198,38 @@ std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t b
     return PickAntiRepeatRow(chosen.first, chosen.second);
 }
 
+std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t botLevel,
+                                       uint8_t botFaction, uint32_t botZoneId)
+{
+    // Same shape as Hs_SelectChannelLine above -- the only difference is
+    // which `channel` value scopes the category set, and that party/raid
+    // aren't an HsChannelKind (see hs_corpus.h for why they aren't).
+    QueryResult catResult = CharacterDatabase.Query(
+        "SELECT name, tag_axis FROM hside_corpus_category WHERE channel = '{}' AND is_opener = 0 AND card_gated = 0",
+        isRaid ? "raid" : "party");
+    if (!catResult)
+        return "";
+
+    std::string band = Hs_LevelBandFor(botLevel);
+
+    std::vector<std::pair<std::string, std::string>> eligible;
+    do
+    {
+        std::string name = (*catResult)[0].Get<std::string>();
+        std::string axis = (*catResult)[1].Get<std::string>();
+
+        std::string tagWhere;
+        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
+            eligible.emplace_back(name, tagWhere);
+    } while (catResult->NextRow());
+
+    if (eligible.empty())
+        return "";
+
+    auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
+    return PickAntiRepeatRow(chosen.first, chosen.second);
+}
+
 namespace
 {
     // The exact hyperlink markup the core itself emits (see
@@ -230,16 +262,22 @@ namespace
     // Collects every non-soulbound item the bot is carrying, then picks one
     // at random -- picking the first found would make a bot's "WTS" line
     // repeat the same stack until the bag shifted.
-    std::string RandomTradeableItemLink(Player* bot)
+    //
+    // Collects Item* rather than ItemTemplate const* so the stack size
+    // survives: %item_link never needed it, but the TradePrice quote does
+    // (mod-playerbots prices a stack, not a unit). Both consumers share this
+    // one walk so a quote and a WTS line can never be drawing from different
+    // pools by different rules.
+    Item* PickTradeableItem(Player* bot)
     {
-        std::vector<ItemTemplate const*> carried;
+        std::vector<Item*> carried;
 
         auto consider = [&carried](Item* item)
         {
             if (!item || item->IsSoulBound())
                 return;
-            if (ItemTemplate const* tmpl = item->GetTemplate())
-                carried.push_back(tmpl);
+            if (item->GetTemplate())
+                carried.push_back(item);
         };
 
         // Backpack.
@@ -257,9 +295,15 @@ namespace
         }
 
         if (carried.empty())
-            return "";
+            return nullptr;
 
-        return BuildItemLink(carried[urand(0, static_cast<uint32_t>(carried.size()) - 1)]);
+        return carried[urand(0, static_cast<uint32_t>(carried.size()) - 1)];
+    }
+
+    std::string RandomTradeableItemLink(Player* bot)
+    {
+        Item* item = PickTradeableItem(bot);
+        return item ? BuildItemLink(item->GetTemplate()) : "";
     }
 
     std::string RandomActiveQuestLink(Player* bot)
@@ -279,6 +323,25 @@ namespace
 
         return BuildQuestLink(active[urand(0, static_cast<uint32_t>(active.size()) - 1)]);
     }
+}
+
+bool Hs_PickTradeableItem(Player* bot, HsTradeableItem& out)
+{
+    if (!bot)
+        return false;
+
+    Item* item = PickTradeableItem(bot);
+    if (!item)
+        return false;
+
+    ItemTemplate const* tmpl = item->GetTemplate();
+    if (!tmpl)
+        return false; // defensive -- PickTradeableItem already required one
+
+    out.itemId = tmpl->ItemId;
+    out.count  = item->GetCount();
+    out.link    = BuildItemLink(tmpl);
+    return true;
 }
 
 std::string Hs_ClassNameFor(uint8_t classId)

@@ -1,3 +1,4 @@
+#include "hs_ambient.h"
 #include "hs_archetype.h"
 #include "hs_archetype_store.h"
 #include "hs_botchain.h"
@@ -61,6 +62,17 @@ namespace
             g_HsGeneratorEnabled ? "on" : "off", Hs_IsReactiveIdle() ? "yes" : "no",
             Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession());
         handler->PSendSysMessage("[HearthsideChat] Openers fired this session: {}", Hs_OpenersFiredThisSession());
+        {
+            // The three unprompted producers share one budget, so the grant/
+            // deny split is reported next to the ambient count rather than
+            // per-producer: a high deny count means openers, scripted scenes
+            // and ambient chatter are competing, which is the number to look
+            // at before raising Ambient.Bucket.RepliesPerMinute.
+            HsAmbientBucketStats ambientBucket = Hs_AmbientBucketStatsSnapshot();
+            handler->PSendSysMessage(
+                "[HearthsideChat] Ambient lines fired this session: {}  Shared unprompted budget: {} granted / {} denied",
+                Hs_AmbientLinesFiredThisSession(), ambientBucket.grantedCount, ambientBucket.deniedCount);
+        }
         handler->PSendSysMessage("[HearthsideChat] Engagement follow-ups fired this session: {}", Hs_EngagementFollowUpsFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Event reactions fired this session: {}", Hs_EventsFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Bot-to-bot chain hops fired this session: {}", Hs_BotChainHopsFiredThisSession());

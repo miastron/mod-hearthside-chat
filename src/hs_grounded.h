@@ -55,6 +55,19 @@ enum class HsGroundedKind
     RecallMet,      // "do you remember me"
     RecallDungeon,  // "what did we run"
     RecallGrouped,  // "have we grouped before"
+
+    // "how much?" -- the asking price for something in the bot's bags,
+    // computed from mod-playerbots' own selling arithmetic so the number the
+    // bot says in chat is the number its trade window will demand
+    // (Claude/PLAN-TRADE.md).
+    //
+    // Grounded rather than reactive for a reason beyond tidiness: the
+    // resolution reads live Player* inventory and mod-playerbots' per-bot
+    // sell multiplier, and only the world thread may touch either. A tier-2
+    // reactive reply resolves on the queue worker and could not do this at
+    // all. hasFact=false covers "carrying nothing sellable", which is a real
+    // answer rather than an invented one.
+    TradePrice,
 };
 
 // One row of hside_grounded_question: `phrase` is pre-normalized at

@@ -180,6 +180,19 @@ namespace
             return; // reserve dry -- running dry is the correct failure mode, not an error
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
 
+        // PLAN-AMBIENT.md §2's shared unprompted-speech budget (hs_queue.h).
+        // Spent once per *scene*, not per turn: a four-turn exchange is one
+        // thing a listener perceives, and charging four tokens for it would
+        // let a single scene drain a budget sized for the whole realm.
+        //
+        // Placed between the availability check and the claiming UPDATE
+        // specifically. Earlier would burn a token whenever the reserve is
+        // dry; later would consume a script the budget then refuses to let
+        // anyone hear. Here, a denied budget costs one wasted SELECT and
+        // leaves the script unclaimed for the next scan.
+        if (!Hs_AmbientBucketTake())
+            return;
+
         QueryResult turnResult = CharacterDatabase.Query(
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
         if (!turnResult)
@@ -378,6 +391,14 @@ namespace
         if (!idResult)
             return; // reserve dry
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
+
+        // Shared unprompted-speech budget, same placement and reasoning as
+        // ClaimAndSchedule above. A channel scene is charged the same single
+        // token a /say scene is -- it reaches a wider audience, but it is
+        // still one exchange, and this budget measures how often bots talk
+        // among themselves rather than how many players overhear it.
+        if (!Hs_AmbientBucketTake())
+            return;
 
         QueryResult turnResult = CharacterDatabase.Query(
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
@@ -594,6 +615,14 @@ void Hs_AbortScriptsWitnessedBy(uint64_t playerGuid)
     for (auto& entry : g_ActiveRuns)
         if (entry.second.witnessGuid == playerGuid)
             entry.second.aborted = true;
+}
+
+bool Hs_IsBotInAnyScriptRun(uint64_t botGuid)
+{
+    // Both file-local predicates, exposed as one call rather than two so a
+    // caller cannot check only half of "is this bot busy" -- the /say and
+    // channel mechanisms are separate bookkeeping but the same speaker.
+    return IsBotInActiveRun(botGuid) || IsBotInActiveChannelRun(botGuid);
 }
 
 uint32_t Hs_ActiveScriptRunCount()

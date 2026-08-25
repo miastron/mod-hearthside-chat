@@ -35,6 +35,7 @@ namespace
         { "RECALL_MET",     HsGroundedKind::RecallMet },
         { "RECALL_DUNGEON", HsGroundedKind::RecallDungeon },
         { "RECALL_GROUPED", HsGroundedKind::RecallGrouped },
+        { "TRADE_PRICE",    HsGroundedKind::TradePrice },
     };
 
     bool KindForName(const std::string& name, HsGroundedKind& out)
