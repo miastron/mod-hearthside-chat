@@ -97,6 +97,13 @@ std::string g_HsMaxTierOpeners     = "corpus";
 std::string g_HsMaxTierBotToBot    = "corpus";
 std::string g_HsMaxTierReflex      = "reflex";
 std::string g_HsMaxTierEngagementFollowUp = "off";
+std::string g_HsMaxTierEvents             = "inference";
+
+// One event roughly every four seconds sustained, with room for a wipe to
+// spend four at once. Starting guesses shaped against the reply bucket's
+// 90/min, not measurements.
+uint32_t g_HsEventBucketRepliesPerMinute = 15;
+uint32_t g_HsEventBucketBurstCapacity    = 4;
 
 // Trade/General/World are on by default at a deliberately low starting
 // rate (§4.17's "a too-quiet channel is recoverable, a too-noisy one has
@@ -217,6 +224,10 @@ void LoadHearthsideChatConfig()
     g_HsMaxTierBotToBot    = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.BotToBot", "corpus");
     g_HsMaxTierReflex      = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Reflex", "reflex");
     g_HsMaxTierEngagementFollowUp = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.EngagementFollowUp", "off");
+    g_HsMaxTierEvents             = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Events", "inference");
+
+    g_HsEventBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.RepliesPerMinute", 15);
+    g_HsEventBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.BurstCapacity", 4);
 
     g_HsChannelTradeMaxTier            = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.Trade.MaxTier", "corpus");
     g_HsChannelTradeRatePerMin          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.Trade.RatePerMin", 3);

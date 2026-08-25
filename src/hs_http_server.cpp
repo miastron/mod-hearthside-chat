@@ -1,5 +1,6 @@
 #include "hs_http_server.h"
 #include "hs_config.h"
+#include "hs_event.h"
 #include "hs_generator.h"
 #include "hs_http_auth.h"
 #include "hs_identity_store.h"
@@ -105,6 +106,7 @@ namespace
             {"openers",      g_HsMaxTierOpeners},
             {"bot_to_bot",   g_HsMaxTierBotToBot},
             {"reflex",       g_HsMaxTierReflex},
+            {"events",       g_HsMaxTierEvents},
         };
         j["generator"] = {
             {"enabled",               g_HsGeneratorEnabled},
@@ -112,6 +114,7 @@ namespace
             {"rows_evicted_session", Hs_RowsEvictedThisSession()},
         };
         j["openers_fired_session"] = Hs_OpenersFiredThisSession();
+        j["events_fired_session"]  = Hs_EventsFiredThisSession();
         j["script"] = {
             {"reserve_depth",     Hs_ScriptReserveDepth()},
             {"active_runs",       Hs_ActiveScriptRunCount()},

@@ -147,7 +147,7 @@ HearthsideChat.ReplyChance.Whisper = 100
 # HearthsideChat.DisableRepliesInCombat
 #     Description: Suppress replies while the sender or the candidate bot is in combat.
 #     Default:     1 (true)
-HearthsideChat.DisableRepliesInCombat = 1
+HearthsideChat.DisableRepliesInCombat = 0
 
 # HearthsideChat.ExcludeNames
 #     Description: Comma-separated bot character names this module never
@@ -373,6 +373,41 @@ HearthsideChat.MaxTier.Reflex = reflex
 #                  rather than corpus -- opt in deliberately.
 #     Default:     off
 HearthsideChat.MaxTier.EngagementFollowUp = off
+
+# HearthsideChat.MaxTier.Events
+#     Description: Ceiling for event reactions -- a bot reacting to
+#                  something that happened rather than to something someone
+#                  said: its own or a groupmate's death, a wipe, a ding, a
+#                  killing blow, winning or losing a group roll, and duels.
+#                  Generated, not corpus: only "inference" enables it, and
+#                  "corpus" behaves the same as "off" here, since a canned
+#                  line about a specific death or drop would be wrong most
+#                  of the time. Unlike EngagementFollowUp this defaults on --
+#                  it only fires on something that actually happened, and
+#                  Events.Bucket.* below is the real volume control.
+#     Default:     inference
+HearthsideChat.MaxTier.Events = inference
+
+# HearthsideChat.Events.Bucket.RepliesPerMinute
+#     Description: Token bucket for the event surface, entirely separate
+#                  from Bucket.RepliesPerMinute above. One token is spent
+#                  per *event*, before any candidate work and regardless of
+#                  how many bots the event could have drawn -- and the
+#                  arbiter that runs afterwards then stays silent for most
+#                  events anyway (heavily so for deaths and duels), so
+#                  actual spoken lines land well under this number.
+#                  Separate because a busy dungeon generates deaths, loot
+#                  and dings constantly, and sharing one budget would let
+#                  ambient reactions starve replies to players who actually
+#                  spoke. Set to 0 to turn the event surface off.
+#     Default:     15
+HearthsideChat.Events.Bucket.RepliesPerMinute = 15
+
+# HearthsideChat.Events.Bucket.BurstCapacity
+#     Description: Max event tokens bankable for a burst -- a wipe is the
+#                  shape this exists for. Also a kill switch at 0.
+#     Default:     4
+HearthsideChat.Events.Bucket.BurstCapacity = 4
 
 # --------------------------------------------
 # §4.17 GLOBAL-CHANNEL CHAT SURFACE

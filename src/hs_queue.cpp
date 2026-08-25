@@ -135,6 +135,7 @@ namespace
         NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
         HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
         bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
+        bool         isEvent;     // event reaction (hs_event.h) -- as isFollowUp, plus no first-meeting record
     };
 
     // deliverAt lets one worker thread queue two chat lines instead of one:
@@ -185,6 +186,17 @@ namespace
     };
     std::mutex                                            g_ChannelBucketMutex;
     std::unordered_map<HsChannelKind, HsChannelBucketState> g_ChannelBuckets;
+
+    // ---- PLAN-ARBITER.md §8: the event tier's own bucket, independent of
+    // the tier-2 bucket above so ambient event reactions can never spend the
+    // budget a player's /say needed. Same lazy-init/refill shape as both of
+    // the others; its own mutex because it is taken from the world thread at
+    // every event fire site, and there is no reason for a death in a dungeon
+    // to wait behind a Trade-channel line.
+    std::mutex        g_EventBucketMutex;
+    double            g_EventBucketTokens = 0.0;
+    Clock::time_point g_EventBucketLastRefill;
+    bool              g_EventBucketInitialized = false;
 
     // ---- per-bot cooldown (gate) and last-successful-reply time (arbiter query) ----
     std::mutex                                        g_CooldownMutex;
@@ -557,21 +569,29 @@ namespace
                     escapedArchetype, escapedTrigger, escapedPreStyle, escapedStyled);
             }
 
+            // The two bot-initiated request kinds share every "this was not
+            // a player utterance" suppression below. Named once here so a
+            // third kind can't accidentally pick up only some of them.
+            bool botInitiated = req.isFollowUp || req.isEvent;
+
             // History stores only the primary reply, not the follow-up
             // correction below -- a bare "*healer" fragment isn't useful
             // prior-turn context, and the corrected meaning is already
             // fully present in result.text. An engagement follow-up
             // (hs_engagement.h) is skipped for the same reason: its
             // "trigger" is a synthetic instruction, not something the
-            // player actually said.
-            if (!req.isFollowUp)
+            // player actually said. An event trigger (hs_event.h) is a
+            // synthetic state line for the same reason -- nobody said
+            // "you have just been killed" to the bot.
+            if (!botInitiated)
                 HistoryAppend(req.botGuid, req.senderGuid, req.prompt, result.text);
 
             // Scores the bot the arbiter selected, only when the reply
             // resolves to tier 2 -- reflex/grounded/corpus-fallback replies
-            // never reach here. An engagement follow-up is bot-initiated,
-            // not a scored player utterance, same as bot-initiated openers.
-            if (!req.isFollowUp)
+            // never reach here. An engagement follow-up or event reaction is
+            // bot-initiated, not a scored player utterance, same as
+            // bot-initiated openers.
+            if (!botInitiated)
                 Hs_BumpInteractionScore(req.botGuid, req.botLevel, ScoreWeightForChannel(req.channel));
 
             // Re-arms this (bot, player) pair's engagement-follow-up
@@ -580,14 +600,22 @@ namespace
             // as the player keeps replying. Engagement follow-up is a
             // whisper/say-only surface (§4.22); a party/raid/guild reply
             // doesn't arm it.
-            if (!req.isFollowUp && (req.channel == HsReplyChannel::Say || req.channel == HsReplyChannel::Whisper))
+            if (!botInitiated && (req.channel == HsReplyChannel::Say || req.channel == HsReplyChannel::Whisper))
                 Hs_EngagementNoteDirectReply(req.botGuid, req.senderGuid, req.channel == HsReplyChannel::Whisper);
 
             // Ordinary chat is the most common way two people actually meet,
             // so first-meeting is seeded here rather than only as a side
             // effect of the rarer shared-experience events (dungeon/group/
             // death/guild). Idempotent -- a no-op after the pair's first.
-            Hs_EnsureFirstMeetingRecorded(req.botGuid, req.senderGuid);
+            //
+            // Skipped for an event reaction, and only for that: an event's
+            // senderGuid is whoever it happened around, which is frequently
+            // another bot (a bot's own death, a bot-only stretch of a
+            // group), and "met" between two bots is not a fact about any
+            // player. An engagement follow-up still records it -- its sender
+            // is by construction the real player it is following up with.
+            if (!req.isEvent)
+                Hs_EnsureFirstMeetingRecorded(req.botGuid, req.senderGuid);
 
             {
                 std::lock_guard<std::mutex> lock(g_CooldownMutex);
@@ -630,9 +658,11 @@ namespace
             }
 
             // Distracted reply: the bot "was away" for a stretch, says so,
-            // then answers properly. Skipped for an engagement follow-up --
-            // that line is bot-initiated, so apologizing for a delay to a
-            // player who never asked anything reads as a non sequitur.
+            // then answers properly. Skipped for an engagement follow-up and
+            // for an event reaction -- both are bot-initiated, so apologizing
+            // for a delay to a player who never asked anything reads as a
+            // non sequitur, and "sorry, was afk" in front of a reaction to
+            // your own death reads worse still.
             //
             // Rolled here in the worker rather than in hs_arbiter.cpp (where
             // the retired reply_chance was rolled) for two reasons: whisper
@@ -643,7 +673,7 @@ namespace
             // here, so nothing has to be threaded through HsQueuedRequest.
             std::string       distractedFiller;
             Clock::time_point distractedFillerAt = now;
-            if (!req.isFollowUp && TryClaimDistractedReply(req.botGuid, archetypeInfo.distractedChance))
+            if (!botInitiated && TryClaimDistractedReply(req.botGuid, archetypeInfo.distractedChance))
             {
                 std::string rawFiller = kDistractedFillers[urand(0, static_cast<uint32_t>(kDistractedFillers.size()) - 1)];
 
@@ -737,7 +767,7 @@ void Hs_QueueShutdown()
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp)
+                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent)
 {
     // 1. Token bucket — peek only; the spend is committed once the request
     // actually clears every later gate.
@@ -809,6 +839,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         req.rpgStatus  = rpgStatus;
         req.topicGate  = topicGate;
         req.isFollowUp = isFollowUp;
+        req.isEvent    = isEvent;
         g_Queue.push_back(std::move(req));
     }
     g_QueueCv.notify_one();
@@ -836,6 +867,35 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
     Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kReflexDelayMinMs, kReflexDelayMaxMs));
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);
     g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind });
+}
+
+bool Hs_EventBucketTake()
+{
+    if (g_HsEventBucketRepliesPerMinute == 0 || g_HsEventBucketBurstCapacity == 0)
+        return false; // budget of zero is a kill switch, not an empty-then-refill
+
+    std::lock_guard<std::mutex> lock(g_EventBucketMutex);
+    Clock::time_point now = Clock::now();
+    if (!g_EventBucketInitialized)
+    {
+        g_EventBucketTokens      = static_cast<double>(g_HsEventBucketBurstCapacity);
+        g_EventBucketLastRefill  = now;
+        g_EventBucketInitialized = true;
+    }
+    else
+    {
+        double elapsedSec = std::chrono::duration<double>(now - g_EventBucketLastRefill).count();
+        g_EventBucketLastRefill = now;
+        double ratePerSec = static_cast<double>(g_HsEventBucketRepliesPerMinute) / 60.0;
+        g_EventBucketTokens = std::min(static_cast<double>(g_HsEventBucketBurstCapacity),
+                                        g_EventBucketTokens + elapsedSec * ratePerSec);
+    }
+
+    if (g_EventBucketTokens < 1.0)
+        return false;
+
+    g_EventBucketTokens -= 1.0;
+    return true;
 }
 
 bool Hs_ChannelBucketTake(HsChannelKind kind)

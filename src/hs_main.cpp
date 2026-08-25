@@ -2,6 +2,8 @@
 #include "hs_bridge.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
+#include "hs_event.h"
+#include "hs_event_affinity_store.h"
 #include "hs_generator.h"
 #include "hs_grounded_store.h"
 #include "hs_handler.h"
@@ -69,6 +71,24 @@ namespace
                 Hs_LoadGroundedQuestionsFromDb();
                 Hs_LoadGroundedTemplatesFromDb();
             }
+        }
+    };
+
+    // Loads hside_event_affinity (PLAN-ARBITER.md §2) -- per-event archetype
+    // weighting for the event arbiter. Same "SQL is the source of truth,
+    // retunable without a rebuild" shape as the two above, and registered
+    // after HsArchetypeLifecycleWorldScript specifically: the loader
+    // validates each row's archetype against the live archetype table
+    // (Hs_ArchetypeForName), so that table has to be populated first.
+    class HsEventAffinityLifecycleWorldScript : public WorldScript
+    {
+    public:
+        HsEventAffinityLifecycleWorldScript() : WorldScript("HsEventAffinityLifecycleWorldScript") {}
+        void OnStartup() override { Hs_LoadEventAffinityFromDb(); }
+        void OnAfterConfigLoad(bool reload) override
+        {
+            if (reload)
+                Hs_LoadEventAffinityFromDb();
         }
     };
 
@@ -214,6 +234,7 @@ void Addmod_hearthside_chatScripts()
     new HsConfigWorldScript();
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();
+    new HsEventAffinityLifecycleWorldScript();
     new HsChatHandler();
     new HsBridgePlayerScript();
     new HsDeliveryWorldScript();
@@ -224,6 +245,14 @@ void Addmod_hearthside_chatScripts()
     new HsOpenerEncounterHandler();
     new HsMemoryDeathHandler();
     new HsMemoryGuildHandler();
+    // Event triggers (hs_event.h). HsEventDeathHandler takes the same
+    // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above -- both
+    // run, and neither depends on the other's ordering.
+    new HsEventDeathHandler();
+    new HsEventLevelHandler();
+    new HsEventPvpKillHandler();
+    new HsEventRollHandler();
+    new HsEventDuelHandler();
     new HsScriptRunnerWorldScript();
     new HsEngagementScanWorldScript();
     new HsQueueLifecycleWorldScript();

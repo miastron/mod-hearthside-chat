@@ -19,6 +19,15 @@ class Player;
 // candidates before the reply count is picked; tier ceilings, the token
 // bucket, and cooldowns are not touched -- those are applied by the caller,
 // after selection.
+//
+// The event surface has its own arbiter, Hs_ArbitrateEventReplies
+// (hs_event_arbiter.h), rather than extra parameters here: an event has no
+// text for the name short-circuit below to match against, its candidates
+// are not interchangeable (the bot that died outranks one that watched),
+// and its reply-count distribution is per-event rather than the flat
+// 50/42/8 this function uses. That file is also genuinely
+// AzerothCore-free, which this one is not (Player.h/Random.h below), so it
+// carries a standalone harness this one cannot.
 std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& message, const std::vector<Player*>& candidates);
 
 #endif // MOD_HS_ARBITER_H

@@ -118,10 +118,10 @@ extern uint32_t g_HsDistractedMaxDelaySeconds;
 extern uint32_t g_HsDistractedCooldownSeconds;
 
 // --------------------------------------------
-// Tier ceilings -- one enum, six keys, one shared parse and resolve helper
-// (hs_tier.h). DirectReply and EngagementFollowUp are the only two whose
-// consumer ever requests HsTier::Inference; the other four are parsed and
-// stored but only ever request HsTier::Corpus, so setting them to
+// Tier ceilings -- one enum, seven keys, one shared parse and resolve helper
+// (hs_tier.h). DirectReply, EngagementFollowUp and Events are the only three
+// whose consumer ever requests HsTier::Inference; the other four are parsed
+// and stored but only ever request HsTier::Corpus, so setting them to
 // "inference" has no additional effect.
 // --------------------------------------------
 extern std::string g_HsMaxTierDirectReply;
@@ -139,6 +139,27 @@ extern std::string g_HsMaxTierReflex;
 // "corpus" like Openers/BotToBot -- autonomous, GPU-doubling behavior that
 // should be an explicit opt-in.
 extern std::string g_HsMaxTierEngagementFollowUp;
+
+// Gates the event-trigger surface (hs_event.h) -- bots reacting to deaths,
+// dings, killing blows, rolls and duels. Its own key rather than reusing
+// MaxTier.Ambient, which is documented as "unprompted ambient chatter near a
+// player" and defaults to corpus: an event reaction is a *reaction to a
+// stated fact*, not idle chatter, and it has no corpus path at all (a canned
+// line about a specific death or roll would be wrong most of the time). So
+// this is checked as HsTierAllows(ceiling, HsTier::Inference) and anything
+// below that is silence, not a downgrade. Defaults "inference" -- unlike the
+// engagement follow-up, an event reaction only fires on something that
+// actually happened, and is bounded further by its own token budget below.
+extern std::string g_HsMaxTierEvents;
+
+// The event surface's own token budget (hs_queue.h's Hs_EventBucketTake),
+// separate from Bucket.RepliesPerMinute so a busy dungeon's stream of
+// deaths, loot and dings can never spend the budget a player's /say needed
+// (PLAN-ARBITER.md §8). Deliberately much smaller than the reply bucket:
+// this is ambient texture, and the failure mode of too much of it is bots
+// narrating every corpse. Either key at 0 turns the surface off outright.
+extern uint32_t g_HsEventBucketRepliesPerMinute;
+extern uint32_t g_HsEventBucketBurstCapacity;
 
 // --------------------------------------------
 // §4.17 global-channel chat surface -- one MaxTier/RatePerMin/MaxCandidates

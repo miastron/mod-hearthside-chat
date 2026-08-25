@@ -68,6 +68,16 @@ void Hs_QueueShutdown();
 // bot-initiated, not a scored player utterance, and not useful prior-turn
 // context.
 //
+// isEvent is the same idea for an event reaction (hs_event.cpp): also
+// bot-initiated, so it suppresses the history append, the score bump, the
+// engagement re-arm, and the distracted-reply roll exactly as isFollowUp
+// does. It suppresses one thing more -- Hs_EnsureFirstMeetingRecorded --
+// because an event's "sender" is whoever the event happened around, which
+// for a bot's own death or a bot-only group is another bot; recording a
+// first meeting between two bots would seed identity state off something
+// no player was part of. That single difference is why this is its own flag
+// rather than a second caller passing isFollowUp.
+//
 // topicGate carries §4.13's remaining topic-gate facts (gear, group
 // membership/leadership, in-instance, gold, zone) -- read at the call site
 // like inCombat/botLevel/rpgStatus, then folded into the prompt as plain
@@ -75,7 +85,21 @@ void Hs_QueueShutdown();
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp);
+                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false);
+
+// PLAN-ARBITER.md §8: the event tier's own token bucket
+// (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket
+// Hs_TryEnqueue spends above. A busy dungeon generates deaths, loot and
+// dings constantly; sharing one budget would let ambient reactions starve
+// replies to players who actually spoke, which is the thing players notice
+// most. Spent once per *event*, not per selected bot, and before any
+// per-candidate work -- a cheap early-out on an exhausted budget, the same
+// shape Hs_ChannelBucketTake gives §4.17's per-channel buckets. Burst
+// capacity is its own config key, since an event burst (a wipe) is a
+// different shape from a chat burst. Returns false (caller does no further
+// work) when the bucket is empty. An admitted event still has to clear
+// Hs_TryEnqueue's own gates per bot on top of this.
+bool Hs_EventBucketTake();
 
 // Delivers any replies the worker has finished since the last call. Must be
 // called once per world tick, from the world thread only -- this is the

@@ -4,6 +4,7 @@
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_engagement.h"
+#include "hs_event.h"
 #include "hs_gen_validate.h"
 #include "hs_generator.h"
 #include "hs_identity_store.h"
@@ -52,14 +53,15 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Backend: {}  Queue depth: {}/{}",
             Hs_IsBackendDown() ? "DOWN (circuit breaker open)" : "up",
             Hs_PendingQueueDepth(), g_HsQueueMaxDepth);
-        handler->PSendSysMessage("[HearthsideChat] MaxTier - DirectReply: {}  Ambient: {}  Openers: {}  BotToBot: {}  Reflex: {}  EngagementFollowUp: {}",
-            g_HsMaxTierDirectReply, g_HsMaxTierAmbient, g_HsMaxTierOpeners, g_HsMaxTierBotToBot, g_HsMaxTierReflex, g_HsMaxTierEngagementFollowUp);
+        handler->PSendSysMessage("[HearthsideChat] MaxTier - DirectReply: {}  Ambient: {}  Openers: {}  BotToBot: {}  Reflex: {}  EngagementFollowUp: {}  Events: {}",
+            g_HsMaxTierDirectReply, g_HsMaxTierAmbient, g_HsMaxTierOpeners, g_HsMaxTierBotToBot, g_HsMaxTierReflex, g_HsMaxTierEngagementFollowUp, g_HsMaxTierEvents);
         handler->PSendSysMessage("[HearthsideChat] BotQuestion mode: {}", g_HsBotQuestionMode);
         handler->PSendSysMessage("[HearthsideChat] Generator: {}  Reactive idle: {}  Rows added this session: {}  Rows evicted this session: {}",
             g_HsGeneratorEnabled ? "on" : "off", Hs_IsReactiveIdle() ? "yes" : "no",
             Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession());
         handler->PSendSysMessage("[HearthsideChat] Openers fired this session: {}", Hs_OpenersFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Engagement follow-ups fired this session: {}", Hs_EngagementFollowUpsFiredThisSession());
+        handler->PSendSysMessage("[HearthsideChat] Event reactions fired this session: {}", Hs_EventsFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Script reserve: {}  Active runs: {}",
             Hs_ScriptReserveDepth(), Hs_ActiveScriptRunCount());
         handler->PSendSysMessage("[HearthsideChat] Identity rows: {}  Card-active (ring 3): {}  Promotions this session: {}",
