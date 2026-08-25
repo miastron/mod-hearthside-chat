@@ -119,10 +119,19 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 
 // --------------------------------------------
 // Tier ceilings -- one enum, seven keys, one shared parse and resolve helper
-// (hs_tier.h). DirectReply, EngagementFollowUp and Events are the only three
-// whose consumer ever requests HsTier::Inference; the other four are parsed
-// and stored but only ever request HsTier::Corpus, so setting them to
+// (hs_tier.h). DirectReply, EngagementFollowUp, Events and BotToBot are the
+// four whose consumer ever requests HsTier::Inference; the other three are
+// parsed and stored but only ever request HsTier::Corpus, so setting them to
 // "inference" has no additional effect.
+//
+// BotToBot is the one key with two consumers at different tiers, and it works
+// because a ceiling is permissive rather than a mode switch: at "corpus"
+// hs_script.cpp replays pre-generated scripts and nothing else; at
+// "inference" hs_botchain.h's live chains run *in addition to* that replay,
+// which still passes its own HsTier::Corpus check. Script pre-generation is
+// unaffected by this key either way -- hs_generator.cpp gates the reserve on
+// Generator.Enable alone, so the GPU keeps filling it during idle at any
+// BotToBot setting.
 // --------------------------------------------
 extern std::string g_HsMaxTierDirectReply;
 extern std::string g_HsMaxTierAmbient;
@@ -160,6 +169,32 @@ extern std::string g_HsMaxTierEvents;
 // narrating every corpse. Either key at 0 turns the surface off outright.
 extern uint32_t g_HsEventBucketRepliesPerMinute;
 extern uint32_t g_HsEventBucketBurstCapacity;
+
+// --------------------------------------------
+// Live bot-to-bot chains (hs_botchain.h), active only while
+// MaxTier.BotToBot = "inference". Every hop is a full tier-2 call, so these
+// five keys are the volume control on top of the global token bucket, which
+// still caps everything.
+//
+// MaxDepth is a hard stop; the decayed chance is what normally ends a chain
+// first. BaseChancePercent applies at depth 0 and is multiplied by
+// DecayPercent/100 per additional hop (Hs_BotChainHopChancePercent), the same
+// taper hs_engagement.cpp gives follow-up chains.
+//
+// ScopeCooldownSeconds paces whole chains, not the hops within one: it is
+// only checked at depth 0, so a chain already under way keeps its turns
+// conversationally prompt while a *new* chain in that group or channel has to
+// wait out the rest period.
+//
+// RequireRealPlayer is the "is anyone actually there" gate -- a group with no
+// human member, or a World channel with no human in it, is GPU spend against
+// nobody's experience. Off only makes sense for load-testing an empty realm.
+// --------------------------------------------
+extern uint32_t g_HsBotChainMaxDepth;
+extern uint32_t g_HsBotChainBaseChancePercent;
+extern uint32_t g_HsBotChainDecayPercent;
+extern uint32_t g_HsBotChainScopeCooldownSeconds;
+extern bool     g_HsBotChainRequireRealPlayer;
 
 // --------------------------------------------
 // §4.17 global-channel chat surface -- one MaxTier/RatePerMin/MaxCandidates

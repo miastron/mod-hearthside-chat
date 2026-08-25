@@ -1,6 +1,7 @@
 #include "hs_handler.h"
 #include "hs_arbiter.h"
 #include "hs_archetype.h"
+#include "hs_botchain.h"
 #include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -595,6 +596,12 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
+    // A real player speaking takes the floor from any bot-to-bot chain in
+    // this group (hs_botchain.h) -- it drops only the hop still answering a
+    // line from before they spoke, not chaining itself. The replies this
+    // message is about to draw seed a fresh chain rooted in what they said.
+    Hs_AbortBotChainsInScope(Hs_BotChainScopeForGroup(group->GetGUID().GetRawValue()));
+
     bool subgroupScoped = (type == CHAT_MSG_PARTY || type == CHAT_MSG_PARTY_LEADER);
 
     std::vector<Player*> eligible;
@@ -704,6 +711,10 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     Hs_AbortScriptsWitnessedBy(player->GetGUID().GetRawValue());
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+
+    // Same floor-taking as the group hook above. A no-op on every channel but
+    // World, which is the only one hs_botchain.h chains on.
+    Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
     if (!Hs_ChannelBucketTake(kind))
         return true; // throttled -- no candidate scan at all on a busy channel

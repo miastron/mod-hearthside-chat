@@ -1,5 +1,6 @@
 #include "hs_archetype.h"
 #include "hs_archetype_store.h"
+#include "hs_botchain.h"
 #include "hs_command.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -62,6 +63,7 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Openers fired this session: {}", Hs_OpenersFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Engagement follow-ups fired this session: {}", Hs_EngagementFollowUpsFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Event reactions fired this session: {}", Hs_EventsFiredThisSession());
+        handler->PSendSysMessage("[HearthsideChat] Bot-to-bot chain hops fired this session: {}", Hs_BotChainHopsFiredThisSession());
         handler->PSendSysMessage("[HearthsideChat] Script reserve: {}  Active runs: {}",
             Hs_ScriptReserveDepth(), Hs_ActiveScriptRunCount());
         handler->PSendSysMessage("[HearthsideChat] Identity rows: {}  Card-active (ring 3): {}  Promotions this session: {}",

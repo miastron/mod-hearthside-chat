@@ -82,10 +82,28 @@ void Hs_QueueShutdown();
 // membership/leadership, in-instance, gold, zone) -- read at the call site
 // like inCombat/botLevel/rpgStatus, then folded into the prompt as plain
 // facts (hs_topic_gate.h) rather than an instruction.
+//
+// channelKind is only meaningful when `channel == HsReplyChannel::Channel`,
+// exactly as on Hs_DeliverReflexReply below. It exists on this path because
+// hs_botchain.h's live chain hop is the first tier-2 producer that can
+// deliver into a global channel -- every earlier channel reply was
+// corpus-only and reached delivery through Hs_DeliverReflexReply, which has
+// carried the kind since §4.17. Without it the worker's delivery push would
+// take HsPendingReply's default and misdeliver every channel hop into Trade.
+//
+// chainScopeId/chainSeq tag a bot-to-bot chain hop (hs_botchain.h); 0 means
+// "not a hop", which is every other caller. They are carried through to
+// delivery so Hs_DeliverPending can drop a hop whose scope was taken over by
+// a real player while it was still generating -- the same stale-line problem
+// Hs_CancelPendingFollowUpsFor solves for engagement follow-ups, but checked
+// at delivery rather than cancelled at abort time, since a hop's scope is not
+// keyed by the player whose message triggers the abort.
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false);
+                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false,
+                    HsChannelKind channelKind = HsChannelKind::Trade,
+                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0);
 
 // PLAN-ARBITER.md §8: the event tier's own token bucket
 // (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket

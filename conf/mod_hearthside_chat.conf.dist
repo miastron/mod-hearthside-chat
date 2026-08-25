@@ -346,10 +346,25 @@ HearthsideChat.MaxTier.Ambient = corpus
 HearthsideChat.MaxTier.Openers = corpus
 
 # HearthsideChat.MaxTier.BotToBot
-#     Description: Ceiling for scripted bot-to-bot conversation replay.
-#                  "corpus" or "inference" both permit it (there is no live
-#                  bot-to-bot inference path, so "inference" behaves the
-#                  same as "corpus" here); "reflex" or "off" silence it.
+#     Description: Ceiling for bot-to-bot conversation. Two mechanisms sit
+#                  under this one key, and because a ceiling is permissive
+#                  rather than a mode switch, the higher value adds to the
+#                  lower rather than replacing it:
+#                    corpus    -- scripted replay only. Multi-turn scenes the
+#                                 idle generator wrote earlier, replayed near
+#                                 a player (/say) or cast into Trade/General/
+#                                 World. No GPU cost at runtime.
+#                    inference -- live chains as well: on party, raid and the
+#                                 World channel, one bot's line becomes the
+#                                 trigger another bot answers with a real
+#                                 tier-2 call. Scripted replay still runs.
+#                                 See the BotChain.* keys below, which are
+#                                 inert at any other value.
+#                  "reflex" or "off" silence both.
+#
+#                  Script pre-generation is NOT gated by this key -- the
+#                  reserve is filled on Generator.Enable alone, so the GPU
+#                  keeps writing scripts during idle at any setting here.
 #     Default:     corpus
 HearthsideChat.MaxTier.BotToBot = corpus
 
@@ -408,6 +423,62 @@ HearthsideChat.Events.Bucket.RepliesPerMinute = 15
 #                  shape this exists for. Also a kill switch at 0.
 #     Default:     4
 HearthsideChat.Events.Bucket.BurstCapacity = 4
+
+# --------------------------------------------
+# LIVE BOT-TO-BOT CHAINS
+# --------------------------------------------
+# Inert unless MaxTier.BotToBot = inference (above). A chain runs on party,
+# raid, or the World channel: a bot's delivered line is offered to the other
+# bots sharing that group or channel, and one of them may answer it with a
+# full tier-2 call. Whisper, guild and /say never chain -- /say already has
+# the scripted proximity mechanism, and the other two have no bounded
+# audience to pace a chain against.
+#
+# Every hop is a full LLM call, so these are the volume control on top of
+# Bucket.RepliesPerMinute (which still caps everything) and, on World, that
+# channel's own RatePerMin. A chain also ends the moment a real player speaks
+# into the group or channel: the hop still generating is thrown away, and the
+# bots' replies to that player start a new chain from what they actually
+# said, so interrupting a conversation joins it rather than killing it.
+
+# HearthsideChat.BotChain.MaxDepth
+#     Description: Hard stop on how many hops one chain may run. A backstop,
+#                  not the normal stop condition -- the decayed chance below
+#                  ends most chains first. 0 disables chaining outright.
+#     Default:     3
+HearthsideChat.BotChain.MaxDepth = 3
+
+# HearthsideChat.BotChain.BaseChancePercent
+#     Description: Chance the first hop of a chain fires, per eligible line.
+#     Default:     55
+HearthsideChat.BotChain.BaseChancePercent = 55
+
+# HearthsideChat.BotChain.DecayPercent
+#     Description: Multiplier applied to the chance per additional hop, so
+#                  hop N fires at Base * (Decay/100)^N. At the defaults that
+#                  is 55% / 33% / 19%, averaging a bit over one extra hop per
+#                  chain. Clamped to 99 -- at 100 the taper disappears and
+#                  MaxDepth becomes the only thing ending a chain.
+#     Default:     60
+HearthsideChat.BotChain.DecayPercent = 60
+
+# HearthsideChat.BotChain.ScopeCooldownSeconds
+#     Description: How long a group or channel rests between chains. Checked
+#                  only when starting a new chain, never between the hops of
+#                  one already under way -- a conversation keeps its turns
+#                  prompt, but the same party won't start a second
+#                  conversation for this long.
+#     Default:     180
+HearthsideChat.BotChain.ScopeCooldownSeconds = 180
+
+# HearthsideChat.BotChain.RequireRealPlayer
+#     Description: Only chain where a real player can actually see it -- a
+#                  human member in the group, or a human in the World
+#                  channel. Bots talking to each other in an empty room is
+#                  GPU spend against nobody's experience. Turn off only to
+#                  load-test an empty realm.
+#     Default:     1
+HearthsideChat.BotChain.RequireRealPlayer = 1
 
 # --------------------------------------------
 # §4.17 GLOBAL-CHANNEL CHAT SURFACE

@@ -105,6 +105,16 @@ std::string g_HsMaxTierEvents             = "inference";
 uint32_t g_HsEventBucketRepliesPerMinute = 15;
 uint32_t g_HsEventBucketBurstCapacity    = 4;
 
+// Starting guesses, not measurements -- the same footing hs_script.cpp's
+// kScanFireChancePercent is on. 55% decaying at 60% gives roughly a 1.4-hop
+// average chain (0.55 + 0.55*0.33 + 0.55*0.20 over the three permitted
+// depths), which is a short exchange rather than a monologue.
+uint32_t g_HsBotChainMaxDepth             = 3;
+uint32_t g_HsBotChainBaseChancePercent    = 55;
+uint32_t g_HsBotChainDecayPercent         = 60;
+uint32_t g_HsBotChainScopeCooldownSeconds = 180;
+bool     g_HsBotChainRequireRealPlayer    = true;
+
 // Trade/General/World are on by default at a deliberately low starting
 // rate (§4.17's "a too-quiet channel is recoverable, a too-noisy one has
 // already cost the illusion"); the remaining four default off, matching
@@ -228,6 +238,19 @@ void LoadHearthsideChatConfig()
 
     g_HsEventBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.RepliesPerMinute", 15);
     g_HsEventBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.BurstCapacity", 4);
+
+    g_HsBotChainMaxDepth             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.MaxDepth", 3);
+    g_HsBotChainBaseChancePercent    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.BaseChancePercent", 55);
+    g_HsBotChainDecayPercent         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.DecayPercent", 60);
+    g_HsBotChainScopeCooldownSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.ScopeCooldownSeconds", 180);
+    g_HsBotChainRequireRealPlayer    = sConfigMgr->GetOption<bool>("HearthsideChat.BotChain.RequireRealPlayer", true);
+
+    // A decay at or above 100% would flatten the taper into a flat chance (or
+    // grow it), turning MaxDepth from a backstop into the only thing ending a
+    // chain -- clamped rather than honoured, since that is never what an
+    // operator raising this key means.
+    if (g_HsBotChainDecayPercent > 99)
+        g_HsBotChainDecayPercent = 99;
 
     g_HsChannelTradeMaxTier            = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.Trade.MaxTier", "corpus");
     g_HsChannelTradeRatePerMin          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.Trade.RatePerMin", 3);

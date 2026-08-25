@@ -1,5 +1,6 @@
 #include "hs_queue.h"
 #include "hs_archetype.h"
+#include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
 #include "hs_identity.h"
@@ -136,6 +137,9 @@ namespace
         HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
         bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
         bool         isEvent;     // event reaction (hs_event.h) -- as isFollowUp, plus no first-meeting record
+        HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
+        uint64_t     chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop
+        uint32_t     chainSeq     = 0; // the scope generation this hop was issued under
     };
 
     // deliverAt lets one worker thread queue two chat lines instead of one:
@@ -152,6 +156,15 @@ namespace
         Clock::time_point deliverAt;
         bool        isFollowUp; // cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
         HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
+        uint64_t    chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop, which is every other producer
+        uint32_t    chainSeq     = 0; // scope generation at issue time; a newer generation means a player took the floor -- drop
+        // Whether this line may seed the next hop of a bot-to-bot chain.
+        // False for the two secondary lines a single reply can also queue --
+        // the distracted "sorry, was afk" filler and the `*correction`
+        // addendum. Both are flavor attached to the primary reply, and
+        // neither is something another bot should be answering: a hop
+        // triggered by a bare "*healer" fragment has no conversation in it.
+        bool        seedsChain = true;
     };
 
     // ---- work queue: world thread pushes, the one worker thread pops ----
@@ -720,11 +733,18 @@ namespace
 
                 // Pushed ahead of the reply so the queue reads in delivery
                 // order; Hs_DeliverPending drains by deliverAt regardless.
+                // channelKind/chainScopeId/chainSeq are carried on every push
+                // here rather than left to HsPendingReply's defaults: a chain
+                // hop (hs_botchain.h) can target HsReplyChannel::Channel, and
+                // a defaulted kind would silently deliver it into Trade.
                 if (!distractedFiller.empty())
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, distractedFiller,
-                                                 distractedFillerAt, req.isFollowUp });
+                                                 distractedFillerAt, req.isFollowUp, req.channelKind,
+                                                 req.chainScopeId, req.chainSeq, /*seedsChain=*/false });
 
-                g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt, req.isFollowUp });
+                g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt,
+                                             req.isFollowUp, req.channelKind, req.chainScopeId, req.chainSeq,
+                                             /*seedsChain=*/true });
 
                 // Self-correction follow-up: only eligible when a typo
                 // actually landed in this message. The `*` prefix is added
@@ -738,7 +758,9 @@ namespace
                     uint32_t delaySec = urand(kSelfCorrectionMinDelaySeconds, kSelfCorrectionMaxDelaySeconds);
                     std::string followUp = "*" + style.correction;
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, followUp,
-                                                 deliverAt + std::chrono::seconds(delaySec), req.isFollowUp });
+                                                 deliverAt + std::chrono::seconds(delaySec), req.isFollowUp,
+                                                 req.channelKind, req.chainScopeId, req.chainSeq,
+                                                 /*seedsChain=*/false });
                 }
             }
         }
@@ -767,7 +789,8 @@ void Hs_QueueShutdown()
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent)
+                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
+                    HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq)
 {
     // 1. Token bucket — peek only; the spend is committed once the request
     // actually clears every later gate.
@@ -840,6 +863,9 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         req.topicGate  = topicGate;
         req.isFollowUp = isFollowUp;
         req.isEvent    = isEvent;
+        req.channelKind  = channelKind;
+        req.chainScopeId = chainScopeId;
+        req.chainSeq     = chainSeq;
         g_Queue.push_back(std::move(req));
     }
     g_QueueCv.notify_one();
@@ -1011,6 +1037,16 @@ void Hs_DeliverPending()
 
     for (auto const& reply : ready)
     {
+        // A chain hop whose scope a real player took over while it was still
+        // generating is dropped rather than spoken (hs_botchain.h) -- the
+        // stale-line problem Hs_CancelPendingFollowUpsFor solves for
+        // engagement follow-ups, checked here instead because a hop's scope
+        // is a group or a channel, not the player whose message aborts it.
+        // Checked ahead of the Player* lookup so an invalidated hop costs
+        // nothing.
+        if (reply.chainScopeId != 0 && !Hs_BotChainHopStillValid(reply.chainScopeId, reply.chainSeq))
+            continue;
+
         Player* bot = ObjectAccessor::FindPlayer(ObjectGuid(reply.botGuid));
         if (!bot || !bot->IsInWorld())
             continue;
@@ -1044,6 +1080,16 @@ void Hs_DeliverPending()
 
         if (g_HsDebugEnabled)
             LOG_INFO("server.loading", "[HearthsideChat] Bot {} replied: {}", bot->GetName(), reply.text);
+
+        // Every delivered party/raid/global-channel line is a candidate seed
+        // for the next hop of a bot-to-bot chain -- including a hop's own
+        // line, which is how a chain gets past depth 1. Hs_NoteBotLine
+        // applies every gate itself and is a cheap no-op on the surfaces and
+        // tiers that don't chain. Safe to call from inside this loop:
+        // g_DeliveryMutex was released before it, and the hop this may
+        // enqueue lands on the *work* queue, never back on this one.
+        if (reply.seedsChain)
+            Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0);
     }
 }
 

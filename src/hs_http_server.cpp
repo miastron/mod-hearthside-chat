@@ -1,4 +1,5 @@
 #include "hs_http_server.h"
+#include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_event.h"
 #include "hs_generator.h"
@@ -113,8 +114,9 @@ namespace
             {"rows_added_session",    Hs_GeneratorRowsAddedThisSession()},
             {"rows_evicted_session", Hs_RowsEvictedThisSession()},
         };
-        j["openers_fired_session"] = Hs_OpenersFiredThisSession();
-        j["events_fired_session"]  = Hs_EventsFiredThisSession();
+        j["openers_fired_session"]         = Hs_OpenersFiredThisSession();
+        j["events_fired_session"]          = Hs_EventsFiredThisSession();
+        j["botchain_hops_fired_session"]   = Hs_BotChainHopsFiredThisSession();
         j["script"] = {
             {"reserve_depth",     Hs_ScriptReserveDepth()},
             {"active_runs",       Hs_ActiveScriptRunCount()},
