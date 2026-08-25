@@ -124,11 +124,11 @@ struct HsEventCandidate
     std::string trigger;
 };
 
-// Per-event reply-count bias, replacing the /say arbiter's flat 50/42/8.
-// Compiled constants rather than config, exactly as PickReplyCount's are:
-// this tunes the illusion, not a GPU dial. Percentages out of 100; the
-// chance of two speakers is whatever these two leave over, so they must sum
-// to no more than 100.
+// Per-event reply-count bias, replacing the /say arbiter's own weights
+// (HearthsideChat.ReplyCount.* -- hs_config.h). Compiled constants here,
+// not config: this tunes the illusion, not a GPU dial. Percentages out of
+// 100; the chance of two speakers is whatever these two leave over, so they
+// must sum to no more than 100.
 struct HsEventCountBias
 {
     uint8_t none;

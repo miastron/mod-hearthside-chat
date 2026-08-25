@@ -139,9 +139,12 @@ HearthsideChat.LLM.DryMultiplier = 0.0
 # --------------------------------------------
 # Player-initiated only. Candidate gating (real player, faction, range,
 # combat) happens first; the arbiter then picks 0-2 of the eligible bots to
-# answer a /say (a named address always wins outright). Whisper is
-# inherently 1:1, so it uses a simple chance roll instead of the arbiter.
-# Bot-to-bot chatter is handled separately, via scripted replay below.
+# answer -- /say, party/raid, guild, and the §4.17 channel surface all route
+# through it (a named address always wins outright). Whisper is inherently
+# 1:1, so it uses a simple chance roll instead of the arbiter. Live bot-to-bot
+# chains (hs_botchain.h) also go through the same arbiter when they fire;
+# scripted bot-to-bot replay is handled separately, via the corpus reserve
+# below.
 
 # HearthsideChat.Say.Distance
 #     Description: Yards within which a bot is an eligible /say candidate.
@@ -152,6 +155,19 @@ HearthsideChat.Say.Distance = 30.0
 #     Description: Percent chance a bot answers a whisper directed at it.
 #     Default:     100
 HearthsideChat.ReplyChance.Whisper = 100
+
+# HearthsideChat.ReplyCount.ZeroPercent / OnePercent / TwoPercent
+#     Description: Once the arbiter has an eligible candidate pool (/say,
+#                  party/raid, guild, channel, or a live bot-to-bot chain),
+#                  these three weights decide how many bots answer: zero,
+#                  one, or two (a named address always wins outright and
+#                  ignores this roll). Relative weights, not cumulative
+#                  percentages -- they need not add to 100, and there is no
+#                  ordering requirement between them.
+#     Default:     30 / 60 / 10
+HearthsideChat.ReplyCount.ZeroPercent = 30
+HearthsideChat.ReplyCount.OnePercent = 60
+HearthsideChat.ReplyCount.TwoPercent = 10
 
 # HearthsideChat.DisableRepliesInCombat
 #     Description: Suppress replies while the sender or the candidate bot is in combat.
@@ -383,8 +399,8 @@ HearthsideChat.MaxTier.Openers = corpus
 #                  Script pre-generation is NOT gated by this key -- the
 #                  reserve is filled on Generator.Enable alone, so the GPU
 #                  keeps writing scripts during idle at any setting here.
-#     Default:     corpus
-HearthsideChat.MaxTier.BotToBot = corpus
+#     Default:     inference
+HearthsideChat.MaxTier.BotToBot = inference
 
 # HearthsideChat.MaxTier.Reflex
 #     Description: Ceiling for tier-0 canned pattern replies: the plain
@@ -405,7 +421,7 @@ HearthsideChat.MaxTier.Reflex = reflex
 #                  follow-up, so unlike Openers/BotToBot this defaults off
 #                  rather than corpus -- opt in deliberately.
 #     Default:     off
-HearthsideChat.MaxTier.EngagementFollowUp = off
+HearthsideChat.MaxTier.EngagementFollowUp = inference
 
 # HearthsideChat.MaxTier.Events
 #     Description: Ceiling for event reactions -- a bot reacting to
@@ -499,7 +515,7 @@ HearthsideChat.BotChain.ScopeCooldownSeconds = 180
 HearthsideChat.BotChain.RequireRealPlayer = 1
 
 # --------------------------------------------
-# §4.17 GLOBAL-CHANNEL CHAT SURFACE
+# GLOBAL-CHANNEL CHAT SURFACE
 # --------------------------------------------
 # mod-playerbots joins every bot to every one of these seven channels
 # unconditionally, with no config gate of its own. MaxTier reuses the same

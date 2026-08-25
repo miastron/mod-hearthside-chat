@@ -34,15 +34,33 @@ namespace
         return false;
     }
 
-    // Weighted toward 0 and 1, 2 rare. Compiled constants, not config --
-    // this tunes the illusion, not a GPU dial.
+    // Weighted toward 0 and 1, 2 rare by default -- tunable via the
+    // HearthsideChat.ReplyCount.{Zero,One,Two}Percent weights (hs_config.h).
+    // These are relative weights, not cumulative percentages: summed and
+    // normalized here, so they need not add to 100 and carry no ordering
+    // constraint between them.
     uint32_t PickReplyCount(size_t eligibleCount)
     {
         if (eligibleCount == 0)
             return 0;
 
-        uint32_t roll  = urand(0, 99);
-        uint32_t count = (roll < 50) ? 0 : (roll < 92) ? 1 : 2;
+        uint32_t weights[3] = { g_HsReplyCountZeroPercent, g_HsReplyCountOnePercent, g_HsReplyCountTwoPercent };
+        uint32_t total      = weights[0] + weights[1] + weights[2];
+        if (total == 0)
+            return 0;
+
+        uint32_t roll       = urand(0, total - 1);
+        uint32_t cumulative = 0;
+        uint32_t count      = 2;
+        for (uint32_t i = 0; i < 3; ++i)
+        {
+            cumulative += weights[i];
+            if (roll < cumulative)
+            {
+                count = i;
+                break;
+            }
+        }
         return static_cast<uint32_t>(std::min<size_t>(count, eligibleCount));
     }
 

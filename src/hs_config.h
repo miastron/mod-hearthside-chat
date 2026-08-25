@@ -48,6 +48,19 @@ extern float     g_HsSayDistance;
 extern uint32_t  g_HsReplyChanceWhisper;
 extern bool      g_HsDisableRepliesInCombat;
 
+// How many bots answer a single message -- /say, party/raid, guild, channel,
+// or a live bot-to-bot chain hop -- once the arbiter has an eligible
+// candidate pool (hs_arbiter.cpp's PickReplyCount). Whisper is 1:1 and skips
+// this entirely (ReplyChance.Whisper above). Weights, not cumulative
+// percentages -- each is the relative share of the roll that lands on that
+// count, summed and normalized at load time, so they need not add to 100 and
+// there is no ordering constraint between them. Defaults are 30/60/10,
+// weighted more toward a single reply than the module's original hardcoded
+// 50%/42%/8% split.
+extern uint32_t  g_HsReplyCountZeroPercent;
+extern uint32_t  g_HsReplyCountOnePercent;
+extern uint32_t  g_HsReplyCountTwoPercent;
+
 // This module's own exclusion list, separate from mod-playerbots' recycling-
 // exclusion vectors (hs_identity_store.h) -- those protect a carded bot from
 // being recycled; this one keeps a named bot out of Hearthside entirely (no

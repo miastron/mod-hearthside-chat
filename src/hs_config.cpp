@@ -37,6 +37,10 @@ float     g_HsSayDistance             = 30.0f;
 uint32_t  g_HsReplyChanceWhisper      = 100;
 bool      g_HsDisableRepliesInCombat  = true;
 
+uint32_t  g_HsReplyCountZeroPercent   = 30;
+uint32_t  g_HsReplyCountOnePercent    = 60;
+uint32_t  g_HsReplyCountTwoPercent    = 10;
+
 std::string g_HsExcludeNames = "";
 
 namespace
@@ -193,6 +197,10 @@ void LoadHearthsideChatConfig()
     g_HsSayDistance            = sConfigMgr->GetOption<float>("HearthsideChat.Say.Distance", 30.0f);
     g_HsReplyChanceWhisper     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyChance.Whisper", 100);
     g_HsDisableRepliesInCombat = sConfigMgr->GetOption<bool>("HearthsideChat.DisableRepliesInCombat", true);
+
+    g_HsReplyCountZeroPercent = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyCount.ZeroPercent", 30);
+    g_HsReplyCountOnePercent  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyCount.OnePercent", 60);
+    g_HsReplyCountTwoPercent  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyCount.TwoPercent", 10);
 
     g_HsExcludeNames = sConfigMgr->GetOption<std::string>("HearthsideChat.ExcludeNames", "");
     RebuildExcludeNameSet();
