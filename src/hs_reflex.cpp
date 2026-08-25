@@ -161,7 +161,16 @@ namespace
         static const std::vector<std::string> phrases = {
             "where are you from", "where you from", "where r u from",
             "what do you do", "what do you do irl", "what do you do for a living",
-            "how old are you", "how old r u", "ur age", "your age", "age",
+            // Deliberately no bare "age" -- same multi-word rule
+            // BotQuestionPhrases states above, and for the same reason.
+            // Matching is whole-message, so a bare entry fires on a message
+            // that is exactly that word, and a one-word "age" is far more
+            // often a level-bracket question or a sentence fragment than a
+            // personal probe. A false positive here is expensive: the reflex
+            // sets handled = true (hs_handler.cpp), short-circuiting the
+            // grounded answer and the LLM tier entirely, so the player gets
+            // "that's classified ;)" as a non sequitur and nothing else.
+            "how old are you", "how old r u", "ur age", "your age", "whats your age", "what's your age",
             "m or f", "male or female", "boy or girl",
             "whats your name", "what's your name", "ur real name", "your real name",
             "whats ur discord", "what's your discord", "got discord", "add me on discord",

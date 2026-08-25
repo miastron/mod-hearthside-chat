@@ -735,11 +735,21 @@ HearthsideChat.Generator.ScriptReserveTarget = 15
 # additionally require HttpControlEnable below. The `.hearthside` in-game GM
 # commands do everything this API can and work whether or not the API is
 # turned on.
+#
+# RESTART REQUIRED for three of the five keys in this section. Every other
+# HearthsideChat.* key in this file takes effect on `.reload config`, but
+# HttpServerPort, HttpServerBind and HttpServerTimeoutSeconds are read once,
+# at worldserver startup, when the listener is created and bound -- changing
+# them and reloading appears to succeed and does nothing. HttpServerPrivateKey
+# and HttpControlEnable DO reload, because they are read per request rather
+# than at bind time.
 
 # HearthsideChat.HttpServerPort
 #     Description: Port to run the web API on. 0 turns it off entirely
 #                  (default) -- the in-game GM commands cover the same
 #                  actions without it.
+#                  Read at worldserver startup only -- see the RESTART
+#                  REQUIRED note above.
 #     Default:     0
 HearthsideChat.HttpServerPort = 0
 
@@ -749,6 +759,8 @@ HearthsideChat.HttpServerPort = 0
 #                  -- put a reverse proxy (nginx, etc.) in front if you want
 #                  it reachable from elsewhere, rather than exposing it
 #                  directly.
+#                  Read at worldserver startup only -- see the RESTART
+#                  REQUIRED note above.
 #     Default:     127.0.0.1
 HearthsideChat.HttpServerBind = 127.0.0.1
 
@@ -762,6 +774,8 @@ HearthsideChat.HttpServerPrivateKey =
 
 # HearthsideChat.HttpServerTimeoutSeconds
 #     Description: Read/write timeout for the HTTP server's connections.
+#                  Read at worldserver startup only -- see the RESTART
+#                  REQUIRED note above.
 #     Default:     10
 HearthsideChat.HttpServerTimeoutSeconds = 10
 

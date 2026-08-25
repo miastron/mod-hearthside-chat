@@ -16,8 +16,11 @@
 //
 // Scope note: combat-based `care` modulation, the self-correction follow-up,
 // and (§4.17) a positive `care` offset for Trade-channel WTS/WTB sightings
-// are built. Party chat during an encounter remains unbuilt for lack of a
-// hook -- see hs_config.h.
+// are built, and apply on every hooked surface (/say, whisper, party/raid,
+// guild, channels). What remains unbuilt is a *group-wide* encounter signal:
+// `inCombat` below is the speaking bot's own IsInCombat(), so a bot standing
+// out of combat while its group is mid-pull reads as calm -- see
+// Hs_StyleCareForBot in hs_style.cpp.
 
 // Result of one style pass. `correction` is empty unless InjectTypos
 // actually altered a word, in which case it holds that word's pre-typo

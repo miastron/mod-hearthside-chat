@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "hs_channel.h"
 
+#include <mutex>
 #include <set>
 #include <sstream>
 
@@ -45,6 +46,15 @@ std::string g_HsExcludeNames = "";
 
 namespace
 {
+    // Guards every std::string global in this file against the `.reload
+    // config` rewrite -- see hs_config.h's "Reading the std::string globals
+    // from a thread that is not the world thread" for why a stale read is
+    // not the failure mode and a freed buffer is. Held for the whole of
+    // LoadHearthsideChatConfig (which only touches sConfigMgr and these
+    // globals, so it is microseconds and cannot re-enter this lock), and
+    // released per-copy by the three accessors below.
+    std::mutex g_ConfigStringMutex;
+
     std::set<std::string> g_ExcludeNameSet;
 
     std::string Trim(const std::string& s)
@@ -177,8 +187,39 @@ std::string g_HsHttpServerPrivateKey      = "";
 uint32_t     g_HsHttpServerTimeoutSeconds = 10;
 bool         g_HsHttpControlEnable        = false;
 
+HsLLMStrings Hs_LLMStringsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
+    return { g_HsLLMApiType, g_HsLLMUrl, g_HsLLMModel,
+             g_HsLLMApiKey, g_HsLLMTemplate, g_HsLLMSystemPrompt };
+}
+
+HsGeneratorStrings Hs_GeneratorStringsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
+    return { g_HsGeneratorLLMApiType, g_HsGeneratorLLMUrl, g_HsGeneratorLLMModel,
+             g_HsGeneratorLLMApiKey, g_HsGeneratorLLMTemplate, g_HsGeneratorPromptVersion };
+}
+
+std::string Hs_ConfigString(const std::string& configGlobal)
+{
+    // The reference parameter is the point: the copy happens inside the lock,
+    // so the caller never holds a reference into a global the world thread
+    // may reassign. Passing anything other than a g_Hs* string global here is
+    // harmless but pointless.
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
+    return configGlobal;
+}
+
 void LoadHearthsideChatConfig()
 {
+    // One lock for the whole load rather than a block per string group: the
+    // body is a straight run of sConfigMgr reads and global assignments with
+    // no callback that could re-enter this mutex, so the exclusion window is
+    // microseconds and every string is covered without a reader being able to
+    // observe a half-applied reload.
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
+
     g_HsEnable       = sConfigMgr->GetOption<bool>("HearthsideChat.Enable", true);
     g_HsDebugEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugEnabled", false);
     g_HsBridgeEnable = sConfigMgr->GetOption<bool>("HearthsideChat.Bridge.Enable", true);

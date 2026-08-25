@@ -337,22 +337,25 @@ namespace
     bool TryCorpusFallback(Player* bot, Player* sender, HsReplyChannel channel,
                             uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
-        bool hasActiveCard = Hs_HasActiveCard(botGuid);
+        // One card query for the whole function. The snapshot carries
+        // `active` (what Hs_HasActiveCard used to answer), the verbal tic,
+        // and both card-only placeholder fields -- all off the same
+        // hside_identity row and the same card_facts JSON. This runs on the
+        // world thread inside the chat hook, once per replying bot, so the
+        // three round trips it replaces were the most expensive avoidable
+        // thing on this path.
+        HsCardSnapshot snapshot = Hs_LookupCardSnapshot(botGuid);
+
         std::string line = Hs_SelectCorpusLine(bot->getClass(), botLevel, static_cast<uint8_t>(bot->GetTeamId()),
-                                                bot->GetZoneId(), hasActiveCard);
+                                                bot->GetZoneId(), snapshot.active);
         if (line.empty())
             return false;
 
         // Card-only placeholders (%main_focus, %current_goal). A no-op for
         // the overwhelming majority of lines, which never contain either
         // token -- Hs_ResolveCardPlaceholders is a plain substring replace.
-        HsCardSnapshot snapshot = Hs_LookupCardSnapshot(botGuid);
-        if (hasActiveCard)
-        {
-            std::string mainFocus   = Hs_LookupCardFactField(botGuid, "main_focus");
-            std::string currentGoal = Hs_LookupCardFactField(botGuid, "current_goal");
-            line = Hs_ResolveCardPlaceholders(line, mainFocus, currentGoal);
-        }
+        if (snapshot.active)
+            line = Hs_ResolveCardPlaceholders(line, snapshot.mainFocus, snapshot.currentGoal);
 
         // Universal placeholders (%item_link, %class, %level, %zone,
         // %guild, %quest_link), after the card pass so the leftover check

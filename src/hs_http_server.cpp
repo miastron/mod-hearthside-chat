@@ -101,13 +101,18 @@ namespace
         j["backend_down"]   = Hs_IsBackendDown();
         j["queue_depth"]    = Hs_PendingQueueDepth();
         j["queue_max_depth"] = g_HsQueueMaxDepth;
+        // Hs_ConfigString, not a direct read: this route runs on the HTTP
+        // server thread, and `.reload config` reassigns these from the world
+        // thread. The equivalent read in `.hearthside status`
+        // (hs_command.cpp) is safe unguarded because the GM command handler
+        // *is* the world thread. See hs_config.h's cross-thread section.
         j["max_tier"] = {
-            {"direct_reply", g_HsMaxTierDirectReply},
-            {"ambient",      g_HsMaxTierAmbient},
-            {"openers",      g_HsMaxTierOpeners},
-            {"bot_to_bot",   g_HsMaxTierBotToBot},
-            {"reflex",       g_HsMaxTierReflex},
-            {"events",       g_HsMaxTierEvents},
+            {"direct_reply", Hs_ConfigString(g_HsMaxTierDirectReply)},
+            {"ambient",      Hs_ConfigString(g_HsMaxTierAmbient)},
+            {"openers",      Hs_ConfigString(g_HsMaxTierOpeners)},
+            {"bot_to_bot",   Hs_ConfigString(g_HsMaxTierBotToBot)},
+            {"reflex",       Hs_ConfigString(g_HsMaxTierReflex)},
+            {"events",       Hs_ConfigString(g_HsMaxTierEvents)},
         };
         j["generator"] = {
             {"enabled",               g_HsGeneratorEnabled},
@@ -348,8 +353,15 @@ void Hs_HttpServerStart()
         s_server = std::move(svr);
         s_running.store(true);
 
-        s_thread = std::make_unique<std::thread>([]() {
-            LOG_INFO("server.loading", "[HearthsideChat] HTTP server listening on {}:{}", g_HsHttpServerBind, g_HsHttpServerPort);
+        // Bind address captured by value rather than read from the global
+        // inside the thread: g_HsHttpServerBind is a namespace-scope
+        // std::string in another translation unit, so reading it from this
+        // thread races both `.reload config` and static destruction at
+        // process exit.
+        std::string bindAddr = g_HsHttpServerBind;
+        uint32_t    bindPort = g_HsHttpServerPort;
+        s_thread = std::make_unique<std::thread>([bindAddr, bindPort]() {
+            LOG_INFO("server.loading", "[HearthsideChat] HTTP server listening on {}:{}", bindAddr, bindPort);
             s_server->listen_after_bind();
             s_running.store(false);
             LOG_INFO("server.loading", "[HearthsideChat] HTTP server stopped.");
@@ -368,16 +380,36 @@ void Hs_HttpServerStart()
 void Hs_HttpServerStop()
 {
     if (s_server)
+    {
+        // wait_until_ready() before stop(), and it is load-bearing rather
+        // than tidiness. bind_to_port() runs on the world thread in
+        // Hs_HttpServerStart, but Server::is_running_ is only set once the
+        // listener thread is actually inside listen_internal(); stop() is a
+        // no-op while that flag is false (httplib.h:10973). A startup
+        // immediately followed by a shutdown can land in exactly that
+        // window, after which the loop would start against a still-valid
+        // socket and never exit -- turning the join below into a hang.
+        // wait_until_ready() closes the window (httplib.h:10967).
+        s_server->wait_until_ready();
         s_server->stop();
+    }
 
-    // Detach rather than join, and deliberately do not reset s_server here
-    // -- the detached thread's lambda still dereferences the global
-    // s_server to call listen_after_bind(), so resetting it here would
-    // race that thread's own teardown of the same object. s_server is left
-    // alive for the rest of the process's life as a result.
+    // Join, not detach. The lambda dereferences the global s_server and
+    // reads g_HsHttpServerBind (a namespace-scope std::string in another
+    // translation unit); detaching does not stop static destruction from
+    // destroying either one out from under a thread still unwinding out of
+    // listen_after_bind() or executing its trailing LOG_INFO.
+    //
+    // The join is bounded: stop() closes the listen socket, so the accept
+    // loop breaks on its next iteration (httplib.h:11590-11597), and the
+    // task queue's own shutdown then waits only for in-flight requests,
+    // themselves bounded by HttpServerTimeoutSeconds.
     if (s_thread && s_thread->joinable())
-        s_thread->detach();
+        s_thread->join();
     s_thread.reset();
+    // Safe to release the server now, unlike under the old detach: no
+    // thread can still be inside it once the join has returned.
+    s_server.reset();
     s_running.store(false);
 }
 

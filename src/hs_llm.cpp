@@ -16,6 +16,8 @@
 #include <chrono>
 #include <memory>
 #include <regex>
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 using json = hs_json;
@@ -194,7 +196,26 @@ namespace
         std::string path  = m[4].matched ? m[4].str() : "/";
         int port = proto == "https" ? 443 : 80;
         if (m[3].matched)
-            port = std::stoi(m[3].str());
+        {
+            // The regex accepts \d+ of any length, so std::stoi throws
+            // out_of_range on an overlong digit run. This runs on the
+            // queue-worker and generator threads, where an escaping exception
+            // is std::terminate -- and LLM.Url/Generator.LLM.Url are both
+            // operator-editable and live-reloading, so one conf typo must
+            // degrade to a logged failure, not take the worldserver down.
+            try
+            {
+                unsigned long parsed = std::stoul(m[3].str());
+                if (parsed == 0 || parsed > 65535)
+                    throw std::out_of_range("port out of range");
+                port = static_cast<int>(parsed);
+            }
+            catch (const std::exception&)
+            {
+                LOG_ERROR("server.loading", "[HearthsideChat] Invalid port in LLM URL: {}", url);
+                return { "", HsLLMFailure::ConnectionFailed, 0 };
+            }
+        }
 
         hs_httplib::Headers headers = { {"Accept", "application/json"}, {"User-Agent", "mod-hearthside-chat/1.0"} };
         for (auto const& h : extraHeaders)

@@ -134,6 +134,18 @@ void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
         Player* member = itr->GetSource();
         if (!member || member == player || !member->IsInWorld())
             continue;
+        // "We went down together" has to be true of both sides. This hook
+        // fires once per death, so the other half of the pair must already be
+        // dead for the beat to be a fact rather than a claim the player
+        // watched not happen (§4.13) -- a bot that pulls too much and dies
+        // while its human groupmate is standing over the corpse must not
+        // record a shared death. hs_event.cpp's wipe detection applies the
+        // same IsAlive() test for the same reason. The effect is that the
+        // beat fires on the *second* death of a pair, which is the correct
+        // semantics; Hs_RecordMemoryEvent's 30-minute dedup window already
+        // stops a full wipe writing one row per corpse.
+        if (member->IsAlive())
+            continue;
         if (IsBot(member) != diedIsBot)
         {
             other = member;

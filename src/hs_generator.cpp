@@ -20,6 +20,8 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <utility>
@@ -29,6 +31,52 @@ namespace
 {
     std::thread           g_GeneratorThread;
     std::atomic<bool>     g_StopGenerator{false};
+
+    // Interruptible sleep for GeneratorLoop below. g_StopGenerator is only
+    // tested at the top of that loop, and std::this_thread::sleep_for has no
+    // wake mechanism, so a plain sleep made Hs_GeneratorShutdown's join wait
+    // out the full backoff -- up to Generator.QuotaSatisfiedBackoffSeconds
+    // (300s default) of worldserver hang after every other subsystem had
+    // stopped, and PollIntervalSeconds even with the generator disabled.
+    // Same shape hs_queue.cpp's worker already uses for the same reason.
+    std::mutex              g_GeneratorSleepMutex;
+    std::condition_variable g_GeneratorSleepCv;
+
+    // Returns as soon as shutdown is signalled, otherwise after `seconds`.
+    void GeneratorSleep(uint32_t seconds)
+    {
+        std::unique_lock<std::mutex> lock(g_GeneratorSleepMutex);
+        g_GeneratorSleepCv.wait_for(lock, std::chrono::seconds(seconds),
+                                    [] { return g_StopGenerator.load(); });
+    }
+
+    // Fills `cfg` for one generation call and hands back the string snapshot
+    // it was built from. All four generation cycles below (corpus, /say
+    // script, channel script, card) built this identically; they now share
+    // one place, which is also the one place that has to take the snapshot.
+    //
+    // Snapshot rather than a live read of g_HsGeneratorLLM*: this runs on the
+    // generator thread while `.reload config` reassigns those strings from
+    // the world thread, and Hs_CallLLM holds what it is given for the whole
+    // round trip. See hs_config.h's cross-thread section.
+    //
+    // Returning the snapshot matters as much as filling cfg -- three of the
+    // callers write result rows tagged with `model` and `promptVersion`
+    // afterwards, and those must be the values the call was actually made
+    // with, not whatever a reload has swapped in since.
+    HsGeneratorStrings BuildGeneratorLLMConfig(HsLLMConfig& cfg)
+    {
+        HsGeneratorStrings gen = Hs_GeneratorStringsSnapshot();
+        cfg.apiType       = gen.apiType;
+        cfg.baseUrl       = gen.url;
+        cfg.model         = gen.model;
+        cfg.apiKey        = gen.apiKey;
+        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
+        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
+        cfg.templateKind  = gen.templateKind;
+        cfg.dryMultiplier = 0.0f;
+        return gen;
+    }
     std::atomic<uint32_t> g_RowsAddedThisSession{0};
     std::atomic<uint32_t> g_RowsEvictedThisSession{0};
 
@@ -360,14 +408,7 @@ namespace
         std::string prompt = BuildGenerationPrompt(bucket, promptSampleRows, usesSiblingSample, requiresPlaceholder);
 
         HsLLMConfig cfg;
-        cfg.apiType       = g_HsGeneratorLLMApiType;
-        cfg.baseUrl       = g_HsGeneratorLLMUrl;
-        cfg.model         = g_HsGeneratorLLMModel;
-        cfg.apiKey        = g_HsGeneratorLLMApiKey;
-        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
-        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
-        cfg.templateKind  = g_HsGeneratorLLMTemplate;
-        cfg.dryMultiplier = 0.0f;
+        const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         HsLLMResult result = Hs_CallLLM(cfg, prompt, "", {}, "Write one new line now. Reply with only the line itself.");
         if (!result.success || result.text.empty())
@@ -379,7 +420,7 @@ namespace
         }
 
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(bucket.category, bucket.tagColumn, bucket.tagValueSql,
-                                                      result.text, g_HsGeneratorLLMModel, g_HsGeneratorPromptVersion);
+                                                      result.text, gen.model, gen.promptVersion);
         if (g_HsDebugEnabled)
             LOG_INFO("server.loading", "[HearthsideChat] Generator: bucket {}/{} candidate {} -- \"{}\"",
                 bucket.category, bucket.tagValueLabel,
@@ -462,14 +503,7 @@ namespace
     bool RunOneScriptGenerationCycle()
     {
         HsLLMConfig cfg;
-        cfg.apiType       = g_HsGeneratorLLMApiType;
-        cfg.baseUrl       = g_HsGeneratorLLMUrl;
-        cfg.model         = g_HsGeneratorLLMModel;
-        cfg.apiKey        = g_HsGeneratorLLMApiKey;
-        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
-        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
-        cfg.templateKind  = g_HsGeneratorLLMTemplate;
-        cfg.dryMultiplier = 0.0f;
+        const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         int turnCount = static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax));
 
@@ -515,9 +549,9 @@ namespace
         QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
         uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
 
-        std::string escapedModel = g_HsGeneratorLLMModel;
+        std::string escapedModel = gen.model;
         CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = g_HsGeneratorPromptVersion;
+        std::string escapedVersion = gen.promptVersion;
         CharacterDatabase.EscapeString(escapedVersion);
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
@@ -594,14 +628,7 @@ namespace
     bool RunOneChannelScriptGenerationCycle(HsChannelKind kind)
     {
         HsLLMConfig cfg;
-        cfg.apiType       = g_HsGeneratorLLMApiType;
-        cfg.baseUrl       = g_HsGeneratorLLMUrl;
-        cfg.model         = g_HsGeneratorLLMModel;
-        cfg.apiKey        = g_HsGeneratorLLMApiKey;
-        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
-        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
-        cfg.templateKind  = g_HsGeneratorLLMTemplate;
-        cfg.dryMultiplier = 0.0f;
+        const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         std::string systemPrompt = ChannelScriptSystemPromptFor(kind);
         std::vector<HsHistoryTurn> history;
@@ -638,9 +665,9 @@ namespace
         QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
         uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
 
-        std::string escapedModel = g_HsGeneratorLLMModel;
+        std::string escapedModel = gen.model;
         CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = g_HsGeneratorPromptVersion;
+        std::string escapedVersion = gen.promptVersion;
         CharacterDatabase.EscapeString(escapedVersion);
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
@@ -745,14 +772,7 @@ namespace
         GuildLookup guild = LookupGuildFor(pending.botGuid);
 
         HsLLMConfig cfg;
-        cfg.apiType       = g_HsGeneratorLLMApiType;
-        cfg.baseUrl       = g_HsGeneratorLLMUrl;
-        cfg.model         = g_HsGeneratorLLMModel;
-        cfg.apiKey        = g_HsGeneratorLLMApiKey;
-        cfg.timeoutSec    = static_cast<int>(g_HsGeneratorLLMTimeoutSeconds);
-        cfg.maxTokens     = static_cast<int>(g_HsGeneratorLLMMaxTokens);
-        cfg.templateKind  = g_HsGeneratorLLMTemplate;
-        cfg.dryMultiplier = 0.0f;
+        const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         std::string voicePrompt = Hs_BuildVoiceBlockPrompt(archetypeInfo.talksAbout);
         HsLLMResult voiceResult = Hs_CallLLM(cfg, voicePrompt, "", {},
@@ -800,9 +820,9 @@ namespace
         CharacterDatabase.EscapeString(escapedVoice);
         std::string factsCompact = facts.dump();
         CharacterDatabase.EscapeString(factsCompact);
-        std::string escapedModel = g_HsGeneratorLLMModel;
+        std::string escapedModel = gen.model;
         CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = g_HsGeneratorPromptVersion;
+        std::string escapedVersion = gen.promptVersion;
         CharacterDatabase.EscapeString(escapedVersion);
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
@@ -833,7 +853,7 @@ namespace
         {
             if (!g_HsGeneratorEnabled || !Hs_IsReactiveIdle())
             {
-                std::this_thread::sleep_for(std::chrono::seconds(g_HsGeneratorPollIntervalSeconds));
+                GeneratorSleep(g_HsGeneratorPollIntervalSeconds);
                 continue;
             }
 
@@ -860,7 +880,7 @@ namespace
                 added = RunOneGenerationCycle();
 
             if (!added)
-                std::this_thread::sleep_for(std::chrono::seconds(g_HsGeneratorQuotaSatisfiedBackoffSeconds));
+                GeneratorSleep(g_HsGeneratorQuotaSatisfiedBackoffSeconds);
             // else loop straight back -- re-checks idle before the next attempt.
         }
     }
@@ -876,8 +896,14 @@ void Hs_GeneratorStartup()
 void Hs_GeneratorShutdown()
 {
     g_StopGenerator.store(true);
+    // Wake the loop out of GeneratorSleep before joining, or this blocks for
+    // the remainder of whatever backoff it happened to be in.
+    g_GeneratorSleepCv.notify_all();
     if (g_GeneratorThread.joinable())
         g_GeneratorThread.join();
+    // A shutdown arriving mid-Hs_CallLLM still waits out that call's
+    // remaining Generator.LLM.TimeoutSeconds (30s default) -- bounded, and
+    // the same exposure the reactive worker already has.
 }
 
 uint32_t Hs_GeneratorRowsAddedThisSession()

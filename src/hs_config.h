@@ -25,6 +25,66 @@ extern bool g_HsBridgeEnable;
 extern bool g_HsDebugChatLogEnabled;
 
 // --------------------------------------------
+// Reading the std::string globals from a thread that is not the world thread
+//
+// `.reload config` re-runs LoadHearthsideChatConfig on the world thread,
+// which reassigns every std::string global below wholesale. Three other
+// threads read them concurrently and can hold one for a long time:
+//
+//   - the queue worker (hs_queue.cpp), which passes g_HsLLMSystemPrompt to
+//     Hs_CallLLM by const& and keeps that reference live for the whole HTTP
+//     round trip -- up to LLM.TimeoutSeconds;
+//   - the generator (hs_generator.cpp), same shape on its own six keys;
+//   - the HTTP server (hs_http_auth.cpp), which indexes
+//     g_HsHttpServerPrivateKey character by character inside the
+//     constant-time token compare.
+//
+// Reassigning a std::string frees its buffer when the new value does not fit
+// the old allocation, so an unguarded read is a use-after-free, not a stale
+// value. (The default system prompt is ~220 bytes -- far past SSO -- so any
+// operator edit to it is a heap reallocation.) This is the same hazard, and
+// the same fix, that hs_archetype.cpp:196-203 documents for g_Archetypes,
+// whose HsArchetypeInfo likewise owns a std::string.
+//
+// The scalars are deliberately left bare: a torn uint32_t/float/bool is
+// formally UB but benign on x86-64, and costs one request a wrong number
+// rather than a freed buffer. Only the strings are a memory-safety problem,
+// which is what keeps this small.
+//
+// Two batched snapshots for the hot paths (one lock per request instead of
+// six), and one generic accessor for everything else -- Hs_ConfigString takes
+// the global by reference but copies it *inside* the lock, so the reference
+// never outlives the writer's exclusion.
+// --------------------------------------------
+struct HsLLMStrings
+{
+    std::string apiType;
+    std::string url;
+    std::string model;
+    std::string apiKey;
+    std::string templateKind;
+    std::string systemPrompt;
+};
+
+struct HsGeneratorStrings
+{
+    std::string apiType;
+    std::string url;
+    std::string model;
+    std::string apiKey;
+    std::string templateKind;
+    std::string promptVersion;
+};
+
+HsLLMStrings       Hs_LLMStringsSnapshot();
+HsGeneratorStrings Hs_GeneratorStringsSnapshot();
+
+// Copy one string global under the config lock. Call as
+// Hs_ConfigString(g_HsMaxTierAmbient). World-thread callers do not need it
+// (they are the writer), but it is harmless there.
+std::string Hs_ConfigString(const std::string& configGlobal);
+
+// --------------------------------------------
 // LLM endpoint -- the reactive tier's. The idle-time generator uses its own,
 // separate endpoint config (below).
 // --------------------------------------------
@@ -40,9 +100,11 @@ extern uint32_t     g_HsLLMHistoryTurns;   // trigger/reply pairs kept per bot-p
 extern float         g_HsLLMDryMultiplier;  // 0.0 leaves DRY off
 
 // --------------------------------------------
-// Reply gating. /say goes through the arbiter (hs_arbiter.h); whisper is
-// inherently 1:1 and unambiguous, so it keeps a simple chance roll instead.
-// Party/raid/guild surfaces are not wired up yet -- only /say and whisper.
+// Reply gating. /say, party/raid (subgroup-scoped for CHAT_MSG_PARTY), guild
+// and the §4.17 global channels all go through the arbiter (hs_arbiter.h) --
+// see the four candidate scans in hs_handler.cpp. Whisper is the one surface
+// that does not: it is inherently 1:1 and unambiguous, so it keeps a simple
+// chance roll instead.
 // --------------------------------------------
 extern float     g_HsSayDistance;
 extern uint32_t  g_HsReplyChanceWhisper;
@@ -133,9 +195,19 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 // --------------------------------------------
 // Tier ceilings -- one enum, seven keys, one shared parse and resolve helper
 // (hs_tier.h). DirectReply, EngagementFollowUp, Events and BotToBot are the
-// four whose consumer ever requests HsTier::Inference; the other three are
-// parsed and stored but only ever request HsTier::Corpus, so setting them to
-// "inference" has no additional effect.
+// four whose consumer ever requests HsTier::Inference. Openers and Reflex are
+// gated but only ever at HsTier::Corpus and HsTier::Reflex respectively, so
+// setting either to "inference" has no additional effect.
+//
+// Ambient is the exception, and not in that sense: it has NO consumer at all.
+// Nothing reads g_HsMaxTierAmbient except the two operator-facing status
+// surfaces that echo it back (hs_command.cpp, hs_http_server.cpp), because
+// there is no unprompted-ambient producer for it to gate -- every other
+// surface in the module needs a trigger (an utterance, a game event, a shared
+// context, a prior reply). Setting it to "off" to quiet a realm therefore
+// does nothing while `.hearthside status` reports "off" as though it took.
+// The producer is designed but unbuilt: see Claude/PLAN-AMBIENT.md, which is
+// also where the decision to keep the key rather than delete it is recorded.
 //
 // BotToBot is the one key with two consumers at different tiers, and it works
 // because a ceiling is permissive rather than a mode switch: at "corpus"
@@ -147,7 +219,7 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 // BotToBot setting.
 // --------------------------------------------
 extern std::string g_HsMaxTierDirectReply;
-extern std::string g_HsMaxTierAmbient;
+extern std::string g_HsMaxTierAmbient; // NOT WIRED -- see above and Claude/PLAN-AMBIENT.md
 extern std::string g_HsMaxTierOpeners;
 extern std::string g_HsMaxTierBotToBot;
 extern std::string g_HsMaxTierReflex;
@@ -306,11 +378,21 @@ extern uint32_t     g_HsGeneratorScriptReserveTarget;
 // multiple authenticated web users to distinguish between. Read routes need
 // only the token; mutating routes need the token *and* HttpControlEnable.
 // --------------------------------------------
-extern uint32_t     g_HsHttpServerPort;           // 0 = disabled
-extern std::string g_HsHttpServerBind;            // loopback by default
-extern std::string g_HsHttpServerPrivateKey;      // required when port != 0
-extern uint32_t     g_HsHttpServerTimeoutSeconds;
-extern bool         g_HsHttpControlEnable;
+//
+// Three of these five are the module's only keys that do NOT take effect on
+// `.reload config`, despite being re-read by it: Port, Bind and
+// TimeoutSeconds are consumed once, by Hs_HttpServerStart, which runs only
+// from HsHttpServerWorldScript::OnStartup (hs_main.cpp). By the time a
+// reload rewrites them the listener is already bound, so the new values sit
+// in these globals unused until the next worldserver start. PrivateKey and
+// HttpControlEnable *do* take effect, because they are read per request --
+// which makes the split more confusing rather than less, hence the
+// RESTART REQUIRED banner on this section of conf.dist.
+extern uint32_t     g_HsHttpServerPort;           // 0 = disabled; startup-only
+extern std::string g_HsHttpServerBind;            // loopback by default; startup-only
+extern std::string g_HsHttpServerPrivateKey;      // required when port != 0; live-reloads
+extern uint32_t     g_HsHttpServerTimeoutSeconds; // startup-only
+extern bool         g_HsHttpControlEnable;        // live-reloads
 
 void LoadHearthsideChatConfig();
 
@@ -320,8 +402,13 @@ public:
     HsConfigWorldScript();
     void OnStartup() override;
 
-    // `.reload config` re-reads every HearthsideChat.* key. Gated on
-    // `reload` since OnStartup already covers the initial load.
+    // `.reload config` re-reads every HearthsideChat.* key into its global.
+    // Gated on `reload` since OnStartup already covers the initial load.
+    //
+    // Re-read is not the same as takes-effect: HttpServerPort/Bind/
+    // TimeoutSeconds are consumed once at startup and ignore the refreshed
+    // value until the next restart (see their declarations above). Every
+    // other key is read at its point of use and so genuinely live-reloads.
     void OnAfterConfigLoad(bool reload) override;
 };
 

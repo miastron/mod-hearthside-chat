@@ -133,6 +133,24 @@ void Hs_DeliverPending();
 // tagged isFollowUp are eligible.
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 
+// Drops every conversation-history entry this bot is a party to, across all
+// players. Called when the bot is detected to have been *reset* by
+// mod-playerbots' recycler (hs_event.cpp's level-drop branch).
+//
+// The recycler resets a character in place -- RandomBotLevelMgr::ResetBot
+// keeps the same GUID and the same name, and knocks the level back down a
+// bracket. So this is not "a different person now" (the GUID never changes
+// hands, and a logout/login is not a reset), but the bot's level, gear, zone
+// and goals have all just been rewritten, and the last thing it said about
+// any of them is no longer true of it. Prior-turn context from before that
+// point is worse than no context, so it goes.
+//
+// Deliberately narrow: only the history, which is the only one of this
+// module's in-memory maps that holds *content* about a prior relationship
+// rather than a timestamp. A stale 8-second reply cooldown surviving a reset
+// is not worth a hook.
+void Hs_ForgetBotHistory(uint64_t botGuid);
+
 // Delivers a tier-0 reflex reply, and also a grounded-answer reply: both are
 // "answer without the GPU" paths that need identical no-bucket, no-cooldown,
 // no-worker-thread, no-history/identity-write delivery, so grounded answers

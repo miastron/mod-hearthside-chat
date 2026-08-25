@@ -7,6 +7,7 @@
 #include "hs_identity_store.h"
 #include "hs_llm.h"
 #include "hs_memory_store.h"
+#include "hs_prune.h"
 #include "hs_style.h"
 
 #include "Channel.h"          // §4.17 channel delivery: Channel::Say
@@ -211,6 +212,15 @@ namespace
     Clock::time_point g_EventBucketLastRefill;
     bool              g_EventBucketInitialized = false;
 
+    // ---- staleness windows for the opportunistic prunes below (hs_prune.h).
+    // Every one of these maps is read only through a window far shorter than
+    // the constant here -- the per-bot cooldown defaults to 8s, the
+    // distracted cooldown to 600s -- so an hour-old entry already answers
+    // every query exactly as a missing one would. Erring long costs a little
+    // delayed reclamation; erring short would change behavior. ----
+    constexpr int64_t kCooldownStaleSeconds   = 3600;
+    constexpr size_t  kCooldownPruneThreshold = 512;
+
     // ---- per-bot cooldown (gate) and last-successful-reply time (arbiter query) ----
     std::mutex                                        g_CooldownMutex;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastEnqueueAt;
@@ -259,14 +269,38 @@ namespace
         }
 
         g_LastDistractedAt[botGuid] = now;
+        HsPrune::PruneStale(g_LastDistractedAt, now, kCooldownStaleSeconds, kCooldownPruneThreshold);
         return true;
     }
 
     // ---- conversation history: a few lines per bot-player pair, held in
     // memory only. Keyed by (botGuid, senderGuid); std::map's operator< on
     // std::pair needs no custom hash. ----
+    //
+    // This is the one map in the module keyed by a *pair* that also holds
+    // more than a timestamp -- up to LLM.HistoryTurns trigger/reply string
+    // pairs each -- so its worst case is (bots x players) deques of chat
+    // text, not a per-population bound. HistoryAppend evicts within a pair's
+    // deque but never dropped the pair itself, so on a long-uptime realm a
+    // player who talks to many bots accumulated one live entry per pair for
+    // the life of the process.
+    //
+    // An hour is well past the point where a prior turn is useful context for
+    // the next reply, so dropping a quiet pair costs nothing a live
+    // conversation would notice. Note this is deliberately *not* keyed to
+    // logout: a player who logs out and back in keeps the same GUID and the
+    // same conversational thread, and so does the bot.
+    constexpr int64_t kHistoryStaleSeconds   = 3600;
+    constexpr size_t  kHistoryPruneThreshold = 512;
+
+    struct HsHistoryEntry
+    {
+        std::deque<HsHistoryTurn> turns;
+        Clock::time_point         touchedAt{};
+    };
+
     std::mutex g_HistoryMutex;
-    std::map<std::pair<uint64_t, uint64_t>, std::deque<HsHistoryTurn>> g_History;
+    std::map<std::pair<uint64_t, uint64_t>, HsHistoryEntry> g_History;
 
     // Snapshot for the worker thread to hand to Hs_CallLLM. Returns a copy so
     // the lock is held only long enough to read it.
@@ -278,7 +312,7 @@ namespace
         auto it = g_History.find({ botGuid, senderGuid });
         if (it == g_History.end())
             return {};
-        return { it->second.begin(), it->second.end() };
+        return { it->second.turns.begin(), it->second.turns.end() };
     }
 
     // Stores the exact trigger/reply just used, byte-for-byte, then evicts
@@ -288,10 +322,16 @@ namespace
         if (g_HsLLMHistoryTurns == 0)
             return;
         std::lock_guard<std::mutex> lock(g_HistoryMutex);
-        std::deque<HsHistoryTurn>& turns = g_History[{ botGuid, senderGuid }];
-        turns.push_back({ trigger, reply });
-        while (turns.size() > g_HsLLMHistoryTurns)
-            turns.pop_front();
+        Clock::time_point now = Clock::now();
+
+        HsHistoryEntry& entry = g_History[{ botGuid, senderGuid }];
+        entry.turns.push_back({ trigger, reply });
+        entry.touchedAt = now;
+        while (entry.turns.size() > g_HsLLMHistoryTurns)
+            entry.turns.pop_front();
+
+        HsPrune::PruneStale(g_History, now, kHistoryStaleSeconds, kHistoryPruneThreshold,
+                            [](const HsHistoryEntry& e) { return e.touchedAt; });
     }
 
     // ---- circuit breaker ----
@@ -308,6 +348,14 @@ namespace
 
     // ---- `.hearthside capture`: last pre-style reply per bot name.
     // Overwritten on every successful reactive reply; not a history. ----
+    //
+    // Deliberately NOT pruned, unlike the time maps above. Two reasons: it is
+    // keyed by bot name and holds exactly one short string per bot, so its
+    // ceiling is the realm's bot population rather than anything unbounded;
+    // and it is the backing store for an operator action -- `.hearthside
+    // capture` promotes a line a GM liked into the corpus. Ageing entries out
+    // would silently shorten the window in which that command works, which is
+    // a regression dressed as a cleanup.
     std::mutex                                  g_LastPreStyleMutex;
     std::unordered_map<std::string, std::string> g_LastPreStyleReplyByBot;
 
@@ -492,13 +540,22 @@ namespace
                 personaLine += "\n" + rpgHint;
             personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
 
+            // One snapshot per request instead of six reads of the live
+            // globals. This is the worker thread; `.reload config` reassigns
+            // those strings from the world thread, and the systemPrompt below
+            // is bound by const& and held across the entire Hs_CallLLM round
+            // trip -- so a reload landing in that window would otherwise free
+            // the buffer out from under the reference. hs_config.h has the
+            // full reasoning.
+            const HsLLMStrings llm = Hs_LLMStringsSnapshot();
+
             HsLLMConfig cfg;
-            cfg.apiType       = g_HsLLMApiType;
-            cfg.baseUrl       = g_HsLLMUrl;
-            cfg.model         = g_HsLLMModel;
-            cfg.apiKey        = g_HsLLMApiKey;
+            cfg.apiType       = llm.apiType;
+            cfg.baseUrl       = llm.url;
+            cfg.model         = llm.model;
+            cfg.apiKey        = llm.apiKey;
             cfg.timeoutSec    = static_cast<int>(g_HsLLMTimeoutSeconds);
-            cfg.templateKind  = g_HsLLMTemplate;
+            cfg.templateKind  = llm.templateKind;
             // Per-archetype verbosity cap refines the operator's configured
             // ceiling downward; it never raises it above what
             // HearthsideChat.LLM.MaxTokens allows.
@@ -508,7 +565,7 @@ namespace
             std::vector<HsHistoryTurn> history = HistorySnapshot(req.botGuid, req.senderGuid);
 
             g_ReactiveWorkerBusy.store(true);
-            HsLLMResult result = Hs_CallLLM(cfg, g_HsLLMSystemPrompt, personaLine, history, req.prompt);
+            HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, req.prompt);
             g_ReactiveWorkerBusy.store(false);
 
             RecordOutcome(result.success);
@@ -632,7 +689,9 @@ namespace
 
             {
                 std::lock_guard<std::mutex> lock(g_CooldownMutex);
-                g_LastReplyAt[req.botGuid] = Clock::now();
+                Clock::time_point now = Clock::now();
+                g_LastReplyAt[req.botGuid] = now;
+                HsPrune::PruneStale(g_LastReplyAt, now, kCooldownStaleSeconds, kCooldownPruneThreshold);
             }
 
             Clock::time_point now = Clock::now();
@@ -878,7 +937,9 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
     }
     {
         std::lock_guard<std::mutex> lock(g_CooldownMutex);
-        g_LastEnqueueAt[botGuid] = Clock::now();
+        Clock::time_point now = Clock::now();
+        g_LastEnqueueAt[botGuid] = now;
+        HsPrune::PruneStale(g_LastEnqueueAt, now, kCooldownStaleSeconds, kCooldownPruneThreshold);
     }
 
     return true;
@@ -1090,6 +1151,21 @@ void Hs_DeliverPending()
         // enqueue lands on the *work* queue, never back on this one.
         if (reply.seedsChain)
             Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0);
+    }
+}
+
+void Hs_ForgetBotHistory(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_HistoryMutex);
+    for (auto it = g_History.begin(); it != g_History.end(); )
+    {
+        // .first is the (botGuid, senderGuid) pair -- match on the bot half
+        // only, so every player this bot was mid-conversation with is
+        // cleared in one pass.
+        if (it->first.first == botGuid)
+            it = g_History.erase(it);
+        else
+            ++it;
     }
 }
 

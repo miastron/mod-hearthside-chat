@@ -3,6 +3,7 @@
 #include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
+#include "hs_prune.h"
 #include "hs_queue.h" // §4.17: Hs_ResolveChannelForDelivery, HsReplyChannel::Channel's delivery pattern
 #include "hs_style.h"
 #include "hs_tier.h"
@@ -48,6 +49,17 @@ namespace
             return false;
         PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
         return ai && ai->IsBotAI();
+    }
+
+    // HearthsideChat.ExcludeNames -- "no reflex, grounded, corpus, or
+    // reactive reply, ever" (hs_config.h). A scripted turn is corpus content
+    // the bot speaks unprompted, so an excluded bot may not be cast as
+    // either speaker in a /say scene or a channel scene. Both scans below
+    // use this in place of a bare IsBot: unlike hs_opener.cpp, neither scan
+    // needs to tell bots from real players, so there is no second predicate.
+    bool IsEligibleBot(Player* p)
+    {
+        return IsBot(p) && !Hs_IsExcludedBotName(p->GetName());
     }
 
     struct HsActiveScriptRun
@@ -138,7 +150,13 @@ namespace
     void MarkWitnessCooldown(uint64_t playerGuid)
     {
         std::lock_guard<std::mutex> lock(g_WitnessCooldownMutex);
-        g_LastWitnessAt[playerGuid] = Clock::now();
+        Clock::time_point now = Clock::now();
+        g_LastWitnessAt[playerGuid] = now;
+        // Read only through kWitnessCooldownSeconds, so anything well past
+        // that window answers as a missing key would (hs_prune.h).
+        HsPrune::PruneStale(g_LastWitnessAt, now,
+                            /*staleSeconds=*/static_cast<int64_t>(kWitnessCooldownSeconds) * 4,
+                            /*pruneAboveSize=*/512);
     }
 
     bool IsBotInActiveRun(uint64_t botGuid)
@@ -215,7 +233,7 @@ namespace
             Player* candidate = itr.second;
             if (!candidate || candidate == player || !candidate->IsInWorld())
                 continue;
-            if (!IsBot(candidate))
+            if (!IsEligibleBot(candidate)) // incl. HearthsideChat.ExcludeNames
                 continue;
             if (candidate->GetTeamId() != player->GetTeamId())
                 continue;
@@ -416,7 +434,11 @@ namespace
         for (auto const& itr : ObjectAccessor::GetPlayers())
         {
             Player* candidate = itr.second;
-            if (!candidate || !candidate->IsInWorld() || !IsBot(candidate) || !candidate->IsAlive())
+            // IsEligibleBot covers HearthsideChat.ExcludeNames, and is
+            // deliberately ahead of the Hs_ResolveChannelForDelivery call
+            // below -- that one is a DBC lookup plus a ChannelMgr string
+            // match, by far the most expensive test in this loop.
+            if (!candidate || !candidate->IsInWorld() || !IsEligibleBot(candidate) || !candidate->IsAlive())
                 continue;
             uint64_t guid = candidate->GetGUID().GetRawValue();
             if (IsBotInActiveRun(guid) || IsBotInActiveChannelRun(guid))

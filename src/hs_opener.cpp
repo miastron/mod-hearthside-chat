@@ -6,6 +6,7 @@
 #include "hs_identity_store.h"
 #include "hs_memory.h"
 #include "hs_memory_store.h"
+#include "hs_prune.h"
 #include "hs_queue.h"
 #include "hs_style.h"
 #include "hs_tier.h"
@@ -54,6 +55,23 @@ namespace
         return ai && ai->IsBotAI();
     }
 
+    // HearthsideChat.ExcludeNames keeps a named bot out of this module
+    // entirely -- "no reflex, grounded, corpus, or reactive reply, ever"
+    // (hs_config.h). An opener is a corpus line the bot speaks unprompted, so
+    // the rule has to hold here too; every chat hook in hs_handler.cpp,
+    // hs_event.cpp and hs_botchain.cpp already applies it at its own
+    // candidate scan.
+    //
+    // Deliberately a second predicate rather than folded into IsBot() above:
+    // an excluded bot is still a bot, and the trigger handlers below use
+    // IsBot() to tell bots from real players. Collapsing the two would make
+    // an excluded bot register as the *human* side of a pair and fire an
+    // opener at it from some other bot.
+    bool IsEligibleBot(Player* p)
+    {
+        return IsBot(p) && !Hs_IsExcludedBotName(p->GetName());
+    }
+
     // ---- per (bot, player) opener cooldown -- prevents e.g. a string of
     // joint kills from firing an opener every single time. ----
     std::mutex g_OpenerCooldownMutex;
@@ -74,7 +92,17 @@ namespace
     void MarkOpenerFired(uint64_t botGuid, uint64_t playerGuid)
     {
         std::lock_guard<std::mutex> lock(g_OpenerCooldownMutex);
-        g_LastOpenerAt[{ botGuid, playerGuid }] = Clock::now();
+        Clock::time_point now = Clock::now();
+        g_LastOpenerAt[{ botGuid, playerGuid }] = now;
+
+        // Keyed by (bot, player), so this grows with the *product* of the two
+        // populations rather than either one -- worth pruning even though the
+        // value is only a timestamp. OpenerCooldownOk reads it purely through
+        // kOpenerCooldownSeconds, so an entry four windows old already
+        // answers exactly as a missing one does (hs_prune.h).
+        HsPrune::PruneStale(g_LastOpenerAt, now,
+                            /*staleSeconds=*/static_cast<int64_t>(kOpenerCooldownSeconds) * 4,
+                            /*pruneAboveSize=*/512);
     }
 
     // ---- fifth trigger: how long each (bot, player) pair has been
@@ -91,6 +119,14 @@ namespace
     void FireOpener(Player* bot, Player* player, const char* categoryName)
     {
         if (!g_HsEnable || !bot || !player || !bot->IsInWorld() || !player->IsInWorld())
+            return;
+
+        // Backstop for HearthsideChat.ExcludeNames. Each trigger below
+        // already filters with IsEligibleBot at its own selection site --
+        // it has to, because two of them write an hside_memory row before
+        // calling in here -- but this is the one funnel all five converge
+        // on, so it is also the one place a future trigger cannot forget.
+        if (Hs_IsExcludedBotName(bot->GetName()))
             return;
 
         HsTier ceiling = HsParseTier(g_HsMaxTierOpeners);
@@ -130,6 +166,11 @@ namespace
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = bot->IsInCombat();
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
+        // §4.17: set here for the same reason inCombat is. The sighting is
+        // per-bot and time-decayed, not per-surface -- a bot that just
+        // watched a WTS flurry in Trade is keyed up whatever it says next,
+        // and an opener is the one HsStyleContext site that used to miss it.
+        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), player->GetName(), line, styleCtx);
         if (style.text.empty())
             return;
@@ -150,6 +191,13 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
 
     bool newIsBot = IsBot(newMember);
 
+    // An excluded bot joining is not a greeter and is not the human side
+    // either, so there is nothing to do for this call at all -- and bailing
+    // here (rather than inside FireOpener) is what keeps the grouped_in_zone
+    // memory write below from happening for it.
+    if (newIsBot && !IsEligibleBot(newMember))
+        return;
+
     // Find "the other side": if the joiner is a bot, the bot it should
     // greet is itself and the target is the first real player already in
     // the group; if the joiner is a real player, the greeter is the first
@@ -164,9 +212,12 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
         if (!member || member == newMember || !member->IsInWorld())
             continue;
 
+        // IsBot for the human-side test, IsEligibleBot for the greeter:
+        // an excluded bot is neither, so it is skipped as a greeter without
+        // ever being mistaken for the real player.
         if (newIsBot && !player && !IsBot(member))
             player = member;
-        else if (!newIsBot && !bot && IsBot(member))
+        else if (!newIsBot && !bot && IsEligibleBot(member))
             bot = member;
 
         if (bot && player)
@@ -196,7 +247,7 @@ void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*kille
     // fires once per player who does, not once per player with kill
     // credit, so "jointly" is scoped to this direction rather than a
     // cross-player correlation cache (hs_opener.h).
-    if (!killer || !IsBot(killer))
+    if (!killer || !IsEligibleBot(killer)) // ExcludeNames: never the speaker
         return;
 
     Group* group = killer->GetGroup();
@@ -217,7 +268,7 @@ void HsOpenerResurrectHandler::OnPlayerResurrect(Player* player, float /*restore
 {
     // Scoped to the bot-receives-rez direction -- the hook carries no
     // caster/giver reference (hs_opener.h).
-    if (!player || !IsBot(player))
+    if (!player || !IsEligibleBot(player)) // ExcludeNames: never the speaker
         return;
 
     Group* group = player->GetGroup();
@@ -250,9 +301,15 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
         Player* member = itr->GetSource();
         if (!member || !member->IsInWorld())
             continue;
+        // IsBot decides which side of the split this member is on;
+        // IsEligibleBot decides whether it may be the speaker. An excluded
+        // bot therefore lands in neither slot -- it must not be picked as
+        // the greeter, and must not fall through to the `player` branch and
+        // be treated as the human the dungeon was run with (which would also
+        // write it an hside_memory row below).
         if (IsBot(member))
         {
-            if (!bot)
+            if (!bot && IsEligibleBot(member))
                 bot = member;
         }
         else if (!player)
@@ -291,8 +348,15 @@ void Hs_ScanProximityOpeners()
         Player* candidate = itr.second;
         if (!candidate || !candidate->IsInWorld())
             continue;
+        // Three-way, not two: an ExcludeNames bot belongs in neither list.
+        // Dropping it from `bots` is the actual fix; keeping it out of
+        // `realPlayers` is what stops the plain `else` from promoting it to
+        // a human that other bots then open on.
         if (IsBot(candidate))
-            bots.push_back(candidate);
+        {
+            if (IsEligibleBot(candidate))
+                bots.push_back(candidate);
+        }
         else
             realPlayers.push_back(candidate);
     }

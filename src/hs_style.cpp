@@ -1,4 +1,5 @@
 #include "hs_style.h"
+#include "hs_prune.h"
 
 #include <algorithm>
 #include <cctype>
@@ -807,7 +808,16 @@ namespace
 void Hs_NoteTradeSighting(uint64_t botGuid)
 {
     std::lock_guard<std::mutex> lock(g_TradeSightingMutex);
-    g_LastTradeSighting[botGuid] = TradeClock::now();
+    TradeClock::time_point now = TradeClock::now();
+    g_LastTradeSighting[botGuid] = now;
+
+    // Pure-leak case: Hs_TradeCareOffsetFor below returns 0 for anything past
+    // kTradeSightingWindowSeconds, which is exactly what it returns for a
+    // missing key, so an expired entry is retention with no effect. Ten
+    // minutes is five times the read window -- far enough clear of it that
+    // this can never drop a sighting that still matters (hs_prune.h).
+    HsPrune::PruneStale(g_LastTradeSighting, now,
+                        /*staleSeconds=*/600, /*pruneAboveSize=*/512);
 }
 
 float Hs_TradeCareOffsetFor(uint64_t botGuid)
@@ -836,10 +846,11 @@ float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat, fl
     // sound like different people rather than reading identically.
     constexpr float kJitterWidth = 0.20f;
 
-    // Negative offset in combat. Party chat during an encounter is a related
-    // case with no hook to read it from yet (this module only hooks /say and
-    // whisper -- hs_config.h). Combat is the one signal already reachable at
-    // the call site (hs_handler.cpp's TryDispatch has the bot's Player*).
+    // Negative offset in combat. `inCombat` is the speaking bot's own
+    // IsInCombat(), read at the call site (every HsStyleContext construction
+    // site has the bot's Player*). The related case still unbuilt is a
+    // group-wide encounter signal: a bot chatting in party while its group is
+    // mid-pull but it personally is not yet tagged reads as calm here.
     // -0.15 is a starting guess, same footing as the rest of the archetype
     // care table.
     constexpr float kCombatCareOffset = -0.15f;

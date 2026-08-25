@@ -27,14 +27,26 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
 // One query's worth of what the reactive tier (hs_queue.cpp's WorkerLoop)
 // and the delivery-side style pass need for a carded bot: the voice block
 // (the only card text that ever enters a prompt) and the verbal_tic (a
-// protected token in the style pass). `active` is false -- and the other two
+// protected token in the style pass). `active` is false -- and the other
 // fields empty -- for a bot with no row or a dormant/retired card, the
 // overwhelmingly common case.
+//
+// mainFocus/currentGoal are the two card-only corpus placeholders
+// (%main_focus, %current_goal -- hs_corpus.h). They live here rather than
+// behind their own lookups because they are read from the same card_facts
+// JSON, on the same row, by the same caller that already needs `active` and
+// `verbalTic`: hs_handler.cpp's TryCorpusFallback previously issued four
+// separate queries (Hs_HasActiveCard, this snapshot, and Hs_LookupCardFactField
+// twice) for one row, on the world thread inside the chat hook, per replying
+// bot. `active` also answers Hs_HasActiveCard outright, so that call has no
+// remaining reason to exist alongside a snapshot the caller is taking anyway.
 struct HsCardSnapshot
 {
     bool        active = false;
     std::string voiceBlock;
     std::string verbalTic;
+    std::string mainFocus;
+    std::string currentGoal;
 };
 HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid);
 
@@ -44,11 +56,6 @@ HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid);
 // field is absent -- same fall-through shape TryGrounded already uses for
 // Mount, rather than fabricating a lacks-line.
 std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldName);
-
-// Whether this bot currently has an active card -- hs_corpus.h's selection
-// needs this to decide whether a card_gated category is eligible to draw
-// from at all.
-bool Hs_HasActiveCard(uint64_t botGuid);
 
 // Re-applies every card_active bot's name into both of mod-playerbots'
 // recycling-exclusion vectors (levelBracketsExcludeNames,

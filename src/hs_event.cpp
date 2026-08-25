@@ -342,7 +342,18 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     // (PLAN-ARBITER.md §3).
     uint8 newLevel = player->GetLevel();
     if (newLevel <= oldlevel)
+    {
+        // A *drop* is how mod-playerbots' recycler shows up here:
+        // RandomBotLevelMgr::ResetBot knocks a bot back down a bracket in
+        // place, keeping its GUID and name. Nothing about the character it
+        // was survives that, so its conversation history stops being useful
+        // prior-turn context and starts being wrong. This hook is the only
+        // signal that covers every bot -- hside_identity's own retirement
+        // sweep only walks carded rows.
+        if (newLevel < oldlevel && IsBot(player))
+            Hs_ForgetBotHistory(player->GetGUID().GetRawValue());
         return;
+    }
 
     std::string levelText = std::to_string(static_cast<uint32_t>(newLevel));
     std::vector<HsEventActor> actors;

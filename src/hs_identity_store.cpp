@@ -197,7 +197,15 @@ HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid)
         std::string factsText = (*result)[1].Get<std::string>();
         hs_json facts = hs_json::parse(factsText, nullptr, /*allow_exceptions=*/false);
         if (!facts.is_discarded())
+        {
             snapshot.verbalTic = Hs_ExtractVerbalTic(facts);
+            // Same already-parsed JSON the verbal tic comes from -- reading
+            // these two here is what lets TryCorpusFallback resolve the
+            // card-only placeholders without two more round trips for the
+            // row it already has.
+            snapshot.mainFocus   = Hs_CardFactField(facts, "main_focus");
+            snapshot.currentGoal = Hs_CardFactField(facts, "current_goal");
+        }
     }
 
     return snapshot;
@@ -215,13 +223,6 @@ std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldNam
         return "";
 
     return Hs_CardFactField(facts, fieldName);
-}
-
-bool Hs_HasActiveCard(uint64_t botGuid)
-{
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT 1 FROM hside_identity WHERE bot_guid = {} AND card_active = 1", botGuid);
-    return result != nullptr;
 }
 
 void Hs_ApplyExcludeVectorsFromIdentityTable()
@@ -344,9 +345,21 @@ void Hs_RunIdentityDailySweep()
 
     // 3. Card demotion -- dormant, unpinned cards clear. Card text is not
     // touched.
+    //
+    // COALESCE, not a bare last_used_at: that column is NULL until
+    // Hs_BumpInteractionScore first writes it, and in MySQL `NULL < <expr>`
+    // is NULL, so a bare comparison silently never selects such a row. That
+    // state is ordinary, not exotic -- `.hearthside promote` (Hs_ForcePromote)
+    // inserts without last_used_at, the generator then flips card_active = 1
+    // without touching it either, and the friend poll in step 1 above
+    // promotes the same shape. Without the COALESCE a GM-promoted bot that
+    // is never actually talked to keeps its card, and its exclude-vector pin
+    // against playerbots' recycler, forever. promoted_at is the right
+    // fallback reference point since the row has no creation timestamp --
+    // same trick Hs_RunUnusedRowEvictionSweep uses for corpus rows.
     QueryResult toDemote = CharacterDatabase.Query(
         "SELECT bot_guid FROM hside_identity WHERE card_active = 1 AND pinned_by_friend = 0 "
-        "AND last_used_at < NOW() - INTERVAL {} DAY",
+        "AND COALESCE(last_used_at, promoted_at) < NOW() - INTERVAL {} DAY",
         kHsCardDormancyDays);
     if (toDemote)
     {
