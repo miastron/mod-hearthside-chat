@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `hside_corpus_category` (
   `card_gated`  TINYINT(1) NOT NULL DEFAULT 0
                 COMMENT '1 = rows may use card-only placeholders (%main_focus, %current_goal)',
   `channel`     VARCHAR(16) DEFAULT NULL
-                COMMENT 'trade | general | world = global-channel category; NULL = /say and direct-reply',
+                COMMENT 'trade | general = global-channel category; NULL = /say and direct-reply',
   `is_opener`   TINYINT(1) NOT NULL DEFAULT 0
                 COMMENT '1 = fired only by a shared-context trigger (hs_opener.cpp), never by ambient/direct-reply selection',
   PRIMARY KEY (`name`)
@@ -26,7 +26,6 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 ('chat_zone_musing',      'zone',       0, NULL, 0),
 ('channel_trade_wts',     'none',       0, 'trade', 0),
 ('channel_general_chat',  'none',       0, 'general', 0),
-('channel_world_chat',    'none',       0, 'world', 0),
 -- Openers: one per first trigger slice (group formed, mob killed jointly,
 -- rez given/received, dungeon completed).
 ('opener_group_formed',     'none', 0, NULL, 1),

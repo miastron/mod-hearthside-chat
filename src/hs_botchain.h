@@ -16,7 +16,7 @@ class Player;
 // hs_botchain.cpp includes the real definition.
 enum class HsReplyChannel : uint8_t;
 
-// Live bot-to-bot chains on party/raid and the World channel: one bot's
+// Live bot-to-bot chains on party/raid and the zone General channel: one bot's
 // delivered line becomes the trigger another bot answers with a real tier-2
 // call, rather than a pre-written scene being replayed.
 //
@@ -32,7 +32,7 @@ enum class HsReplyChannel : uint8_t;
 // Why /say is deliberately not a chaining surface: it already has the
 // scripted proximity mechanism, and a /say chain has no conversational scope
 // to bound it -- every player in range hears it, and there is no group or
-// channel membership to key a depth counter on. Party, raid and World all
+// channel membership to key a depth counter on. Party, raid and General all
 // have exactly that natural boundary.
 //
 // The trigger point is delivery (hs_queue.cpp's Hs_DeliverPending), not the

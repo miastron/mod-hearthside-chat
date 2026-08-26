@@ -403,9 +403,6 @@ namespace
 
         handler->PSendSysMessage("[HearthsideChat] {} bot(s) online. Channel instances as seen from your zone:", bots.size());
 
-        // World is omitted deliberately: Hs_ChannelPolicyFor and
-        // Hs_ResolveChannelForDelivery both alias it onto General, so
-        // listing it would print General's row twice under a second name.
         const HsChannelKind kinds[] = {
             HsChannelKind::Trade,
             HsChannelKind::General,
@@ -425,12 +422,14 @@ namespace
             }
 
             // Resolved through the same function delivery uses, from the
-            // caller rather than from a bot. For Trade this can legitimately
-            // differ from the channel the *core* joined the caller to --
-            // hs_queue.h records that mod-playerbots' join-time naming and
-            // Player::UpdateLocalChannels disagree on the city-qualified
-            // name -- which is precisely why the "you are in it" flag below
-            // is reported rather than assumed.
+            // caller rather than from a bot -- so a name this module builds
+            // that no channel answers to shows up here as "resolves to no
+            // live channel" rather than as silence. That is exactly how the
+            // AreaID 3459 bug was caught: Trade printed no instance and no
+            // bots while the caller was plainly sitting in "Trade - City".
+            // The "you are in it" flag stays reported rather than assumed for
+            // the same reason -- ChannelMgr::GetChannel is a name lookup and
+            // does not test membership.
             Channel* mine = Hs_ResolveChannelForDelivery(player, kind);
 
             std::map<std::string, uint32_t> byInstance;

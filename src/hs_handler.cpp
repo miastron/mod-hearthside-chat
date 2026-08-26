@@ -493,23 +493,18 @@ namespace
         return true;
     }
 
-    // §4.17: maps a live Channel* to one of the seven kinds this module
+    // §4.17: maps a live Channel* to one of the six kinds this module
     // knows about, via mod-playerbots' own ChatChannelId enum (PlayerbotAI.h
     // -- the same ids mod-playerbots itself joins bots to, PlayerbotMgr.cpp)
     // rather than parsing Channel::GetName()'s zone-suffixed display string.
-    // World has no ChatChannels.dbc entry in this build (mod-playerbots
-    // joins it via a raw CMSG_JOIN_CHANNEL with id 0), so it's matched by
-    // name instead. Returns false for any other channel (a GM/custom
-    // channel, or a DBC id this module doesn't have a policy for) -- the
-    // hook passes those through untouched.
+    // Returns false for any other channel (a GM/custom channel, or a DBC id
+    // this module doesn't have a policy for) -- the hook passes those through
+    // untouched. That deliberately includes the channel mod-playerbots joins
+    // by raw CMSG_JOIN_CHANNEL with id 0 and the name "World": 3.3.5a has no
+    // World channel in ChatChannels.dbc and nothing auto-joins a real player
+    // to one, so this module has nothing to say there.
     bool ChannelKindFor(Channel* channel, HsChannelKind& out)
     {
-        if (channel->GetName() == "World")
-        {
-            out = HsChannelKind::World;
-            return true;
-        }
-
         switch (channel->GetChannelId())
         {
             case ChatChannelId::TRADE:              out = HsChannelKind::Trade;            return true;
@@ -827,18 +822,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
     // Same floor-taking as the group hook above. A no-op on every channel but
-    // World, which is the only one hs_botchain.h chains on.
+    // General, which is the only one hs_botchain.h chains on.
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
-
-    // World's chain scope (hs_botchain.h) is a separate bookkeeping key from
-    // General's, but the two now deliver into the exact same real channel
-    // (Hs_ResolveChannelForDelivery) -- a real player typing in General is
-    // interrupting a World-scoped chain hop just as much as a General-scoped
-    // one, since both are about to say something into the channel this
-    // player is looking at. Without this, a pending World chain hop would
-    // survive an interruption that visibly landed in the same window.
-    if (kind == HsChannelKind::General)
-        Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(HsChannelKind::World));
 
     if (!Hs_ChannelBucketTake(kind))
         return true; // throttled -- no candidate scan at all on a busy channel

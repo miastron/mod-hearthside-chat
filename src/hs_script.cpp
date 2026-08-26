@@ -5,6 +5,7 @@
 #include "hs_corpus.h"
 #include "hs_prune.h"
 #include "hs_queue.h" // §4.17: Hs_ResolveChannelForDelivery, HsReplyChannel::Channel's delivery pattern
+#include "hs_rpgstate.h"
 #include "hs_style.h"
 #include "hs_tier.h"
 
@@ -33,10 +34,14 @@ namespace
 
     // Script fire rate and reserve behaviour are live-realm-only
     // judgements, so these are placeholder constants, not config keys.
-    // kScanIntervalMs x kScanFireChancePercent targets roughly a 10-minute
-    // burn rate, without claiming that figure is measured.
+    //
+    // The proximity-scene fire chance is the exception: it moved to
+    // Script.Proximity.FireChancePercent (hs_config.h) when the
+    // settled-state gate landed, since how much that gate cuts depends on
+    // what the realm's bots are doing at the time and cannot be guessed
+    // here. kScanIntervalMs x that key is still the burn-rate knob it
+    // always was.
     constexpr uint32_t kScanIntervalMs          = 30000; // how often we even look
-    constexpr uint32_t kScanFireChancePercent   = 5;     // per eligible duo, per scan
     constexpr uint32_t kWitnessCooldownSeconds  = 300;   // don't re-fire near the same player too soon
     constexpr uint32_t kFirstTurnDelayMinMs     = 800;
     constexpr uint32_t kFirstTurnDelayMaxMs     = 2000;
@@ -123,8 +128,8 @@ namespace
 
     uint32_t g_ChannelScanAccumulatorMs = 0;
 
-    // A placeholder starting guess, same footing as kScanFireChancePercent
-    // above -- channel scripts additionally gate on each channel's own
+    // A placeholder starting guess, same footing kScanIntervalMs
+    // above is on -- channel scripts additionally gate on each channel's own
     // MaxTier (checked per kind at fire time, not here).
     constexpr uint32_t kChannelScanFireChancePercent = 3;
 
@@ -252,6 +257,18 @@ namespace
                 continue;
             if (candidate->IsInCombat() || !candidate->IsAlive())
                 continue;
+            // Both participants must be settled -- stationary and resting
+            // or loitering (Hs_IsBotSettled, hs_rpgstate.h). Unlike
+            // ambient's companion,
+            // neither of these two is scenery: they are about to hold a
+            // multi-turn conversation in /say over the next several minutes,
+            // and a bot that walks off to a quest objective mid-scene leaves
+            // the other one talking to nobody. DeliverOneTurn's per-turn
+            // re-check catches that as a range abort, but not starting a
+            // scene with a bot that was already on its way somewhere is the
+            // better fix.
+            if (!Hs_IsBotSettled(candidate))
+                continue;
             // Map- and phase-aware; see hs_handler.cpp's /say eligibility
             // filter for why the bare GetDistance is wrong here.
             if (!candidate->IsWithinDistInMap(player, g_HsSayDistance))
@@ -265,7 +282,7 @@ namespace
 
         if (nearbyBots.size() < 2)
             return;
-        if (urand(0, 99) >= kScanFireChancePercent)
+        if (urand(0, 99) >= g_HsScriptProximityFireChancePercent)
             return;
 
         ClaimAndSchedule(nearbyBots[0], nearbyBots[1], player);
@@ -446,20 +463,46 @@ namespace
     // Hs_ResolveChannelForDelivery's return alone. No proximity or combat
     // check (§4.17's channel cast needn't be co-located) -- only alive,
     // same team, and not already mid-script (either mechanism).
+    //
+    // The instance also has to have a real player in it. Unlike the /say
+    // scene scan, which gets its audience from the witness search, a channel
+    // scene has no such constraint on the cast, so the audience test has to
+    // be made explicitly against the instance itself.
     void TryFireChannelScript(HsChannelKind kind)
     {
         if (!HsTierAllows(Hs_ChannelPolicyFor(kind).maxTier, HsTier::Corpus))
             return; // this channel's own MaxTier, independent of MaxTier.BotToBot
 
         std::unordered_map<Channel*, std::vector<Player*>> byInstance;
+        std::vector<Player*>                                realPlayers;
         for (auto const& itr : ObjectAccessor::GetPlayers())
         {
             Player* candidate = itr.second;
+            if (!candidate || !candidate->IsInWorld())
+                continue;
+
+            // Real players are collected unresolved, for the reason
+            // hs_ambient.cpp's own channel scan spells out: resolving a human
+            // through Hs_ResolveChannelForDelivery would make this scan depend
+            // on that function agreeing with the core about every channel's
+            // name, and a disagreement silences the surface instead of failing
+            // visibly. Membership is tested below against the bot-resolved
+            // Channel*, which is exact because it is the same object.
+            //
+            // Note this is a bare IsBot, not IsEligibleBot: an excluded bot
+            // is not a valid speaker, but it is also not the human whose
+            // presence makes a scene worth performing.
+            if (!IsBot(candidate))
+            {
+                realPlayers.push_back(candidate);
+                continue;
+            }
+
             // IsEligibleBot covers HearthsideChat.ExcludeNames, and is
             // deliberately ahead of the Hs_ResolveChannelForDelivery call
             // below -- that one is a DBC lookup plus a ChannelMgr string
             // match, by far the most expensive test in this loop.
-            if (!candidate || !candidate->IsInWorld() || !IsEligibleBot(candidate) || !candidate->IsAlive())
+            if (!IsEligibleBot(candidate) || !candidate->IsAlive())
                 continue;
             uint64_t guid = candidate->GetGUID().GetRawValue();
             if (IsBotInActiveRun(guid) || IsBotInActiveChannelRun(guid))
@@ -471,17 +514,46 @@ namespace
             byInstance[channel].push_back(candidate);
         }
 
-        std::vector<Player*>* pool = nullptr;
+        // Collect every instance that can carry a scene, then pick among
+        // them, rather than taking the first one enumerated. Two changes in
+        // one, both copied from hs_ambient.cpp's channel scan:
+        //
+        //   - A real player has to be in the instance. Global channels are
+        //     one Channel object per zone, so a realm with bots spread over
+        //     forty zones has forty General instances and a player standing
+        //     in one of them. Without this test a scene fires into whichever
+        //     instance enumerated first, is logged as delivered, is written
+        //     to hside_chat_log, and is heard by nobody -- measured at ~98%
+        //     inaudible on the test realm (334 bots, 8 of them sharing the
+        //     player's instance).
+        //   - Picking uniformly rather than taking the first, so that on a
+        //     realm with several populated cities one instance cannot
+        //     monopolize the surface.
+        std::vector<std::vector<Player*>*> eligibleInstances;
         for (auto& entry : byInstance)
         {
-            if (entry.second.size() >= 2)
+            if (entry.second.size() < 2)
+                continue;
+
+            bool heard = false;
+            for (Player* player : realPlayers)
             {
-                pool = &entry.second;
-                break; // first eligible instance found this scan -- no cross-instance preference
+                if (player->IsInChannel(entry.first))
+                {
+                    heard = true;
+                    break; // presence test, not a count
+                }
             }
+            if (!heard)
+                continue;
+
+            eligibleInstances.push_back(&entry.second);
         }
-        if (!pool)
+        if (eligibleInstances.empty())
             return;
+
+        std::vector<Player*>* pool =
+            eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
         if (urand(0, 99) >= kChannelScanFireChancePercent)
             return;
 
@@ -605,7 +677,6 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
         g_ChannelScanAccumulatorMs = 0;
         TryFireChannelScript(HsChannelKind::Trade);
         TryFireChannelScript(HsChannelKind::General);
-        TryFireChannelScript(HsChannelKind::World);
     }
 }
 

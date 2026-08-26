@@ -148,8 +148,8 @@ HearthsideChat.LLM.DryMultiplier = 0.0
 
 # HearthsideChat.Say.Distance
 #     Description: Yards within which a bot is an eligible /say candidate.
-#     Default:     30.0
-HearthsideChat.Say.Distance = 30.0
+#     Default:     20.0
+HearthsideChat.Say.Distance = 20.0
 
 # HearthsideChat.ReplyChance.Whisper
 #     Description: Percent chance a bot answers a whisper directed at it.
@@ -376,7 +376,7 @@ HearthsideChat.MaxTier.DirectReply = inference
 #                  cost-per-value in the module, and the idle generator
 #                  already writes this content offline for free.
 #
-#                  Speaks on /say, party, raid, and the Trade/General/World
+#                  Speaks on /say, party, raid, and the Trade/General
 #                  channels. See the Ambient.* keys below for volume, which
 #                  is where the real tuning is -- and note this key is a
 #                  ceiling, not the volume control: setting it to "off"
@@ -402,10 +402,10 @@ HearthsideChat.MaxTier.Openers = corpus
 #                  lower rather than replacing it:
 #                    corpus    -- scripted replay only. Multi-turn scenes the
 #                                 idle generator wrote earlier, replayed near
-#                                 a player (/say) or cast into Trade/General/
-#                                 World. No GPU cost at runtime.
+#                                 a player (/say) or cast into Trade or
+#                                 General. No GPU cost at runtime.
 #                    inference -- live chains as well: on party, raid and the
-#                                 World channel, one bot's line becomes the
+#                                 General channel, one bot's line becomes the
 #                                 trigger another bot answers with a real
 #                                 tier-2 call. Scripted replay still runs.
 #                                 See the BotChain.* keys below, which are
@@ -587,9 +587,9 @@ HearthsideChat.Ambient.Party.Enable = 1
 #     Default:     1
 HearthsideChat.Ambient.Raid.Enable = 1
 
-# Trade, General and World ambient have no Enable key of their own -- they
-# are gated by each channel's existing Channel.<name>.MaxTier and paced by
-# that channel's own RatePerMin, on top of the shared bucket above. Set
+# Trade and General ambient have no Enable key of their own -- they are
+# gated by each channel's existing Channel.<name>.MaxTier and paced by that
+# channel's own RatePerMin, on top of the shared bucket above. Set
 # Channel.Trade.MaxTier = off to silence ambient there along with everything
 # else this module says in Trade.
 #
@@ -601,17 +601,106 @@ HearthsideChat.Ambient.Raid.Enable = 1
 # silence.
 
 # --------------------------------------------
+# UNPROMPTED /SAY -- SETTLED-STATE GATE AND FIRE CHANCES
+# --------------------------------------------
+# Three producers speak in /say without anyone having said anything first:
+# ambient musing (above), openers, and two-bot proximity scenes. All three now
+# require the speaker to be *settled*, which is two facts AND-ed together:
+#
+#   - it is standing still (mod-playerbots' own isMoving() check), and
+#   - its mod-playerbots activity state is RPG_REST (sat down for a break) or
+#     RPG_WANDER_NPC (arrived somewhere and milling about among the NPCs).
+#
+# Neither fact alone is the question. The state is stable but coarse -- most
+# states cover the travel to a place as well as the time spent there, so
+# RPG_GO_CAMP, which sounds like it belongs, is actually the *run* to a camp
+# and flips to RPG_WANDER_NPC on arrival. Stillness is precise but flighty on
+# its own -- a questing bot stops constantly to loot, cast, or use a mailbox,
+# and any of those pauses would let it chat mid-task. Together they mean the
+# bot is in a settled phase AND has actually stopped, which is the scene worth
+# having: two bots standing or sitting near each other with nothing to do.
+#
+# Every other state -- grinding, questing, flying, outdoor PvP, wandering a
+# grind spot -- describes a bot on its way somewhere or mid-task, and a bot
+# that stops mid-run to muse about the scenery is the clearest possible tell
+# that it is not a player.
+#
+# This gate is not configurable. It is a correctness fix, not a taste setting:
+# there is no realm on which chatter from a bot sprinting to a quest objective
+# is the desired behaviour. What is configurable is the roll that follows it,
+# because how much the gate cuts depends entirely on what fraction of a given
+# realm's bots happen to be resting or loitering at any moment -- which no
+# default can predict.
+#
+# The gate applies to /say only. Direct replies, party/raid/guild, and the
+# global channels are untouched: a bot ignoring a player who spoke to it
+# because it happens to be walking somewhere is a worse failure than the one
+# this prevents, and Trade/General are typed into deliberately from anywhere,
+# so what the typist is doing is beside the point. The one other exception is
+# the group-formed opener, which is delivered to party chat and still fires
+# from a travelling bot -- an unacknowledged group invite is silence where a
+# response is expected.
+#
+# All three defaults below are raised from the compiled constants they
+# replaced, on the arithmetic that a narrower gate needs a higher roll to
+# produce the same density. They are starting guesses to be corrected against
+# a live realm, not measurements. Setting any of them to 0 silences that one
+# producer's /say path without touching the others or the shared bucket.
+
+# HearthsideChat.Ambient.Say.FireChancePercent
+#     Description: Chance an eligible ambient /say speaker actually speaks,
+#                  rolled last. Ambient /say had no roll at all before the
+#                  settled-state gate -- it was paced only by the shared
+#                  bucket and the 30-minute per-bot cooldown.
+#
+#                  Four things must line up before this roll is reached: the
+#                  bot is settled (stationary + resting or loitering), a real
+#                  player is within Say.Distance,
+#                  another bot is within Say.Distance too, and the bot is off
+#                  its ambient cooldown. The companion-bot requirement is
+#                  what makes the line read as overheard rather than as the
+#                  bot talking at the player and expecting an answer.
+#     Default:     60
+HearthsideChat.Ambient.Say.FireChancePercent = 60
+
+# HearthsideChat.Openers.FireChancePercent
+#     Description: Chance a bot delivers an opener once a shared moment has
+#                  occurred and its 10-minute per-pair cooldown has expired.
+#                  Was a compiled 40 before the settled-state gate.
+#
+#                  Applies to every opener trigger, including the party-chat
+#                  group-formed one -- only the settled-state gate above is
+#                  restricted to the /say triggers.
+#     Default:     60
+HearthsideChat.Openers.FireChancePercent = 60
+
+# HearthsideChat.Script.Proximity.FireChancePercent
+#     Description: Chance a scripted /say scene starts, rolled per eligible
+#                  bot pair per 30-second scan. Was a compiled 5.
+#
+#                  Both participants must be settled here, not just one:
+#                  a scene runs several turns over minutes, and a bot that
+#                  walks off to a quest objective partway through leaves the
+#                  other one talking to nobody.
+#
+#                  Does not affect the Trade/General channel scenes, which
+#                  have no proximity or state requirement and keep their own
+#                  compiled rate.
+#     Default:     20
+HearthsideChat.Script.Proximity.FireChancePercent = 20
+
+# --------------------------------------------
 # LIVE BOT-TO-BOT CHAINS
 # --------------------------------------------
 # Inert unless MaxTier.BotToBot = inference (above). A chain runs on party,
-# raid, or the World channel: a bot's delivered line is offered to the other
+# raid, or the General channel: a bot's delivered line is offered to the other
 # bots sharing that group or channel, and one of them may answer it with a
 # full tier-2 call. Whisper, guild and /say never chain -- /say already has
 # the scripted proximity mechanism, and the other two have no bounded
 # audience to pace a chain against.
 #
 # Every hop is a full LLM call, so these are the volume control on top of
-# Bucket.RepliesPerMinute (which still caps everything) and, on World, that
+# Bucket.RepliesPerMinute (which still caps everything) and, in General, that
 # channel's own RatePerMin. A chain also ends the moment a real player speaks
 # into the group or channel: the hop still generating is thrown away, and the
 # bots' replies to that player start a new chain from what they actually
@@ -649,7 +738,7 @@ HearthsideChat.BotChain.ScopeCooldownSeconds = 180
 
 # HearthsideChat.BotChain.RequireRealPlayer
 #     Description: Only chain where a real player can actually see it -- a
-#                  human member in the group, or a human in the World
+#                  human member in the group, or a human in the General
 #                  channel. Bots talking to each other in an empty room is
 #                  GPU spend against nobody's experience. Turn off only to
 #                  load-test an empty realm.
@@ -659,7 +748,7 @@ HearthsideChat.BotChain.RequireRealPlayer = 1
 # --------------------------------------------
 # GLOBAL-CHANNEL CHAT SURFACE
 # --------------------------------------------
-# mod-playerbots joins every bot to every one of these seven channels
+# mod-playerbots joins every bot to every one of these six channels
 # unconditionally, with no config gate of its own. MaxTier reuses the same
 # off/reflex/corpus/inference enum as above but is capped at "corpus" in
 # practice -- speaking in a channel is corpus/script content only, never
@@ -687,30 +776,13 @@ HearthsideChat.Channel.Trade.RatePerMin = 3
 HearthsideChat.Channel.Trade.MaxCandidates = 8
 
 # HearthsideChat.Channel.General.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: General channel -- zone-flavor chatter.
+#     Description: General channel -- zone-flavor chatter. Resolved per zone,
+#                  so the audience is the other players standing in the same
+#                  zone as the speaker.
 #     Default:     corpus / 3 / 8
 HearthsideChat.Channel.General.MaxTier = corpus
 HearthsideChat.Channel.General.RatePerMin = 3
 HearthsideChat.Channel.General.MaxCandidates = 8
-
-# HearthsideChat.Channel.World.MaxTier / .RatePerMin / .MaxCandidates
-#     NOTE:        World has no ChatChannels.dbc entry in WotLK and nothing
-#                   auto-joins a real player to a channel literally named
-#                   "World" -- bots were talking to each other in a channel no
-#                   player could ever hear. World now delivers into General's
-#                   real, zone-scoped channel and shares General's own
-#                   MaxTier/RatePerMin/MaxCandidates and rate bucket
-#                   (Hs_ChannelPolicyFor, hs_channel.cpp). These three keys are
-#                   parsed but no longer independently read by anything --
-#                   edit Channel.General.* instead. Kept only so an existing
-#                   conf.dist line doesn't become an unknown key. World still
-#                   contributes its own realm-wide-flavored corpus content
-#                   (channel_world_chat) as a second content pool into that
-#                   same channel.
-#     Default:     corpus / 3 / 8
-HearthsideChat.Channel.World.MaxTier = corpus
-HearthsideChat.Channel.World.RatePerMin = 3
-HearthsideChat.Channel.World.MaxCandidates = 8
 
 # HearthsideChat.Channel.LookingForGroup.MaxTier / .RatePerMin / .MaxCandidates
 #     Description: LookingForGroup channel. Off by default -- soliciting a

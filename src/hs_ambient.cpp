@@ -6,6 +6,7 @@
 #include "hs_identity_store.h"
 #include "hs_prune.h"
 #include "hs_queue.h"
+#include "hs_rpgstate.h"
 #include "hs_script.h"
 #include "hs_style.h"
 #include "hs_tier.h"
@@ -52,8 +53,8 @@ namespace
     // Which surface a given tick speaks on. Not HsReplyChannel: that enum is
     // about *delivery*, and it collapses the three global channels into a
     // single Channel value carrying an HsChannelKind. Ambient needs to choose
-    // among six things that each have their own scan, so it needs its own
-    // six-valued list.
+    // among five things that each have their own scan, so it needs its own
+    // five-valued list.
     enum class AmbientSurface
     {
         Say,
@@ -61,7 +62,6 @@ namespace
         Raid,
         Trade,
         General,
-        World,
     };
 
     std::atomic<uint32_t> g_AmbientLinesFired{0};
@@ -210,6 +210,27 @@ namespace
     // Ambient.RequireRealPlayer exists at all -- party/raid get the same
     // guarantee free from the delivery layer, and the channel scan tests
     // membership instead.
+    //
+    // Four independent conditions now have to line up, and the order below
+    // is deliberate (cheapest first, each cutting the pool the next one
+    // walks):
+    //
+    //   1. the bot is settled -- stationary, and in RPG_REST or
+    //      RPG_WANDER_NPC (Hs_IsBotSettled, hs_rpgstate.h). A bot sprinting
+    //      to a quest objective muttering about the scenery is the tell
+    //      this gate exists to remove.
+    //   2. a real player is in earshot (Say.Distance), as before.
+    //   3. another eligible bot is in earshot too. Musing aloud with
+    //      literally nobody but the player around reads as the bot talking
+    //      *at* them and expecting an answer; with a companion present the
+    //      same line reads as overheard, which is what it is meant to be.
+    //      The companion is not required to be settled -- it is scenery
+    //      here, not a participant, and requiring both would cut the pool
+    //      by the square of an already narrow fraction.
+    //   4. the roll (Ambient.Say.FireChancePercent).
+    //
+    // The chance is high precisely because the first three are narrow --
+    // see hs_config.h's block on the three fire-chance keys.
     void TryAmbientSay()
     {
         std::vector<Player*> realPlayers;
@@ -232,7 +253,10 @@ namespace
                 realPlayers.push_back(candidate);
         }
 
-        if (bots.empty())
+        // Two, not one: gate 3 above needs a speaker *and* a companion, so a
+        // realm with a single eligible bot in the world can never satisfy it
+        // and there is nothing to walk.
+        if (bots.size() < 2)
             return;
         if (g_HsAmbientRequireRealPlayer && realPlayers.empty())
             return;
@@ -242,6 +266,11 @@ namespace
         for (Player* bot : bots)
         {
             if (!BotBaseEligible(bot))
+                continue;
+
+            // Gate 1. A cheap map lookup, so it goes ahead of both distance
+            // walks below and cuts the pool they have to cover.
+            if (!Hs_IsBotSettled(bot))
                 continue;
 
             Player* audience = nullptr;
@@ -260,6 +289,26 @@ namespace
             if (!audience && g_HsAmbientRequireRealPlayer)
                 continue;
 
+            // Gate 3. Same presence-not-count shape as the audience scan
+            // above, and the same map/phase-aware distance test -- one
+            // companion in earshot is the whole requirement.
+            bool hasCompanion = false;
+            for (Player* other : bots)
+            {
+                if (other == bot)
+                    continue;
+                if (other->GetTeamId() != bot->GetTeamId())
+                    continue;
+                if (!other->IsAlive()) // a corpse is not company
+                    continue;
+                if (!bot->IsWithinDistInMap(other, g_HsSayDistance))
+                    continue;
+                hasCompanion = true;
+                break;
+            }
+            if (!hasCompanion)
+                continue;
+
             candidates.emplace_back(bot, audience);
             if (candidates.size() >= kMaxCandidates)
                 break;
@@ -271,6 +320,13 @@ namespace
         auto const& picked = candidates[urand(0, static_cast<uint32_t>(candidates.size() - 1))];
         Player* speaker  = picked.first;
         Player* audience = picked.second;
+
+        // Gate 4, ahead of the budget for the same reason hs_opener.cpp
+        // rolls before Hs_AmbientBucketTake: a token should be spent on a
+        // line actually about to be attempted, not burned by a speaker the
+        // roll was going to silence anyway.
+        if (urand(0, 99) >= g_HsAmbientSayFireChancePercent)
+            return;
 
         // Budget spent only now, on a speaker that is actually going to try.
         // PLAN-AMBIENT.md §5 sketched this check ahead of speaker selection;
@@ -356,7 +412,7 @@ namespace
                       HsChannelKind::Trade, "");
     }
 
-    // ---- Trade / General / World ---------------------------------------
+    // ---- Trade / General -----------------------------------------------
     // Membership is the audience test here rather than distance. Bots are
     // grouped by resolved Channel* -- the same zone-qualified resolution
     // delivery itself uses, so "same resolved Channel*" is equivalent to
@@ -365,7 +421,7 @@ namespace
     void TryAmbientChannel(HsChannelKind kind)
     {
         // The channel's own MaxTier, independent of MaxTier.Ambient: an
-        // operator who set Channel.World.MaxTier = off meant it, and ambient
+        // operator who set Channel.General.MaxTier = off meant it, and ambient
         // is not an exception to that.
         if (!HsTierAllows(Hs_ChannelPolicyFor(kind).maxTier, HsTier::Corpus))
             return;
@@ -381,16 +437,16 @@ namespace
 
             // Real players are collected unresolved, deliberately. It is
             // tempting to resolve their channel here too and group everyone
-            // in one pass, but Hs_ResolveChannelForDelivery mirrors
-            // *mod-playerbots'* join-time name construction rather than the
-            // core's player-facing Player::UpdateLocalChannels, and
-            // hs_queue.h records that the two disagree on the zone-qualified
-            // name for Trade and GuildRecruitment. Resolving a human through
-            // it would hand back the wrong instance or nullptr, so on Trade
-            // -- the busiest channel this feature has -- no human would ever
-            // register and RequireRealPlayer would silence the surface
-            // outright. Membership is tested below against the bot-resolved
-            // Channel* instead, which is exact because it is the same object.
+            // in one pass, but that would make this scan's correctness depend
+            // on Hs_ResolveChannelForDelivery agreeing with the core about
+            // every channel's name -- and a disagreement there resolves a
+            // human to the wrong instance or to nullptr, which silences the
+            // surface outright rather than failing visibly. (That is not
+            // hypothetical: the city-scoped names disagreed until the
+            // AreaID 3459 fix, and Trade carried no traffic at all for it.)
+            // Membership is tested below against the bot-resolved Channel*
+            // instead, which is exact because it is the same object, whatever
+            // that object happens to be called.
             if (!IsBot(candidate))
             {
                 realPlayers.push_back(candidate);
@@ -491,8 +547,6 @@ namespace
             enabled.push_back(AmbientSurface::Trade);
         if (HsTierAllows(Hs_ChannelPolicyFor(HsChannelKind::General).maxTier, HsTier::Corpus))
             enabled.push_back(AmbientSurface::General);
-        if (HsTierAllows(Hs_ChannelPolicyFor(HsChannelKind::World).maxTier, HsTier::Corpus))
-            enabled.push_back(AmbientSurface::World);
 
         if (enabled.empty())
             return;
@@ -517,7 +571,6 @@ namespace
             case AmbientSurface::Raid:    TryAmbientGroup(/*isRaid=*/true);           break;
             case AmbientSurface::Trade:   TryAmbientChannel(HsChannelKind::Trade);    break;
             case AmbientSurface::General: TryAmbientChannel(HsChannelKind::General);  break;
-            case AmbientSurface::World:   TryAmbientChannel(HsChannelKind::World);    break;
         }
     }
 }

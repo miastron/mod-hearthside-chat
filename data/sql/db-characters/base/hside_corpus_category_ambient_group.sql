@@ -44,7 +44,7 @@
 -- the map. %zone resolves off the bot's live zone for every zone there is.
 --
 -- The `channel` column carries 'party'/'raid' here, extending the
--- trade|general|world values it held before. Nothing else has to change for
+-- trade|general values it held before. Nothing else has to change for
 -- that: Hs_SelectCorpusLine's `channel IS NULL` filter already excludes
 -- every non-NULL value, so these rows stay out of the /say and direct-reply
 -- pool by the same mechanism the channel_* categories already do.

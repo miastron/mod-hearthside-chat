@@ -149,7 +149,7 @@ namespace
         std::string tagValueSql;   // "" | "2" | "'mid'" -- ready for a WHERE clause
         std::string tagValueLabel; // "" | "warrior" | "mid" -- for the prompt
         bool        cardGated;
-        std::string channel;       // "" | "trade" | "general" | "world" -- broadcast framing (§4.17)
+        std::string channel;       // "" | "trade" | "general" -- broadcast framing (§4.17)
     };
 
     // All rows in one exact bucket -- unlimited, since dedup has to check a
@@ -293,38 +293,38 @@ namespace
         return result;
     }
 
-    // Channel-tagged buckets (§4.17: trade/general/world) are read by
-    // strangers scattered across the realm, not someone standing next to
-    // you -- the opposite framing from the default /say-and-direct-reply
-    // intro below, which assumes a proximate listener. Same distinction
+    // Channel-tagged buckets (§4.17: trade/general) are read by the other
+    // members of that channel, not by someone standing next to you -- the
+    // opposite framing from the default /say-and-direct-reply intro below,
+    // which assumes a proximate listener. Same distinction
     // ChannelScriptSystemPromptFor draws for the 2-turn channel scripts;
-    // this is the single-line corpus path's equivalent so LLM-generated
-    // rows for these buckets don't drift back into "here"/"this place"
-    // local framing the way the hand-written seed rows originally did.
+    // this is the single-line corpus path's equivalent.
+    //
+    // Neither channel is realm-wide: General resolves per zone, and Trade to
+    // the shared "Trade - City" instance every player currently in a city is
+    // in (hs_queue.cpp's Hs_ResolveChannelForDelivery). The "never name a
+    // place, never say 'here'" rule below therefore is not about the reader
+    // being far away -- it is that one stored corpus row is replayed in every
+    // zone the generator never saw, so anything place-specific is wrong
+    // somewhere.
     std::string BroadcastChannelPromptIntro(const std::string& channel)
     {
         if (channel == "trade")
             return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of "
-                   "the Lich King player would post in the realm-wide Trade channel -- read by "
-                   "strangers scattered across the realm, not someone standing nearby. Write "
+                   "the Lich King player would post in the Trade channel -- read by the other "
+                   "players who are in a city right now, not someone standing next to you. Write "
                    "exactly ONE short, casual, grammatically clean sentence about gearing up, "
                    "professions, or gripes about prices in general terms -- never a specific "
                    "item, quest, or exact gold price the other person could check and find "
                    "wrong, and nothing that assumes the reader is in the same place as you.";
-        if (channel == "general")
-            return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of "
-                   "the Lich King player would post in the realm-wide General channel -- read by "
-                   "strangers who could be in any zone, not someone standing nearby. Write "
-                   "exactly ONE short, casual, grammatically clean sentence: zone flavor, "
-                   "quests, or a general opinion about the game, phrased as true no matter where "
-                   "the reader is -- never 'here'/'this place'/anything implying the reader can "
-                   "see what you see.";
-        // world
+        // general
         return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of the "
-               "Lich King player would post in the realm-wide World channel -- read by strangers "
-               "anywhere on the realm. Write exactly ONE short, casual, grammatically clean "
-               "sentence: general opinions or banter about the game, nothing tied to one zone or "
-               "place, nothing that assumes the reader is nearby.";
+               "Lich King player would post in the General channel for the zone they are standing "
+               "in -- read by the other players in that same zone, not someone standing next to "
+               "you. Write exactly ONE short, casual, grammatically clean sentence: quests, "
+               "gearing, or a general opinion about the game. The same line is reused in every "
+               "zone, so keep it true anywhere -- never name a place, and never say 'here'/'this "
+               "place' or anything implying the reader can see what you see.";
     }
 
     std::string BuildGenerationPrompt(const HsGenBucket& bucket, const std::vector<std::string>& promptSampleRows,
@@ -590,7 +590,8 @@ namespace
         {
             case HsChannelKind::Trade:
                 return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
-                       "chatting in the Trade channel with another player you don't know well. Keep "
+                       "chatting in the Trade channel -- read by the other players who are in a "
+                       "city right now -- with another player you don't know well. Keep "
                        "it casual and brief, one short line at a time. Talk about gearing up, "
                        "professions, or gripes about prices in general terms -- never a specific "
                        "item, quest, or exact gold price the other person could check and find "
@@ -600,28 +601,18 @@ namespace
                        "%other_class, %other_level, %other_zone, %other_guild. No roleplay "
                        "narration, no asterisks, no mention of being an AI or a game.";
             case HsChannelKind::General:
-                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
-                       "chatting in the General channel with another player you don't know well. "
-                       "Keep it casual and brief, one short line at a time -- zone flavor, quests, "
-                       "or general opinions about the game. If you want to mention your own class, "
-                       "level, current zone, or guild, write exactly one of these tokens instead of "
-                       "naming one directly: %my_class, %my_level, %my_zone, %my_guild. For the "
-                       "other player's, use: %other_class, %other_level, %other_zone, %other_guild. "
-                       "Never invent or state a specific item, quest, or any other detail the other "
-                       "person could check and find wrong. No roleplay narration, no asterisks, no "
-                       "mention of being an AI or a game.";
-            case HsChannelKind::World:
             default:
                 return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
-                       "chatting in the realm-wide World channel with another player you don't know "
-                       "well. Keep it casual and brief, one short line at a time -- general opinions "
-                       "or banter about the game, nothing tied to one zone. If you want to mention "
-                       "your own class, level, current zone, or guild, write exactly one of these "
-                       "tokens instead of naming one directly: %my_class, %my_level, %my_zone, "
-                       "%my_guild. For the other player's, use: %other_class, %other_level, "
-                       "%other_zone, %other_guild. Never invent or state a specific item, quest, or "
-                       "any other detail the other person could check and find wrong. No roleplay "
-                       "narration, no asterisks, no mention of being an AI or a game.";
+                       "chatting in the General channel for the zone you are standing in -- read by "
+                       "the other players in that same zone -- with another player you don't know "
+                       "well. Keep it casual and brief, one short line at a time -- zone flavor, "
+                       "quests, or general opinions about the game. If you want to mention your own "
+                       "class, level, current zone, or guild, write exactly one of these tokens "
+                       "instead of naming one directly: %my_class, %my_level, %my_zone, %my_guild. "
+                       "For the other player's, use: %other_class, %other_level, %other_zone, "
+                       "%other_guild. Never invent or state a specific item, quest, or any other "
+                       "detail the other person could check and find wrong. No roleplay narration, "
+                       "no asterisks, no mention of being an AI or a game.";
         }
     }
 
@@ -858,8 +849,8 @@ namespace
             }
 
             // Priority order: cards first, then the /say script reserve,
-            // then the three channel-script reserves (§4.17 -- Trade,
-            // General, World, in that order), then corpus buckets. Channel
+            // then the two channel-script reserves (§4.17 -- Trade then
+            // General), then corpus buckets. Channel
             // reserves reuse the same g_HsGeneratorScriptReserveTarget as
             // the /say reserve rather than a separate per-channel config
             // key (Claude/ISSUES.md's "separate generator reserve or a
@@ -874,8 +865,6 @@ namespace
                 added = RunOneChannelScriptGenerationCycle(HsChannelKind::Trade);
             else if (ChannelScriptReserveDepthQuery(HsChannelKind::General) < g_HsGeneratorScriptReserveTarget)
                 added = RunOneChannelScriptGenerationCycle(HsChannelKind::General);
-            else if (ChannelScriptReserveDepthQuery(HsChannelKind::World) < g_HsGeneratorScriptReserveTarget)
-                added = RunOneChannelScriptGenerationCycle(HsChannelKind::World);
             else
                 added = RunOneGenerationCycle();
 

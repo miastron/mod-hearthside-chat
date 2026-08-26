@@ -31,7 +31,7 @@ different costs, so they run through different mechanisms. Only one of them ever
   *happened* (a death, a ding, a duel) rather than something said, arbitrated by involvement and
   per-archetype affinity, own token bucket; and **live bot-to-bot chains** (`hs_botchain.*`,
   `MaxTier.BotToBot = inference`) — one bot's delivered line seeding another's reply on party, raid,
-  or World, depth-capped and decayed per hop.
+  or the General channel, depth-capped and decayed per hop.
 
 Openers' fifth trigger and engagement follow-ups both run off one shared periodic scan
 (`HsEngagementScanWorldScript`, 30s tick) rather than a per-utterance chat hook — see below.
@@ -49,6 +49,19 @@ solved once instead of per tier.
 The diagram below traces the direct-reply path, triggered once per utterance. Engagement follow-ups
 and the opener's prolonged-proximity trigger fire off the periodic scan instead, but funnel into the
 same bucket/cooldown gates, delivery queue, and style pass once admitted.
+
+One gate sits *above* everything below and is not in the diagram, because it applies only to the
+three producers that speak in `/say` with no trigger at all — ambient musing, openers, and
+proximity scenes. Each requires the speaker to be *settled* — stationary (`isMoving()`) **and** in
+`RPG_REST` or `RPG_WANDER_NPC` (`Hs_IsBotSettled`, `hs_rpgstate.h`). Both halves are needed: the
+state alone covers the travel to a place as well as the time spent there, and stillness alone fires
+on every loot pause of an active quest. A bot mid-quest or running to a grind spot is silent on that
+surface regardless of what the rest of the flow would allow. Ambient additionally
+requires a second bot in earshot, so the line reads as overheard rather than addressed. Because
+those gates are narrow and their bite depends on live realm conditions, the roll each producer
+ends on is a config key (`Ambient.Say.FireChancePercent`, `Openers.FireChancePercent`,
+`Script.Proximity.FireChancePercent`) rather than a compiled constant. Direct replies, party/raid/
+guild and the global channels are deliberately untouched by all of this.
 
 ```mermaid
 flowchart TD

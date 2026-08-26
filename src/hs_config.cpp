@@ -140,6 +140,10 @@ bool g_HsAmbientSayEnable   = true;
 bool g_HsAmbientPartyEnable = true;
 bool g_HsAmbientRaidEnable  = true;
 
+uint32_t g_HsAmbientSayFireChancePercent      = 60;
+uint32_t g_HsOpenerFireChancePercent          = 60;
+uint32_t g_HsScriptProximityFireChancePercent = 20;
+
 // Starting guesses, not measurements -- the same footing hs_script.cpp's
 // kScanFireChancePercent is on. 55% decaying at 60% gives roughly a 1.4-hop
 // average chain (0.55 + 0.55*0.33 + 0.55*0.20 over the three permitted
@@ -150,7 +154,7 @@ uint32_t g_HsBotChainDecayPercent         = 60;
 uint32_t g_HsBotChainScopeCooldownSeconds = 180;
 bool     g_HsBotChainRequireRealPlayer    = true;
 
-// Trade/General/World are on by default at a deliberately low starting
+// Trade and General are on by default at a deliberately low starting
 // rate (§4.17's "a too-quiet channel is recoverable, a too-noisy one has
 // already cost the illusion"); the remaining four default off, matching
 // PLAN.md §4.17's table, but stay operator-adjustable via config like every
@@ -162,10 +166,6 @@ uint32_t     g_HsChannelTradeMaxCandidates      = 8;
 std::string g_HsChannelGeneralMaxTier          = "corpus";
 uint32_t     g_HsChannelGeneralRatePerMin       = 3;
 uint32_t     g_HsChannelGeneralMaxCandidates    = 8;
-
-std::string g_HsChannelWorldMaxTier            = "corpus";
-uint32_t     g_HsChannelWorldRatePerMin         = 3;
-uint32_t     g_HsChannelWorldMaxCandidates      = 8;
 
 std::string g_HsChannelLookingForGroupMaxTier         = "off";
 uint32_t     g_HsChannelLookingForGroupRatePerMin      = 0;
@@ -256,7 +256,7 @@ void LoadHearthsideChatConfig()
     g_HsLLMHistoryTurns     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.HistoryTurns", 2);
     g_HsLLMDryMultiplier    = sConfigMgr->GetOption<float>("HearthsideChat.LLM.DryMultiplier", 0.0f);
 
-    g_HsSayDistance            = sConfigMgr->GetOption<float>("HearthsideChat.Say.Distance", 30.0f);
+    g_HsSayDistance            = sConfigMgr->GetOption<float>("HearthsideChat.Say.Distance", 20.0f);
     g_HsReplyChanceWhisper     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyChance.Whisper", 100);
     g_HsDisableRepliesInCombat = sConfigMgr->GetOption<bool>("HearthsideChat.DisableRepliesInCombat", true);
 
@@ -317,6 +317,10 @@ void LoadHearthsideChatConfig()
     g_HsAmbientPartyEnable            = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.Party.Enable", true);
     g_HsAmbientRaidEnable             = sConfigMgr->GetOption<bool>("HearthsideChat.Ambient.Raid.Enable", true);
 
+    g_HsAmbientSayFireChancePercent      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.Say.FireChancePercent", 60);
+    g_HsOpenerFireChancePercent          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Openers.FireChancePercent", 60);
+    g_HsScriptProximityFireChancePercent = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Script.Proximity.FireChancePercent", 20);
+
     g_HsBotChainMaxDepth             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.MaxDepth", 3);
     g_HsBotChainBaseChancePercent    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.BaseChancePercent", 55);
     g_HsBotChainDecayPercent         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.BotChain.DecayPercent", 60);
@@ -338,9 +342,6 @@ void LoadHearthsideChatConfig()
     g_HsChannelGeneralRatePerMin         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.RatePerMin", 3);
     g_HsChannelGeneralMaxCandidates       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.MaxCandidates", 8);
 
-    g_HsChannelWorldMaxTier             = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.World.MaxTier", "corpus");
-    g_HsChannelWorldRatePerMin           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.World.RatePerMin", 3);
-    g_HsChannelWorldMaxCandidates         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.World.MaxCandidates", 8);
 
     g_HsChannelLookingForGroupMaxTier          = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.LookingForGroup.MaxTier", "off");
     g_HsChannelLookingForGroupRatePerMin        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LookingForGroup.RatePerMin", 0);
@@ -364,8 +365,6 @@ void LoadHearthsideChatConfig()
             { HsParseTier(g_HsChannelTradeMaxTier), g_HsChannelTradeRatePerMin, g_HsChannelTradeMaxCandidates };
         table[static_cast<size_t>(HsChannelKind::General)] =
             { HsParseTier(g_HsChannelGeneralMaxTier), g_HsChannelGeneralRatePerMin, g_HsChannelGeneralMaxCandidates };
-        table[static_cast<size_t>(HsChannelKind::World)] =
-            { HsParseTier(g_HsChannelWorldMaxTier), g_HsChannelWorldRatePerMin, g_HsChannelWorldMaxCandidates };
         table[static_cast<size_t>(HsChannelKind::LookingForGroup)] =
             { HsParseTier(g_HsChannelLookingForGroupMaxTier), g_HsChannelLookingForGroupRatePerMin, g_HsChannelLookingForGroupMaxCandidates };
         table[static_cast<size_t>(HsChannelKind::GuildRecruitment)] =

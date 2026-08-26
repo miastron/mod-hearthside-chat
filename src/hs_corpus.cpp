@@ -159,7 +159,6 @@ namespace
         {
             case HsChannelKind::Trade:   out = "trade";   return true;
             case HsChannelKind::General: out = "general"; return true;
-            case HsChannelKind::World:   out = "world";   return true;
             default: return false;
         }
     }

@@ -248,13 +248,38 @@ extern uint32_t g_HsAmbientBotCooldownSeconds;
 // all-bot group generates no packets regardless of this setting.
 extern bool g_HsAmbientRequireRealPlayer;
 
-// Per-surface enable. Trade/General/World reuse each channel's own MaxTier
+// Per-surface enable. Trade and General reuse each channel's own MaxTier
 // and RatePerMin bucket (HearthsideChat.Channel.<name>.*) rather than a
-// third set of keys -- ambient on those three is gated by the shared bucket
+// third set of keys -- ambient on those two is gated by the shared bucket
 // above plus that channel's own policy, nothing new to configure.
 extern bool g_HsAmbientSayEnable;
 extern bool g_HsAmbientPartyEnable;
 extern bool g_HsAmbientRaidEnable;
+
+// --------------------------------------------
+// Fire chance for the three unprompted /say producers -- ambient musing
+// (hs_ambient.cpp), openers (hs_opener.cpp) and proximity scenes
+// (hs_script.cpp). Each is the last gate before a line is attempted, rolled
+// after every cheaper in-memory test and before any DB query or bucket
+// spend, so a bot that was never going to speak costs nothing.
+//
+// These were compiled constants until the settled-state gate
+// (Hs_IsBotSettled, hs_rpgstate.h) landed. That gate is a large, hard-to-
+// predict cut -- it depends on what fraction of a realm's bots happen to be
+// resting or camping at any moment, which no amount of reading the code
+// answers -- so the chances that compensate for it are the one thing here
+// that has to be tunable against a live realm rather than guessed at
+// compile time. All three defaults are raised from their pre-gate constants
+// (ambient had no roll at all; openers 40; scenes 5) on the arithmetic that
+// a narrower gate needs a higher roll to produce the same density, and all
+// three are guesses to be corrected by observation.
+//
+// 0 disables that producer's /say path outright, which is the cheapest way
+// to silence one surface without touching the others or the shared bucket.
+// --------------------------------------------
+extern uint32_t g_HsAmbientSayFireChancePercent;
+extern uint32_t g_HsOpenerFireChancePercent;
+extern uint32_t g_HsScriptProximityFireChancePercent;
 
 // Gates the engagement follow-up feature (hs_engagement.h). Deliberately its
 // own key rather than reusing MaxTier.Openers -- Openers is checked as
@@ -304,7 +329,7 @@ extern uint32_t g_HsEventBucketBurstCapacity;
 // wait out the rest period.
 //
 // RequireRealPlayer is the "is anyone actually there" gate -- a group with no
-// human member, or a World channel with no human in it, is GPU spend against
+// human member, or a General channel with no human in it, is GPU spend against
 // nobody's experience. Off only makes sense for load-testing an empty realm.
 // --------------------------------------------
 extern uint32_t g_HsBotChainMaxDepth;
@@ -332,10 +357,6 @@ extern uint32_t     g_HsChannelTradeMaxCandidates;
 extern std::string g_HsChannelGeneralMaxTier;
 extern uint32_t     g_HsChannelGeneralRatePerMin;
 extern uint32_t     g_HsChannelGeneralMaxCandidates;
-
-extern std::string g_HsChannelWorldMaxTier;
-extern uint32_t     g_HsChannelWorldRatePerMin;
-extern uint32_t     g_HsChannelWorldMaxCandidates;
 
 extern std::string g_HsChannelLookingForGroupMaxTier;
 extern uint32_t     g_HsChannelLookingForGroupRatePerMin;

@@ -218,13 +218,16 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
 bool Hs_ChannelBucketTake(HsChannelKind kind);
 
 // §4.17: resolves the live Channel* a bot should speak into for delivery,
-// mirroring mod-playerbots' own join-time name construction (PlayerbotMgr.cpp's
-// bot-login channel join) rather than the core's player-facing
-// Player::UpdateLocalChannels -- the two can disagree on the exact
-// zone-qualified name for Trade/GuildRecruitment (a documented core quirk
-// mod-playerbots works around by always using AreaID 3459's "City" label),
-// and a mismatch here means ChannelMgr::GetChannel finds no member match and
-// silently drops the reply. Called fresh at delivery time from the bot's
+// building the same name Player::UpdateLocalChannels does -- the zone name for
+// General/LocalDefense, and for the city-scoped Trade/GuildRecruitment the
+// LANG_CHANNEL_CITY acore_string rather than AreaTable 3459. That function is
+// what actually joins anyone to these channels, so matching it is what makes
+// the lookup hit; see the block in the .cpp for why the AreaID 3459 route
+// this used to take (and that PlayerbotMgr.cpp still takes) resolves to
+// nullptr instead. Note ChannelMgr::GetChannel is a pure name lookup and does
+// *not* test membership, so a hit here proves the channel exists, not that the
+// bot is in it -- every caller that needs the latter checks
+// Player::IsInChannel itself. Called fresh at delivery time from the bot's
 // *then-current* zone by both Hs_DeliverPending (a corpus-fallback channel
 // reply) and hs_script.cpp's channel-script delivery, not a name captured
 // earlier -- the bot may have moved zones during the typing delay for a

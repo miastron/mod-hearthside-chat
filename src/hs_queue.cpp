@@ -14,7 +14,9 @@
 #include "ChannelMgr.h"       // §4.17 channel delivery: ChannelMgr::forTeam/GetChannel
 #include "DBCStores.h"        // §4.17 channel delivery: sChatChannelsStore (zone-qualified channel name)
 #include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
+#include "Language.h"         // §4.17 channel delivery: LANG_CHANNEL_CITY
 #include "Log.h"
+#include "ObjectMgr.h"        // §4.17 channel delivery: GetAcoreStringForDBCLocale
 #include "Player.h"
 #include "PlayerbotAI.h"      // also mod-playerbots' ChatChannelId enum, reused for §4.17's DBC id mapping
 #include "PlayerbotMgr.h"
@@ -1047,14 +1049,6 @@ HsAmbientBucketStats Hs_AmbientBucketStatsSnapshot()
 
 bool Hs_ChannelBucketTake(HsChannelKind kind)
 {
-    // World shares General's real channel and policy (Hs_ChannelPolicyFor,
-    // Hs_ResolveChannelForDelivery) -- it must share the token bucket too, or
-    // the two surfaces would independently rate-limit traffic landing in the
-    // same real channel, doubling the effective throughput General's own
-    // RatePerMin implies.
-    if (kind == HsChannelKind::World)
-        kind = HsChannelKind::General;
-
     uint32_t ratePerMin = Hs_ChannelPolicyFor(kind).ratePerMin;
     if (ratePerMin == 0)
         return false;
@@ -1095,20 +1089,13 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
         return nullptr;
 
     uint32 chatChannelId = 0;
-    bool   isCityScoped  = false; // Trade/GuildRecruitment always use AreaID 3459's "City" label
+    bool   isCityScoped  = false; // Trade/GuildRecruitment always use the "City" label, not a zone name
     bool   isGlobal      = false; // LookingForGroup/WorldDefense: pattern used as-is, no zone substitution
     switch (kind)
     {
         case HsChannelKind::Trade:            chatChannelId = ChatChannelId::TRADE;             isCityScoped = true; break;
         case HsChannelKind::GuildRecruitment:  chatChannelId = ChatChannelId::GUILD_RECRUITMENT;  isCityScoped = true; break;
-        // World has no ChatChannels.dbc entry, and nothing auto-joins a real
-        // player to a channel literally named "World" -- it resolves to the
-        // exact same real, zone-scoped General channel a player is actually
-        // in. World keeps its own corpus category as a distinct content
-        // pool (Hs_ChannelPolicyFor, hs_channel.cpp); this is only the
-        // delivery-target half of that aliasing.
-        case HsChannelKind::General:
-        case HsChannelKind::World:            chatChannelId = ChatChannelId::GENERAL;                                break;
+        case HsChannelKind::General:           chatChannelId = ChatChannelId::GENERAL;                                break;
         case HsChannelKind::LocalDefense:      chatChannelId = ChatChannelId::LOCAL_DEFENSE;                          break;
         case HsChannelKind::LookingForGroup:   chatChannelId = ChatChannelId::LOOKING_FOR_GROUP;  isGlobal = true;    break;
         case HsChannelKind::WorldDefense:      chatChannelId = ChatChannelId::WORLD_DEFENSE;      isGlobal = true;    break;
@@ -1123,13 +1110,37 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
     if (isGlobal)
         return cMgr->GetChannel(entry->pattern[locale], bot);
 
-    AreaTableEntry const* areaEntry = isCityScoped
-        ? GetAreaEntryByAreaID(3459) // "City" -- matches PlayerbotMgr.cpp's own join-time substitution
-        : sAreaTableStore.LookupEntry(bot->GetZoneId());
-    if (!areaEntry)
-        return nullptr;
+    // The substituted half of the channel name. City-scoped channels take it
+    // from the same acore_string the core does, deliberately -- not from
+    // AreaTable 3459.
+    //
+    // This used to read GetAreaEntryByAreaID(3459), mirroring PlayerbotMgr's
+    // own join-time substitution. Both are broken, for a reason the function
+    // name hides: GetAreaEntryByAreaID maps an area ID to its exploreFlag and
+    // then looks *that* up as a row ID (DBCStores.cpp). For 3459 -- a dummy
+    // row that exists only to carry the string "City" -- it returns nullptr,
+    // so Trade and GuildRecruitment resolved to nullptr for every caller and
+    // the whole surface was silently inert.
+    //
+    // Player::UpdateLocalChannels is what actually puts anyone in these
+    // channels (mod-playerbots' login-time join hits the same nullptr and is
+    // a no-op), so the name it builds is by definition the name of the live
+    // object. Reading the same string back is exact rather than inferred --
+    // sAreaTableStore.LookupEntry(3459) would agree on an enUS realm, but
+    // only by coincidence of the two tables carrying the same word.
+    std::string areaName;
+    if (isCityScoped)
+    {
+        areaName = sObjectMgr->GetAcoreStringForDBCLocale(LANG_CHANNEL_CITY);
+    }
+    else
+    {
+        AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(bot->GetZoneId());
+        if (!areaEntry)
+            return nullptr;
+        areaName = PlayerbotAI::GetLocalizedAreaName(areaEntry);
+    }
 
-    std::string areaName = PlayerbotAI::GetLocalizedAreaName(areaEntry);
     char nameBuf[100];
     snprintf(nameBuf, sizeof(nameBuf), entry->pattern[locale], areaName.c_str());
     return cMgr->GetChannel(nameBuf, bot);

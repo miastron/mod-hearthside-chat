@@ -24,7 +24,7 @@ namespace
     constexpr uint64_t kChannelSalt = 0x9E3779B97F4A7C15ULL;
 
     constexpr std::array<const char*, kHsChannelKindCount> kChannelNames = {{
-        "Trade", "General", "World", "LookingForGroup", "GuildRecruitment",
+        "Trade", "General", "LookingForGroup", "GuildRecruitment",
         "LocalDefense", "WorldDefense",
     }};
 
@@ -74,17 +74,6 @@ void Hs_SetChannelPolicyTable(const HsChannelPolicy (&table)[kHsChannelKindCount
 
 HsChannelPolicy Hs_ChannelPolicyFor(HsChannelKind kind)
 {
-    // World has no ChatChannels.dbc entry and nothing auto-joins a real
-    // player to a channel literally named "World" (hs_handler.cpp's
-    // ChannelKindFor documents this) -- bots were talking to each other in a
-    // channel no player could ever hear. Rather than build a real realm-wide
-    // channel, World is retired as an independently-governed surface: its
-    // policy is General's, verbatim. World keeps its own corpus category
-    // (channel_world_chat) as a second, realm-wide-flavored content pool --
-    // see hs_queue.cpp's Hs_ResolveChannelForDelivery and Hs_ChannelBucketTake
-    // for the matching delivery-target and rate-bucket aliasing.
-    if (kind == HsChannelKind::World)
-        kind = HsChannelKind::General;
     return g_ChannelPolicies[static_cast<size_t>(kind)];
 }
 

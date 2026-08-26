@@ -13,7 +13,7 @@
 CREATE TABLE IF NOT EXISTS `hside_script` (
   `id`               INT UNSIGNED NOT NULL,
   `turn_count`       TINYINT UNSIGNED NOT NULL,
-  `channel`          VARCHAR(16) DEFAULT NULL COMMENT 'trade | general | world = §4.17 2-turn channel script; NULL = /say 4-turn script',
+  `channel`          VARCHAR(16) DEFAULT NULL COMMENT 'trade | general = §4.17 2-turn channel script; NULL = /say 4-turn script',
   `generated_at`     TIMESTAMP NULL DEFAULT NULL,
   `model`            VARCHAR(64) DEFAULT NULL,
   `prompt_version`   VARCHAR(32) DEFAULT NULL,

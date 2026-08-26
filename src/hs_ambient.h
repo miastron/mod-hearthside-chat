@@ -59,7 +59,7 @@
 //
 // ---- Surfaces ----
 //
-// /say, Trade, General, World, party and raid. Battleground is deliberately
+// /say, Trade, General, party and raid. Battleground is deliberately
 // absent: mod-playerbots has no SayToBG and SayToRaid hardcodes
 // CHAT_MSG_RAID, so BG would need a new HsReplyChannel, a new delivery path,
 // and new content -- and a battleground is the one context where chat is

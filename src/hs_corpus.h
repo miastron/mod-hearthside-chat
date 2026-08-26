@@ -52,7 +52,7 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
 // `channel` column), previously unwired -- same anti-repeat pick and
 // exposure bookkeeping as Hs_SelectCorpusLine, scoped to categories tagged
 // for this channel instead of the channel-IS-NULL /say set. Only
-// Trade/General/World have any channel_* rows seeded today; a kind with none
+// Trade/General have any channel_* rows seeded today; a kind with none
 // simply returns empty, same as any other "nothing eligible" case. Called
 // from hs_handler.cpp's Channel* hook (§4.17), never for a channel whose
 // policy is Off.
@@ -69,7 +69,7 @@ std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t b
 // hs_handler.cpp's Channel* hook) would have to special-case away.
 //
 // Reuses hside_corpus_category's existing `channel` column, whose values
-// extend from trade|general|world to also include party|raid. Nothing else
+// extend from trade|general to also include party|raid. Nothing else
 // has to change for that: Hs_SelectCorpusLine's `channel IS NULL` filter
 // already excludes every non-NULL value, so the new rows stay out of the
 // /say and direct-reply pool by the same mechanism the channel_* categories

@@ -145,8 +145,8 @@ namespace
         }
     }
 
-    // World-channel candidates. The scan is realm-wide (World has no
-    // proximity bound), so it is capped the same way hs_handler.cpp's
+    // Channel candidates. The scan is channel-membership-wide (a channel has
+    // no proximity bound), so it is capped the same way hs_handler.cpp's
     // Channel* hook caps its own: zone-local first, then a bounded random
     // sample, via Hs_OrderChannelCandidates. Without that a hop would roll
     // the arbiter against every bot on the realm.
@@ -219,8 +219,9 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         return;
 
     // Checked before the scope map is touched below, not just as part of the
-    // depth gate: at MaxDepth 0 no hop can ever fire, and every party/World
-    // line would otherwise create a scope entry for the pruner to clean up.
+    // depth gate: at MaxDepth 0 no hop can ever fire, and every party or
+    // channel line would otherwise create a scope entry for the pruner to
+    // clean up.
     if (g_HsBotChainMaxDepth == 0)
         return;
 
@@ -240,7 +241,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         scopeId        = Hs_BotChainScopeForGroup(group->GetGUID().GetRawValue());
         subgroupScoped = (channel == HsReplyChannel::Party);
     }
-    else if (channel == HsReplyChannel::Channel && kind == HsChannelKind::World)
+    else if (channel == HsReplyChannel::Channel && kind == HsChannelKind::General)
     {
         // The channel's own ceiling still applies on top of MaxTier.BotToBot,
         // the same way TryFireChannelScript checks it independently.

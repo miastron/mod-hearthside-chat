@@ -9,6 +9,7 @@
 #include "hs_memory_store.h"
 #include "hs_prune.h"
 #include "hs_queue.h"
+#include "hs_rpgstate.h"
 #include "hs_style.h"
 #include "hs_tier.h"
 
@@ -36,11 +37,16 @@ namespace
 
     // Opener trigger tuning -- which shared-context events fire openers,
     // and at what rate before they read as spam -- is a live-realm
-    // judgement, not something to settle in advance, so these are compiled
-    // constants rather than config keys. 10 minutes and a coin-flip-ish
-    // chance are starting guesses, not measurements.
+    // judgement, not something to settle in advance, so this is a compiled
+    // constant rather than a config key. 10 minutes is a starting guess,
+    // not a measurement.
+    //
+    // The fire chance used to sit here on the same footing. It moved to
+    // Openers.FireChancePercent (hs_config.h) when the settled-state gate
+    // landed: that gate's size depends on live realm conditions, so the
+    // number that compensates for it has to be adjustable without a
+    // rebuild.
     constexpr uint32_t kOpenerCooldownSeconds = 600;
-    constexpr uint32_t kOpenerFireChancePercent = 40;
 
     // Fifth trigger: how long a (bot, player) pair must be continuously
     // observed in range before "prolonged proximity" counts as a shared
@@ -150,7 +156,22 @@ namespace
 
         if (!OpenerCooldownOk(botGuid, playerGuid))
             return;
-        if (urand(0, 99) >= kOpenerFireChancePercent)
+
+        // The settled-state gate (Hs_IsBotSettled, hs_rpgstate.h), on the
+        // /say path only. A bot that stops mid-run to greet someone it is
+        // jogging past is the same tell ambient chatter had; a bot parked at
+        // an inn or camping a spawn greeting a passer-by is not.
+        //
+        // opener_group_formed is the exception, and it is why this tests the
+        // channel rather than applying unconditionally: its moment is the
+        // grouping itself, it is delivered to party/raid, and a bot that was
+        // travelling when the player invited it should still acknowledge the
+        // invite. Suppressing that would be the reverse of the problem this
+        // gate solves -- silence where a response is expected.
+        if (channel == HsReplyChannel::Say && !Hs_IsBotSettled(bot))
+            return;
+
+        if (urand(0, 99) >= g_HsOpenerFireChancePercent)
             return;
 
         // PLAN-AMBIENT.md §2: the shared unprompted-speech budget
