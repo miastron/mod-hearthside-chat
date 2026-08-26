@@ -86,4 +86,17 @@ public:
 // game client. Counts lines actually delivered, not ticks attempted.
 uint32_t Hs_AmbientLinesFiredThisSession();
 
+// Spend this bot's ambient cooldown without speaking an ambient line.
+//
+// For the other unprompted producers: a bot that just spoke on its own
+// initiative has said its piece, and ambient must not immediately follow it
+// with a second unprompted line. The shared token bucket does not cover this
+// -- it bounds realm-wide volume, not one bot talking twice in a row -- and
+// neither does the script-run check in BotBaseEligible, which only knows
+// about hs_script.cpp's scenes. hs_opener.cpp calls this after every opener
+// it delivers, which is what stops the opener/ambient pileup a group-join
+// used to produce (an opener, then an ambient_party_downtime line seconds
+// later, from the same bot).
+void Hs_MarkAmbientSpoke(uint64_t botGuid);
+
 #endif // MOD_HS_AMBIENT_H

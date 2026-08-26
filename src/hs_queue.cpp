@@ -1047,6 +1047,14 @@ HsAmbientBucketStats Hs_AmbientBucketStatsSnapshot()
 
 bool Hs_ChannelBucketTake(HsChannelKind kind)
 {
+    // World shares General's real channel and policy (Hs_ChannelPolicyFor,
+    // Hs_ResolveChannelForDelivery) -- it must share the token bucket too, or
+    // the two surfaces would independently rate-limit traffic landing in the
+    // same real channel, doubling the effective throughput General's own
+    // RatePerMin implies.
+    if (kind == HsChannelKind::World)
+        kind = HsChannelKind::General;
+
     uint32_t ratePerMin = Hs_ChannelPolicyFor(kind).ratePerMin;
     if (ratePerMin == 0)
         return false;
@@ -1086,9 +1094,6 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
     if (!cMgr)
         return nullptr;
 
-    if (kind == HsChannelKind::World)
-        return cMgr->GetChannel("World", bot);
-
     uint32 chatChannelId = 0;
     bool   isCityScoped  = false; // Trade/GuildRecruitment always use AreaID 3459's "City" label
     bool   isGlobal      = false; // LookingForGroup/WorldDefense: pattern used as-is, no zone substitution
@@ -1096,11 +1101,18 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
     {
         case HsChannelKind::Trade:            chatChannelId = ChatChannelId::TRADE;             isCityScoped = true; break;
         case HsChannelKind::GuildRecruitment:  chatChannelId = ChatChannelId::GUILD_RECRUITMENT;  isCityScoped = true; break;
-        case HsChannelKind::General:           chatChannelId = ChatChannelId::GENERAL;                                break;
+        // World has no ChatChannels.dbc entry, and nothing auto-joins a real
+        // player to a channel literally named "World" -- it resolves to the
+        // exact same real, zone-scoped General channel a player is actually
+        // in. World keeps its own corpus category as a distinct content
+        // pool (Hs_ChannelPolicyFor, hs_channel.cpp); this is only the
+        // delivery-target half of that aliasing.
+        case HsChannelKind::General:
+        case HsChannelKind::World:            chatChannelId = ChatChannelId::GENERAL;                                break;
         case HsChannelKind::LocalDefense:      chatChannelId = ChatChannelId::LOCAL_DEFENSE;                          break;
         case HsChannelKind::LookingForGroup:   chatChannelId = ChatChannelId::LOOKING_FOR_GROUP;  isGlobal = true;    break;
         case HsChannelKind::WorldDefense:      chatChannelId = ChatChannelId::WORLD_DEFENSE;      isGlobal = true;    break;
-        default: return nullptr; // World handled above
+        default: return nullptr;
     }
 
     ChatChannelsEntry const* entry = sChatChannelsStore.LookupEntry(chatChannelId);

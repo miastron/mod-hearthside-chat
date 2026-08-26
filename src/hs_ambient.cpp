@@ -539,3 +539,8 @@ uint32_t Hs_AmbientLinesFiredThisSession()
 {
     return g_AmbientLinesFired.load();
 }
+
+void Hs_MarkAmbientSpoke(uint64_t botGuid)
+{
+    MarkAmbientFired(botGuid);
+}

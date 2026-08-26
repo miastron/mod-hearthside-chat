@@ -694,7 +694,19 @@ HearthsideChat.Channel.General.RatePerMin = 3
 HearthsideChat.Channel.General.MaxCandidates = 8
 
 # HearthsideChat.Channel.World.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: World channel -- realm-wide, not zone-scoped.
+#     NOTE:        World has no ChatChannels.dbc entry in WotLK and nothing
+#                   auto-joins a real player to a channel literally named
+#                   "World" -- bots were talking to each other in a channel no
+#                   player could ever hear. World now delivers into General's
+#                   real, zone-scoped channel and shares General's own
+#                   MaxTier/RatePerMin/MaxCandidates and rate bucket
+#                   (Hs_ChannelPolicyFor, hs_channel.cpp). These three keys are
+#                   parsed but no longer independently read by anything --
+#                   edit Channel.General.* instead. Kept only so an existing
+#                   conf.dist line doesn't become an unknown key. World still
+#                   contributes its own realm-wide-flavored corpus content
+#                   (channel_world_chat) as a second content pool into that
+#                   same channel.
 #     Default:     corpus / 3 / 8
 HearthsideChat.Channel.World.MaxTier = corpus
 HearthsideChat.Channel.World.RatePerMin = 3

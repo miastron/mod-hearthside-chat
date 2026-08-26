@@ -1,4 +1,5 @@
 #include "hs_opener.h"
+#include "hs_ambient.h"
 #include "hs_archetype.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -116,7 +117,18 @@ namespace
     // TryCorpusFallback -- no bucket, no worker thread, and deliberately no
     // history or identity write; openers must never feed interaction score
     // or identity state.
-    void FireOpener(Player* bot, Player* player, const char* categoryName)
+    //
+    // `channel` is Say for every trigger whose shared moment is a physical
+    // one -- a kill, a rez, a dungeon's last boss, two strangers standing in
+    // the same field -- where the audience is whoever is close enough to see
+    // what just happened. opener_group_formed is the exception: the moment
+    // being remarked on is joining the group itself, its audience is the
+    // group, and the joining bot may be nowhere near the player who invited
+    // it (mod-playerbots only teleports it in when summonWhenGroup is set and
+    // it is out of sight distance), so a /say there is frequently addressed
+    // to an empty patch of ground.
+    void FireOpener(Player* bot, Player* player, const char* categoryName,
+                     HsReplyChannel channel = HsReplyChannel::Say)
     {
         if (!g_HsEnable || !bot || !player || !bot->IsInWorld() || !player->IsInWorld())
             return;
@@ -190,8 +202,17 @@ namespace
         if (style.text.empty())
             return;
 
-        Hs_DeliverReflexReply(botGuid, playerGuid, HsReplyChannel::Say, style.text);
+        Hs_DeliverReflexReply(botGuid, playerGuid, channel, style.text);
         MarkOpenerFired(botGuid, playerGuid);
+
+        // The per-pair opener cooldown above says nothing about ambient, which
+        // is keyed per bot and has no idea an opener just went out. Without
+        // this a bot could greet the group and then, seconds later on the next
+        // ambient tick, follow it with an unrelated ambient_party_downtime
+        // line -- two unprompted lines from the same bot back to back, which
+        // is exactly what a player sees as bot spam (hs_ambient.h).
+        Hs_MarkAmbientSpoke(botGuid);
+
         g_OpenersFiredThisSession.fetch_add(1);
     }
 }
@@ -252,7 +273,14 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
         Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(),
                               kHsMemoryEventGroupedInZone, Hs_BuildGroupedInZoneText(zone));
 
-        FireOpener(bot, player, "opener_group_formed");
+        // Party/raid, not /say: see FireOpener's `channel` note. Decided off
+        // the `group` this hook was handed rather than bot->GetGroup(), which
+        // is not guaranteed to be wired up yet at OnAddMember time; by the
+        // time Hs_DeliverPending calls SayToParty/SayToRaid (a 400-1500ms
+        // reflex delay later) it is, and SayToRaid is the one that needs the
+        // raid flag to be right.
+        FireOpener(bot, player, "opener_group_formed",
+                    group->isRaidGroup() ? HsReplyChannel::Raid : HsReplyChannel::Party);
     }
 }
 
@@ -384,6 +412,14 @@ void Hs_ScanProximityOpeners()
             if (bot->GetTeamId() != player->GetTeamId())
                 continue;
             if (!bot->IsAlive() || bot->IsInCombat())
+                continue;
+            // A grouped bot is already at this player's side by the
+            // player's own choice -- "we've been standing around a while"
+            // is not a shared moment worth remarking on when that's just
+            // what a party follower does. opener_group_formed already
+            // covers the moment grouping itself happens; this trigger is
+            // for two strangers who happen to keep crossing paths.
+            if (bot->GetGroup() && bot->GetGroup() == player->GetGroup())
                 continue;
             // Map- and phase-aware; see hs_handler.cpp's /say eligibility
             // filter for why the bare GetDistance is wrong here.

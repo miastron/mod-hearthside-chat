@@ -830,6 +830,16 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     // World, which is the only one hs_botchain.h chains on.
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
+    // World's chain scope (hs_botchain.h) is a separate bookkeeping key from
+    // General's, but the two now deliver into the exact same real channel
+    // (Hs_ResolveChannelForDelivery) -- a real player typing in General is
+    // interrupting a World-scoped chain hop just as much as a General-scoped
+    // one, since both are about to say something into the channel this
+    // player is looking at. Without this, a pending World chain hop would
+    // survive an interruption that visibly landed in the same window.
+    if (kind == HsChannelKind::General)
+        Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(HsChannelKind::World));
+
     if (!Hs_ChannelBucketTake(kind))
         return true; // throttled -- no candidate scan at all on a busy channel
 
