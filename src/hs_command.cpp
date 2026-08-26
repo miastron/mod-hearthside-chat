@@ -2,6 +2,7 @@
 #include "hs_archetype.h"
 #include "hs_archetype_store.h"
 #include "hs_botchain.h"
+#include "hs_channel.h"
 #include "hs_command.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -16,6 +17,7 @@
 #include "hs_script.h"
 
 #include "CharacterCache.h"
+#include "Channel.h"
 #include "Chat.h"
 #include "ChatCommand.h"
 #include "DatabaseEnv.h"
@@ -26,6 +28,7 @@
 #include "QueryResult.h"
 
 #include <cctype>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -361,6 +364,113 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Evicted {} row(s) tagged prompt_version '{}'.", evicted, promptVersion);
         return true;
     }
+
+    // The one question no other operator surface can answer: for the
+    // channels this module speaks on, which live Channel instance does the
+    // invoking character actually share with bots.
+    //
+    // Global channels are not one channel each -- General/LocalDefense are
+    // one Channel object per zone, Trade/GuildRecruitment one per "City"
+    // label -- and every producer here resolves its delivery target from the
+    // *speaking bot's* zone (Hs_ResolveChannelForDelivery, hs_queue.cpp).
+    // A bot musing in "General - Elwynn Forest" is logged as delivered, is
+    // written to hside_chat_log, and is completely inaudible to a player
+    // standing in Ironforge. Nothing else in the module distinguishes that
+    // case from silence, which is exactly the confusion this command exists
+    // to end.
+    //
+    // In-game only (Console::No): a channel instance is resolved from the
+    // caller's zone, and a console caller has none.
+    bool HandleHearthsideChannels(ChatHandler* handler, Optional<std::string_view>)
+    {
+        Player* player = handler->GetPlayer();
+        if (!player)
+        {
+            handler->SendSysMessage("[HearthsideChat] .hearthside channels needs a logged-in character -- channel instances are zone-scoped.");
+            return true;
+        }
+
+        std::vector<Player*> bots;
+        for (auto const& itr : ObjectAccessor::GetPlayers())
+        {
+            Player* candidate = itr.second;
+            if (!candidate || !candidate->IsInWorld())
+                continue;
+            PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(candidate);
+            if (botAI && botAI->IsBotAI())
+                bots.push_back(candidate);
+        }
+
+        handler->PSendSysMessage("[HearthsideChat] {} bot(s) online. Channel instances as seen from your zone:", bots.size());
+
+        // World is omitted deliberately: Hs_ChannelPolicyFor and
+        // Hs_ResolveChannelForDelivery both alias it onto General, so
+        // listing it would print General's row twice under a second name.
+        const HsChannelKind kinds[] = {
+            HsChannelKind::Trade,
+            HsChannelKind::General,
+            HsChannelKind::LookingForGroup,
+            HsChannelKind::GuildRecruitment,
+            HsChannelKind::LocalDefense,
+            HsChannelKind::WorldDefense,
+        };
+
+        for (HsChannelKind kind : kinds)
+        {
+            HsChannelPolicy policy = Hs_ChannelPolicyFor(kind);
+            if (policy.maxTier == HsTier::Off)
+            {
+                handler->PSendSysMessage("  {}: MaxTier off -- no traffic on this channel.", Hs_ChannelKindName(kind));
+                continue;
+            }
+
+            // Resolved through the same function delivery uses, from the
+            // caller rather than from a bot. For Trade this can legitimately
+            // differ from the channel the *core* joined the caller to --
+            // hs_queue.h records that mod-playerbots' join-time naming and
+            // Player::UpdateLocalChannels disagree on the city-qualified
+            // name -- which is precisely why the "you are in it" flag below
+            // is reported rather than assumed.
+            Channel* mine = Hs_ResolveChannelForDelivery(player, kind);
+
+            std::map<std::string, uint32_t> byInstance;
+            uint32_t sharedWithYou = 0;
+            for (Player* bot : bots)
+            {
+                Channel* theirs = Hs_ResolveChannelForDelivery(bot, kind);
+                if (!theirs || !bot->IsInChannel(theirs))
+                    continue; // resolves to an instance it never actually joined
+                ++byInstance[theirs->GetName()];
+                if (mine && theirs == mine)
+                    ++sharedWithYou;
+            }
+
+            if (!mine)
+            {
+                handler->PSendSysMessage("  {}: resolves to no live channel from your zone.", Hs_ChannelKindName(kind));
+            }
+            else
+            {
+                handler->PSendSysMessage("  {}: '{}' -- you are {}a member, {} bot(s) share it.",
+                    Hs_ChannelKindName(kind), mine->GetName(),
+                    player->IsInChannel(mine) ? "" : "NOT ", sharedWithYou);
+            }
+
+            // Where the bots that aren't with you actually are. This is the
+            // payload of the whole command: a large count here next to a
+            // zero above is the signature of chatter firing into instances
+            // no player is standing in.
+            for (auto const& entry : byInstance)
+            {
+                if (mine && entry.first == mine->GetName())
+                    continue;
+                handler->PSendSysMessage("      elsewhere: '{}' -- {} bot(s)", entry.first, entry.second);
+            }
+        }
+
+        return true;
+    }
+
 }
 
 HsCommandScript::HsCommandScript() : CommandScript("HsCommandScript") {}
@@ -370,6 +480,7 @@ ChatCommandTable HsCommandScript::GetCommands() const
     static ChatCommandTable hearthsideSubCommands =
     {
         { "status",     HandleHearthsideStatus,    SEC_GAMEMASTER, Console::Yes },
+        { "channels",   HandleHearthsideChannels,  SEC_GAMEMASTER, Console::No  },
         { "capture",    HandleHearthsideCapture,   SEC_GAMEMASTER, Console::Yes },
         { "inspect",    HandleHearthsideInspect,   SEC_GAMEMASTER, Console::Yes },
         { "archetype",  HandleHearthsideArchetype, SEC_GAMEMASTER, Console::Yes },
