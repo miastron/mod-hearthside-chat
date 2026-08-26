@@ -14,6 +14,7 @@
 #include "Channel.h"
 #include "Group.h"
 #include "GroupReference.h"
+#include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
@@ -177,7 +178,17 @@ namespace
         if (line.find('%') != std::string::npos)
         {
             if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
+            {
+                // The Trade pool is entirely %item_link lines, so a bot with
+                // nothing non-soulbound in its bags drops every one of them
+                // here. Silent before this log, and indistinguishable from
+                // the surface never firing.
+                if (g_HsDebugEnabled)
+                    LOG_INFO("server.loading",
+                             "[HearthsideChat] Bot {} dropped an ambient line: unresolved placeholder in \"{}\"",
+                             bot->GetName(), line);
                 return;
+            }
         }
 
         HsArchetype           archetype     = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
@@ -468,10 +479,22 @@ namespace
                 pool.push_back(candidate);
         }
 
+        // One reason-tagged trace per bail, under the debug flag only. The
+        // whole surface fails silently otherwise: every exit below is a
+        // bare `return`, so an operator seeing no Trade or General traffic
+        // cannot tell "no bot is in the channel" from "the corpus had
+        // nothing to say" from "the rate limiter ate it".
+        auto bail = [kind](const char* why)
+        {
+            if (g_HsDebugEnabled)
+                LOG_INFO("server.loading", "[HearthsideChat] ambient {} skipped: {}",
+                         Hs_ChannelKindName(kind), why);
+        };
+
         if (botsByInstance.empty())
-            return;
+            return bail("no eligible bot resolved into the channel");
         if (g_HsAmbientRequireRealPlayer && realPlayers.empty())
-            return;
+            return bail("RequireRealPlayer is on and no real player is online");
 
         // Collect the instances that can actually carry a line, then pick
         // one -- rather than taking the first eligible instance found, which
@@ -501,7 +524,7 @@ namespace
             eligibleInstances.push_back(&entry.second);
         }
         if (eligibleInstances.empty())
-            return;
+            return bail("no channel instance had both a bot and a real player in it");
 
         std::vector<Player*>* pool =
             eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
@@ -512,15 +535,15 @@ namespace
         // should not also be spending from the realm-wide ambient budget
         // other surfaces are waiting on.
         if (!Hs_ChannelBucketTake(kind))
-            return;
+            return bail("channel RatePerMin bucket is empty");
         if (!Hs_AmbientBucketTake())
-            return;
+            return bail("shared Ambient.Bucket is empty");
 
         std::string line = Hs_SelectChannelLine(kind, speaker->getClass(), speaker->GetLevel(),
                                                  static_cast<uint8_t>(speaker->GetTeamId()),
                                                  speaker->GetZoneId());
         if (line.empty())
-            return;
+            return bail("corpus returned no line for this speaker");
 
         SpeakAmbient(speaker, line, HsReplyChannel::Channel, kind, "");
     }

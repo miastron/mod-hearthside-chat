@@ -1216,14 +1216,38 @@ void Hs_DeliverPending()
             {
                 Channel* channel = Hs_ResolveChannelForDelivery(bot, reply.channelKind);
                 if (!channel)
-                    continue; // bot no longer resolves to that channel instance (e.g. moved zones) -- drop, don't misdeliver
+                {
+                    // Bot no longer resolves to that channel instance (e.g.
+                    // moved zones) -- drop, don't misdeliver. Logged because
+                    // this is otherwise indistinguishable from the surface
+                    // never having produced a line at all.
+                    if (g_HsDebugEnabled)
+                        LOG_INFO("server.loading",
+                                 "[HearthsideChat] Bot {} dropped a {} line: channel did not resolve",
+                                 bot->GetName(), Hs_ChannelKindName(reply.channelKind));
+                    continue;
+                }
                 channel->Say(bot->GetGUID(), reply.text, LANG_UNIVERSAL);
                 break;
             }
         }
 
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Bot {} replied: {}", bot->GetName(), reply.text);
+        {
+            // Surface, not just text: /say and party lines are proximity- or
+            // membership-scoped, so an operator watching the log has no way
+            // to tell an invisible-to-them local line from a global-channel
+            // line that failed to appear. The global-channel case also
+            // carries which channel it landed in.
+            std::string where = Hs_ReplyChannelName(reply.channel);
+            if (reply.channel == HsReplyChannel::Channel)
+            {
+                where += '/';
+                where += Hs_ChannelKindName(reply.channelKind);
+            }
+            LOG_INFO("server.loading", "[HearthsideChat] Bot {} replied [{}]: {}",
+                     bot->GetName(), where, reply.text);
+        }
 
         // Every delivered party/raid/global-channel line is a candidate seed
         // for the next hop of a bot-to-bot chain -- including a hop's own
