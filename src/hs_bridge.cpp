@@ -32,7 +32,7 @@ namespace
     std::size_t constexpr kMaxBotNameLength = 48;
     // The LLM-generated voice block validates up to 400 raw bytes
     // (Hs_ValidateVoiceBlock), well past what fits in one 255-byte addon
-    // chat packet alongside its envelope/opcode/token overhead -- rather
+    // chat packet alongside its envelope/opcode/token overhead: rather
     // than a second framing layer for what is a cosmetic flavor line, this
     // just truncates. `.hearthside inspect` and the HTTP route already show
     // the untruncated text for anyone who needs it in full.
@@ -166,7 +166,7 @@ namespace
     // relies on.
     std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> g_lastRequestAt;
 
-    // Nothing else erases from that map -- not logout, not a sweep -- so
+    // Nothing else erases from that map: not logout, not a sweep: so
     // without this it retains one entry per character that ever sent an
     // inspect, for the life of the worldserver process. An entry older than
     // the window already fails the test below, so dropping it gives the same
@@ -194,7 +194,7 @@ namespace
     {
         std::vector<std::string> fields = SplitFields(payload);
         if (fields.size() != 2)
-            return; // malformed -- no reliably-extractable token to echo back
+            return; // malformed: no reliably-extractable token to echo back
 
         std::string const& encodedName = fields[0];
         std::string const& token       = fields[1];
@@ -234,7 +234,7 @@ namespace
 
         // Archetype is a pure GUID+level draw (hs_archetype.h), available
         // for every bot whether or not it has ever earned an identity row
-        // -- unlike the voice/personality card below, which only exists
+        //: unlike the voice/personality card below, which only exists
         // once promoted. This is deliberately not insp.archetype (below):
         // that field is only populated once hasIdentityRow is true, and
         // would leave freshly-met bots showing nothing at all.
@@ -252,7 +252,7 @@ namespace
         }
 
         // hasAnyMemoryRows is bot-global (any player this bot ever shared
-        // history with), so it's only a cheap pre-filter here -- the actual
+        // history with), so it's only a cheap pre-filter here: the actual
         // lines below are still looked up scoped to this specific
         // requester, same pair-scoping hs_grounded.h's recall kinds use.
         if (insp.hasAnyMemoryRows)
@@ -286,7 +286,7 @@ bool HsBridgePlayerScript::OnPlayerCanUseChat(Player* player, uint32_t /*type*/,
 
     std::size_t const envelopeLength = std::char_traits<char>::length(kAddonEnvelope);
     if (msg.size() < envelopeLength || msg.compare(0, envelopeLength, kAddonEnvelope) != 0)
-        return true; // not ours -- let it (and every other addon's prefix) through untouched
+        return true; // not ours: let it (and every other addon's prefix) through untouched
 
     std::string const body = msg.substr(envelopeLength);
 
@@ -295,7 +295,7 @@ bool HsBridgePlayerScript::OnPlayerCanUseChat(Player* player, uint32_t /*type*/,
     // that is what this check is guarding the name/token fields against, not
     // the framing the client is required to send.
     if (msg.size() > kMaxWireLength || HasControlCharacter(body))
-        return false; // ours, but malformed -- consume it, answer nothing
+        return false; // ours, but malformed: consume it, answer nothing
 
     auto const [opcode, afterOpcode] = SplitOnce(body, kFieldSeparator);
     if (opcode != "GET")
@@ -306,5 +306,5 @@ bool HsBridgePlayerScript::OnPlayerCanUseChat(Player* player, uint32_t /*type*/,
         return false;
 
     HandleGetInspect(player, requestPayload);
-    return false; // consumed -- never let a self-whisper addon message become a real chat send
+    return false; // consumed: never let a self-whisper addon message become a real chat send
 }

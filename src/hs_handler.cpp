@@ -29,9 +29,9 @@
 #include "PlayerbotAI.h"
 #include "PlayerbotAIConfig.h" // NewRpgStatus, enableRandomBotTrading (grounded TradePrice)
 #include "PlayerbotMgr.h"
-#include "RandomPlayerbotMgr.h" // GetSellMultiplier/IsRandomBot -- grounded TradePrice
+#include "RandomPlayerbotMgr.h" // GetSellMultiplier/IsRandomBot: grounded TradePrice
 #include "ObjectAccessor.h"
-#include "ObjectMgr.h"          // GetItemTemplate -- grounded TradePrice
+#include "ObjectMgr.h"          // GetItemTemplate: grounded TradePrice
 #include "Random.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
@@ -78,7 +78,7 @@ namespace
     }
 
     // §4.13's remaining topic-gate facts, read fresh per request like
-    // inCombat/botLevel -- gear, group, and instance are all as volatile as
+    // inCombat/botLevel: gear, group, and instance are all as volatile as
     // combat. hs_topic_gate.h stays pure/no-AC-dependency for standalone
     // testing, so this Player*-reading half lives here (and is duplicated
     // in hs_engagement.cpp's TryFireFollowUp) rather than there.
@@ -132,13 +132,13 @@ namespace
         if (match.kind == HsReflexKind::None)
             return;
 
-        handled = true; // matched -- handled whether or not a reply actually goes out
+        handled = true; // matched: handled whether or not a reply actually goes out
         if (match.text.empty())
             return; // Silent BotQuestion mode, or PersonalProbe's no-reply roll
 
         // Same style pass the LLM path applies, so a reflex reply reads as
         // this bot's voice rather than a flat string. No history append and
-        // no cooldown/last-reply bump -- tier 0 writes no identity state at
+        // no cooldown/last-reply bump: tier 0 writes no identity state at
         // all.
         HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
         HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
@@ -154,9 +154,9 @@ namespace
 
     // A fourth answer source, sitting between the reflex check and the tier
     // ceiling. Questions the realm can already answer truthfully from live
-    // Player*/DB state -- mount, level, gold, zone, guild, profession, gear,
-    // card facts, and shared-history recall (hs_grounded.h's HsGroundedKind)
-    // -- each a direct lookup and a short template, no GPU work and no
+    // Player*/DB state: mount, level, gold, zone, guild, profession, gear,
+    // card facts, and shared-history recall (hs_grounded.h's HsGroundedKind),
+    // each a direct lookup and a short template, no GPU work and no
     // chance of invention. Same "no identity state" shape as TryReflex
     // above: style pass applies, nothing is scored or written to history,
     // delivered through the same short-delay path.
@@ -185,7 +185,7 @@ namespace
             case HsGroundedKind::Mount:
             {
                 if (!bot->IsMounted())
-                    return false; // not observably mounted -- fall through rather than claim one
+                    return false; // not observably mounted: fall through rather than claim one
                 auto const& mountAuras = bot->GetAuraEffectsByType(SPELL_AURA_MOUNTED);
                 if (mountAuras.empty())
                     return false; // defensive: IsMounted() true but no aura found
@@ -228,7 +228,7 @@ namespace
             }
             case HsGroundedKind::Profession:
             {
-                // Primary professions only -- deliberately excludes
+                // Primary professions only. Deliberately excludes
                 // secondary skills (fishing, cooking, first aid), which is
                 // what a player asking "what professions do you have"
                 // means in practice.
@@ -258,7 +258,7 @@ namespace
             }
             case HsGroundedKind::Gear:
             {
-                // Priority order, not every slot -- the visually notable
+                // Priority order, not every slot: the visually notable
                 // pieces a player would actually be commenting on.
                 static const uint8_t kGearSlots[] = {
                     EQUIPMENT_SLOT_MAINHAND, EQUIPMENT_SLOT_CHEST, EQUIPMENT_SLOT_LEGS, EQUIPMENT_SLOT_HEAD,
@@ -282,7 +282,7 @@ namespace
             // Hs_LookupCardFactField returns "" for both "no active card"
             // and "field absent", which collapses to hasFact=false below
             // and falls through exactly like Mount's "not observably
-            // mounted" case -- no invented lacks-line for a bot with no
+            // mounted" case: no invented lacks-line for a bot with no
             // fact sheet at all.
             case HsGroundedKind::CurrentGoal:
             {
@@ -300,7 +300,7 @@ namespace
                 if (raw == "vanilla")      fact = "vanilla";
                 else if (raw == "bc")      fact = "BC";
                 else if (raw == "wrath")   fact = "Wrath";
-                else                       hasFact = false; // unrecognized value -- fall through rather than echo it raw
+                else                       hasFact = false; // unrecognized value: fall through rather than echo it raw
                 break;
             }
             case HsGroundedKind::Alt:
@@ -311,7 +311,7 @@ namespace
             }
             // hside_memory-backed facts, pair-scoped (bot, sender) rather
             // than per-bot like the card facts above. Never carries a
-            // timeline into the prompt -- same zero-inference
+            // timeline into the prompt: same zero-inference
             // lookup-and-template path as everything else in TryGrounded.
             case HsGroundedKind::RecallMet:
             {
@@ -330,9 +330,9 @@ namespace
                 hasFact = Hs_HasGroupedBefore(botGuid, senderGuid);
                 break;
             }
-            // PLAN-TRADE.md: the asking price for something the bot is
+            // Claude/archive/PLAN-TRADE.md: the asking price for something the bot is
             // actually carrying, computed with mod-playerbots' own selling
-            // arithmetic rather than invented -- the whole point is that the
+            // arithmetic rather than invented: the whole point is that the
             // number said in chat is the number the trade window will then
             // demand.
             case HsGroundedKind::TradePrice:
@@ -347,7 +347,7 @@ namespace
                 // anything true about this bot's bags.
                 //
                 // Both modes gate on IsRandomBot/IsAddclassBot in
-                // mod-playerbots, so the check is scoped the same way -- an
+                // mod-playerbots, so the check is scoped the same way: an
                 // account-controlled bot is unaffected by either mode.
                 if (sPlayerbotAIConfig.enableRandomBotTrading == 0 ||
                     sPlayerbotAIConfig.enableRandomBotTrading == 2)
@@ -359,7 +359,7 @@ namespace
                 HsTradeableItem item;
                 if (!Hs_PickTradeableItem(bot, item))
                 {
-                    hasFact = false; // carrying nothing tradeable -- a true answer, not an invented one
+                    hasFact = false; // carrying nothing tradeable: a true answer, not an invented one
                     break;
                 }
 
@@ -388,7 +388,7 @@ namespace
                 //
                 // GetTradeDiscount is deliberately NOT folded in. It is a
                 // running per-pair credit applied to the whole trade's money
-                // *delta* at accept time, not to any item's price -- for a
+                // *delta* at accept time, not to any item's price. For a
                 // plain item-for-gold trade there is no delta for it to
                 // discount, so the undiscounted figure is what the window
                 // demands. It only diverges once items also flow back from
@@ -398,14 +398,14 @@ namespace
                     sRandomPlayerbotMgr.GetSellMultiplier(bot));
                 if (price == 0)
                 {
-                    hasFact = false; // multiplier rounded it away -- don't quote "0c"
+                    hasFact = false; // multiplier rounded it away: don't quote "0c"
                     break;
                 }
 
                 // "2g50s for [Bolt of Mageweave]", or with a stack,
                 // "5g for 20x [Bolt of Mageweave]". The item is named in the
                 // fact rather than left implicit because the module does not
-                // record which item a past WTS line advertised -- naming
+                // record which item a past WTS line advertised. Naming
                 // what is being quoted makes the answer coherent on its own
                 // terms instead of a non-sequitur about some other item.
                 fact = FormatMoney(price) + " for ";
@@ -415,14 +415,14 @@ namespace
                 break;
             }
             case HsGroundedKind::None:
-                return false; // unreachable -- guarded above
+                return false; // unreachable: guarded above
         }
 
         std::string reply = Hs_BuildGroundedReply(kind, hasFact, fact, botGuid, msg);
         if (reply.empty())
             return false;
 
-        // Same style pass and delivery path as TryReflex -- both answer
+        // Same style pass and delivery path as TryReflex; both answer
         // without touching the GPU.
         HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
@@ -439,7 +439,7 @@ namespace
 
     // Reached only when the surface's ceiling permits corpus but not
     // inference (an operator running the realm cheaper). Same "answer
-    // without the GPU" shape as TryReflex/TryGrounded above -- no bucket,
+    // without the GPU" shape as TryReflex/TryGrounded above: no bucket,
     // no cooldown, no history/identity write, since none of those exist
     // to protect a zero-GPU-cost path. Hs_SelectCorpusLine (hs_corpus.h)
     // does the weighted anti-repeat pick and its own exposure bookkeeping;
@@ -450,7 +450,7 @@ namespace
     {
         // One card query for the whole function. The snapshot carries
         // `active` (what Hs_HasActiveCard used to answer), the verbal tic,
-        // and both card-only placeholder fields -- all off the same
+        // and both card-only placeholder fields, all off the same
         // hside_identity row and the same card_facts JSON. This runs on the
         // world thread inside the chat hook, once per replying bot, so the
         // three round trips it replaces were the most expensive avoidable
@@ -464,7 +464,7 @@ namespace
 
         // Card-only placeholders (%main_focus, %current_goal). A no-op for
         // the overwhelming majority of lines, which never contain either
-        // token -- Hs_ResolveCardPlaceholders is a plain substring replace.
+        // token: Hs_ResolveCardPlaceholders is a plain substring replace.
         if (snapshot.active)
             line = Hs_ResolveCardPlaceholders(line, snapshot.mainFocus, snapshot.currentGoal);
 
@@ -494,11 +494,11 @@ namespace
     }
 
     // §4.17: maps a live Channel* to one of the six kinds this module
-    // knows about, via mod-playerbots' own ChatChannelId enum (PlayerbotAI.h
-    // -- the same ids mod-playerbots itself joins bots to, PlayerbotMgr.cpp)
+    // knows about, via mod-playerbots' own ChatChannelId enum (PlayerbotAI.h,
+    // the same ids mod-playerbots itself joins bots to, PlayerbotMgr.cpp)
     // rather than parsing Channel::GetName()'s zone-suffixed display string.
     // Returns false for any other channel (a GM/custom channel, or a DBC id
-    // this module doesn't have a policy for) -- the hook passes those through
+    // this module doesn't have a policy for); the hook passes those through
     // untouched. That deliberately includes the channel mod-playerbots joins
     // by raw CMSG_JOIN_CHANNEL with id 0 and the name "World": 3.3.5a has no
     // World channel in ChatChannels.dbc and nothing auto-joins a real player
@@ -517,7 +517,7 @@ namespace
         }
     }
 
-    // §4.17's corpus-only channel reply -- deliberately not a call into
+    // §4.17's corpus-only channel reply, deliberately not a call into
     // TryDispatch: channel content is corpus/script only by design (never
     // tier-2 inference, never reflex/grounded, which are direct-address
     // concepts that don't fit ambient channel chatter), so this mirrors only
@@ -531,7 +531,7 @@ namespace
         if (line.empty())
             return;
 
-        // Universal placeholders only -- channel_* categories are never
+        // Universal placeholders only: channel_* categories are never
         // card_gated (hs_corpus.cpp's ChannelColumnFor query), so no card
         // placeholder pass is needed here, unlike TryCorpusFallback.
         if (line.find('%') != std::string::npos)
@@ -556,7 +556,7 @@ namespace
     // tier ceiling, then the real admission gates (bucket/cooldown/
     // breaker/queue depth) inside Hs_TryEnqueue. A ceiling is permission,
     // not budget. Say, whisper, party/raid, and guild all read
-    // MaxTier.DirectReply -- the ceiling is one surface-shaped concept ("a
+    // MaxTier.DirectReply: the ceiling is one surface-shaped concept ("a
     // player addressed a bot"), not per-channel; only delivery and the
     // interaction_score weight (hs_identity.h) vary by channel.
     //
@@ -597,7 +597,7 @@ namespace
         }
 
         // §4.13's remaining topic-gate facts. Only read here, not for the
-        // reflex/grounded/corpus tiers above -- those never reach the LLM
+        // reflex/grounded/corpus tiers above: those never reach the LLM
         // prompt this feeds, so the read would be wasted work.
         HsTopicGateContext topicGate = BuildTopicGateContext(bot);
 
@@ -612,15 +612,15 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         return true;
 
     if (!player || IsBot(player))
-        return true; // sender-aware (bot-initiated) chatter is not wired up yet -- see hs_config.h
+        return true; // sender-aware (bot-initiated) chatter is not wired up yet; see hs_config.h
 
     // A real player speaking aborts any scripted bot-to-bot conversation
-    // they're witnessing -- finish the line in flight, then stop.
+    // they're witnessing: finish the line in flight, then stop.
     // Unconditional on the real-player branch, independent of whether any
     // bot ends up eligible to reply below.
     Hs_AbortScriptsWitnessedBy(player->GetGUID().GetRawValue());
 
-    // Same reasoning, for a scheduled engagement follow-up -- delivering
+    // Same reasoning, for a scheduled engagement follow-up: delivering
     // one after the player has already said something else reads as the
     // bot not listening.
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
@@ -634,14 +634,14 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (!IsBot(candidate))
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (candidate->GetTeamId() != player->GetTeamId())
             continue; // opposing faction can't read /say
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
         // IsWithinDistInMap, not GetDistance: the candidate loop walks
         // ObjectAccessor::GetPlayers(), which is realm-wide, and GetDistance
-        // is purely positional -- no map, no phase. Two instances of the same
+        // is purely positional (no map, no phase). Two instances of the same
         // dungeon share one coordinate space, so the bare distance would make
         // a bot in another instance "nearby".
         if (!candidate->IsWithinDistInMap(player, g_HsSayDistance))
@@ -669,13 +669,13 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     // Whisper is a full engagement-follow-up surface, unlike scripted
-    // bot-to-bot which is only ever witnessed via /say -- so this handler
+    // bot-to-bot which is only ever witnessed via /say, so this handler
     // needs the same abort-on-interrupt call the /say path already has.
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
     if (!IsBot(receiver))
         return true;
     if (Hs_IsExcludedBotName(receiver->GetName()))
-        return true; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+        return true; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
     if (g_HsDisableRepliesInCombat && receiver->IsInCombat())
         return true;
 
@@ -688,7 +688,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
 // CHAT_MSG_PARTY/PARTY_LEADER stay within the sender's own subgroup even in
 // a raid (ChatHandler.cpp's HandleMessagechatOpcode broadcasts by subgroup,
-// not the whole group) -- a candidate outside it never heard the line, so
+// not the whole group), so a candidate outside it never heard the line, and
 // it can't "reply." CHAT_MSG_RAID/RAID_LEADER reach the whole raid, no
 // subgroup filter. RAID_WARNING and the battleground variants are
 // deliberately excluded: a leader broadcast or BG channel isn't something a
@@ -706,7 +706,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
     // A real player speaking takes the floor from any bot-to-bot chain in
-    // this group (hs_botchain.h) -- it drops only the hop still answering a
+    // this group (hs_botchain.h): it drops only the hop still answering a
     // line from before they spoke, not chaining itself. The replies this
     // message is about to draw seed a fresh chain rooted in what they said.
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForGroup(group->GetGUID().GetRawValue()));
@@ -726,7 +726,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (subgroupScoped && !group->SameSubGroup(player, candidate))
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
         eligible.push_back(candidate);
@@ -765,7 +765,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (candidate->GetGuildId() != guildId)
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
         eligible.push_back(candidate);
@@ -781,11 +781,11 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 }
 
 // §4.17: mod-playerbots joins every bot to every one of these channels
-// unconditionally (trap 20) -- this is the only gate deciding whether any of
+// unconditionally (trap 20); this is the only gate deciding whether any of
 // them ever speaks. Corpus-only by design (TryChannelCorpusReply above,
 // never TryDispatch), rate-limited per channel (Hs_ChannelBucketTake, checked
 // before any candidate scan so a throttled channel costs nothing), and
-// sampled rather than enumerated (Hs_OrderChannelCandidates, trap 21) -- a
+// sampled rather than enumerated (Hs_OrderChannelCandidates, trap 21): a
 // channel with most of the realm in it has no proximity bound the way /say
 // does, so nothing else here caps how many bots could otherwise be rolled
 // against reply chance on one message.
@@ -806,7 +806,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     // §4.17's Trade `care` offset trigger: stamps every bot currently a
     // member of this channel instance, independent of whether any of them
-    // go on to reply below -- "recently witnessed WTS/WTB activity" is true
+    // go on to reply below. "Recently witnessed WTS/WTB activity" is true
     // for the whole channel, not just whichever bot happens to answer.
     if (kind == HsChannelKind::Trade && Hs_IsWtsWtb(msg))
     {
@@ -826,7 +826,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
     if (!Hs_ChannelBucketTake(kind))
-        return true; // throttled -- no candidate scan at all on a busy channel
+        return true; // throttled: no candidate scan at all on a busy channel
 
     std::vector<Player*> eligible;
     for (auto const& itr : ObjectAccessor::GetPlayers())
@@ -837,7 +837,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (!IsBot(candidate))
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames -- never spoken through, no tier at all
+            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (candidate->GetTeamId() != player->GetTeamId())
             continue; // opposing faction can't read this channel
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())

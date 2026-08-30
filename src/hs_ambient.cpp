@@ -44,7 +44,7 @@ namespace
     // Upper bound on how many candidates a single scan collects before it
     // stops walking. The scan picks uniformly among what it collected, so
     // stopping early biases toward whatever ObjectAccessor happens to
-    // enumerate first -- accepted for the same reason hs_script.cpp accepts
+    // enumerate first: accepted for the same reason hs_script.cpp accepts
     // "first eligible instance found this scan": the enumeration order is
     // effectively arbitrary, this runs every 30 seconds, and the alternative
     // is an unbounded O(bots x players) walk on a realm with thousands of
@@ -87,7 +87,7 @@ namespace
         return ai && ai->IsBotAI();
     }
 
-    // HearthsideChat.ExcludeNames -- "no reflex, grounded, corpus, or
+    // HearthsideChat.ExcludeNames: "no reflex, grounded, corpus, or
     // reactive reply, ever" (hs_config.h). An ambient line is corpus content
     // spoken unprompted, so an excluded bot may never be the speaker. Same
     // predicate hs_script.cpp uses, and for the same reason: unlike
@@ -118,7 +118,7 @@ namespace
         // windows old already answers exactly as a missing one does
         // (hs_prune.h). Bounded by the bot population rather than a product,
         // so this is retention hygiene on a long-uptime realm rather than a
-        // correctness need -- hence the same generous multiplier the other
+        // correctness need: hence the same generous multiplier the other
         // call sites use.
         HsPrune::PruneStale(g_LastAmbientAt, now,
                             /*staleSeconds=*/static_cast<int64_t>(g_HsAmbientBotCooldownSeconds) * 4,
@@ -144,7 +144,7 @@ namespace
 
     // The one funnel every surface converges on: placeholder resolution,
     // style pass, delivery, bookkeeping. Mirrors hs_handler.cpp's
-    // TryCorpusFallback exactly -- ambient is the same zero-GPU corpus
+    // TryCorpusFallback exactly: ambient is the same zero-GPU corpus
     // delivery, differing only in that nothing asked for it.
     //
     // Scores nothing and writes no history, deliberately, for the same
@@ -160,8 +160,8 @@ namespace
         HsCardSnapshot snapshot = Hs_LookupCardSnapshot(botGuid);
 
         // Card-only placeholders (%main_focus, %current_goal). Only the /say
-        // pool can contain them -- the party/raid and channel category
-        // queries both filter card_gated = 0 -- but running the pass
+        // pool can contain them: the party/raid and channel category
+        // queries both filter card_gated = 0: but running the pass
         // unconditionally is a plain substring replace over a line that
         // almost never contains either token, and it means a future
         // card_gated category on those surfaces can't silently deliver a
@@ -171,7 +171,7 @@ namespace
 
         // Universal placeholders, after the card pass so the leftover check
         // sees a fully-substituted line. An unresolvable token drops the
-        // line into silence rather than an untrue claim (§4.13) -- and note
+        // line into silence rather than an untrue claim (§4.13): and note
         // the ambient token is already spent at this point, which is
         // correct: the budget bounds how often a bot *attempts* to speak,
         // and a dropped line is silence the player experiences, not free.
@@ -206,7 +206,7 @@ namespace
 
         // senderGuid 0: ambient has no addressee. Hs_DeliverReflexReply only
         // reads it on the Whisper path (to resolve the recipient), and
-        // ambient never whispers -- an unprompted whisper to a stranger is
+        // ambient never whispers: an unprompted whisper to a stranger is
         // the one shape of this feature that would read as harassment rather
         // than atmosphere.
         Hs_DeliverReflexReply(botGuid, /*senderGuid=*/0, channel, style.text, channelKind);
@@ -218,7 +218,7 @@ namespace
     // ---- /say ----------------------------------------------------------
     // Dead air near a real player. The one surface where "is anyone actually
     // there" has to be tested explicitly and by distance, which is why
-    // Ambient.RequireRealPlayer exists at all -- party/raid get the same
+    // Ambient.RequireRealPlayer exists at all: party/raid get the same
     // guarantee free from the delivery layer, and the channel scan tests
     // membership instead.
     //
@@ -226,7 +226,7 @@ namespace
     // is deliberate (cheapest first, each cutting the pool the next one
     // walks):
     //
-    //   1. the bot is settled -- stationary, and in RPG_REST or
+    //   1. the bot is settled: stationary, and in RPG_REST or
     //      RPG_WANDER_NPC (Hs_IsBotSettled, hs_rpgstate.h). A bot sprinting
     //      to a quest objective muttering about the scenery is the tell
     //      this gate exists to remove.
@@ -235,7 +235,7 @@ namespace
     //      literally nobody but the player around reads as the bot talking
     //      *at* them and expecting an answer; with a companion present the
     //      same line reads as overheard, which is what it is meant to be.
-    //      The companion is not required to be settled -- it is scenery
+    //      The companion is not required to be settled: it is scenery
     //      here, not a participant, and requiring both would cut the pool
     //      by the square of an already narrow fraction.
     //   4. the roll (Ambient.Say.FireChancePercent).
@@ -254,7 +254,7 @@ namespace
             // Three-way, not two: an excluded bot is neither a valid speaker
             // nor a real player. Letting it fall into realPlayers would make
             // other bots treat it as the human whose presence justifies the
-            // line -- the same trap hs_opener.cpp documents for its own scan.
+            // line: the same trap hs_opener.cpp documents for its own scan.
             if (IsBot(candidate))
             {
                 if (IsEligibleBot(candidate))
@@ -294,14 +294,14 @@ namespace
                 if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
                     continue;
                 audience = player;
-                break; // one is enough -- this is a presence test, not a count
+                break; // one is enough: this is a presence test, not a count
             }
 
             if (!audience && g_HsAmbientRequireRealPlayer)
                 continue;
 
             // Gate 3. Same presence-not-count shape as the audience scan
-            // above, and the same map/phase-aware distance test -- one
+            // above, and the same map/phase-aware distance test: one
             // companion in earshot is the whole requirement.
             bool hasCompanion = false;
             for (Player* other : bots)
@@ -340,7 +340,7 @@ namespace
             return;
 
         // Budget spent only now, on a speaker that is actually going to try.
-        // PLAN-AMBIENT.md §5 sketched this check ahead of speaker selection;
+        // Claude/archive/PLAN-AMBIENT.md §5 sketched this check ahead of speaker selection;
         // taken there it would burn a token on every tick that found nobody
         // eligible, which on a quiet realm is most of them.
         if (!Hs_AmbientBucketTake())
@@ -360,7 +360,7 @@ namespace
     // ---- party / raid --------------------------------------------------
     // PlayerbotAI::SayToParty and ::SayToRaid send only to
     // GetRealPlayersInGroup(), so a bot-only group generates no packets at
-    // all -- the real-player gate is enforced by the delivery layer here
+    // all: the real-player gate is enforced by the delivery layer here
     // regardless of Ambient.RequireRealPlayer. The scan still checks for a
     // human in the group, unconditionally and not gated on that key: a line
     // nobody receives would still spend a token from a realm-wide budget and
@@ -425,7 +425,7 @@ namespace
 
     // ---- Trade / General -----------------------------------------------
     // Membership is the audience test here rather than distance. Bots are
-    // grouped by resolved Channel* -- the same zone-qualified resolution
+    // grouped by resolved Channel*: the same zone-qualified resolution
     // delivery itself uses, so "same resolved Channel*" is equivalent to
     // "members of the same channel instance" (hs_script.cpp's channel scan
     // documents this equivalence and it holds identically here).
@@ -450,7 +450,7 @@ namespace
             // tempting to resolve their channel here too and group everyone
             // in one pass, but that would make this scan's correctness depend
             // on Hs_ResolveChannelForDelivery agreeing with the core about
-            // every channel's name -- and a disagreement there resolves a
+            // every channel's name: and a disagreement there resolves a
             // human to the wrong instance or to nullptr, which silences the
             // surface outright rather than failing visibly. (That is not
             // hypothetical: the city-scoped names disagreed until the
@@ -497,7 +497,7 @@ namespace
             return bail("RequireRealPlayer is on and no real player is online");
 
         // Collect the instances that can actually carry a line, then pick
-        // one -- rather than taking the first eligible instance found, which
+        // one: rather than taking the first eligible instance found, which
         // on a realm with several populated cities would let whichever
         // instance enumerated first monopolize the surface.
         std::vector<std::vector<Player*>*> eligibleInstances;
@@ -550,14 +550,14 @@ namespace
 
     void ScanAmbient()
     {
-        // Corpus-only, permanently -- see hs_ambient.h. "inference" is
+        // Corpus-only, permanently: see hs_ambient.h. "inference" is
         // accepted and behaves exactly as "corpus"; there is no generated
         // ambient path and no plan for one.
         if (!HsTierAllows(HsParseTier(g_HsMaxTierAmbient), HsTier::Corpus))
             return;
 
         // Which surfaces are switched on at all. Cheap config and policy
-        // reads only -- no player walk happens until one surface is chosen,
+        // reads only: no player walk happens until one surface is chosen,
         // which is what keeps a tick to at most one channel resolution pass.
         std::vector<AmbientSurface> enabled;
         if (g_HsAmbientSayEnable)
@@ -585,7 +585,7 @@ namespace
         //     first always won, and the later ones would only ever speak on
         //     the ticks the earlier ones found nobody. Choosing first makes
         //     each enabled surface equally likely to be the one that speaks,
-        //     independent of how many bots each has available -- so /say,
+        //     independent of how many bots each has available: so /say,
         //     with the largest pool by far, cannot drown out party chatter.
         switch (enabled[urand(0, static_cast<uint32_t>(enabled.size() - 1))])
         {

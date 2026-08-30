@@ -9,15 +9,15 @@ class Player;
 // Centralised reply arbitration for the "addressed" branch of the decision
 // flow (a real player's /say, with one or more bots in range). Answers
 // "who replies, and how many," never "should this bot reply" rolled
-// independently per bot -- that per-bot rolling is exactly the "four bots
+// independently per bot: that per-bot rolling is exactly the "four bots
 // answer the same line" defect this exists to prevent.
 //
 // `speaker` is the player who spoke; `candidates` is the already-gated
 // eligible set (real-player/faction/range/combat gating happens in the
-// caller, hs_handler.cpp -- the arbiter only selects among what it is
+// caller, hs_handler.cpp; the arbiter only selects among what it is
 // given). Returns 0-2 bots. Archetype reply-chance is rolled here, dropping
 // candidates before the reply count is picked; tier ceilings, the token
-// bucket, and cooldowns are not touched -- those are applied by the caller,
+// bucket, and cooldowns are not touched, those are applied by the caller,
 // after selection.
 //
 // The event surface has its own arbiter, Hs_ArbitrateEventReplies

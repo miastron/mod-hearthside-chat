@@ -45,7 +45,7 @@ void Hs_LoadEventAffinityFromDb()
         }
 
         // Validated against the archetype table as loaded, not against a
-        // second name list -- same reasoning hs_archetype_store.cpp gives
+        // second name list, same reasoning hs_archetype_store.cpp gives
         // for the override loader. This runs after
         // HsArchetypeLifecycleWorldScript::OnStartup, so the table is
         // populated by the time we get here.

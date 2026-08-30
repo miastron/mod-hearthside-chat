@@ -115,9 +115,9 @@ lookup rather than injected text, and the cache economics that make a "carded" b
 ## Where to look next
 
 - `Claude/PLAN.md` — the design decisions behind every mechanism above, and why the alternatives were
-  rejected.
-- `Claude/PLAN-ARBITER.md` / `Claude/PLAN-TRADE.md` — event-reaction arbitration and trade-price
-  grounding, two newer efforts layered on top of `PLAN.md`'s design, tracked separately.
+  rejected. Event-reaction arbitration and trade-price grounding were designed in their own files
+  (`Claude/PLAN-ARBITER.md`, `Claude/PLAN-TRADE.md`) and are both shipped; those files are now frozen
+  history under `Claude/archive/`.
 - `conf/mod_hearthside_chat.conf.dist` — every `HearthsideChat.*` config key, commented.
 - `data/sql/db-characters/base/` — the authoritative schema for every `hside_*` table.
 - `hs_main.cpp` — startup/shutdown order for every `WorldScript`/`PlayerScript`, with comments on why

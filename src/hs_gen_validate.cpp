@@ -19,7 +19,7 @@ namespace
         "%main_focus", "%current_goal",
     };
 
-    // Scripted bot-to-bot dialogue's own token vocabulary -- disjoint from
+    // Scripted bot-to-bot dialogue's own token vocabulary: disjoint from
     // the corpus sets above, resolved per cast pair rather than per bot
     // (see hs_corpus.h's Hs_ResolveScriptPlaceholders).
     const std::unordered_set<std::string> kScriptPlaceholders = {
@@ -31,7 +31,7 @@ namespace
     // words like "cap" (level cap), and "based" would be too noisy to
     // trust as a single token, so the list sticks to slang with little
     // chance of colliding with ordinary WoW-flavor prose. Not exhaustive
-    // by design -- this is a cheap regex-shaped gate, not a rule engine.
+    // by design: this is a cheap regex-shaped gate, not a rule engine.
     const std::vector<std::string> kSlangTokens = {
         "lol", "lmao", "rofl", "bruh", "bestie", "ngl", "sus", "bussin", "yeet", "rn",
     };
@@ -93,7 +93,7 @@ namespace
     }
 
     // Same codepoint-range scan hs_style.cpp's StripEmoji uses to decide
-    // what to drop -- here just a detector, not a stripper.
+    // what to drop: here just a detector, not a stripper.
     bool ScanForEmoji(const std::string& in)
     {
         size_t i = 0;

@@ -15,10 +15,10 @@
 -- assembled prompt length per ring, replies-vs-silences per archetype,
 -- per-channel lines/min) would need new timing/tracking machinery this
 -- module does not have yet, and several of those metrics describe surfaces
--- (channel chat) that are not built at all -- a named follow-up.
+-- (channel chat) that are not built at all: a named follow-up.
 --
 -- Sample interval (~5 min) and retention window are §6's own "not known yet"
--- starting shape -- kHsMetricsSampleIntervalSeconds/kHsMetricsRetentionDays
+-- starting shape: kHsMetricsSampleIntervalSeconds/kHsMetricsRetentionDays
 -- in hs_metrics.cpp, compiled constants for the same reason every other
 -- unmeasured §6 number in this module has shipped as a placeholder rather
 -- than a config key nobody has grounds to tune yet.

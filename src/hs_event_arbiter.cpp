@@ -7,7 +7,7 @@
 
 namespace
 {
-    // Indexed by HsEventType's underlying value -- declaration order in the
+    // Indexed by HsEventType's underlying value: declaration order in the
     // enum and entry order here are one contract, not two lists that happen
     // to agree.
     constexpr const char* kEventTypeNames[kHsEventTypeCount] = {
@@ -30,25 +30,25 @@ namespace
     };
 
     // { chance of nobody, chance of exactly one }; the remainder is the
-    // chance of two. Starting guesses shaped by PLAN-ARBITER.md §1/§2's
-    // three stated judgements -- most deaths pass without comment, a ding
+    // chance of two. Starting guesses shaped by Claude/archive/PLAN-ARBITER.md §1/§2's
+    // three stated judgements (most deaths pass without comment, a ding
     // almost always draws a "gz", duels draw little beyond the occasional
-    // jab -- not measurements. Same status as hs_opener.cpp's fire-chance
+    // jab), not measurements. Same status as hs_opener.cpp's fire-chance
     // constants: a live-realm judgement, retuned by editing this table.
     constexpr HsEventCountBias kEventCountBias[kHsEventTypeCount] = {
-        { 70, 28 }, // DEATH_IN_GROUP          -- one death mid-fight is unremarkable
-        { 50, 42 }, // DEATH_WIPE              -- a wipe is the one death people do talk about
-        { 65, 33 }, // DEATH_GROUP_PLAYER      -- someone says something to the person who died
-        { 80, 20 }, // DEATH_SOLO              -- nobody to say it to; mostly silence
-        { 55, 43 }, // LEVEL_UP_SELF           -- announcing your own ding, not congratulating
-        { 20, 68 }, // LEVEL_UP_GROUP          -- a ding almost always draws a gz (§1)
+        { 70, 28 }, // DEATH_IN_GROUP          : one death mid-fight is unremarkable
+        { 50, 42 }, // DEATH_WIPE              : a wipe is the one death people do talk about
+        { 65, 33 }, // DEATH_GROUP_PLAYER      : someone says something to the person who died
+        { 80, 20 }, // DEATH_SOLO              : nobody to say it to; mostly silence
+        { 55, 43 }, // LEVEL_UP_SELF           : announcing your own ding, not congratulating
+        { 20, 68 }, // LEVEL_UP_GROUP          : a ding almost always draws a gz (§1)
         { 60, 38 }, // KILLING_BLOW
-        { 45, 52 }, // ROLL_WON                -- winners say something more often than not
+        { 45, 52 }, // ROLL_WON                : winners say something more often than not
         { 65, 33 }, // ROLL_LOST
-        { 80, 20 }, // DUEL_START              -- heavy bias toward 0 (§2, operator read)
+        { 80, 20 }, // DUEL_START              : heavy bias toward 0 (§2, operator read)
         { 75, 25 }, // DUEL_WON
         { 75, 25 }, // DUEL_LOST
-        { 40, 55 }, // OPENER_GROUP_FORMED     -- reserved; openers are tier-1 corpus today
+        { 40, 55 }, // OPENER_GROUP_FORMED     : reserved; openers are tier-1 corpus today
         { 55, 45 }, // OPENER_REZ
         { 45, 50 }, // OPENER_DUNGEON_COMPLETE
         { 65, 35 }, // OPENER_PROXIMITY
@@ -56,7 +56,7 @@ namespace
 
     // Involvement multipliers on the shared three-level scale. Wide enough
     // that the bot something happened *to* usually speaks over a bystander,
-    // narrow enough that affinity and recency can still overturn it -- a
+    // narrow enough that affinity and recency can still overturn it: a
     // subject that answered ten seconds ago (0.15x recency) loses to a
     // witness that has been quiet.
     double InvolvementWeight(HsEventInvolvement involvement)
@@ -107,7 +107,7 @@ namespace
     std::mutex                                        g_AffinityMutex;
     std::map<std::pair<uint8_t, std::string>, float>  g_Affinity;
 
-    // Seeded once from random_device, then reused -- constructing a
+    // Seeded once from random_device, then reused: constructing a
     // random_device per event would be both slower and, on some libstdc++
     // builds, a repeated open of /dev/urandom. Hs_SeedEventArbiterForTest
     // overwrites it for the harness.
@@ -163,7 +163,7 @@ float Hs_EventAffinityWeight(HsEventType type, const std::string& archetypeName)
 {
     std::lock_guard<std::mutex> lock(g_AffinityMutex);
     auto it = g_Affinity.find({ static_cast<uint8_t>(type), archetypeName });
-    // Default 1.0, so the SQL only has to author the exceptions -- an
+    // Default 1.0, so the SQL only has to author the exceptions: an
     // archetype with no row for an event is neither favoured nor penalised.
     return it == g_Affinity.end() ? 1.0f : it->second;
 }

@@ -12,8 +12,8 @@ enum class HsLLMFailure
     None,
     ConnectionFailed,   // refused / unreachable / could not connect at all
     Timeout,             // connection established but no timely response
-    ServerError,         // HTTP 5xx — backend reached and failed
-    ClientError,         // HTTP 4xx — our bug: malformed request, bad model, wrong endpoint
+    ServerError,         // HTTP 5xx, backend reached and failed
+    ClientError,         // HTTP 4xx, our bug: malformed request, bad model, wrong endpoint
     ParseError,          // 200 but the response body wasn't the shape expected
 };
 
@@ -25,7 +25,7 @@ struct HsLLMResult
     HsLLMFailure failure;      // HsLLMFailure::None when success is true
     int          httpStatus;  // 0 if the request never got an HTTP response
     uint32_t     latencyMs;   // wall time of the backend call itself, set on every outcome (§4.19)
-    uint32_t     promptChars; // assembled prompt length -- §4.2's budget that fails silently, set
+    uint32_t     promptChars; // assembled prompt length: §4.2's budget that fails silently, set
                                // regardless of outcome since the prompt was still built and sent
 };
 
@@ -42,13 +42,13 @@ struct HsLLMConfig
     std::string apiKey;       // optional bearer token (llama-server supports --api-key)
     std::string model;        // ignored by llamacpp native /completion, required by the others
     int         timeoutSec;
-    int         maxTokens;    // output cap -- a GPU budget, not a hard chop
-    float       dryMultiplier; // DRY penalty multiplier -- 0.0f leaves DRY off (llamacpp only)
+    int         maxTokens;    // output cap (a GPU budget, not a hard chop)
+    float       dryMultiplier; // DRY penalty multiplier, 0.0f leaves DRY off (llamacpp only)
 
     // Which chat-markup dialect to hand-assemble for apiType=llamacpp's
     // native /completion (that endpoint bypasses llama.cpp's own template
     // handling entirely, so the module must speak the model's exact
-    // dialect itself -- see Hs_CallLLM). Ignored by openai/ollama, which
+    // dialect itself, see Hs_CallLLM). Ignored by openai/ollama, which
     // send a structured messages array and let the server apply whatever
     // template its own tokenizer_config declares.
     // "llama3" (default): <|start_header_id|>role<|end_header_id|>\n\ncontent<|eot_id|>
@@ -77,7 +77,7 @@ struct HsHistoryTurn
 // locking needed.
 //
 // archetypeLine (hs_archetype.h, Hs_ArchetypePromptLine) is the per-bot
-// personality delta -- a distinct layer from systemPrompt: systemPrompt and
+// personality delta, a distinct layer from systemPrompt: systemPrompt and
 // the fixed few-shot block are byte-identical across every bot regardless
 // of archetype (the cache-shared prefix), and archetypeLine is what
 // actually differs, so it's placed after the few-shot block and before

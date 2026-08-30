@@ -2,7 +2,7 @@
 -- assembled-prompt length by identity ring, added to hside_metrics; and a
 -- new hside_metrics_breakdown table for the variable-cardinality
 -- per-archetype/per-channel reply-vs-silence counts that don't fit
--- hside_metrics' flat per-interval row (Claude/ISSUES.md).
+-- hside_metrics' flat per-interval row (Claude/archive/ISSUES.md).
 
 ALTER TABLE `hside_metrics`
   ADD COLUMN `latency_p50_ms`          INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'rolling-window reactive-tier call latency, hs_queue.cpp kMaxLatencySamples' AFTER `openers_fired_session`,

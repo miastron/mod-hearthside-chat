@@ -7,7 +7,7 @@
 
 namespace
 {
-    // SplitMix64's finalizer — same mixer hs_style.cpp uses for the same
+    // SplitMix64's finalizer, same mixer hs_style.cpp uses for the same
     // reason: AzerothCore GUIDs come from a small sequential counter, so
     // std::hash<uint64_t> alone (identity on libstdc++) would draw
     // neighbouring GUIDs into neighbouring archetypes instead of scattering
@@ -27,7 +27,7 @@ namespace
     // happens to land.
     constexpr uint64_t kArchetypeSalt = 0xC2B2AE3D27D4EB4FULL;
 
-    // Enum order is the array-index contract Hs_ArchetypeInfoFor relies on --
+    // Enum order is the array-index contract Hs_ArchetypeInfoFor relies on:
     // hs_archetype_store.cpp matches hside_archetype rows to this list by
     // enum_name rather than trusting row order, so this is the single source
     // of truth for "which index is which archetype."
@@ -40,8 +40,8 @@ namespace
     // Populated by Hs_SetArchetypeTable, normally called once at startup by
     // hs_archetype_store.cpp's Hs_LoadArchetypesFromDb(). Defaults to a
     // single safe entry (CASUAL at full weight, no eligibility bound) so a
-    // lookup before that call -- or a missing/misconfigured hside_archetype
-    // table -- degrades to "every bot is CASUAL" rather than reading
+    // lookup before that call, or a missing/misconfigured hside_archetype
+    // table, degrades to "every bot is CASUAL" rather than reading
     // uninitialized data. hs_archetype_store.cpp logs an error on that path;
     // this file has no logging dependency of its own by design.
     std::array<HsArchetypeInfo, kHsArchetypeCount> g_Archetypes = {{
@@ -51,7 +51,7 @@ namespace
         { kEnumNames[3],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[4],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[5],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL -- the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL: the one real fallback row, weight 100 so it's always drawn until the DB table loads
         { kEnumNames[7],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[8],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[9],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
@@ -75,7 +75,7 @@ namespace
     // Guards every access to g_Archetypes. `.reload config` replaces the
     // whole table from the world thread (hs_main.cpp's
     // HsArchetypeLifecycleWorldScript) while the queue-worker and generator
-    // threads are reading it -- and each HsArchetypeInfo owns a
+    // threads are reading it, and each HsArchetypeInfo owns a
     // std::string talksAbout, so an unguarded replace frees a buffer a
     // reader may be mid-way through. Hs_ArchetypeInfoFor returns by value
     // for the same reason: its callers hold the result across a
@@ -168,7 +168,7 @@ std::string Hs_ArchetypePromptLine(HsArchetype a)
     std::string line = std::string("You mostly talk about: ") + info.talksAbout + ".";
 
     // TROLL_MILD/TROLL_AGGRESSIVE's profanity axis. No longer scoped away
-    // from the person being talked to (dropped 2026-08-24 -- the archetype
+    // from the person being talked to (dropped 2026-08-24: the archetype
     // voices already keep this in range on their own, and the arbiter's
     // rate limits/cooldowns make a sustained pile-on structurally
     // impossible, so the old boundary text was buying nothing). See

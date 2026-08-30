@@ -20,12 +20,12 @@
 //
 //   - **State** is the stable, coarse one: which phase of its life the bot
 //     is in, lasting minutes. It is what separates "on a quest" from
-//     "taking a break". On its own it is too coarse -- several states cover
+//     "taking a break". On its own it is too coarse: several states cover
 //     both the travel to somewhere and the time spent there.
 //   - **isMoving()** is the instantaneous physical one, sampled at scan
 //     time. On its own it is far too flighty: a questing bot stops
-//     constantly -- looting, casting, at a mailbox, at a vendor, at a fork
-//     in the path -- and any of those momentary halts would let it chat
+//     constantly (looting, casting, at a mailbox, at a vendor, at a fork
+//     in the path), and any of those momentary halts would let it chat
 //     mid-task.
 //
 // Together: the state establishes the bot is in a settled phase, and the
@@ -41,7 +41,7 @@
 // bot is reliably stationary and the movement check is merely belt-and-
 // braces there.
 //
-// RPG_WANDER_NPC is a bot that has arrived somewhere -- a town, a camp --
+// RPG_WANDER_NPC is a bot that has arrived somewhere (a town, a camp)
 // and is milling about between NPCs, alternately walking to the next one and
 // standing still. This is the state the movement check exists for: it picks
 // out the standing-still moments, which is exactly the scene worth having
@@ -56,14 +56,14 @@
 // exactly the mid-run chatter this gate exists to stop, and AND-ing
 // isMoving() onto it would leave it contributing nothing but a dead branch.
 // Note hs_queue.cpp's RpgStatusHint describes RPG_GO_CAMP to the model as
-// "camping a spot, waiting for something to spawn" -- that string is
+// "camping a spot, waiting for something to spawn": that string is
 // misleading for the same reason, but it only colors a prompt, so it is left
 // alone here rather than changed as a drive-by.
 //
-// Everything else -- RPG_GO_GRIND, RPG_DO_QUEST, RPG_TRAVEL_FLIGHT,
+// Everything else: RPG_GO_GRIND, RPG_DO_QUEST, RPG_TRAVEL_FLIGHT,
 // RPG_OUTDOOR_PVP, RPG_WANDER_RANDOM (milling at a grind spot, i.e. a bot
 // that just finished fighting), and RPG_IDLE (a transient that immediately
-// rolls into a new activity) -- describes a bot that is on its way somewhere
+// rolls into a new activity): describes a bot that is on its way somewhere
 // or mid-task.
 //
 // ---- Scope ----
@@ -76,12 +76,12 @@
 // deliberately from anywhere, so what the typist is doing is irrelevant
 // there.
 //
-// A bot with no PlayerbotAI is not settled rather than settled -- the fact
+// A bot with no PlayerbotAI is not settled rather than settled: the fact
 // is unavailable, and the conservative answer for a producer that speaks on
 // its own initiative is silence.
 //
 // **World thread only.** Touches PlayerbotAI*, so this may never be called
-// from the LLM worker thread -- same constraint as every other rpgInfo read
+// from the LLM worker thread: same constraint as every other rpgInfo read
 // in the module (hs_handler.cpp's TryDispatch documents why).
 inline bool Hs_IsBotSettled(Player* bot)
 {

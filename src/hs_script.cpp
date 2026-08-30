@@ -56,7 +56,7 @@ namespace
         return ai && ai->IsBotAI();
     }
 
-    // HearthsideChat.ExcludeNames -- "no reflex, grounded, corpus, or
+    // HearthsideChat.ExcludeNames: "no reflex, grounded, corpus, or
     // reactive reply, ever" (hs_config.h). A scripted turn is corpus content
     // the bot speaks unprompted, so an excluded bot may not be cast as
     // either speaker in a /say scene or a channel scene. Both scans below
@@ -96,12 +96,13 @@ namespace
 
     uint32_t g_ScanAccumulatorMs = 0;
 
-    // ---- §4.17: channel scripts. No witness/abort concept -- a channel
-    // cast needn't be co-located and there's no single player to interrupt
-    // on (the whole channel is the audience), so this state is deliberately
+    // §4.17: channel scripts. No witness/abort concept: a channel cast
+    // needn't be co-located and there's no single player to interrupt on
+    // (the whole channel is the audience), so this state is deliberately
     // smaller than HsActiveScriptRun/HsScheduledTurn above: no aborted flag,
-    // no witnessGuid. 2 turns, not 4 (kChannelScriptTurnDelayMinMs/MaxMs
-    // below reuse the same first-turn/turn-gap shape as the /say path).
+    // no witnessGuid. 2 turns, not 4 (ClaimAndScheduleChannel below reuses
+    // kFirstTurnDelayMinMs/MaxMs and kTurnGapMinSeconds/MaxSeconds directly,
+    // the same first-turn/turn-gap constants as the /say path).
     struct HsActiveChannelRun
     {
         uint64_t      bot0Guid;
@@ -129,7 +130,7 @@ namespace
     uint32_t g_ChannelScanAccumulatorMs = 0;
 
     // A placeholder starting guess, same footing kScanIntervalMs
-    // above is on -- channel scripts additionally gate on each channel's own
+    // above is on. Channel scripts additionally gate on each channel's own
     // MaxTier (checked per kind at fire time, not here).
     constexpr uint32_t kChannelScanFireChancePercent = 3;
 
@@ -173,8 +174,8 @@ namespace
         return false;
     }
 
-    // Claims one available script (single consumer -- only this scan ever
-    // writes hside_script.consumed_at -- so a plain SELECT-then-UPDATE has
+    // Claims one available script (single consumer: only this scan ever
+    // writes hside_script.consumed_at, so a plain SELECT-then-UPDATE has
     // no concurrent claimant to race against) and schedules its turns,
     // staggered by a per-turn typing delay so they don't land in a burst.
     void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
@@ -182,10 +183,10 @@ namespace
         QueryResult idResult = CharacterDatabase.Query(
             "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL ORDER BY id LIMIT 1");
         if (!idResult)
-            return; // reserve dry -- running dry is the correct failure mode, not an error
+            return; // reserve dry: running dry is the correct failure mode, not an error
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
 
-        // PLAN-AMBIENT.md §2's shared unprompted-speech budget (hs_queue.h).
+        // Claude/archive/PLAN-AMBIENT.md §2's shared unprompted-speech budget (hs_queue.h).
         // Spent once per *scene*, not per turn: a four-turn exchange is one
         // thing a listener perceives, and charging four tokens for it would
         // let a single scene drain a budget sized for the whole realm.
@@ -257,11 +258,11 @@ namespace
                 continue;
             if (candidate->IsInCombat() || !candidate->IsAlive())
                 continue;
-            // Both participants must be settled -- stationary and resting
-            // or loitering (Hs_IsBotSettled, hs_rpgstate.h). Unlike
-            // ambient's companion,
-            // neither of these two is scenery: they are about to hold a
-            // multi-turn conversation in /say over the next several minutes,
+            // Both participants must be settled (stationary and resting
+            // or loitering, Hs_IsBotSettled, hs_rpgstate.h). Unlike
+            // ambient's companion check, neither of these two is scenery:
+            // they are about to hold a multi-turn conversation in /say
+            // over the next several minutes,
             // and a bot that walks off to a quest objective mid-scene leaves
             // the other one talking to nobody. DeliverOneTurn's per-turn
             // re-check catches that as a range abort, but not starting a
@@ -288,7 +289,7 @@ namespace
         ClaimAndSchedule(nearbyBots[0], nearbyBots[1], player);
     }
 
-    // Re-checks every abort condition immediately before sending -- schedule
+    // Re-checks every abort condition immediately before sending: schedule
     // time and delivery time can be minutes apart for a script's later
     // turns, and a participant leaving range, entering combat, or dying
     // needs to be caught whenever it actually happens, not just at the
@@ -302,7 +303,7 @@ namespace
             std::lock_guard<std::mutex> lock(g_RunsMutex);
             auto it = g_ActiveRuns.find(scheduled.runId);
             if (it == g_ActiveRuns.end())
-                return; // defensive -- shouldn't happen
+                return; // defensive, shouldn't happen
             HsActiveScriptRun& run = it->second;
             aborted     = run.aborted;
             bot0Guid    = run.bot0Guid;
@@ -310,7 +311,7 @@ namespace
             witnessGuid = run.witnessGuid;
 
             if (--run.turnsRemaining == 0)
-                g_ActiveRuns.erase(it); // last turn of this run -- free the participants either way
+                g_ActiveRuns.erase(it); // last turn of this run, free the participants either way
         }
 
         if (aborted)
@@ -347,7 +348,7 @@ namespace
         // %my_*/%other_* resolution (§4.16), before the style pass so a
         // typo/abbreviation transform never touches a still-live token.
         // Skips just this turn, not the whole run, on an unresolvable field
-        // (e.g. the listener is unguilded) -- the same "no substitute"
+        // (e.g. the listener is unguilded), the same "no substitute"
         // shape used elsewhere in the module.
         std::string text = scheduled.text;
         if (text.find('%') != std::string::npos)
@@ -357,7 +358,7 @@ namespace
         }
 
         // No archetype/persona goes into script generation, but the style
-        // pass still runs per speaker at delivery -- the same script
+        // pass still runs per speaker at delivery: the same script
         // spoken by two different bots reads as two different people.
         HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
@@ -393,7 +394,7 @@ namespace
     }
 
     // §4.17: claims one 2-turn channel script (hside_script.channel = the
-    // kind's lowercase name) and schedules its turns -- same shape as
+    // kind's lowercase name) and schedules its turns. Same shape as
     // ClaimAndSchedule above, minus the witness bookkeeping that mechanism
     // has no equivalent for.
     void ClaimAndScheduleChannel(HsChannelKind kind, Player* bot0, Player* bot1)
@@ -411,7 +412,7 @@ namespace
 
         // Shared unprompted-speech budget, same placement and reasoning as
         // ClaimAndSchedule above. A channel scene is charged the same single
-        // token a /say scene is -- it reaches a wider audience, but it is
+        // token a /say scene is: it reaches a wider audience, but it is
         // still one exchange, and this budget measures how often bots talk
         // among themselves rather than how many players overhear it.
         if (!Hs_AmbientBucketTake())
@@ -456,12 +457,12 @@ namespace
     }
 
     // Finds two same-team bots that both resolve to the same live channel
-    // instance for `kind` (Hs_ResolveChannelForDelivery, hs_queue.h -- the
+    // instance for `kind` (Hs_ResolveChannelForDelivery, hs_queue.h: the
     // same zone-qualified resolution delivery uses, so "grouped by resolved
     // Channel*" is equivalent to "members of the same channel instance"),
     // confirmed via the public Player::IsInChannel rather than trusted on
     // Hs_ResolveChannelForDelivery's return alone. No proximity or combat
-    // check (§4.17's channel cast needn't be co-located) -- only alive,
+    // check (§4.17's channel cast needn't be co-located). Only alive,
     // same team, and not already mid-script (either mechanism).
     //
     // The instance also has to have a real player in it. Unlike the /say
@@ -500,7 +501,7 @@ namespace
 
             // IsEligibleBot covers HearthsideChat.ExcludeNames, and is
             // deliberately ahead of the Hs_ResolveChannelForDelivery call
-            // below -- that one is a DBC lookup plus a ChannelMgr string
+            // below: that one is a DBC lookup plus a ChannelMgr string
             // match, by far the most expensive test in this loop.
             if (!IsEligibleBot(candidate) || !candidate->IsAlive())
                 continue;
@@ -523,7 +524,7 @@ namespace
         //     forty zones has forty General instances and a player standing
         //     in one of them. Without this test a scene fires into whichever
         //     instance enumerated first, is logged as delivered, is written
-        //     to hside_chat_log, and is heard by nobody -- measured at ~98%
+        //     to hside_chat_log, and is heard by nobody: measured at ~98%
         //     inaudible on the test realm (334 bots, 8 of them sharing the
         //     player's instance).
         //   - Picking uniformly rather than taking the first, so that on a
@@ -563,7 +564,7 @@ namespace
         for (int attempt = 0; attempt < 5 && bot1 == bot0; ++attempt)
             bot1 = (*pool)[urand(0, static_cast<uint32_t>(pool->size() - 1))];
         if (bot1 == bot0)
-            return; // defensive -- shouldn't happen with size() >= 2
+            return; // defensive, shouldn't happen with size() >= 2
 
         ClaimAndScheduleChannel(kind, bot0, bot1);
     }
@@ -572,12 +573,12 @@ namespace
     {
         {
             // Decrements turnsRemaining and frees the run slot on its last
-            // turn either way -- run bookkeeping only, the speaker/listener
+            // turn either way. Run bookkeeping only, the speaker/listener
             // guids scheduled per-turn are what delivery actually uses.
             std::lock_guard<std::mutex> lock(g_ChannelRunsMutex);
             auto it = g_ActiveChannelRuns.find(scheduled.runId);
             if (it == g_ActiveChannelRuns.end())
-                return; // defensive -- shouldn't happen
+                return; // defensive, shouldn't happen
             if (--it->second.turnsRemaining == 0)
                 g_ActiveChannelRuns.erase(it);
         }
@@ -585,7 +586,7 @@ namespace
         Player* speaker  = ObjectAccessor::FindPlayer(ObjectGuid(scheduled.speakerGuid));
         Player* listener = ObjectAccessor::FindPlayer(ObjectGuid(scheduled.listenerGuid));
         if (!speaker || !speaker->IsInWorld() || !speaker->IsAlive())
-            return; // no proximity/combat re-check by design (§4.17) -- alive+online is the floor
+            return; // no proximity/combat re-check by design (§4.17): alive+online is the floor
 
         PlayerbotAI* speakerAI = PlayerbotsMgr::instance().GetPlayerbotAI(speaker);
         if (!speakerAI)
@@ -594,7 +595,7 @@ namespace
         std::string text = scheduled.text;
         if (text.find('%') != std::string::npos)
         {
-            // listener may have logged off mid-run -- an unresolvable
+            // listener may have logged off mid-run: an unresolvable
             // %other_* field drops just this turn, same "no substitute"
             // contract as the /say path.
             HsPlaceholderContext otherCtx = listener ? Hs_BuildPlaceholderContext(listener) : HsPlaceholderContext{};
@@ -615,7 +616,7 @@ namespace
 
         Channel* channel = Hs_ResolveChannelForDelivery(speaker, scheduled.kind);
         if (!channel)
-            return; // speaker no longer resolves to that channel instance (e.g. moved zones) -- drop, don't misdeliver
+            return; // speaker no longer resolves to that channel instance (e.g. moved zones): drop, don't misdeliver
         channel->Say(speaker->GetGUID(), style.text, LANG_UNIVERSAL);
     }
 
@@ -642,7 +643,7 @@ namespace
 
 void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
 {
-    // Fine-grained every tick -- turn pacing depends on it. Delivery always
+    // Fine-grained every tick: turn pacing depends on it. Delivery always
     // drains regardless of the tier gates below, same as the /say path.
     DeliverPendingTurns();
     DeliverPendingChannelTurns();
@@ -666,7 +667,7 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
         }
     }
 
-    // §4.17: independent of MaxTier.BotToBot -- each channel's own MaxTier
+    // §4.17: independent of MaxTier.BotToBot: each channel's own MaxTier
     // gates it (checked inside TryFireChannelScript). Shares this
     // WorldScript's tick and scan cadence rather than running a second
     // near-identical timer, same reasoning §4.22 gives for sharing a scan
@@ -691,7 +692,7 @@ void Hs_AbortScriptsWitnessedBy(uint64_t playerGuid)
 bool Hs_IsBotInAnyScriptRun(uint64_t botGuid)
 {
     // Both file-local predicates, exposed as one call rather than two so a
-    // caller cannot check only half of "is this bot busy" -- the /say and
+    // caller cannot check only half of "is this bot busy": the /say and
     // channel mechanisms are separate bookkeeping but the same speaker.
     return IsBotInActiveRun(botGuid) || IsBotInActiveChannelRun(botGuid);
 }

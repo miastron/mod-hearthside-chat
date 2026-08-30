@@ -102,8 +102,9 @@ std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botF
 
     std::string band = Hs_LevelBandFor(botLevel);
 
-    // name, and the extra WHERE-clause fragment (if any) that narrows
-    // hside_corpus rows to this bot's tag value for that category's axis.
+    // Each entry: category name, and the extra WHERE-clause fragment (if
+    // any) narrowing hside_corpus rows to this bot's tag value for that
+    // category's axis.
     std::vector<std::pair<std::string, std::string>> eligible;
     do
     {
@@ -125,7 +126,7 @@ std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botF
 std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel,
                                  uint8_t botFaction, uint32_t botZoneId)
 {
-    // card_gated categories are unconditionally excluded here -- no
+    // card_gated categories are unconditionally excluded here. No
     // is_opener=1 category is card_gated yet, so this is a defensive floor
     // rather than plumbing for a real signal.
     QueryResult catResult = CharacterDatabase.Query(
@@ -145,12 +146,12 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
 
 namespace
 {
-    // hside_corpus_category.channel's stored values -- lowercase, matching
+    // hside_corpus_category.channel's stored values: lowercase, matching
     // the seed rows in hside_corpus_category.sql. HsChannelKind's own name
     // (Hs_ChannelKindName, hs_channel.h) is PascalCase to match the config
     // key spelling instead, so this is a distinct mapping, not a case-fold
     // of that one. LookingForGroup/GuildRecruitment/LocalDefense/
-    // WorldDefense have no channel_* rows seeded and no mapping here --
+    // WorldDefense have no channel_* rows seeded and no mapping here;
     // Hs_SelectChannelLine returns empty for them, same as any other
     // "nothing eligible" case.
     bool ChannelColumnFor(HsChannelKind kind, std::string& out)
@@ -200,7 +201,7 @@ std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t b
 std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t botLevel,
                                        uint8_t botFaction, uint32_t botZoneId)
 {
-    // Same shape as Hs_SelectChannelLine above -- the only difference is
+    // Same shape as Hs_SelectChannelLine above. The only difference is
     // which `channel` value scopes the category set, and that party/raid
     // aren't an HsChannelKind (see hs_corpus.h for why they aren't).
     QueryResult catResult = CharacterDatabase.Query(
@@ -233,7 +234,7 @@ namespace
 {
     // The exact hyperlink markup the core itself emits (see
     // PlayerStorage.cpp's access-requirement report), not a hand-rolled
-    // approximation -- hs_style.cpp treats a full |c...|Hitem:...|h[...]|h|r
+    // approximation. hs_style.cpp treats a full |c...|Hitem:...|h[...]|h|r
     // run as a protected token, and only matching markup gets that treatment.
     std::string BuildItemLink(ItemTemplate const* tmpl)
     {
@@ -259,7 +260,7 @@ namespace
     }
 
     // Collects every non-soulbound item the bot is carrying, then picks one
-    // at random -- picking the first found would make a bot's "WTS" line
+    // at random. Picking the first found would make a bot's "WTS" line
     // repeat the same stack until the bag shifted.
     //
     // Collects Item* rather than ItemTemplate const* so the stack size
@@ -335,7 +336,7 @@ bool Hs_PickTradeableItem(Player* bot, HsTradeableItem& out)
 
     ItemTemplate const* tmpl = item->GetTemplate();
     if (!tmpl)
-        return false; // defensive -- PickTradeableItem already required one
+        return false; // defensive, PickTradeableItem already required one
 
     out.itemId = tmpl->ItemId;
     out.count  = item->GetCount();
@@ -384,7 +385,7 @@ HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot)
     }
 
     // Left empty when the bot has nothing to point at; Hs_ResolveUniversalPlaceholders
-    // turns that into "drop the line" -- an empty-bagged bot must not advertise stock.
+    // turns that into "drop the line": an empty-bagged bot must not advertise stock.
     ctx.itemLink  = RandomTradeableItemLink(bot);
     ctx.questLink = RandomActiveQuestLink(bot);
 

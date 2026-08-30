@@ -1,7 +1,7 @@
 -- Gated by HearthsideChat.DebugChatLog.Enable. One row per reactive-tier
 -- (LLM) exchange: the trigger, the model's pre-style output, and what
 -- actually got delivered after hs_style.cpp's typo/casing/abbreviation pass.
--- An operator-reviewed debugging aid, not an automatic corpus feed -- lets
+-- An operator-reviewed debugging aid, not an automatic corpus feed: lets
 -- an operator read back real exchanges and hand-pick ones worth improving
 -- or using as training/fine-tuning examples.
 --

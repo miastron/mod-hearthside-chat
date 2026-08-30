@@ -1,12 +1,12 @@
 -- §4.20 grounded answers, phrase side. New 2026-08-23: moved out of a
 -- compiled C++ table (hs_grounded.cpp) into SQL so trigger phrasing can be
--- widened without a rebuild -- same reasoning hside_archetype's 2026-08-21
+-- widened without a rebuild: same reasoning hside_archetype's 2026-08-21
 -- move gives for its own content. Loaded once into memory at startup by
--- hs_grounded_store.cpp's Hs_LoadGroundedQuestionsFromDb() -- `.reload
+-- hs_grounded_store.cpp's Hs_LoadGroundedQuestionsFromDb(): `.reload
 -- config` re-reads it too. `kind` must match hs_grounded.h's HsGroundedKind
 -- enum name (hs_grounded_store.cpp's kKindNames). `phrase` must already be
 -- normalized the way a trigger is normalized at match time: lowercase,
--- single-spaced, no trailing ?/!/. -- Hs_MatchGroundedQuestion compares
+-- single-spaced, no trailing ?/!/.: Hs_MatchGroundedQuestion compares
 -- verbatim (plus a tight bounded-typo fallback,
 -- HearthsideChat.GroundedAnswers.FuzzyMaxDistance).
 --

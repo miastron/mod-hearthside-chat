@@ -1,12 +1,12 @@
--- PLAN-ARBITER.md §2: per-event archetype affinity for the event arbiter
+-- Claude/archive/PLAN-ARBITER.md §2: per-event archetype affinity for the event arbiter
 -- (hs_event_arbiter.h). Loaded into memory at startup and on `.reload
 -- config` by hs_event_affinity_store.cpp's Hs_LoadEventAffinityFromDb().
 --
 -- This table authors ONLY the exceptions. Any (event_type, archetype) pair
 -- with no row here weighs 1.0, so an archetype that should react to an
 -- event about as often as anyone else needs no row at all. Weight is one
--- factor of a four-way product -- proximity x recency x involvement x
--- affinity -- so it shapes the draw, it does not decide it: a 0.3 archetype
+-- factor of a four-way product: proximity x recency x involvement x
+-- affinity: so it shapes the draw, it does not decide it: a 0.3 archetype
 -- standing alone still speaks, and a 3.0 one that answered ten seconds ago
 -- usually loses to a quiet bystander.
 --
@@ -17,7 +17,7 @@
 --
 -- `event_type` must match hs_event_arbiter.h's HsEventType enum name
 -- (kEventTypeNames), and `archetype` must match an hside_archetype row's
--- `enum_name` -- both are validated at load, and a row failing either is
+-- `enum_name`: both are validated at load, and a row failing either is
 -- skipped and logged rather than silently applied.
 --
 -- ⚠️ This is a runtime-draw weighting, NOT a training-data partition. The
@@ -25,13 +25,13 @@
 -- every archetype gets a row for every trigger, including the ones it is
 -- weighted *down* for here. If LOOTGOBLIN only ever appeared next to loot
 -- events in the dataset the model would predict the reply from the event
--- type and stop reading the `Archetype:` tag at all -- and the one time
+-- type and stop reading the `Archetype:` tag at all: and the one time
 -- affinity does draw LOOTGOBLIN for a duel, it would have nothing to draw
--- on. See PLAN-TUNING.md §1b and PLAN-ARBITER.md §2's warning.
+-- on. See PLAN-TUNING.md §1b and Claude/archive/PLAN-ARBITER.md §2's warning.
 --
 -- The four OPENER_* event types are reserved: hs_opener.cpp's openers are
 -- still tier-1 corpus and no fire site routes to them, so rows here for
--- those types are inert until PLAN-ARBITER.md §8's migration question is
+-- those types are inert until Claude/archive/PLAN-ARBITER.md §8's migration question is
 -- settled. They are seeded anyway so the vocabulary is complete in one
 -- place.
 
@@ -179,7 +179,7 @@ INSERT INTO `hside_event_affinity` (`event_type`, `archetype`, `weight`) VALUES
 ('DUEL_LOST',          'LOOTGOBLIN',       0.4),
 
 -- ---- Reserved: the four corpus openers ----------------------------------
--- Inert until openers migrate to tier 2 (PLAN-ARBITER.md §8).
+-- Inert until openers migrate to tier 2 (Claude/archive/PLAN-ARBITER.md §8).
 ('OPENER_GROUP_FORMED',       'SOCIALITE',        2.4),
 ('OPENER_GROUP_FORMED',       'MENTOR',           1.8),
 ('OPENER_GROUP_FORMED',       'YOUNG_APPRENTICE', 1.3),

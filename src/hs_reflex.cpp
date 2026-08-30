@@ -25,7 +25,7 @@ namespace
     constexpr uint64_t kBotQuestionSalt   = 0x9E6B4A1D7F0C3358ULL;
     constexpr uint64_t kPersonalProbeSalt = 0x51F0A8D3C6E29B47ULL;
 
-    // hash(botGuid, senderGuid, salt) -- independent salts keep the two
+    // hash(botGuid, senderGuid, salt). Independent salts keep the two
     // per-player-consistent families from picking correlated indices for
     // the same bot/player pair.
     uint64_t SeedForPlayer(uint64_t botGuid, uint64_t senderGuid, uint64_t salt)
@@ -35,7 +35,7 @@ namespace
         return h;
     }
 
-    // hash(botGuid, message text) -- seeds per message rather than per bot,
+    // hash(botGuid, message text). Seeds per message rather than per bot,
     // same idiom hs_style.cpp's SeedFor uses.
     uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
     {
@@ -53,7 +53,7 @@ namespace
     }
 
     // Trims outer whitespace and collapses internal whitespace runs to a
-    // single space. Punctuation is left alone -- callers decide how much of
+    // single space. Punctuation is left alone; callers decide how much of
     // it to strip, since the BotQuestion family needs to keep a literal
     // trailing '?' for the bare "bot?" case, while the Plain family strips
     // it freely.
@@ -82,9 +82,9 @@ namespace
     }
 
     // Collapses any run of 3+ identical characters down to one ("loooool"
-    // -> "lol", "tyyyy" -> "ty") and strips any trailing run of !?. -- the
+    // -> "lol", "tyyyy" -> "ty") and strips any trailing run of !?. (the
     // Plain family's tolerance for how a one-word reflex actually gets
-    // typed. Not used by BotQuestion/PersonalProbe, which stay strict: a
+    // typed). Not used by BotQuestion/PersonalProbe, which stay strict: a
     // false positive there is far worse than a miss.
     std::string CompressForPlainMatch(const std::string& s)
     {
@@ -97,7 +97,7 @@ namespace
         return collapsed.substr(0, end);
     }
 
-    // Strips at most one trailing '?', '!' or '.' -- BotQuestion/
+    // Strips at most one trailing '?', '!' or '.': BotQuestion/
     // PersonalProbe's tolerance for "how old are you?" vs "how old are
     // you", without the Plain family's aggressive repeat-collapsing, which
     // would turn "bot??" into "bot?" and blur the bare-"bot?" special case.
@@ -156,12 +156,12 @@ namespace
 
     const std::vector<std::string>& PersonalProbePhrases()
     {
-        // Core personal-probe questions -- "where are you from", "what do
-        // you do", "how old are you", "m or f" -- plus close variants.
+        // Core personal-probe questions ("where are you from", "what do
+        // you do", "how old are you", "m or f") plus close variants.
         static const std::vector<std::string> phrases = {
             "where are you from", "where you from", "where r u from",
             "what do you do", "what do you do irl", "what do you do for a living",
-            // Deliberately no bare "age" -- same multi-word rule
+            // Deliberately no bare "age": same multi-word rule
             // BotQuestionPhrases states above, and for the same reason.
             // Matching is whole-message, so a bare entry fires on a message
             // that is exactly that word, and a one-word "age" is far more
@@ -201,7 +201,7 @@ namespace
     {
         // A vague deflection, a joke, a subject change, and an occasional
         // no-reply reads as a person; a rule reads as a rule. One shared
-        // pool across every probe question -- the honest non-answer is the
+        // pool across every probe question: the honest non-answer is the
         // same regardless of which personal question triggered it. The
         // empty entry is the no-reply member: 1 of 9, occasional, not the
         // rule.
@@ -229,8 +229,8 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
     std::string withPunct  = NormalizeWhitespace(ToLowerAscii(trigger));
     std::string corePhrase = StripOneTrailingMark(withPunct);
 
-    // ---- "are you a bot?" -- checked first: it is the module's
-    // most-scrutinised line and the narrowest, most specific match. ----
+    // ---- "are you a bot?" (checked first: the module's most-scrutinised
+    // line and the narrowest, most specific match) ----
     bool isBotQuestion = (withPunct == "bot?");
     if (!isBotQuestion)
     {
@@ -284,5 +284,5 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
         }
     }
 
-    return HsReflexMatch{}; // kind stays None -- caller falls through
+    return HsReflexMatch{}; // kind stays None; caller falls through
 }

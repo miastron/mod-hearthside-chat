@@ -16,7 +16,7 @@
 // exists yet. Called from every write path below (so a shared-experience
 // event also seeds first-meeting if that's genuinely the pair's first
 // contact) and directly from hs_queue.cpp's WorkerLoop on every tier-2
-// delivery -- ordinary chat is by far the most common way two people
+// delivery. Ordinary chat is by far the most common way two people
 // actually meet.
 void Hs_EnsureFirstMeetingRecorded(uint64_t botGuid, uint64_t playerGuid);
 
@@ -29,7 +29,7 @@ void Hs_RecordMemoryEvent(uint64_t botGuid, uint64_t playerGuid, const std::stri
 
 // ---- recall lookups, consumed by hs_grounded.h's three Recall kinds ----
 
-// "Do you remember me" -- any hside_memory row at all for this pair.
+// "Do you remember me": any hside_memory row at all for this pair.
 bool Hs_HasMetBefore(uint64_t botGuid, uint64_t playerGuid);
 
 struct HsMemoryFact
@@ -38,23 +38,23 @@ struct HsMemoryFact
     std::string text;
 };
 
-// "What did we run" -- the most recent dungeon_completed row's text.
+// "What did we run": the most recent dungeon_completed row's text.
 HsMemoryFact Hs_LookupLastDungeonRun(uint64_t botGuid, uint64_t playerGuid);
 
-// "Have we grouped before" -- any dungeon_completed or grouped_in_zone row.
+// "Have we grouped before": any dungeon_completed or grouped_in_zone row.
 bool Hs_HasGroupedBefore(uint64_t botGuid, uint64_t playerGuid);
 
 // Read-only counter for `.hearthside status`.
 uint32_t Hs_MemoryRowCount();
 
 // Retirement: drops every row for every player this bot ever shared history
-// with, unlike EvictOverflow's per-pair cap -- a retired bot is a different
+// with, unlike EvictOverflow's per-pair cap. A retired bot is a different
 // person going forward, so nothing it "remembers" is true anymore. Called
 // from hs_identity_store.cpp's Hs_RetireCard.
 void Hs_DropMemoryRowsForBot(uint64_t botGuid);
 
 // "Died together": PlayerScript::OnPlayerJustDied carries whichever Player*
-// just died -- unlike the rez opener's OnPlayerResurrect (receiver-only by
+// just died. Unlike the rez opener's OnPlayerResurrect (receiver-only by
 // hook limitation), this hook covers both directions for free, firing once
 // per death regardless of which side of the bot/real-player pair died, so
 // no separate "gave/received" scoping is needed here.

@@ -1,12 +1,12 @@
 -- §4.20 grounded answers, reply side. Companion to hside_grounded_question
 -- (see that file for the split rationale). `kind` must match hs_grounded.h's
 -- HsGroundedKind enum name. `has_fact` selects which fact-state (1 = has,
--- 0 = lacks/negative) this row answers -- Mount/Level/Gold/Zone only ever
+-- 0 = lacks/negative) this row answers: Mount/Level/Gold/Zone only ever
 -- get called with has_fact=1 (hs_handler.cpp treats them as always
 -- resolvable), so they carry no has_fact=0 rows. `uses_fact` = 1 means the
 -- reply is `prefix + fact + suffix` (the fact is interpolated); = 0 means
 -- `prefix` is the full canned reply verbatim and `fact`/`suffix` are
--- unused -- covers the flat has/lacks response pools (Guild/Profession/
+-- unused: covers the flat has/lacks response pools (Guild/Profession/
 -- Gear's lacks set, RecallMet/RecallGrouped's has and lacks sets,
 -- RecallDungeon's lacks set).
 
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `hside_grounded_template` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`, `suffix`) VALUES
--- MOUNT -- always resolvable, templated
+-- MOUNT: always resolvable, templated
 ('MOUNT', 1, 1, 'it''s a ', ''),
 ('MOUNT', 1, 1, 'just my ', ''),
 ('MOUNT', 1, 1, '', ', nothing special'),
@@ -29,7 +29,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('MOUNT', 1, 1, 'riding my ', ''),
 ('MOUNT', 1, 1, '', ', found it a while back'),
 
--- LEVEL -- always resolvable, templated
+-- LEVEL: always resolvable, templated
 ('LEVEL', 1, 1, 'level ', ''),
 ('LEVEL', 1, 1, 'I''m level ', ''),
 ('LEVEL', 1, 1, '', ', why'),
@@ -37,8 +37,8 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('LEVEL', 1, 1, '', ' atm'),
 ('LEVEL', 1, 1, 'lvl ', ''),
 
--- GOLD -- always resolvable, templated. `fact` already carries its own
--- denomination suffix (e.g. "47g", "12s" -- hs_handler.cpp's Gold case), so
+-- GOLD: always resolvable, templated. `fact` already carries its own
+-- denomination suffix (e.g. "47g", "12s": hs_handler.cpp's Gold case), so
 -- templates wrap it plainly rather than appending another one.
 ('GOLD', 1, 1, '', ''),
 ('GOLD', 1, 1, 'got about ', ''),
@@ -46,7 +46,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('GOLD', 1, 1, 'sitting on ', ''),
 ('GOLD', 1, 1, '', ' ish'),
 
--- ZONE -- always resolvable, templated
+-- ZONE: always resolvable, templated
 ('ZONE', 1, 1, '', ''),
 ('ZONE', 1, 1, '', ', you?'),
 ('ZONE', 1, 1, 'just in ', ''),
@@ -54,7 +54,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('ZONE', 1, 1, 'in ', ''),
 ('ZONE', 1, 1, '', ' right now'),
 
--- GUILD -- has (templated) / lacks (flat)
+-- GUILD: has (templated) / lacks (flat)
 ('GUILD', 1, 1, 'I''m in ', ''),
 ('GUILD', 1, 1, '', ', why'),
 ('GUILD', 1, 1, 'running with ', ''),
@@ -68,7 +68,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('GUILD', 0, 0, 'guildless atm', ''),
 ('GUILD', 0, 0, 'flying solo right now', ''),
 
--- PROFESSION -- has (templated) / lacks (flat)
+-- PROFESSION: has (templated) / lacks (flat)
 ('PROFESSION', 1, 1, '', ''),
 ('PROFESSION', 1, 1, 'just ', ''),
 ('PROFESSION', 1, 1, 'picked up ', ''),
@@ -81,7 +81,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('PROFESSION', 0, 0, 'none so far', ''),
 ('PROFESSION', 0, 0, 'haven''t bothered yet', ''),
 
--- GEAR -- has (templated) / lacks (flat)
+-- GEAR: has (templated) / lacks (flat)
 ('GEAR', 1, 1, 'just this ', ''),
 ('GEAR', 1, 1, '', ', nothing fancy'),
 ('GEAR', 1, 1, 'picked up this ', ' a while back'),
@@ -92,7 +92,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('GEAR', 0, 0, 'nothing special honestly', ''),
 ('GEAR', 0, 0, 'working on it', ''),
 
--- CURRENT_GOAL -- has only; hasFact=false returns "" by design (no active card)
+-- CURRENT_GOAL: has only; hasFact=false returns "" by design (no active card)
 ('CURRENT_GOAL', 1, 1, '', ''),
 ('CURRENT_GOAL', 1, 1, 'mostly ', ''),
 ('CURRENT_GOAL', 1, 1, 'honestly, ', ''),
@@ -100,7 +100,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('CURRENT_GOAL', 1, 1, 'just ', ''),
 ('CURRENT_GOAL', 1, 1, '', ', mostly'),
 
--- PLAYED_SINCE -- has only; hasFact=false returns "" by design
+-- PLAYED_SINCE: has only; hasFact=false returns "" by design
 ('PLAYED_SINCE', 1, 1, 'since ', ''),
 ('PLAYED_SINCE', 1, 1, 'playing since ', ''),
 ('PLAYED_SINCE', 1, 1, 'started back in ', ''),
@@ -108,7 +108,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('PLAYED_SINCE', 1, 1, '', ' for me'),
 ('PLAYED_SINCE', 1, 1, 'playing ', ' content'),
 
--- ALT -- has only; hasFact=false returns "" by design
+-- ALT: has only; hasFact=false returns "" by design
 ('ALT', 1, 1, 'I''ve got a ', ' on the side'),
 ('ALT', 1, 1, 'mostly this, but I dabble on a ', ''),
 ('ALT', 1, 1, 'a ', ' when I need a break'),
@@ -116,7 +116,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('ALT', 1, 1, 'my alt is a ', ''),
 ('ALT', 1, 1, 'also play a ', ' sometimes'),
 
--- RECALL_MET -- has/lacks, both flat canned pools
+-- RECALL_MET: has/lacks, both flat canned pools
 ('RECALL_MET', 1, 0, 'yeah, we''ve talked before', ''),
 ('RECALL_MET', 1, 0, 'of course I remember you', ''),
 ('RECALL_MET', 1, 0, 'we go back a bit', ''),
@@ -130,7 +130,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('RECALL_MET', 0, 0, 'not that I remember', ''),
 ('RECALL_MET', 0, 0, 'don''t think so', ''),
 
--- RECALL_DUNGEON -- has (templated, wraps hside_memory's own sentence) / lacks (flat)
+-- RECALL_DUNGEON: has (templated, wraps hside_memory's own sentence) / lacks (flat)
 ('RECALL_DUNGEON', 1, 1, '', ''),
 ('RECALL_DUNGEON', 1, 1, 'yeah, ', ''),
 ('RECALL_DUNGEON', 1, 1, 'iirc, ', ''),
@@ -142,7 +142,7 @@ INSERT INTO `hside_grounded_template` (`kind`, `has_fact`, `uses_fact`, `prefix`
 ('RECALL_DUNGEON', 0, 0, 'not that I recall', ''),
 ('RECALL_DUNGEON', 0, 0, 'can''t place it', ''),
 
--- RECALL_GROUPED -- has/lacks, both flat canned pools
+-- RECALL_GROUPED: has/lacks, both flat canned pools
 ('RECALL_GROUPED', 1, 0, 'yeah, we have', ''),
 ('RECALL_GROUPED', 1, 0, 'we have, actually', ''),
 ('RECALL_GROUPED', 1, 0, 'yeah, a couple times', ''),

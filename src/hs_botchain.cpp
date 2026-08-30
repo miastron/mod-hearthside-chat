@@ -29,7 +29,7 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // A scope untouched this long is forgotten -- a disbanded group would
+    // A scope untouched this long is forgotten: a disbanded group would
     // otherwise leave its entry in the map for the life of the process.
     // Pruning is opportunistic (see PruneStaleLocked) rather than on a timer;
     // this file has no WorldScript of its own, because it is driven by
@@ -77,7 +77,7 @@ namespace
     // §4.13's remaining topic-gate facts. Read here on the world thread and
     // carried into the queued request as plain values, exactly as
     // hs_handler.cpp's BuildTopicGateContext and hs_engagement.cpp's
-    // TryFireFollowUp already do -- this file duplicates that read rather
+    // TryFireFollowUp already do: this file duplicates that read rather
     // than sharing it, per the convention hs_handler.cpp states at its own
     // copy (hs_topic_gate.h stays free of any AzerothCore dependency so it
     // can carry a standalone harness).
@@ -213,7 +213,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
 
     // Live chaining is the one thing "inference" turns on that "corpus" does
     // not. Because a ceiling is permissive, "inference" still permits the
-    // scripted replay path hs_script.cpp gates at HsTier::Corpus -- the two
+    // scripted replay path hs_script.cpp gates at HsTier::Corpus: the two
     // mechanisms run together, they do not replace each other.
     if (!HsTierAllows(HsParseTier(g_HsMaxTierBotToBot), HsTier::Inference))
         return;
@@ -227,7 +227,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
 
     // Resolve the surface to a scope, rejecting everything that does not
     // chain. Whisper is 1:1, guild is realm-wide with no bounded audience to
-    // pace against, and /say is covered by the scripted mechanism -- see the
+    // pace against, and /say is covered by the scripted mechanism: see the
     // header for why none of the three is a chaining surface.
     uint64_t scopeId       = 0;
     Group*   group         = nullptr;
@@ -305,7 +305,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         CollectChannelCandidates(speaker, kind, candidates, sawRealPlayer);
 
     // Bots talking to each other with nobody there to overhear it is pure GPU
-    // spend against no one's experience -- the same reasoning that scopes
+    // spend against no one's experience: the same reasoning that scopes
     // guild replies to a guild with a real member online.
     if (g_HsBotChainRequireRealPlayer && !sawRealPlayer)
         return;
@@ -332,8 +332,8 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     // isEvent, not isFollowUp: hs_queue.h documents that flag as the one for
     // a request whose "sender" is another bot, and that is exactly this case.
     // It suppresses the history write, the interaction-score bump, the
-    // engagement re-arm, the distracted-reply roll, and -- the part only this
-    // flag carries -- Hs_EnsureFirstMeetingRecorded, so a chain can never
+    // engagement re-arm, the distracted-reply roll, and: the part only this
+    // flag carries: Hs_EnsureFirstMeetingRecorded, so a chain can never
     // seed identity state from two bots meeting each other.
     bool admitted = Hs_TryEnqueue(responderGuid, responder->GetName(),
                                    speaker->GetGUID().GetRawValue(), speaker->GetName(),
@@ -342,14 +342,14 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
                                    /*isFollowUp=*/false, /*isEvent=*/true,
                                    kind, scopeId, seq);
     if (!admitted)
-        return; // bucket/cooldown/breaker/queue-depth -- silence, not a retry
+        return; // bucket/cooldown/breaker/queue-depth: silence, not a retry
 
     {
         Clock::time_point now = Clock::now();
         std::lock_guard<std::mutex> lock(g_ChainMutex);
         auto it = g_Chains.find(scopeId);
         if (it == g_Chains.end())
-            return; // pruned between the gate above and here -- nothing to record
+            return; // pruned between the gate above and here: nothing to record
         // Re-check the generation: a player may have taken the floor while
         // the scan above was running. The hop still carries the older seq, so
         // delivery will drop it; not advancing depth here keeps the scope's
@@ -370,11 +370,11 @@ void Hs_AbortBotChainsInScope(uint64_t scopeId)
     std::lock_guard<std::mutex> lock(g_ChainMutex);
     auto it = g_Chains.find(scopeId);
     if (it == g_Chains.end())
-        return; // no chain here -- nothing to take the floor from
+        return; // no chain here: nothing to take the floor from
 
     // Bumping seq is what actually drops the hop still generating: it carries
     // the old value, and Hs_BotChainHopStillValid rejects it at delivery.
-    // lastHopAt is deliberately left alone -- a chain that just ran still owes
+    // lastHopAt is deliberately left alone: a chain that just ran still owes
     // the scope its cooldown before the player's arrival can seed a new one.
     it->second.seq          += 1;
     it->second.depth         = 0;
@@ -386,7 +386,7 @@ bool Hs_BotChainHopStillValid(uint64_t scopeId, uint32_t chainSeq)
     std::lock_guard<std::mutex> lock(g_ChainMutex);
     auto it = g_Chains.find(scopeId);
     if (it == g_Chains.end())
-        return false; // scope forgotten entirely -- there is no chain left to continue
+        return false; // scope forgotten entirely: there is no chain left to continue
     return it->second.seq == chainSeq;
 }
 

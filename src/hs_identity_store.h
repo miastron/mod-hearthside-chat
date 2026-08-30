@@ -12,12 +12,12 @@
 
 // Bumps this bot's interaction_score by `weight`, lazily creating the
 // identity row on first score event (needs `botLevel` to fill the row's NOT
-// NULL archetype/last_known_level columns -- hs_archetype.h's
+// NULL archetype/last_known_level columns; hs_archetype.h's
 // Hs_ArchetypeForBot is pure GUID+level, so the snapshot costs nothing
 // extra). Promotes (sets promoted_at) the instant the running total crosses
 // kHsPromotionThreshold, if not already promoted. Card generation itself is
 // the generator's job (hs_generator.h), picking up rows with promoted_at set
-// and card_voice still NULL -- this function only flips the flag. Safe to
+// and card_voice still NULL; this function only flips the flag. Safe to
 // call from any thread: it touches CharacterDatabase, and its level-drop
 // branch reaches Hs_RetireCard, whose exclude-vector release is queued for
 // the world thread rather than applied inline (see
@@ -27,12 +27,12 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
 // One query's worth of what the reactive tier (hs_queue.cpp's WorkerLoop)
 // and the delivery-side style pass need for a carded bot: the voice block
 // (the only card text that ever enters a prompt) and the verbal_tic (a
-// protected token in the style pass). `active` is false -- and the other
-// fields empty -- for a bot with no row or a dormant/retired card, the
+// protected token in the style pass). `active` is false, and the other
+// fields empty, for a bot with no row or a dormant/retired card, the
 // overwhelmingly common case.
 //
 // mainFocus/currentGoal are the two card-only corpus placeholders
-// (%main_focus, %current_goal -- hs_corpus.h). They live here rather than
+// (%main_focus, %current_goal, hs_corpus.h). They live here rather than
 // behind their own lookups because they are read from the same card_facts
 // JSON, on the same row, by the same caller that already needs `active` and
 // `verbalTic`: hs_handler.cpp's TryCorpusFallback previously issued four
@@ -51,9 +51,9 @@ struct HsCardSnapshot
 HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid);
 
 // One card_facts field, for the three grounded-answer questions that use it
-// (current_goal, played_since, alt -- hs_grounded.h). Empty string
+// (current_goal, played_since, alt, hs_grounded.h). Empty string
 // (hasFact=false at the call site) when the bot has no active card or the
-// field is absent -- same fall-through shape TryGrounded already uses for
+// field is absent, same fall-through shape TryGrounded already uses for
 // Mount, rather than fabricating a lacks-line.
 std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldName);
 
@@ -65,7 +65,7 @@ std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldNam
 // handler unconditionally clears both vectors from playerbots.conf, which
 // has no way to encode these names), and every 300s from hs_main.cpp's
 // HsIdentityLifecycleWorldScript::OnUpdate. The periodic call is not
-// defensive insurance -- playerbots' OnAfterConfigLoad handler runs *after*
+// defensive insurance: playerbots' OnAfterConfigLoad handler runs *after*
 // this module's re-apply on `.reload config`, clearing the vectors again, so
 // a carded bot's name is gone within one reload without the periodic
 // re-apply.
@@ -82,7 +82,7 @@ void Hs_ApplyExcludeVectorsFromIdentityTable();
 // actually mutates the vectors. Cheap when idle (one mutex + empty check).
 void Hs_DrainExcludeVectorQueue();
 
-// Queues exactly one bot's name for pushing into both vectors -- called right
+// Queues exactly one bot's name for pushing into both vectors, called right
 // after a card finishes generating (hs_generator.cpp), so the bot is
 // protected from the next world tick rather than waiting for the next
 // startup/reload. Callable from any thread; the write itself happens in
@@ -90,8 +90,8 @@ void Hs_DrainExcludeVectorQueue();
 void Hs_PushBotIntoExcludeVectors(uint64_t botGuid);
 
 // The reverse of the above: exclusion tracks card_active and is released on
-// demotion. Called on both demotion (dormancy) and retirement (invalidation)
-// -- either way the bot is no longer somebody's known bot and rejoins the
+// demotion. Called on both demotion (dormancy) and retirement (invalidation):
+// either way the bot is no longer somebody's known bot and rejoins the
 // recycling pool. Queued for the world thread, same as the push.
 void Hs_RemoveBotFromExcludeVectors(uint64_t botGuid);
 
@@ -100,7 +100,7 @@ void Hs_RemoveBotFromExcludeVectors(uint64_t botGuid);
 // for this bot (a retired bot must not quote shared history back at a level
 // that contradicts it), redraws the archetype fresh for `newLevel`, and
 // releases the bot's name from the recycling-exclusion vectors. The identity
-// row itself survives -- bot_guid carries on, so the bot can earn a new card
+// row itself survives: bot_guid carries on, so the bot can earn a new card
 // later as a new person. Called both from
 // Hs_BumpInteractionScore (a level drop caught live, mid-conversation) and
 // Hs_RunIdentityDailySweep (a carded bot, online or offline, whose level
@@ -109,10 +109,10 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel);
 
 // One daily sweep for decay, pinning, and retirement, intended to be driven
 // from hs_main.cpp's HsIdentityLifecycleWorldScript (which already runs a
-// periodic tick for the exclude-vector reconcile) -- see that file for why
+// periodic tick for the exclude-vector reconcile). See that file for why
 // this shares the existing WorldScript rather than getting its own. In
 // order:
-//   1. Friend poll -- character_social is queried directly rather than the
+//   1. Friend poll: character_social is queried directly rather than the
 //      live SocialMgr API, so an offline friending player is still counted
 //      correctly (a live Player*-only poll would incorrectly see nothing
 //      and unpin a still-friended bot the moment its friend logs off).
@@ -120,14 +120,14 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel);
 //      pinned_by_friend is set; rows no longer found friended have
 //      pinned_by_friend cleared, since unfriending isn't observable via
 //      hooks and must be revalidated by polling. Scoped to bots that
-//      already have an hside_identity row -- a bot friended with zero prior
+//      already have an hside_identity row; a bot friended with zero prior
 //      qualifying interaction has no row to find yet.
-//   2. Score decay -- one point per day, once a row has gone quiet for
+//   2. Score decay: one point per day, once a row has gone quiet for
 //      kHsScoreDecayGraceDays, floored at 0.
-//   3. Card demotion -- dormant (kHsCardDormancyDays quiet), unpinned cards
+//   3. Card demotion: dormant (kHsCardDormancyDays quiet), unpinned cards
 //      clear card_active and release the exclude-vector entry. Card text is
 //      untouched.
-//   4. Retirement -- carded bots (online or offline, checked against
+//   4. Retirement: carded bots (online or offline, checked against
 //      characters.level when offline) whose level has dropped below their
 //      stored last_known_level are retired via Hs_RetireCard.
 void Hs_RunIdentityDailySweep();
@@ -136,8 +136,8 @@ void Hs_RunIdentityDailySweep();
 uint32_t Hs_PromotionsThisSession();
 uint32_t Hs_DemotionsThisSession();
 uint32_t Hs_RetirementsThisSession();
-uint32_t Hs_IdentityRowCount();     // total hside_identity rows (ring 1+ -- has ever scored)
-uint32_t Hs_CardActiveCount();      // ring 3 -- card_active = 1
+uint32_t Hs_IdentityRowCount();     // total hside_identity rows (ring 1+, has ever scored)
+uint32_t Hs_CardActiveCount();      // ring 3, card_active = 1
 
 // The GM-tooling and control-API half. Force actions bypass the normal
 // earn-it path (score threshold, dormancy timer, level-drop detection) for
@@ -147,7 +147,7 @@ uint32_t Hs_CardActiveCount();      // ring 3 -- card_active = 1
 // retirement) rather than duplicating them.
 
 // Forces promotion (sets promoted_at if not already set), lazily creating
-// the row exactly like Hs_BumpInteractionScore does. Does not touch score --
+// the row exactly like Hs_BumpInteractionScore does. Does not touch score:
 // the generator's existing pickup query (promoted_at IS NOT NULL AND
 // card_voice IS NULL) handles card generation the same way it does for a
 // normally-earned promotion, so this doesn't block the world thread by
@@ -156,7 +156,7 @@ uint32_t Hs_CardActiveCount();      // ring 3 -- card_active = 1
 bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel);
 
 // Forces demotion (card_active = 0, exclude-vector entry released) on
-// demand -- the same action Hs_RunIdentityDailySweep's dormancy check takes
+// demand, the same action Hs_RunIdentityDailySweep's dormancy check takes
 // automatically, just not waiting for kHsCardDormancyDays. Card text is
 // retained; demotion is a flag, not a deletion. Returns false if the bot had
 // no active card to demote.
@@ -185,7 +185,7 @@ HsIdentityInspection Hs_InspectIdentity(uint64_t botGuid);
 
 // Pins a bot into the exclude list regardless of card_active. A raw
 // exclude-vector push/release, independent of the card/pinned_by_friend
-// machinery entirely -- an operator can protect any named bot from
+// machinery entirely: an operator can protect any named bot from
 // mod-playerbots' recycler (or release one) without that bot needing an
 // hside_identity row at all. Thin wrappers over
 // Hs_PushBotIntoExcludeVectors/Hs_RemoveBotFromExcludeVectors, named

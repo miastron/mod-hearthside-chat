@@ -28,7 +28,7 @@ namespace HsCardFacts
 
 namespace
 {
-    // Same four bands as hs_corpus.h's Hs_LevelBandFor -- duplicated rather
+    // Same four bands as hs_corpus.h's Hs_LevelBandFor, duplicated rather
     // than depending on that header, keeping this file's dependency surface
     // at zero (hs_json.h and hs_gen_validate.h only).
     enum class Band { Low, Mid, High, Endgame };
@@ -49,7 +49,7 @@ namespace
         return false;
     }
 
-    // Each main_focus value's plausible bands -- authored by hand, not
+    // Each main_focus value's plausible bands, authored by hand, not
     // derived from an external spec.
     bool MainFocusAllowedInBand(const std::string& value, Band band)
     {
@@ -63,9 +63,9 @@ namespace
             return band == Band::High || band == Band::Endgame;
         if (value == "achievements")
             return band == Band::High || band == Band::Endgame;
-        // pvp, professions, collecting -- credible at any level (battlegrounds
-        // are available from level 10; gold is a topic gate, not an
-        // assignment gate).
+        // pvp, professions, collecting are credible at any level
+        // (battlegrounds are available from level 10; gold is a topic gate,
+        // not an assignment gate).
         return value == "pvp" || value == "professions" || value == "collecting";
     }
 
@@ -77,7 +77,7 @@ namespace
     }
 
     // Format-only check for the two freeform fields (current_goal,
-    // held_opinion) -- checking their subject against acore_world is a
+    // held_opinion). Checking their subject against acore_world is a
     // named, accepted residual risk, not built here.
     bool IsPlausibleFreeform(const std::string& s)
     {

@@ -35,7 +35,7 @@ namespace
         {
             Hs_LoadArchetypesFromDb();
             // Overrides validate their enum_name against the table just
-            // loaded above, so this must come second. Startup-only -- a
+            // loaded above, so this must come second. Startup-only: a
             // pin survives a `.reload config` untouched, since neither that
             // reload nor Hs_SetArchetypeTable's replace touches the
             // separate override map.
@@ -52,7 +52,7 @@ namespace
 
     // Loads hside_grounded_question/hside_grounded_template into memory,
     // same "SQL is the source of truth, retunable without a rebuild" shape
-    // and lifecycle as HsArchetypeLifecycleWorldScript above -- registered
+    // and lifecycle as HsArchetypeLifecycleWorldScript above. Registered
     // right after it, before anything that could call
     // Hs_MatchGroundedQuestion/Hs_BuildGroundedReply (hs_handler.cpp's
     // TryGrounded, reachable only once a player is in the world).
@@ -75,7 +75,7 @@ namespace
         }
     };
 
-    // Loads hside_event_affinity (PLAN-ARBITER.md §2) -- per-event archetype
+    // Loads hside_event_affinity (Claude/archive/PLAN-ARBITER.md §2): per-event archetype
     // weighting for the event arbiter. Same "SQL is the source of truth,
     // retunable without a rebuild" shape as the two above, and registered
     // after HsArchetypeLifecycleWorldScript specifically: the loader
@@ -105,7 +105,7 @@ namespace
     };
 
     // Same lifecycle shape for the idle-time generator's background thread.
-    // Kept separate from the queue's -- the generator only calls into
+    // Kept separate from the queue's: the generator only calls into
     // Hs_IsReactiveIdle(), it doesn't share the reactive worker thread.
     class HsGeneratorLifecycleWorldScript : public WorldScript
     {
@@ -124,7 +124,7 @@ namespace
     constexpr uint32_t kIdentityReconcileIntervalMs = 300000;
 
     // Decay/pinning/retirement sweep. Shares this WorldScript rather than
-    // getting its own -- decay/dormancy operate on day/week-scale windows
+    // getting its own: decay/dormancy operate on day/week-scale windows
     // (hs_identity.h's kHsScoreDecayGraceDays/kHsCardDormancyDays), so a
     // once-daily cadence fits better than the reconcile's 300s interval.
     // See Hs_RunIdentityDailySweep (hs_identity_store.h) for what it does.
@@ -170,8 +170,8 @@ namespace
 
     // Corpus eviction: exposure-first over-quota trimming, then the
     // age-based unused-row sweep. Its own WorldScript rather than folded
-    // into the identity one above -- corpus and identity are unrelated
-    // subsystems that happen to share a once-daily cadence. Runs
+    // into the identity one above (corpus and identity are unrelated
+    // subsystems that happen to share a once-daily cadence). Runs
     // unconditionally (not gated on g_HsGeneratorEnabled), since a bucket
     // can go over quota via `.hearthside capture` or a lowered
     // RowsPerBucket even while generation itself is off.
@@ -198,7 +198,7 @@ namespace
     // The authenticated HTTP control API's lifecycle. Registered after
     // HsConfigWorldScript so g_HsHttpServer* is loaded before Start() reads
     // it. A bind failure or missing private key is logged and leaves the
-    // server off (hs_http_server.cpp) -- this WorldScript doesn't need to
+    // server off (hs_http_server.cpp); this WorldScript doesn't need to
     // know which happened.
     class HsHttpServerWorldScript : public WorldScript
     {
@@ -209,7 +209,7 @@ namespace
     };
 
     // Rolling metrics sampler, on the same tick-driven shape as the other
-    // periodic sweeps in this file -- its own accumulator since none of
+    // periodic sweeps in this file. Its own accumulator since none of
     // them share its cadence.
     class HsMetricsWorldScript : public WorldScript
     {
@@ -247,7 +247,7 @@ void Addmod_hearthside_chatScripts()
     new HsMemoryDeathHandler();
     new HsMemoryGuildHandler();
     // Event triggers (hs_event.h). HsEventDeathHandler takes the same
-    // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above -- both
+    // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above; both
     // run, and neither depends on the other's ordering.
     new HsEventDeathHandler();
     new HsEventLevelHandler();
@@ -260,8 +260,8 @@ void Addmod_hearthside_chatScripts()
     // 30s cadence and draw from the same speakers, and ambient asks the
     // script runner whether a bot is already mid-scene
     // (Hs_IsBotInAnyScriptRun). Neither depends on the other's registration
-    // order for correctness -- both are tick-driven, and the query reads a
-    // mutex-guarded map -- but keeping them adjacent keeps the pairing
+    // order for correctness (both are tick-driven, and the query reads a
+    // mutex-guarded map), but keeping them adjacent keeps the pairing
     // visible to whoever reads this list next.
     new HsAmbientScanWorldScript();
     new HsQueueLifecycleWorldScript();

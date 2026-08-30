@@ -1,5 +1,5 @@
 -- The per-category tag-axis table: one row per hside_corpus category name,
--- and the generator's bucket list -- a category's tag_axis decides which
+-- and the generator's bucket list: a category's tag_axis decides which
 -- columns on hside_corpus matter for it, and card_gated decides whether it
 -- may use card-only placeholders (%main_focus, %current_goal). Retagging a
 -- category later means regenerating its rows, so this is authored once, up

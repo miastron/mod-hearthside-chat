@@ -8,19 +8,19 @@
 // The rolling metrics table. Samples the observable surface this module
 // already exposes (every counter/query behind `.hearthside status`, plus
 // latency percentiles, prompt length by identity ring, and archetype/
-// channel reply rates -- §4.19) into `hside_metrics`/`hside_metrics_breakdown`
+// channel reply rates, §4.19) into `hside_metrics`/`hside_metrics_breakdown`
 // on an interval, so a restart doesn't erase history and a dashboard can be
 // stateless.
 
-// Compiled constants, not config -- a placeholder value rather than an
-// operator knob, since there's no basis yet to make it tunable.
+// Compiled constants, not config: placeholder values rather than operator
+// knobs, since there's no basis yet to make them tunable.
 constexpr uint32_t kHsMetricsSampleIntervalSeconds = 300;
 constexpr uint32_t kHsMetricsRetentionDays         = 7;
 
 // Takes one sample and inserts it, then prunes rows older than
-// kHsMetricsRetentionDays -- a delete-old-rows sweep rather than a
+// kHsMetricsRetentionDays (a delete-old-rows sweep rather than a
 // fixed-size table, since the interval/retention pair already bounds row
-// count to a known maximum. Called from hs_main.cpp's HsMetricsWorldScript.
+// count to a known maximum). Called from hs_main.cpp's HsMetricsWorldScript.
 void Hs_SampleMetrics();
 
 struct HsMetricsSample
@@ -45,7 +45,7 @@ struct HsMetricsSample
     // §4.19: reactive-tier latency percentiles (rolling window, hs_queue.h's
     // Hs_ReactiveLatencyPercentiles) and mean assembled-prompt length by
     // identity ring (hs_queue.h's Hs_PromptCharsByRing). Archetype/channel
-    // reply rates don't fit this flat shape -- see hside_metrics_breakdown
+    // reply rates don't fit this flat shape; see hside_metrics_breakdown
     // and Hs_RecentMetricsBreakdown below instead.
     uint32_t    latencyP50Ms;
     uint32_t    latencyP95Ms;
@@ -55,7 +55,7 @@ struct HsMetricsSample
     uint32_t    promptCharsRing3Mean;
 
     // Session-cumulative (since worldserver process start, not a per-interval
-    // delta) -- hs_queue.h's Hs_TtlDropStatsSnapshot/Hs_GlobalBucketSaturationSnapshot.
+    // delta): hs_queue.h's Hs_TtlDropStatsSnapshot/Hs_GlobalBucketSaturationSnapshot.
     // A consumer wanting a rate divides droppedCount/processedCount (or
     // deniedCount/attemptCount) itself; storing the raw running totals lets a
     // dashboard also see whether either denominator is even moving.
@@ -66,13 +66,13 @@ struct HsMetricsSample
 };
 
 // Most-recent samples first, capped at `limit`. Backs the HTTP
-// GET /api/metrics route -- there is no GM-command equivalent since a
+// GET /api/metrics route. There is no GM-command equivalent since a
 // scrolling table of ~16 columns doesn't fit a chat window usefully;
 // `.hearthside status` already gives the current-moment view of the same
 // counters.
 std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit);
 
-// One row per (dimension, key) pair sampled alongside HsMetricsSample --
+// One row per (dimension, key) pair sampled alongside HsMetricsSample.
 // dimension is "archetype", "channel", or "channel_bucket" (§4.17's
 // per-channel token buckets, hs_queue.h's Hs_ChannelBucketSaturationSnapshot);
 // key is the archetype enum name, Hs_ReplyChannelName(channel), or
@@ -80,8 +80,8 @@ std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit);
 // than columns on hside_metrics, since these are variable-cardinality and
 // don't fit that table's flat per-interval row. For "channel_bucket" rows,
 // repliedCount/silentCount hold granted/denied token-bucket takes rather
-// than a reply/silence outcome -- same two-counter shape, different meaning,
-// not worth a second table for.
+// than a reply/silence outcome (same two-counter shape, different meaning,
+// not worth a second table for).
 struct HsMetricsBreakdownRow
 {
     std::string sampledAt;
@@ -91,7 +91,7 @@ struct HsMetricsBreakdownRow
     uint32_t    silentCount;
 };
 
-// Most-recent samples first, capped at `limit` rows (not `limit` intervals --
+// Most-recent samples first, capped at `limit` rows (not `limit` intervals:
 // each interval contributes one row per archetype plus one per channel).
 std::vector<HsMetricsBreakdownRow> Hs_RecentMetricsBreakdown(uint32_t limit);
 

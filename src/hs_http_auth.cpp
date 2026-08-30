@@ -23,7 +23,7 @@ bool Hs_ValidateBearerToken(const std::string& token)
     if (key.empty())
         return false;
 
-    // Constant-time comparison -- the token backs an admin control surface,
+    // Constant-time comparison: the token backs an admin control surface,
     // so a length/early-exit timing leak is worth closing even though this
     // server binds loopback by default.
     if (token.size() != key.size())

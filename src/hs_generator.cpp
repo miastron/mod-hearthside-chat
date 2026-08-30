@@ -35,7 +35,7 @@ namespace
     // Interruptible sleep for GeneratorLoop below. g_StopGenerator is only
     // tested at the top of that loop, and std::this_thread::sleep_for has no
     // wake mechanism, so a plain sleep made Hs_GeneratorShutdown's join wait
-    // out the full backoff -- up to Generator.QuotaSatisfiedBackoffSeconds
+    // out the full backoff: up to Generator.QuotaSatisfiedBackoffSeconds
     // (300s default) of worldserver hang after every other subsystem had
     // stopped, and PollIntervalSeconds even with the generator disabled.
     // Same shape hs_queue.cpp's worker already uses for the same reason.
@@ -60,7 +60,7 @@ namespace
     // the world thread, and Hs_CallLLM holds what it is given for the whole
     // round trip. See hs_config.h's cross-thread section.
     //
-    // Returning the snapshot matters as much as filling cfg -- three of the
+    // Returning the snapshot matters as much as filling cfg: three of the
     // callers write result rows tagged with `model` and `promptVersion`
     // afterwards, and those must be the values the call was actually made
     // with, not whatever a reload has swapped in since.
@@ -80,7 +80,7 @@ namespace
     std::atomic<uint32_t> g_RowsAddedThisSession{0};
     std::atomic<uint32_t> g_RowsEvictedThisSession{0};
 
-    // Compiled constants, not config keys -- there's no data yet to judge
+    // Compiled constants, not config keys: there's no data yet to judge
     // the right turn count from, so this ships as a placeholder range.
     // Randomized per script (RunOneScriptGenerationCycle) rather than fixed,
     // so consecutive /say exchanges don't all read as the same fixed-length
@@ -88,7 +88,7 @@ namespace
     constexpr int kScriptTurnCountMin = 2;
     constexpr int kScriptTurnCountMax = 6;
 
-    // §4.17: 2 turns, not 4 -- a 4-turn exchange scrolling through a
+    // §4.17: 2 turns, not 4: a 4-turn exchange scrolling through a
     // channel is conspicuous in a way the same script overheard in /say is
     // not (PLAN.md §4.17).
     constexpr int kChannelScriptTurnCount = 2;
@@ -111,13 +111,13 @@ namespace
     const std::vector<std::string> kLevelBands = { "low", "mid", "high", "endgame" };
 
     // faction_tag's two values (0 = Alliance, 1 = Horde), matching
-    // Player::GetTeamId()'s own convention -- same values hs_corpus.cpp's
+    // Player::GetTeamId()'s own convention: same values hs_corpus.cpp's
     // TagWhereFor and every caller now thread through.
     const std::vector<std::pair<uint8_t, std::string>> kFactionIds = {
         { 0, "Alliance" }, { 1, "Horde" },
     };
 
-    // A curated slice of zone ids, not every WotLK zone -- ids verified
+    // A curated slice of zone ids, not every WotLK zone: ids verified
     // against azerothcore-wotlk-pb/data/sql/base/db_world/graveyard_zone.sql
     // rather than guessed. Spans both factions' starting zones through a
     // handful of classic leveling hubs and Northrend; the generator grows
@@ -146,13 +146,13 @@ namespace
     {
         std::string category;
         std::string tagColumn;     // "" | "class_tag" | "level_band_tag"
-        std::string tagValueSql;   // "" | "2" | "'mid'" -- ready for a WHERE clause
-        std::string tagValueLabel; // "" | "warrior" | "mid" -- for the prompt
+        std::string tagValueSql;   // "" | "2" | "'mid'", ready for a WHERE clause
+        std::string tagValueLabel; // "" | "warrior" | "mid", for the prompt
         bool        cardGated;
-        std::string channel;       // "" | "trade" | "general" -- broadcast framing (§4.17)
+        std::string channel;       // "" | "trade" | "general", broadcast framing (§4.17)
     };
 
-    // All rows in one exact bucket -- unlimited, since dedup has to check a
+    // All rows in one exact bucket: unlimited, since dedup has to check a
     // candidate against every existing row, not a sample.
     std::vector<std::string> AllRowsInBucket(const std::string& category, const std::string& tagColumn,
                                               const std::string& tagValueSql)
@@ -174,7 +174,7 @@ namespace
         return rows;
     }
 
-    // A small random sample -- only for the generation prompt's
+    // A small random sample: only for the generation prompt's
     // diversity-forcing text, not for validation.
     std::vector<std::string> SampleRows(const std::string& category, const std::string& tagColumn,
                                          const std::string& tagValueSql, int limit)
@@ -294,7 +294,7 @@ namespace
     }
 
     // Channel-tagged buckets (§4.17: trade/general) are read by the other
-    // members of that channel, not by someone standing next to you -- the
+    // members of that channel, not by someone standing next to you: the
     // opposite framing from the default /say-and-direct-reply intro below,
     // which assumes a proximate listener. Same distinction
     // ChannelScriptSystemPromptFor draws for the 2-turn channel scripts;
@@ -304,7 +304,7 @@ namespace
     // the shared "Trade - City" instance every player currently in a city is
     // in (hs_queue.cpp's Hs_ResolveChannelForDelivery). The "never name a
     // place, never say 'here'" rule below therefore is not about the reader
-    // being far away -- it is that one stored corpus row is replayed in every
+    // being far away: it is that one stored corpus row is replayed in every
     // zone the generator never saw, so anything place-specific is wrong
     // somewhere.
     std::string BroadcastChannelPromptIntro(const std::string& channel)
@@ -381,7 +381,7 @@ namespace
 
     // One full attempt: pick an under-quota bucket, generate one candidate,
     // validate, insert on accept. Returns true only if a row was actually
-    // added -- the caller uses that to decide how eagerly to loop back.
+    // added: the caller uses that to decide how eagerly to loop back.
     bool RunOneGenerationCycle()
     {
         std::vector<std::pair<HsGenBucket, uint32_t>> buckets = EnumerateBucketsWithCounts();
@@ -391,7 +391,7 @@ namespace
                 underQuota.push_back(entry.first);
 
         if (underQuota.empty())
-            return false; // quota satisfied everywhere -- caller backs off
+            return false; // quota satisfied everywhere: caller backs off
 
         HsGenBucket const& bucket = underQuota[urand(0, static_cast<uint32_t>(underQuota.size() - 1))];
 
@@ -451,7 +451,7 @@ namespace
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
 
-    // Baseline persona only, no archetype and no card -- personality is
+    // Baseline persona only, no archetype and no card: personality is
     // applied per speaker at delivery by the style pass (hs_script.cpp), so
     // the generator's job is clean, neutral dialogue: gripes, opinions, and
     // preferences, nothing checkable. A live-fire test still produced one
@@ -489,12 +489,12 @@ namespace
     // One full attempt: generate a randomized-length (kScriptTurnCountMin..
     // kScriptTurnCountMax) run of lines as a single continuous exchange
     // (reusing the reactive tier's own history-append mechanism, hs_llm.h's
-    // HsHistoryTurn -- turn N's trigger is turn N-1's text, so the model is
+    // HsHistoryTurn: turn N's trigger is turn N-1's text, so the model is
     // always just replying, the same shape as two real people alternating).
     // Turns are labelled speaker_slot 0/1 by position after the fact; the
     // model never needs to know there are two characters, since both share
     // the identical baseline voice. A single line per call is required, not
-    // a stylistic choice -- Hs_CallLLM stops generation at the first newline
+    // a stylistic choice: Hs_CallLLM stops generation at the first newline
     // (hs_llm.cpp), so one call cannot produce a multi-turn script.
     //
     // Aborts (returns false, no partial script ever inserted) on the first
@@ -543,7 +543,7 @@ namespace
         // connections (LAST_INSERT_ID() is session-scoped and the pool does
         // not guarantee two calls share a connection). Only this generator
         // thread ever writes to hside_script, so MAX(id)+1 has no concurrent
-        // writer to race against -- application-side id generation, the
+        // writer to race against: application-side id generation, the
         // same idiom ObjectMgr uses for mail/auction ids, without needing a
         // persistent in-memory counter for something this infrequent.
         QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
@@ -576,7 +576,7 @@ namespace
         return true;
     }
 
-    // §4.17: a channel variant of the exchange above -- shorter (2 turns),
+    // §4.17: a channel variant of the exchange above: shorter (2 turns),
     // and swaps the neutral small-talk framing for one naming the channel
     // itself, so the model's opening line reads as belonging there instead
     // of a chance meeting. Trade still forbids AH-shaped price claims (same
@@ -697,7 +697,7 @@ namespace
 
     // One promoted-but-uncarded bot's row (archetype is recomputed from
     // Hs_ArchetypeForBot(guid, lastKnownLevel) rather than parsed back from
-    // the stored name column -- that function is pure and already the
+    // the stored name column: that function is pure and already the
     // source of truth hs_queue.cpp's WorkerLoop uses, so this avoids
     // needing a second string->enum lookup that would exist only for this
     // one call site).
@@ -720,7 +720,7 @@ namespace
     }
 
     // hasGuild/guildName straight from the characters/guild_member/guild
-    // tables -- the generator thread never touches Player*, resolving it in
+    // tables: the generator thread never touches Player*, resolving it in
     // SQL instead, the same shape the rest of this file already uses for
     // class/level bucket enumeration.
     struct GuildLookup
@@ -818,7 +818,7 @@ namespace
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
-        // archetype is written back here too -- it's recomputed above from
+        // archetype is written back here too: it's recomputed above from
         // (guid, lastKnownLevel) rather than trusted from the stored column,
         // same as hs_archetype.h's Hs_ArchetypeForBot always recomputing for
         // the level passed in. Without this the stored column can go stale
@@ -849,13 +849,13 @@ namespace
             }
 
             // Priority order: cards first, then the /say script reserve,
-            // then the two channel-script reserves (§4.17 -- Trade then
+            // then the two channel-script reserves (§4.17: Trade then
             // General), then corpus buckets. Channel
             // reserves reuse the same g_HsGeneratorScriptReserveTarget as
             // the /say reserve rather than a separate per-channel config
-            // key (Claude/ISSUES.md's "separate generator reserve or a
+            // key (Claude/archive/ISSUES.md's "separate generator reserve or a
             // truncation rule" question, answered as "shared target" for
-            // now -- easy to split later against live-realm evidence).
+            // now: easy to split later against live-realm evidence).
             bool added;
             if (PendingCardCount() > 0)
                 added = RunOneCardGenerationCycle();
@@ -870,7 +870,7 @@ namespace
 
             if (!added)
                 GeneratorSleep(g_HsGeneratorQuotaSatisfiedBackoffSeconds);
-            // else loop straight back -- re-checks idle before the next attempt.
+            // else loop straight back: re-checks idle before the next attempt.
         }
     }
 }
@@ -891,7 +891,7 @@ void Hs_GeneratorShutdown()
     if (g_GeneratorThread.joinable())
         g_GeneratorThread.join();
     // A shutdown arriving mid-Hs_CallLLM still waits out that call's
-    // remaining Generator.LLM.TimeoutSeconds (30s default) -- bounded, and
+    // remaining Generator.LLM.TimeoutSeconds (30s default): bounded, and
     // the same exposure the reactive worker already has.
 }
 
@@ -1054,7 +1054,7 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
     std::string escapedVersion = promptVersion;
     CharacterDatabase.EscapeString(escapedVersion);
 
-    // NULL rather than an empty string for either -- hand-authored rows use
+    // NULL rather than an empty string for either: hand-authored rows use
     // NULL, and an empty string would read as a set-but-blank value instead
     // of "not supplied" (e.g. a generator configured with no model name, or
     // a GM capture's prompt_version).

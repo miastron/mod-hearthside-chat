@@ -11,20 +11,20 @@
 // which answers the same question for a real player's /say.
 //
 // Why a separate file rather than a second function in hs_arbiter.cpp (as
-// PLAN-ARBITER.md §2 originally proposed): that file includes Player.h and
+// Claude/archive/PLAN-ARBITER.md §2 originally proposed): that file includes Player.h and
 // Random.h, so it is not standalone-testable, and §9's
 // Tests/test_hs_event_arbiter.cpp harness could not exist there. Everything
-// in here is pure -- no AzerothCore headers, no globals, no clock -- so the
+// in here is pure (no AzerothCore headers, no globals, no clock), so the
 // weighting and count distribution are verifiable on the workstation.
 // hs_event.cpp is the AzerothCore-facing half that computes each
 // candidate's inputs from live Player*s and fires the result.
 //
 // Three things the /say arbiter cannot express, and this one can:
-//   1. Involvement -- event candidates are not interchangeable listeners.
+//   1. Involvement: event candidates are not interchangeable listeners.
 //      The bot that died has different standing from one that watched.
-//   2. Per-event archetype affinity -- a duel should draw the PvP
+//   2. Per-event archetype affinity: a duel should draw the PvP
 //      archetypes more often than TRADER (hside_event_affinity).
-//   3. Per-event reply count -- the /say arbiter's flat 50/42/8 is wrong in
+//   3. Per-event reply count: the /say arbiter's flat 50/42/8 is wrong in
 //      both directions across events: a ding almost always draws a "gz",
 //      most deaths pass without comment, duels draw almost nothing.
 //
@@ -36,7 +36,7 @@
 // The event vocabulary. Shared by three consumers that must agree:
 // hside_event_affinity.event_type, Claude/finetune/matrix/event.txt's
 // trigger slates, and the fire sites in hs_event.cpp. Adding an entry means
-// extending kEventTypeNames and kEventCountBias in lockstep -- both are
+// extending kEventTypeNames and kEventCountBias in lockstep: both are
 // indexed by this enum's underlying value, not searched.
 enum class HsEventType : uint8_t
 {
@@ -53,9 +53,9 @@ enum class HsEventType : uint8_t
     DuelWon,               // bot won a duel
     DuelLost,              // bot lost a duel
 
-    // Reserved -- the four existing corpus openers (hs_opener.cpp), named
+    // Reserved: the four existing corpus openers (hs_opener.cpp), named
     // here so hside_event_affinity and matrix/event.txt can carry rows for
-    // them ahead of PLAN-ARBITER.md §8's undecided tier-2 migration. No
+    // them ahead of Claude/archive/PLAN-ARBITER.md §8's undecided tier-2 migration. No
     // fire site in hs_event.cpp routes to these today; openers remain
     // tier-1 corpus under MaxTier.Openers.
     OpenerGroupFormed,
@@ -76,7 +76,7 @@ const char* Hs_EventTypeName(HsEventType type);
 bool Hs_EventTypeForName(const std::string& name, HsEventType& out);
 
 // How close this bot stands to the thing that happened. A shared three-level
-// scale rather than a per-event one (PLAN-ARBITER.md §8): every event's fire
+// scale rather than a per-event one (Claude/archive/PLAN-ARBITER.md §8): every event's fire
 // site can express itself in these terms, and one scale keeps the weights
 // comparable across events, which a per-event scale would not.
 enum class HsEventInvolvement : uint8_t
@@ -94,7 +94,7 @@ struct HsEventCandidate
     uint64_t botGuid = 0;
 
     // Distance in yards from the event's origin. Ignored when sameMap is
-    // false -- GetDistance() across unrelated coordinate spaces is
+    // false: GetDistance() across unrelated coordinate spaces is
     // meaningless, not merely "far", so a cross-map candidate takes the
     // beyond-range floor instead (the same rule hs_arbiter.cpp's
     // ProximityWeight applies for party/raid chat).
@@ -111,7 +111,7 @@ struct HsEventCandidate
     // Hs_EventAffinityWeight for (this candidate's own event type, this
     // bot's archetype). Resolved at the fire site, not here, for the same
     // reason involvement is: it keeps the table lookup off the hot path of
-    // the selection loop. Note "this candidate's own event type" -- for a
+    // the selection loop. Note "this candidate's own event type": for a
     // duel end the winner resolves against DUEL_WON and the loser against
     // DUEL_LOST inside a single arbitration pass (below).
     float affinityWeight = 1.0f;
@@ -119,13 +119,13 @@ struct HsEventCandidate
     // Opaque to this file; hs_event.cpp stores the trigger text to send if
     // this candidate is the one selected. Carried through so a duel end can
     // arbitrate once over {winner, loser} and only *then* decide whether
-    // the prompt says "you just won" or "you just lost" -- one hook call,
-    // one pass, outcome resolved after selection (PLAN-ARBITER.md §2).
+    // the prompt says "you just won" or "you just lost": one hook call,
+    // one pass, outcome resolved after selection (Claude/archive/PLAN-ARBITER.md §2).
     std::string trigger;
 };
 
 // Per-event reply-count bias, replacing the /say arbiter's own weights
-// (HearthsideChat.ReplyCount.* -- hs_config.h). Compiled constants here,
+// (HearthsideChat.ReplyCount.*, hs_config.h). Compiled constants here,
 // not config: this tunes the illusion, not a GPU dial. Percentages out of
 // 100; the chance of two speakers is whatever these two leave over, so they
 // must sum to no more than 100.
@@ -140,8 +140,8 @@ HsEventCountBias Hs_EventCountBiasFor(HsEventType type);
 // The affinity table (hside_event_affinity), keyed by (event type,
 // archetype enum_name). Default 1.0 for any pair with no row, so the SQL
 // authors only the exceptions. A row with weight 0.0 is the "never speaks
-// to this event" floor -- no separate negative mechanism is needed
-// (PLAN-ARBITER.md §8), since a zero-weight candidate can never be drawn by
+// to this event" floor. No separate negative mechanism is needed
+// (Claude/archive/PLAN-ARBITER.md §8), since a zero-weight candidate can never be drawn by
 // the cumulative selection below.
 //
 // Storage lives here rather than in the store so this file stays the whole
@@ -167,7 +167,7 @@ float Hs_EventAffinityWeight(HsEventType type, const std::string& archetypeName)
 // reach back for the matching trigger text.
 //
 // `sayDistance` is g_HsSayDistance, passed in rather than read from
-// hs_config.h -- that header is not dependency-free, and reading it here
+// hs_config.h: that header is not dependency-free, and reading it here
 // would cost this file its standalone build.
 std::vector<size_t> Hs_ArbitrateEventReplies(HsEventCountBias bias, float sayDistance,
                                               const std::vector<HsEventCandidate>& candidates);

@@ -6,7 +6,7 @@
 
 namespace
 {
-    // SplitMix64's finalizer -- same mixer hs_archetype.cpp/hs_style.cpp use
+    // SplitMix64's finalizer: same mixer hs_archetype.cpp/hs_style.cpp use
     // for the same reason: AzerothCore GUIDs come from a small sequential
     // counter, so std::hash<uint64_t> alone would scatter neighbouring GUIDs
     // into neighbouring positions instead of a real shuffle.
@@ -31,7 +31,7 @@ namespace
     // Populated by Hs_SetChannelPolicyTable, normally called once at startup
     // (and again on `.reload config`) by hs_config.cpp. Defaults to
     // all-Off/zero so a lookup before that call degrades to "every channel
-    // is silent" rather than reading uninitialized data -- same precedent as
+    // is silent" rather than reading uninitialized data: same precedent as
     // hs_archetype.cpp's g_Archetypes (no mutex: a plain array assignment on
     // an infrequent reload, not a per-message write).
     HsChannelPolicy g_ChannelPolicies[kHsChannelKindCount] = {};
@@ -42,7 +42,7 @@ namespace
     }
 
     // True if `needle` occurs in `haystackLower` (already lowercased) at a
-    // position not flanked by another word character on either side -- so
+    // position not flanked by another word character on either side: so
     // "wts" matches "WTS:" or "wts frost badge" but not "wtsryke" or a name
     // like "Growthspurt".
     bool ContainsWord(const std::string& haystackLower, const std::string& needle)

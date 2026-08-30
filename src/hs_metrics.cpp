@@ -45,7 +45,7 @@ void Hs_SampleMetrics()
     CharacterDatabase.Execute(
         "DELETE FROM hside_metrics WHERE sampled_at < NOW() - INTERVAL {} DAY", kHsMetricsRetentionDays);
 
-    // Per-archetype and per-channel reply-vs-silence counts, one row each --
+    // Per-archetype and per-channel reply-vs-silence counts, one row each:
     // variable cardinality, doesn't fit hside_metrics' flat per-interval row
     // (see hs_metrics.h's HsMetricsBreakdownRow doc comment).
     for (auto const& row : Hs_ArchetypeReplyCountsSnapshot())

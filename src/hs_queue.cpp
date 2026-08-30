@@ -50,10 +50,10 @@ namespace
     // A short, factual line describing what the bot is actually doing right
     // now (mod-playerbots' own NewRpgStatus), appended to personaLine in
     // WorkerLoop below so a free-generating reply can't contradict
-    // observable state -- e.g. claiming to be PvPing while mid-quest. Stated
+    // observable state (e.g. claiming to be PvPing while mid-quest). Stated
     // as plain fact, not an instruction, matching how the card voice block
     // and grounded answers address the model. RPG_IDLE and the wander states
-    // return empty -- not distinctive enough to be worth stating.
+    // return empty: not distinctive enough to be worth stating.
     std::string RpgStatusHint(NewRpgStatus status)
     {
         switch (status)
@@ -64,7 +64,7 @@ namespace
             case RPG_TRAVEL_FLIGHT: return "Right now you're traveling.";
             case RPG_REST:          return "Right now you're taking a break in town.";
             case RPG_OUTDOOR_PVP:   return "Right now you're fighting over a PvP objective.";
-            default:                return ""; // RPG_IDLE, RPG_WANDER_RANDOM, RPG_WANDER_NPC -- not distinctive enough to state
+            default:                return ""; // RPG_IDLE, RPG_WANDER_RANDOM, RPG_WANDER_NPC: not distinctive enough to state
         }
     }
 
@@ -77,7 +77,7 @@ namespace
     // Hardcoded content rather than a config key or an SQL table, following
     // the same reasoning hs_reflex.h's gz/ty/inv vocabulary already gets:
     // editing costs a rebuild, which is the right price for a fixed set this
-    // small. Written lowercase/uncapitalized as neutral raw input -- each
+    // small. Written lowercase/uncapitalized as neutral raw input: each
     // pick still goes through the same style pass (WorkerLoop below, same
     // HsStyleContext as the real reply) before delivery, so a careful
     // archetype's casing/punctuation and a carded verbal tic still apply;
@@ -108,7 +108,7 @@ namespace
     }
 
     // hs_identity.h's weight table, keyed by delivery channel (§4.12).
-    // Channel (§4.17) scores nothing -- ambient chatter, not addressed at a
+    // Channel (§4.17) scores nothing: ambient chatter, not addressed at a
     // player, same rule openers/engagement follow-ups already get.
     uint32_t ScoreWeightForChannel(HsReplyChannel channel)
     {
@@ -138,18 +138,20 @@ namespace
         uint8_t      botLevel;    // archetype eligibility filter (hs_archetype.h)
         NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
         HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
-        bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h) -- no score, no history write
-        bool         isEvent;     // event reaction (hs_event.h) -- as isFollowUp, plus no first-meeting record
+        bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h): no score, no history write
+        bool         isEvent;     // event reaction (hs_event.h): as isFollowUp, plus no first-meeting record
         HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
         uint64_t     chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop
         uint32_t     chainSeq     = 0; // the scope generation this hop was issued under
     };
 
-    // deliverAt lets one worker thread queue two chat lines instead of one:
-    // the reply after its typing delay, and a self-correction `*correction`
-    // a beat after that. Reflex/grounded/corpus-fallback replies (delivered
-    // via Hs_DeliverReflexReply, not this struct's other producer below)
-    // still use their own fixed 400-1500ms window regardless of text length.
+    // deliverAt lets one worker thread queue more than one chat line with
+    // staggered delivery times: the reply after its typing delay, an
+    // optional distracted-reply filler ahead of it, and a self-correction
+    // `*correction` a beat after it. Reflex/grounded/corpus-fallback replies
+    // (delivered via Hs_DeliverReflexReply, not this struct's other producer
+    // below) still use their own fixed 400-1500ms window regardless of text
+    // length.
     struct HsPendingReply
     {
         uint64_t    botGuid;
@@ -160,7 +162,7 @@ namespace
         bool        isFollowUp; // cancellable via Hs_CancelPendingFollowUpsFor; direct replies and the self-correction addendum are never tagged
         HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
         uint64_t    chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop, which is every other producer
-        uint32_t    chainSeq     = 0; // scope generation at issue time; a newer generation means a player took the floor -- drop
+        uint32_t    chainSeq     = 0; // scope generation at issue time; a newer generation means a player took the floor, drop
         // Whether this line may seed the next hop of a bot-to-bot chain.
         // False for the two secondary lines a single reply can also queue --
         // the distracted "sorry, was afk" filler and the `*correction`
@@ -188,7 +190,7 @@ namespace
     bool                 g_BucketInitialized = false;
 
     // ---- §4.17: one token bucket per channel, independent of the tier-2
-    // bucket above -- corpus-fallback channel replies never touch that one
+    // bucket above: corpus-fallback channel replies never touch that one
     // (zero GPU work). Burst capacity equals the channel's own RatePerMin
     // (a channel can spend a full minute's budget at once, then waits), no
     // separate config key. Same shape as the tier-2 bucket, keyed by channel
@@ -203,7 +205,7 @@ namespace
     std::mutex                                            g_ChannelBucketMutex;
     std::unordered_map<HsChannelKind, HsChannelBucketState> g_ChannelBuckets;
 
-    // ---- PLAN-ARBITER.md §8: the event tier's own bucket, independent of
+    // ---- Claude/archive/PLAN-ARBITER.md §8: the event tier's own bucket, independent of
     // the tier-2 bucket above so ambient event reactions can never spend the
     // budget a player's /say needed. Same lazy-init/refill shape as both of
     // the others; its own mutex because it is taken from the world thread at
@@ -214,10 +216,10 @@ namespace
     Clock::time_point g_EventBucketLastRefill;
     bool              g_EventBucketInitialized = false;
 
-    // ---- PLAN-AMBIENT.md §2: the shared unprompted-speech budget. Same
+    // ---- Claude/archive/PLAN-AMBIENT.md §2: the shared unprompted-speech budget. Same
     // lazy-init/refill shape as the three buckets above; its own mutex for
     // the same reason the event bucket has one. The distinguishing property
-    // is not the mechanism but who spends it -- three separate producers
+    // is not the mechanism but who spends it: three separate producers
     // (hs_ambient.cpp, hs_opener.cpp, hs_script.cpp) rather than one, which
     // is the whole point (see Hs_AmbientBucketTake in hs_queue.h).
     std::mutex        g_AmbientBucketMutex;
@@ -229,8 +231,8 @@ namespace
 
     // ---- staleness windows for the opportunistic prunes below (hs_prune.h).
     // Every one of these maps is read only through a window far shorter than
-    // the constant here -- the per-bot cooldown defaults to 8s, the
-    // distracted cooldown to 600s -- so an hour-old entry already answers
+    // the constant here (the per-bot cooldown defaults to 8s, the
+    // distracted cooldown to 600s), so an hour-old entry already answers
     // every query exactly as a missing one would. Erring long costs a little
     // delayed reclamation; erring short would change behavior. ----
     constexpr int64_t kCooldownStaleSeconds   = 3600;
@@ -251,13 +253,13 @@ namespace
     // "this particular bot keeps replying late," and per-bot is also what the
     // per-bot reply cooldown above already keys on. A player talking to many
     // bots can still see two distracted replies close together from two
-    // different bots, which is the intended read -- two people happened to
+    // different bots, which is the intended read: two people happened to
     // step away, not one flaky bot.
     std::mutex                                        g_DistractedMutex;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastDistractedAt;
 
     // Rolls this reply's distracted flavor and, on a hit, claims the bot's
-    // cooldown window in the same call -- returning true means the caller
+    // cooldown window in the same call. Returning true means the caller
     // *will* deliver a filler line, so the claim can't be deferred.
     //
     // The chance roll runs before the cooldown check so the cheap test
@@ -293,8 +295,8 @@ namespace
     // std::pair needs no custom hash. ----
     //
     // This is the one map in the module keyed by a *pair* that also holds
-    // more than a timestamp -- up to LLM.HistoryTurns trigger/reply string
-    // pairs each -- so its worst case is (bots x players) deques of chat
+    // more than a timestamp (up to LLM.HistoryTurns trigger/reply string
+    // pairs each), so its worst case is (bots x players) deques of chat
     // text, not a per-population bound. HistoryAppend evicts within a pair's
     // deque but never dropped the pair itself, so on a long-uptime realm a
     // player who talks to many bots accumulated one live entry per pair for
@@ -367,7 +369,7 @@ namespace
     // Deliberately NOT pruned, unlike the time maps above. Two reasons: it is
     // keyed by bot name and holds exactly one short string per bot, so its
     // ceiling is the realm's bot population rather than anything unbounded;
-    // and it is the backing store for an operator action -- `.hearthside
+    // and it is the backing store for an operator action: `.hearthside
     // capture` promotes a line a GM liked into the corpus. Ageing entries out
     // would silently shorten the window in which that command works, which is
     // a regression dressed as a cleanup.
@@ -376,11 +378,11 @@ namespace
 
     // ---- §4.19 fuller metrics: rolling latency samples, prompt-char sums
     // by ring, reply/silence counts by archetype and channel. One mutex
-    // covers all four -- updates are cheap and never contended against
+    // covers all four: updates are cheap and never contended against
     // anything but this same worker thread's next request. ----
     std::mutex           g_MetricsMutex;
     std::deque<uint32_t> g_LatencySamplesMs;
-    constexpr size_t     kMaxLatencySamples = 500; // a rolling window, not a full history -- hside_metrics is the history
+    constexpr size_t     kMaxLatencySamples = 500; // a rolling window, not a full history: hside_metrics is the history
 
     struct RingPromptStats { uint64_t sumChars = 0; uint32_t count = 0; };
     RingPromptStats g_PromptStatsByRing[3]; // index 0 = ring 1, 1 = ring 2, 2 = ring 3
@@ -390,11 +392,11 @@ namespace
     std::unordered_map<uint8_t, ReplyCounts>     g_ReplyCountsByChannel;
 
     // TTL-drop and token-bucket-saturation counts, session-cumulative like
-    // the reply/silence counts above -- an operator-visible answer to "is
+    // the reply/silence counts above: an operator-visible answer to "is
     // the queue going stale" / "is a rate limit actually binding", named as
-    // a gap in Claude/ISSUES.md while building the rest of §4.19's metrics.
+    // a gap in Claude/archive/ISSUES.md while building the rest of §4.19's metrics.
     uint64_t g_TtlDroppedSession    = 0;
-    uint64_t g_TtlProcessedSession  = 0; // dropped + handled -- the drop-rate denominator
+    uint64_t g_TtlProcessedSession  = 0; // dropped + handled: the drop-rate denominator
     uint64_t g_BucketDeniedSession   = 0;
     uint64_t g_BucketAttemptedSession = 0;
     std::unordered_map<HsChannelKind, ReplyCounts> g_ChannelBucketCountsByKind; // .replied = granted, .silent = denied
@@ -482,7 +484,7 @@ namespace
     }
 
     // Updates the consecutive-failure count and flips the breaker open/closed
-    // as needed. Edge-triggered logging only -- one line per transition,
+    // as needed. Edge-triggered logging only: one line per transition,
     // never per request; the breaker stays silent while open.
     void RecordOutcome(bool success)
     {
@@ -536,8 +538,8 @@ namespace
             // The voice block is the only card text that ever enters a
             // prompt. Folded into the same personaLine string Hs_CallLLM
             // already takes, after the archetype line and before history,
-            // rather than widening that function's signature -- a no-op
-            // concat for the majority of bots with no active card.
+            // rather than widening that function's signature (a no-op
+            // concat for the majority of bots with no active card).
             HsCardSnapshot cardSnapshot = Hs_LookupCardSnapshot(req.botGuid);
 
             // Ring, derived the same way hs_identity.h's table defines it
@@ -559,7 +561,7 @@ namespace
             // globals. This is the worker thread; `.reload config` reassigns
             // those strings from the world thread, and the systemPrompt below
             // is bound by const& and held across the entire Hs_CallLLM round
-            // trip -- so a reload landing in that window would otherwise free
+            // trip, so a reload landing in that window would otherwise free
             // the buffer out from under the reference. hs_config.h has the
             // full reasoning.
             const HsLLMStrings llm = Hs_LLMStringsSnapshot();
@@ -588,7 +590,7 @@ namespace
                 g_ProbeInFlight.store(false);
 
             // §4.19: latency and prompt length are meaningful on every
-            // outcome, not just a delivered reply -- a failing backend
+            // outcome, not just a delivered reply: a failing backend
             // should show up in the latency percentiles, not silently drop
             // out of them.
             RecordLatencySample(result.latencyMs);
@@ -613,7 +615,7 @@ namespace
 
             // Caps/punctuation/abbrev reshaping and typo injection, applied
             // before the text becomes either delivered chat or the next
-            // turn's history line -- so a re-rendered history line and the
+            // turn's history line, so a re-rendered history line and the
             // one actually spoken always match byte-for-byte. `care`'s
             // baseline is the archetype's; TRADER is the only entry with an
             // abbreviation override today.
@@ -650,7 +652,7 @@ namespace
                     "archetype, trigger_text, pre_style_text, styled_text, created_at) "
                     "VALUES ({}, '{}', {}, '{}', {}, '{}', '{}', '{}', '{}', NOW())",
                     req.botGuid, escapedBotName, req.senderGuid, escapedSenderName,
-                    req.channel == HsReplyChannel::Whisper ? 1 : 0, // party/raid/guild collapse to 0 -- debug log doesn't distinguish them from say yet
+                    req.channel == HsReplyChannel::Whisper ? 1 : 0, // party/raid/guild collapse to 0: debug log doesn't distinguish them from say yet
                     escapedArchetype, escapedTrigger, escapedPreStyle, escapedStyled);
             }
 
@@ -660,19 +662,19 @@ namespace
             bool botInitiated = req.isFollowUp || req.isEvent;
 
             // History stores only the primary reply, not the follow-up
-            // correction below -- a bare "*healer" fragment isn't useful
+            // correction below: a bare "*healer" fragment isn't useful
             // prior-turn context, and the corrected meaning is already
             // fully present in result.text. An engagement follow-up
             // (hs_engagement.h) is skipped for the same reason: its
             // "trigger" is a synthetic instruction, not something the
             // player actually said. An event trigger (hs_event.h) is a
-            // synthetic state line for the same reason -- nobody said
+            // synthetic state line for the same reason: nobody said
             // "you have just been killed" to the bot.
             if (!botInitiated)
                 HistoryAppend(req.botGuid, req.senderGuid, req.prompt, result.text);
 
             // Scores the bot the arbiter selected, only when the reply
-            // resolves to tier 2 -- reflex/grounded/corpus-fallback replies
+            // resolves to tier 2: reflex/grounded/corpus-fallback replies
             // never reach here. An engagement follow-up or event reaction is
             // bot-initiated, not a scored player utterance, same as
             // bot-initiated openers.
@@ -680,7 +682,7 @@ namespace
                 Hs_BumpInteractionScore(req.botGuid, req.botLevel, ScoreWeightForChannel(req.channel));
 
             // Re-arms this (bot, player) pair's engagement-follow-up
-            // eligibility -- only a genuine direct reply does this, never a
+            // eligibility: only a genuine direct reply does this, never a
             // follow-up's own delivery, so a chain only continues as long
             // as the player keeps replying. Engagement follow-up is a
             // whisper/say-only surface (§4.22); a party/raid/guild reply
@@ -691,13 +693,13 @@ namespace
             // Ordinary chat is the most common way two people actually meet,
             // so first-meeting is seeded here rather than only as a side
             // effect of the rarer shared-experience events (dungeon/group/
-            // death/guild). Idempotent -- a no-op after the pair's first.
+            // death/guild). Idempotent: a no-op after the pair's first.
             //
             // Skipped for an event reaction, and only for that: an event's
             // senderGuid is whoever it happened around, which is frequently
             // another bot (a bot's own death, a bot-only stretch of a
             // group), and "met" between two bots is not a fact about any
-            // player. An engagement follow-up still records it -- its sender
+            // player. An engagement follow-up still records it: its sender
             // is by construction the real player it is following up with.
             if (!req.isEvent)
                 Hs_EnsureFirstMeetingRecorded(req.botGuid, req.senderGuid);
@@ -733,8 +735,8 @@ namespace
             if (elapsedMs < static_cast<int64_t>(typingTargetMs))
                 deliverAt = now + std::chrono::milliseconds(typingTargetMs - static_cast<uint32_t>(elapsedMs));
 
-            // Unconditional floor on top of whatever the block above produced
-            // -- closes the gap left when TypingDelay.Enable is off, where a
+            // Unconditional floor on top of whatever the block above produced.
+            // Closes the gap left when TypingDelay.Enable is off, where a
             // fast backend could otherwise deliver same-tick (hs_config.h).
             if (elapsedMs < static_cast<int64_t>(g_HsMinDeliveryDelayMs))
             {
@@ -746,15 +748,15 @@ namespace
 
             // Distracted reply: the bot "was away" for a stretch, says so,
             // then answers properly. Skipped for an engagement follow-up and
-            // for an event reaction -- both are bot-initiated, so apologizing
+            // for an event reaction: both are bot-initiated, so apologizing
             // for a delay to a player who never asked anything reads as a
             // non sequitur, and "sorry, was afk" in front of a reaction to
             // your own death reads worse still.
             //
             // Rolled here in the worker rather than in hs_arbiter.cpp (where
             // the retired reply_chance was rolled) for two reasons: whisper
-            // never passes through the arbiter at all -- it is gated by a
-            // plain chance roll in hs_handler.cpp -- and whisper is the
+            // never passes through the arbiter at all (it is gated by a
+            // plain chance roll in hs_handler.cpp), and whisper is the
             // surface where this flavor reads best, so an arbiter-side roll
             // would miss it entirely; and archetypeInfo is already in hand
             // here, so nothing has to be threaded through HsQueuedRequest.
@@ -790,7 +792,7 @@ namespace
                 // default) expires long before a 25-60s away window does, and
                 // a second question to the same bot would be generated and
                 // delivered *ahead* of the pair still sitting in the delivery
-                // queue -- the bot would answer the newer question normally,
+                // queue: the bot would answer the newer question normally,
                 // then say "sorry, was afk" and answer the older one. It also
                 // happens to be what the fiction already claims: someone who
                 // is away from the keyboard isn't answering anyone else
@@ -823,8 +825,8 @@ namespace
                 // Self-correction follow-up: only eligible when a typo
                 // actually landed in this message. The `*` prefix is added
                 // here, after the style pass, and the corrected word is
-                // exempt from it -- a plain literal fix, not another sloppy
-                // line. The delay is measured from the primary reply's own
+                // exempt from it (a plain literal fix, not another sloppy
+                // line). The delay is measured from the primary reply's own
                 // deliverAt (not `now`) so the correction can never arrive
                 // before the line it corrects.
                 if (!style.correction.empty() && urand(0, 99) < kSelfCorrectionChancePercent)
@@ -866,7 +868,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
                     HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq)
 {
-    // 1. Token bucket — peek only; the spend is committed once the request
+    // 1. Token bucket. Peek only; the spend is committed once the request
     // actually clears every later gate.
     {
         std::lock_guard<std::mutex> lock(g_BucketMutex);
@@ -891,7 +893,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         }
     }
 
-    // 3. Circuit breaker — silent while open, except for the single claimed
+    // 3. Circuit breaker. Silent while open, except for the single claimed
     // probe request per interval.
     bool isProbe = false;
     if (g_BreakerOpen.load())
@@ -944,7 +946,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
     }
     g_QueueCv.notify_one();
 
-    // Only now commit the token spend and the cooldown timestamp — the
+    // Only now commit the token spend and the cooldown timestamp: the
     // request is actually admitted.
     {
         std::lock_guard<std::mutex> lock(g_BucketMutex);
@@ -1111,21 +1113,21 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
         return cMgr->GetChannel(entry->pattern[locale], bot);
 
     // The substituted half of the channel name. City-scoped channels take it
-    // from the same acore_string the core does, deliberately -- not from
+    // from the same acore_string the core does, deliberately, not from
     // AreaTable 3459.
     //
     // This used to read GetAreaEntryByAreaID(3459), mirroring PlayerbotMgr's
     // own join-time substitution. Both are broken, for a reason the function
     // name hides: GetAreaEntryByAreaID maps an area ID to its exploreFlag and
-    // then looks *that* up as a row ID (DBCStores.cpp). For 3459 -- a dummy
-    // row that exists only to carry the string "City" -- it returns nullptr,
+    // then looks *that* up as a row ID (DBCStores.cpp). For 3459 (a dummy
+    // row that exists only to carry the string "City") it returns nullptr,
     // so Trade and GuildRecruitment resolved to nullptr for every caller and
     // the whole surface was silently inert.
     //
     // Player::UpdateLocalChannels is what actually puts anyone in these
     // channels (mod-playerbots' login-time join hits the same nullptr and is
     // a no-op), so the name it builds is by definition the name of the live
-    // object. Reading the same string back is exact rather than inferred --
+    // object. Reading the same string back is exact rather than inferred:
     // sAreaTableStore.LookupEntry(3459) would agree on an enUS realm, but
     // only by coincidence of the two tables carrying the same word.
     std::string areaName;
@@ -1182,7 +1184,7 @@ void Hs_DeliverPending()
     for (auto const& reply : ready)
     {
         // A chain hop whose scope a real player took over while it was still
-        // generating is dropped rather than spoken (hs_botchain.h) -- the
+        // generating is dropped rather than spoken (hs_botchain.h): the
         // stale-line problem Hs_CancelPendingFollowUpsFor solves for
         // engagement follow-ups, checked here instead because a hop's scope
         // is a group or a channel, not the player whose message aborts it.
@@ -1218,7 +1220,7 @@ void Hs_DeliverPending()
                 if (!channel)
                 {
                     // Bot no longer resolves to that channel instance (e.g.
-                    // moved zones) -- drop, don't misdeliver. Logged because
+                    // moved zones): drop, don't misdeliver. Logged because
                     // this is otherwise indistinguishable from the surface
                     // never having produced a line at all.
                     if (g_HsDebugEnabled)
@@ -1250,7 +1252,7 @@ void Hs_DeliverPending()
         }
 
         // Every delivered party/raid/global-channel line is a candidate seed
-        // for the next hop of a bot-to-bot chain -- including a hop's own
+        // for the next hop of a bot-to-bot chain, including a hop's own
         // line, which is how a chain gets past depth 1. Hs_NoteBotLine
         // applies every gate itself and is a cheap no-op on the surfaces and
         // tiers that don't chain. Safe to call from inside this loop:
@@ -1266,7 +1268,7 @@ void Hs_ForgetBotHistory(uint64_t botGuid)
     std::lock_guard<std::mutex> lock(g_HistoryMutex);
     for (auto it = g_History.begin(); it != g_History.end(); )
     {
-        // .first is the (botGuid, senderGuid) pair -- match on the bot half
+        // .first is the (botGuid, senderGuid) pair. Match on the bot half
         // only, so every player this bot was mid-conversation with is
         // cleared in one pass.
         if (it->first.first == botGuid)

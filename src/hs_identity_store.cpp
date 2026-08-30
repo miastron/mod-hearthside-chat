@@ -24,7 +24,7 @@ namespace
     std::atomic<uint32_t> g_DemotionsThisSession{0};
     std::atomic<uint32_t> g_RetirementsThisSession{0};
 
-    // Idempotent append -- both vectors are re-applied on every startup and
+    // Idempotent append: both vectors are re-applied on every startup and
     // `.reload config`, so a repeat call must not accumulate duplicate
     // entries.
     void AppendIfMissing(std::vector<std::string>& names, const std::string& name)
@@ -50,7 +50,7 @@ namespace
     // are plain std::vectors with no synchronization of their own, and
     // mod-playerbots walks them from the world thread (RandomBotLevelMgr's
     // IsNameInExcludeList sites). A mutex on this side alone would not close
-    // the race, because that reader takes no lock -- so the only correct fix
+    // the race, because that reader takes no lock, so the only correct fix
     // is to never touch the vectors off the world thread at all.
     //
     // The two Apply* functions below therefore write directly and are
@@ -58,7 +58,7 @@ namespace
     // card, the queue worker retiring one, the HTTP control API's
     // pin/unpin/promote/demote routes) queues its intent here instead, and
     // Hs_DrainExcludeVectorQueue() applies it on the next world tick from
-    // hs_main.cpp's HsIdentityLifecycleWorldScript::OnUpdate -- the same
+    // hs_main.cpp's HsIdentityLifecycleWorldScript::OnUpdate, the same
     // thread the existing 300s reconcile already writes them from. A push
     // and a remove for the same name stay in submission order, since the
     // queue is a FIFO vector.
@@ -110,8 +110,8 @@ namespace
 
     // Every hside_identity row is created exclusively by
     // Hs_BumpInteractionScore (always called with a bot's guid), so joining
-    // against hside_identity is enough to guarantee these results are bots
-    // -- no separate "is this guid a bot" check needed.
+    // against hside_identity is enough to guarantee these results are bots.
+    // No separate "is this guid a bot" check needed.
     std::set<uint64_t> FetchFriendedIdentityBotGuids()
     {
         std::set<uint64_t> guids;
@@ -138,7 +138,7 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
 
     // A carded bot whose level drops is retired, not repaired. This call
     // site already has a trustworthy, freshly-read botLevel on every tier-2
-    // delivery, so the level check runs before the score bump below -- a
+    // delivery, so the level check runs before the score bump below: a
     // level-dropped bot's next utterance retires it instead of scoring a
     // persona that no longer applies.
     QueryResult existing = CharacterDatabase.Query(
@@ -153,7 +153,7 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
     // Lazily create the row on first score event, otherwise just add to the
-    // running total -- last_known_level/level_checked_at refresh on every
+    // running total. last_known_level/level_checked_at refresh on every
     // bump too, which is what makes the retirement check above trustworthy
     // on the next call.
     CharacterDatabase.Execute(
@@ -199,7 +199,7 @@ HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid)
         if (!facts.is_discarded())
         {
             snapshot.verbalTic = Hs_ExtractVerbalTic(facts);
-            // Same already-parsed JSON the verbal tic comes from -- reading
+            // Same already-parsed JSON the verbal tic comes from. Reading
             // these two here is what lets TryCorpusFallback resolve the
             // card-only placeholders without two more round trips for the
             // row it already has.
@@ -299,7 +299,7 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel)
 
 void Hs_RunIdentityDailySweep()
 {
-    // 1. Friend poll -- promote/pin newly-friended rows, unpin rows no
+    // 1. Friend poll: promote/pin newly-friended rows, unpin rows no
     // longer found friended. See hs_identity_store.h's doc comment for why
     // this reads character_social directly instead of the live SocialMgr
     // API, and why it's scoped to existing hside_identity rows.
@@ -335,7 +335,7 @@ void Hs_RunIdentityDailySweep()
         } while (rows->NextRow());
     }
 
-    // 2. Score decay -- one point per day once a row has gone quiet for
+    // 2. Score decay: one point per day once a row has gone quiet for
     // kHsScoreDecayGraceDays. The sweep's own once-daily cadence is the
     // decay unit; no extra column is needed to track partial progress.
     CharacterDatabase.Execute(
@@ -343,19 +343,19 @@ void Hs_RunIdentityDailySweep()
         "WHERE last_used_at IS NOT NULL AND last_used_at < NOW() - INTERVAL {} DAY AND interaction_score > 0",
         kHsScoreDecayPointsPerDay, kHsScoreDecayGraceDays);
 
-    // 3. Card demotion -- dormant, unpinned cards clear. Card text is not
+    // 3. Card demotion: dormant, unpinned cards clear. Card text is not
     // touched.
     //
     // COALESCE, not a bare last_used_at: that column is NULL until
     // Hs_BumpInteractionScore first writes it, and in MySQL `NULL < <expr>`
     // is NULL, so a bare comparison silently never selects such a row. That
-    // state is ordinary, not exotic -- `.hearthside promote` (Hs_ForcePromote)
+    // state is ordinary, not exotic: `.hearthside promote` (Hs_ForcePromote)
     // inserts without last_used_at, the generator then flips card_active = 1
     // without touching it either, and the friend poll in step 1 above
     // promotes the same shape. Without the COALESCE a GM-promoted bot that
     // is never actually talked to keeps its card, and its exclude-vector pin
     // against playerbots' recycler, forever. promoted_at is the right
-    // fallback reference point since the row has no creation timestamp --
+    // fallback reference point since the row has no creation timestamp,
     // same trick Hs_RunUnusedRowEvictionSweep uses for corpus rows.
     QueryResult toDemote = CharacterDatabase.Query(
         "SELECT bot_guid FROM hside_identity WHERE card_active = 1 AND pinned_by_friend = 0 "
@@ -399,12 +399,12 @@ void Hs_RunIdentityDailySweep()
 
     // 5. Orphan cleanup. AiPlayerbot.DeleteRandomBotAccounts wipes every
     // random-bot account/character in one shot, followed by an immediate
-    // worldserver restart -- a one-shot startup action, not a live event
+    // worldserver restart: a one-shot startup action, not a live event
     // this module can hook. Any hside_identity/hside_memory row still
     // pointing at a since-deleted bot_guid is dead weight with no possible
     // owner to reconcile against: a full wipe invalidates every card
     // regardless of whether a recreated bot happens to reuse the old GUID.
-    // Self-healing -- no operator step, no new config key -- and folded into
+    // Self-healing (no operator step, no new config key) and folded into
     // this existing daily sweep rather than a dedicated one, same reasoning
     // hs_main.cpp gives for putting decay/pinning/retirement here instead of
     // their own timer.
@@ -456,7 +456,7 @@ bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
     QueryResult before = CharacterDatabase.Query(
         "SELECT promoted_at FROM hside_identity WHERE bot_guid = {}", botGuid);
     if (before && !(*before)[0].IsNull())
-        return false; // already promoted -- nothing to write, nothing to count
+        return false; // already promoted, nothing to write, nothing to count
 
     // The ON DUPLICATE KEY clause still matters: the row may exist and be
     // unpromoted, which is exactly the case that reaches here.

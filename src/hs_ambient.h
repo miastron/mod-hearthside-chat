@@ -4,8 +4,8 @@
 #include "ScriptMgr.h"
 #include <cstdint>
 
-// Unprompted ambient chatter -- the producer HearthsideChat.MaxTier.Ambient
-// has always claimed to gate (Claude/PLAN-AMBIENT.md). Until this file
+// Unprompted ambient chatter: the producer HearthsideChat.MaxTier.Ambient
+// has always claimed to gate (Claude/archive/PLAN-AMBIENT.md). Until this file
 // existed that key was parsed, live-reloaded, and echoed back by both
 // operator status surfaces while nothing read it, so setting it to "off" to
 // quiet a realm did nothing while `.hearthside status` reported "off" as
@@ -17,14 +17,14 @@
 // (hs_event.cpp), another bot's line landed (hs_botchain.cpp), or the bot had
 // already answered this player once (hs_engagement.cpp). Ambient fires
 // because there is dead air. That is the point of it, and also the entire
-// design problem -- see "volume" below.
+// design problem: see "volume" below.
 //
 // The content it speaks already existed before this producer did. The five
 // non-opener, non-channel corpus categories (chat_gripe_general,
 // chat_class_banter, chat_levelband_musing, chat_faction_banter,
 // chat_zone_musing) are documented in docs/architecture.md as ambient "dead
 // air" flavor, and the idle-time generator has been filling them on
-// Generator.Enable alone -- but their only consumer was hs_handler.cpp's
+// Generator.Enable alone: but their only consumer was hs_handler.cpp's
 // direct-reply corpus fallback. The GPU was writing dead-air lines that could
 // only ever surface when a player talked to a bot first.
 //
@@ -41,7 +41,7 @@
 //      spoke on their own initiative; a third independent producer, each
 //      tuned separately to "reasonable", still stacks into constant noise.
 //   2. At most one line per scan tick, realm-wide. Not one per surface and
-//      not a candidate set -- the arbiter exists to answer "who replies to
+//      not a candidate set: the arbiter exists to answer "who replies to
 //      *this message*", and ambient has no message, so there is nothing to
 //      arbitrate. One speaker per tick is also the cheapest possible volume
 //      control, and it keeps the failure mode bounded by the tick rate rather
@@ -62,9 +62,9 @@
 // /say, Trade, General, party and raid. Battleground is deliberately
 // absent: mod-playerbots has no SayToBG and SayToRaid hardcodes
 // CHAT_MSG_RAID, so BG would need a new HsReplyChannel, a new delivery path,
-// and new content -- and a battleground is the one context where chat is
+// and new content: and a battleground is the one context where chat is
 // overwhelmingly tactical, so corpus-authored musing landing mid-fight may
-// read worse than silence. See PLAN-AMBIENT.md §3.
+// read worse than silence. See Claude/archive/PLAN-AMBIENT.md §3.
 //
 // One surface is chosen per tick before any scanning happens, then scanned.
 // That ordering is deliberate: resolving a live Channel* is by far the most
@@ -91,7 +91,7 @@ uint32_t Hs_AmbientLinesFiredThisSession();
 // For the other unprompted producers: a bot that just spoke on its own
 // initiative has said its piece, and ambient must not immediately follow it
 // with a second unprompted line. The shared token bucket does not cover this
-// -- it bounds realm-wide volume, not one bot talking twice in a row -- and
+//: it bounds realm-wide volume, not one bot talking twice in a row: and
 // neither does the script-run check in BotBaseEligible, which only knows
 // about hs_script.cpp's scenes. hs_opener.cpp calls this after every opener
 // it delivers, which is what stops the opener/ambient pileup a group-join

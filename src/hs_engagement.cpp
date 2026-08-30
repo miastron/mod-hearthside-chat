@@ -27,7 +27,7 @@ namespace
     using Clock = std::chrono::steady_clock;
 
     // Starting-guess compiled constants, same reasoning as hs_opener.cpp's
-    // kOpenerCooldownSeconds/kOpenerFireChancePercent -- tuned later
+    // kOpenerCooldownSeconds/kOpenerFireChancePercent: tuned later
     // against live-realm evidence, not fixed here.
     constexpr uint32_t kEngagementScanIntervalMs        = 30000; // matches hs_script.cpp's cadence
     constexpr int64_t  kEngagementFireWindowMinSec       = 60;
@@ -37,10 +37,10 @@ namespace
     constexpr uint32_t kEngagementMaxChainDepth          = 7;    // safety valve, not the normal stop condition
     constexpr int64_t  kEngagementStaleSeconds           = 900;  // untouched this long -> forgotten, next chain starts fresh
 
-    // A follow-up has no real player line to answer -- this is the
+    // A follow-up has no real player line to answer. This is the
     // "trigger" passed to Hs_CallLLM in its place, the same way a normal
     // reply's trigger is the player's chat text. History (read as context,
-    // never written back to for a follow-up -- see hs_queue.cpp) still gives
+    // never written back to for a follow-up, see hs_queue.cpp) still gives
     // the model the real prior exchange to continue.
     const char* kEngagementFollowUpTrigger =
         "Continue the conversation naturally with a brief follow-up of your own -- "
@@ -98,7 +98,7 @@ namespace
         return candidates;
     }
 
-    // Marks a fired follow-up's outcome on its pair state -- eligible=false
+    // Marks a fired follow-up's outcome on its pair state: eligible=false
     // (the next follow-up in this chain needs another direct reply first),
     // depth+1, lastActivityAt refreshed so the pair doesn't immediately
     // re-enter the fire window.
@@ -125,7 +125,7 @@ namespace
         if (!candidate.isWhisper)
         {
             // Same eligibility a normal /say reply already uses
-            // (hs_handler.cpp) -- a follow-up on a public line the bot can
+            // (hs_handler.cpp): a follow-up on a public line the bot can
             // no longer actually be heard on doesn't get to fire regardless.
             if (bot->GetTeamId() != sender->GetTeamId())
                 return;
@@ -151,7 +151,7 @@ namespace
         if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot))
             rpgStatus = botAI->rpgInfo.GetStatus();
 
-        // §4.13's remaining topic-gate facts -- same read as
+        // §4.13's remaining topic-gate facts, same read as
         // hs_handler.cpp's TryDispatch, duplicated here rather than shared
         // since inCombat/botLevel/rpgStatus above already follow that
         // per-call-site pattern.
@@ -181,7 +181,7 @@ namespace
             kEngagementFollowUpTrigger, inCombat, botLevel, rpgStatus, topicGate,
             /*isFollowUp=*/true);
         if (!admitted)
-            return; // same bucket/cooldown/breaker/queue-depth gates as any reply -- silence, not a retry
+            return; // same bucket/cooldown/breaker/queue-depth gates as any reply: silence, not a retry
 
         MarkFollowUpFired(botGuid, senderGuid);
         g_EngagementFollowUpsFiredThisSession.fetch_add(1);
@@ -212,7 +212,7 @@ void Hs_EngagementNoteDirectReply(uint64_t botGuid, uint64_t senderGuid, bool is
     state.lastActivityAt = Clock::now();
     state.isWhisper      = isWhisper;
     state.eligible       = true;
-    // chainDepth deliberately untouched -- a genuine direct reply re-arms
+    // chainDepth deliberately untouched: a genuine direct reply re-arms
     // eligibility for the next follow-up without resetting how deep this
     // conversation's chain already is.
 }
@@ -244,7 +244,7 @@ void HsEngagementScanWorldScript::OnUpdate(uint32_t diff)
     // one scan interval wide, so it only reliably catches every pair while
     // the scan period stays exactly kEngagementScanIntervalMs. Discarding the
     // per-cycle overshoot (up to one world tick) would drift the period past
-    // 30s and eventually step a pair's window entirely -- the follow-up would
+    // 30s and eventually step a pair's window entirely: the follow-up would
     // never fire and nothing would record why.
     s_AccumulatorMs -= kEngagementScanIntervalMs;
 
@@ -253,7 +253,7 @@ void HsEngagementScanWorldScript::OnUpdate(uint32_t diff)
 
     ScanEngagementFollowUps();
 
-    // hs_opener.h's own named fifth trigger ("prolonged proximity") --
+    // hs_opener.h's own named fifth trigger ("prolonged proximity"),
     // sharing this tick rather than running a second near-identical scan
     // timer.
     Hs_ScanProximityOpeners();

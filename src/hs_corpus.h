@@ -11,11 +11,11 @@ class Player;
 // When a surface's MaxTier ceiling permits corpus but not inference, this
 // answers instead of falling straight to silence. Weighted anti-repeat pick
 // from a category the bot's class/level qualifies for, synchronous like
-// TryReflex/TryGrounded in hs_handler.cpp -- zero GPU work, so no queue, no
-// bucket, no cooldown; only the ceiling->inference branch touches the token
+// TryReflex/TryGrounded in hs_handler.cpp: zero GPU work, so no queue, no
+// bucket, no cooldown. Only the ceiling->inference branch touches the token
 // bucket.
 //
-// Scoped to channel IS NULL categories -- the /say and direct-reply set
+// Scoped to channel IS NULL categories, the /say and direct-reply set
 // (channel_* categories are ambient content for the global-channel surface,
 // selected via Hs_SelectChannelLine below instead). Covers every tag axis a
 // seeded category now uses: none, class, level_band, faction, zone.
@@ -27,58 +27,56 @@ class Player;
 // Hs_BuildPlaceholderContext already resolves for %zone.
 //
 // Returns empty if no eligible category has a matching row (schema not
-// installed, or nothing fits this bot's class/level/faction/zone) --
+// installed, or nothing fits this bot's class/level/faction/zone); the
 // caller falls through to silence like any other "nothing to say" path.
 //
-// `hasActiveCard`: a card_gated=1 category is only eligible when true --
-// its rows use %main_focus/%current_goal, which only resolve for a carded
-// bot. False (the overwhelming majority of bots) simply removes those
+// `hasActiveCard`: a card_gated=1 category is only eligible when true,
+// since its rows use %main_focus/%current_goal, which only resolve for a
+// carded bot. False (the overwhelming majority of bots) removes those
 // categories from the eligible set, same as the other tag filtering.
 std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botFaction, uint32_t botZoneId, bool hasActiveCard);
 
 // An opener fires off a specific shared-context trigger (hs_opener.cpp)
-// that already knows which category applies -- "group formed" wants
+// that already knows which category applies: "group formed" wants
 // opener_group_formed, not a random pick among all eligible categories.
 // Same anti-repeat pick and exposure bookkeeping as Hs_SelectCorpusLine,
 // scoped to one named category. Returns empty if the category doesn't
 // exist, isn't flagged is_opener, or has no row matching this bot's
 // class/level/faction/zone. No is_opener=1 category is faction/zone-axis
-// today, but the plumbing carries the signal regardless -- same shape as
-// the class/level_band tags an opener category doesn't use either.
+// today, but the plumbing carries the signal regardless, same as the
+// class/level_band tags an opener category doesn't use either.
 std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel,
                                  uint8_t botFaction, uint32_t botZoneId);
 
 // §4.17: the channel_* categories' selection path (hs_corpus_category.sql's
-// `channel` column), previously unwired -- same anti-repeat pick and
-// exposure bookkeeping as Hs_SelectCorpusLine, scoped to categories tagged
-// for this channel instead of the channel-IS-NULL /say set. Only
-// Trade/General have any channel_* rows seeded today; a kind with none
-// simply returns empty, same as any other "nothing eligible" case. Called
-// from hs_handler.cpp's Channel* hook (§4.17), never for a channel whose
-// policy is Off.
+// `channel` column), previously unwired. Same anti-repeat pick and exposure
+// bookkeeping as Hs_SelectCorpusLine, scoped to categories tagged for this
+// channel instead of the channel-IS-NULL /say set. Only Trade/General have
+// any channel_* rows seeded today; a kind with none returns empty, same as
+// any other "nothing eligible" case. Called from hs_handler.cpp's Channel*
+// hook (§4.17), never for a channel whose policy is Off.
 std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t botLevel,
                                   uint8_t botFaction, uint32_t botZoneId);
 
-// PLAN-AMBIENT.md §4: party/raid ambient content. A third selection scope
-// alongside the two above, and it needs to be its own function rather than
-// an HsChannelKind added to Hs_SelectChannelLine -- party and raid are not
+// Claude/archive/PLAN-AMBIENT.md §4: party/raid ambient content. A third selection scope
+// alongside the two above; it needs to be its own function rather than an
+// HsChannelKind added to Hs_SelectChannelLine, since party and raid are not
 // global channels. They have no Channel* to resolve, no per-channel policy
 // row, and no membership beyond the bot's own Group, so folding them into
 // HsChannelKind would put two values into that enum that every other
 // consumer of it (the policy table, Hs_ResolveChannelForDelivery,
 // hs_handler.cpp's Channel* hook) would have to special-case away.
 //
-// Reuses hside_corpus_category's existing `channel` column, whose values
-// extend from trade|general to also include party|raid. Nothing else
-// has to change for that: Hs_SelectCorpusLine's `channel IS NULL` filter
-// already excludes every non-NULL value, so the new rows stay out of the
-// /say and direct-reply pool by the same mechanism the channel_* categories
-// already do.
+// Reuses hside_corpus_category's existing `channel` column; its values now
+// extend from trade|general to include party|raid too. Nothing else has to
+// change: Hs_SelectCorpusLine's `channel IS NULL` filter already excludes
+// every non-NULL value, so the new rows stay out of the /say and
+// direct-reply pool the same way the channel_* categories already do.
 //
-// The register is genuinely different from a /say musing, which is why these
-// get their own categories rather than reusing the five chat_* ones: a /say
-// line is overheard by whoever happens to be nearby, while a party line is
-// addressed to four specific people who are doing something together.
+// The register differs from a /say musing, which is why these get their own
+// categories instead of reusing the five chat_* ones: a /say line is
+// overheard by whoever happens to be nearby, while a party or raid line is
+// addressed to a specific group of people doing something together.
 //
 // `isRaid` selects the raid categories over the party ones. Returns empty
 // if nothing is eligible, same contract as the two functions above.
@@ -86,8 +84,8 @@ std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t bot
                                        uint8_t botFaction, uint32_t botZoneId);
 
 // The four level_band_tag labels used by chat_levelband_musing's seeded
-// rows: low 1-19, mid 20-59, high 60-79, endgame 80 (the level cap) --
-// lined up with WotLK's own pacing (Outland opens at 58, Northrend at 68,
+// rows: low 1-19, mid 20-59, high 60-79, endgame 80 (the level cap). Lined
+// up with WotLK's own leveling pace (Outland opens at 58, Northrend at 68,
 // raiding/dailies only exist at the level-80 cap) rather than an even
 // split.
 //
@@ -103,7 +101,7 @@ inline std::string Hs_LevelBandFor(uint8_t level)
 }
 
 // Card-only placeholder resolution: literal substring replacement, not a
-// template engine -- there are exactly two card-only placeholders
+// template engine. There are exactly two card-only placeholders
 // (hs_gen_validate.cpp's kCardOnlyPlaceholders), and a card-gated category
 // is only ever selected for a bot that actually has both. `mainFocus`/
 // `currentGoal` empty is a no-op for that token (defensive; shouldn't
@@ -147,8 +145,8 @@ struct HsPlaceholderContext
 // Resolves every universal placeholder in `text` in place. Returns false if
 // a placeholder in the text has no value in `ctx`, or if a card-only token
 // is still standing afterwards (a card_gated line that reached an uncarded
-// bot); the caller must discard `text` rather than deliver it in that case
-// -- a line is either fully resolved or not delivered at all.
+// bot); the caller must discard `text` rather than deliver it in that case,
+// since a line is either fully resolved or not delivered at all.
 //
 // The leftover check matches the two card-only tokens by name rather than
 // any `%`-shaped substring, since ordinary chat can contain a literal `%`
@@ -176,7 +174,7 @@ inline bool Hs_ResolveUniversalPlaceholders(std::string& text, const HsPlacehold
         if (pos == std::string::npos)
             continue;
         if (entry.value->empty())
-            return false; // nothing true to substitute -- drop the line
+            return false; // nothing true to substitute, drop the line
 
         while (pos != std::string::npos)
         {
@@ -192,7 +190,7 @@ inline bool Hs_ResolveUniversalPlaceholders(std::string& text, const HsPlacehold
 }
 
 // One tradeable item out of a bot's bags, for the grounded TradePrice
-// answer (Claude/PLAN-TRADE.md). Deliberately primitives plus the ready-made
+// answer (Claude/archive/PLAN-TRADE.md, frozen 2026-08-25). Deliberately primitives plus the ready-made
 // link rather than an `Item*`/`ItemTemplate const*`, so this header stays
 // free of the core's item headers the way it already stays free of the rest
 // of AzerothCore.
@@ -207,7 +205,7 @@ struct HsTradeableItem
     std::string link;   // the same |cff...|Hitem:...|h[...]|h|r markup %item_link produces
 };
 
-// Picks one non-soulbound item from the bot's backpack and equipped bags --
+// Picks one non-soulbound item from the bot's backpack and equipped bags:
 // the exact same selection %item_link uses (they share one implementation),
 // so a WTS line and a price quote are drawn from the same pool and by the
 // same rule. Soulbound is excluded because an item the bot cannot hand over
@@ -218,8 +216,8 @@ struct HsTradeableItem
 // turns into the "not selling anything" answer rather than a fabricated
 // price.
 //
-// Note this picks *a* tradeable item, not necessarily the one the bot last
-// advertised -- the module does not record which item a past WTS line named.
+// This picks *a* tradeable item, not necessarily the one the bot last
+// advertised: the module does not record which item a past WTS line named.
 // That is why the TradePrice reply interpolates the item link into the text:
 // the bot says what it is quoting, so the answer is coherent on its own
 // terms even when it is not the item the player had in mind.
@@ -230,12 +228,11 @@ bool Hs_PickTradeableItem(Player* bot, HsTradeableItem& out);
 // (hs_handler.cpp's TryCorpusFallback, hs_opener.cpp's FireOpener) is
 // already on the world thread, the only place a Player* may be touched.
 //
-// %item_link draws a random non-soulbound item from the bot's backpack and
-// equipped bags -- soulbound is excluded since an item the bot can't hand
-// over would be exactly the falsifiable claim §4.13 exists to prevent.
+// %item_link draws from the same non-soulbound selection as
+// Hs_PickTradeableItem above.
 HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot);
 
-// Scripted bot-to-bot dialogue's placeholder resolution (§4.16) --
+// Scripted bot-to-bot dialogue's placeholder resolution (§4.16):
 // %my_class/%my_level/%my_zone/%my_guild bind to whichever bot is speaking
 // this turn, %other_class/... to the other cast bot, resolved fresh per
 // turn from live state since a script isn't tied to a specific pair of
@@ -268,7 +265,7 @@ inline bool Hs_ResolveScriptPlaceholders(std::string& text, const HsPlaceholderC
         if (pos == std::string::npos)
             continue;
         if (entry.value->empty())
-            return false; // nothing true to substitute -- drop the turn
+            return false; // nothing true to substitute, drop the turn
 
         while (pos != std::string::npos)
         {

@@ -3,7 +3,7 @@
 namespace
 {
     // Player::GetMoney() is copper; 1g = 100s = 10000c. Silver-only precision
-    // matches how a player would actually describe their own purse -- nobody
+    // matches how a player would actually describe their own purse: nobody
     // states copper in chat.
     constexpr uint32_t kCopperPerSilver = 100;
     constexpr uint32_t kCopperPerGold   = 10000;

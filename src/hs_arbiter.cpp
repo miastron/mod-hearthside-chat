@@ -34,7 +34,7 @@ namespace
         return false;
     }
 
-    // Weighted toward 0 and 1, 2 rare by default -- tunable via the
+    // Weighted toward 0 and 1, 2 rare by default: tunable via the
     // HearthsideChat.ReplyCount.{Zero,One,Two}Percent weights (hs_config.h).
     // These are relative weights, not cumulative percentages: summed and
     // normalized here, so they need not add to 100 and carry no ordering
@@ -66,7 +66,7 @@ namespace
 
     // Recent-speaker penalty: a bot that just answered is down-weighted
     // for a short window so the same bot doesn't answer three lines
-    // running. No archetype/ring multipliers yet -- proximity + recency
+    // running. No archetype/ring multipliers yet: proximity + recency
     // is the whole weighting model until they land.
     double RecencyWeight(uint32_t secondsSinceLastReply)
     {
@@ -99,7 +99,7 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
     if (!speaker || candidates.empty())
         return selected;
 
-    // Named address wins outright -- no lottery, no substitutes.
+    // Named address wins outright: no lottery, no substitutes.
     for (Player* bot : candidates)
     {
         if (MentionsName(message, bot->GetName()))
@@ -113,7 +113,7 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
     // filter runs ahead of this any more: hside_archetype.reply_chance was
     // replaced outright by distracted_chance on 2026-08-24 (hs_archetype.h).
     // A personality that often just doesn't answer is true to a real player
-    // but reads as being ignored -- or as a broken module -- on a realm that
+    // but reads as being ignored: or as a broken module: on a realm that
     // is almost entirely bots, so the trait is now expressed as a *late*
     // reply (hs_queue.cpp's "sorry, was afk" line) rather than a missing one.
     // PickReplyCount's own weighting is still what keeps a crowd from
@@ -122,7 +122,7 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
     if (replyCount == 0)
         return selected;
 
-    // Weighted select without replacement -- proximity and recency, not
+    // Weighted select without replacement: proximity and recency, not
     // uniform.
     std::vector<Player*> pool = candidates;
     std::random_device   rd;

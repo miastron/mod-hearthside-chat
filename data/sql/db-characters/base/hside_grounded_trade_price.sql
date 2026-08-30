@@ -1,4 +1,4 @@
--- Claude/PLAN-TRADE.md: the TRADE_PRICE grounded answer -- "how much?" for
+-- Claude/archive/PLAN-TRADE.md (frozen 2026-08-25): the TRADE_PRICE grounded answer: "how much?" for
 -- something in the bot's bags, priced with mod-playerbots' own selling
 -- arithmetic so the number said in chat is the number the trade window then
 -- demands.
@@ -14,7 +14,7 @@
 -- double every template, since that table has no unique key to collide on.
 -- A brand-new base/ file has no tracked hash, so it applies exactly once on
 -- both a fresh install and an already-deployed realm. No companion updates/
--- file, because that would duplicate this content -- the specific mistake
+-- file, because that would duplicate this content: the specific mistake
 -- CLAUDE.md records breaking a realm boot three times.
 --
 -- The filename sorts after both files it depends on ('q' < 't', and

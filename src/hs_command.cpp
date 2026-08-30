@@ -36,7 +36,7 @@ using namespace Acore::ChatCommands;
 
 namespace
 {
-    // Resolves a bot by name regardless of online status -- control commands
+    // Resolves a bot by name regardless of online status. Control commands
     // act on a named bot whether or not it's currently loaded, unlike
     // `.hearthside capture` which needs a live Player* for the bot's
     // current class/level. Returns 0 if the name doesn't exist.
@@ -142,8 +142,8 @@ namespace
             return true;
         }
 
-        // gm-capture is a one-off GM action, not a versioned generation run
-        // -- prompt_version stays NULL (empty string here, coalesced to
+        // gm-capture is a one-off GM action, not a versioned generation run.
+        // prompt_version stays NULL (empty string here, coalesced to
         // NULL by Hs_TryInsertCorpusRow), same convention as a hand-authored
         // row.
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(category, tagColumn, tagValueSql, preStyleText, "gm-capture", "");
@@ -157,7 +157,7 @@ namespace
 
     // Ring 3 is reported directly (card_active is bot-global); rings 1/2 are
     // only meaningful relative to one specific player, so this reports the
-    // row-level facts rather than a single invented ring number -- see
+    // row-level facts rather than a single invented ring number. See
     // HsIdentityInspection's doc comment in hs_identity_store.h.
     bool HandleHearthsideInspect(ChatHandler* handler, std::string_view botNameArg)
     {
@@ -229,7 +229,7 @@ namespace
         return true;
     }
 
-    // Force demotion on demand -- same action Hs_RunIdentityDailySweep's
+    // Force demotion on demand: same action Hs_RunIdentityDailySweep's
     // dormancy check takes automatically, without waiting kHsCardDormancyDays.
     bool HandleHearthsideDemote(ChatHandler* handler, std::string_view botNameArg)
     {
@@ -267,7 +267,7 @@ namespace
         return true;
     }
 
-    // Pins a bot into the exclude list regardless of card_active -- a raw
+    // Pins a bot into the exclude list regardless of card_active: a raw
     // exclude-vector push, independent of the card/pinned_by_friend
     // machinery. The bot doesn't need an hside_identity row at all.
     bool HandleHearthsidePin(ChatHandler* handler, std::string_view botNameArg)
@@ -301,7 +301,7 @@ namespace
     }
 
     // Comma-separated list of every currently-loaded archetype's enum_name,
-    // for the error message below -- built from the live table so it never
+    // for the error message below. Built from the live table so it never
     // drifts from what hside_archetype actually has loaded.
     std::string ListLoadedArchetypeNames()
     {
@@ -316,8 +316,8 @@ namespace
     }
 
     // Pins a bot to one specific, already-existing archetype, bypassing
-    // Hs_ArchetypeForBot's normal GUID-weighted draw -- e.g. to test how an
-    // archetype reads without waiting for a bot to draw it naturally.
+    // Hs_ArchetypeForBot's normal GUID-weighted draw (e.g. to test how an
+    // archetype reads without waiting for a bot to draw it naturally).
     // `reset` clears the pin and returns the bot to the normal draw.
     bool HandleHearthsideArchetype(ChatHandler* handler, std::string_view botNameArg, std::string_view archetypeArg)
     {
@@ -369,9 +369,9 @@ namespace
     // channels this module speaks on, which live Channel instance does the
     // invoking character actually share with bots.
     //
-    // Global channels are not one channel each -- General/LocalDefense are
+    // Global channels are not one channel each: General/LocalDefense are
     // one Channel object per zone, Trade/GuildRecruitment one per "City"
-    // label -- and every producer here resolves its delivery target from the
+    // label, and every producer here resolves its delivery target from the
     // *speaking bot's* zone (Hs_ResolveChannelForDelivery, hs_queue.cpp).
     // A bot musing in "General - Elwynn Forest" is logged as delivered, is
     // written to hside_chat_log, and is completely inaudible to a player
@@ -422,13 +422,13 @@ namespace
             }
 
             // Resolved through the same function delivery uses, from the
-            // caller rather than from a bot -- so a name this module builds
+            // caller rather than from a bot, so a name this module builds
             // that no channel answers to shows up here as "resolves to no
             // live channel" rather than as silence. That is exactly how the
             // AreaID 3459 bug was caught: Trade printed no instance and no
             // bots while the caller was plainly sitting in "Trade - City".
             // The "you are in it" flag stays reported rather than assumed for
-            // the same reason -- ChannelMgr::GetChannel is a name lookup and
+            // the same reason: ChannelMgr::GetChannel is a name lookup and
             // does not test membership.
             Channel* mine = Hs_ResolveChannelForDelivery(player, kind);
 

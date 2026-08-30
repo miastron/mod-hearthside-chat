@@ -5,7 +5,7 @@
 #include <vector>
 
 // The generator's validation gate, shared by the idle-time bucket-filler
-// (hs_generator.cpp) and `.hearthside capture` (hs_command.cpp) -- no
+// (hs_generator.cpp) and `.hearthside capture` (hs_command.cpp): no
 // automatic harvesting, both paths reuse this same gate. Pure string/logic
 // checks only, no AzerothCore dependency or DB access, so this is
 // standalone-testable, same pattern as hs_reflex.cpp/hs_grounded.cpp.
@@ -20,16 +20,16 @@ struct HsGenVerdict
 
 // Quality gate (cheap regex checks): length, markdown/emoji/quote
 // characters, modern slang, and wrong point of view (reads as a directed
-// question rather than commentary -- none of this module's seeded
+// question rather than commentary; none of this module's seeded
 // categories are openers). `allowQuestions` lets a caller opt out of just
-// the question check -- scripted bot-to-bot turns are natural
+// the question check: scripted bot-to-bot turns are natural
 // back-and-forth dialogue and legitimately include questions, unlike every
 // corpus category this gate was built for.
 HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions = false);
 
 // Placeholder discipline: if any of `existingRows` (the bucket's
-// hand-authored exemplars) uses a placeholder, `candidate` must use one too
-// -- and any placeholder it does use must be recognized. Recognizes the
+// hand-authored exemplars) uses a placeholder, `candidate` must use one too,
+// and any placeholder it does use must be recognized. Recognizes the
 // universal placeholders always; `categoryCardGated` widens the recognized
 // set to include the card-only ones (%main_focus etc), so a card-gated
 // category won't need this file touched again later.
@@ -42,7 +42,7 @@ HsGenVerdict Hs_PlaceholderDiscipline(const std::string& candidate,
 // the first near-duplicate found is the reason.
 HsGenVerdict Hs_DedupCheck(const std::string& candidate, const std::vector<std::string>& existingRows);
 
-// Scripted bot-to-bot dialogue's own placeholder discipline -- a smaller,
+// Scripted bot-to-bot dialogue's own placeholder discipline, a smaller,
 // separate gate from Hs_PlaceholderDiscipline above, since scripts have no
 // `existingRows` exemplar set to key off of and use their own token
 // vocabulary (the %my_*/%other_* personal facts, resolved at delivery time
@@ -53,7 +53,7 @@ HsGenVerdict Hs_DedupCheck(const std::string& candidate, const std::vector<std::
 HsGenVerdict Hs_ScriptPlaceholderDiscipline(const std::string& candidate);
 
 // Runs all three gates in cost order (quality, placeholder, dedup) and stops
-// at the first failure -- what both callers actually call.
+// at the first failure: what both callers actually call.
 HsGenVerdict Hs_EvaluateCandidate(const std::string& candidate,
                                    const std::vector<std::string>& existingRows,
                                    bool categoryCardGated);

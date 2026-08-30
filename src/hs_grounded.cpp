@@ -22,7 +22,7 @@ namespace
         return x;
     }
 
-    // hash(botGuid, message text) -- seeded per message rather than per
+    // hash(botGuid, message text). Seeded per message rather than per
     // bot, same idiom as hs_reflex.cpp's SeedForMessage (Plain family).
     uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
     {
@@ -74,7 +74,7 @@ namespace
         return s;
     }
 
-    // Iterative two-row Levenshtein distance -- no recursion, no library.
+    // Iterative two-row Levenshtein distance, no recursion, no library.
     // Only ever called on short chat phrases (a handful of words), so the
     // O(len(a) * len(b)) cost is negligible; Hs_MatchGroundedQuestion also
     // skips a candidate outright when its length differs from the trigger

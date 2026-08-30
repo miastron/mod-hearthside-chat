@@ -3,19 +3,19 @@
 -- §4.11's own text ("weight is per-archetype config so it can be retuned
 -- without touching bots") and the code, which had never actually made it
 -- configurable. Loaded once into memory at startup by
--- hs_archetype_store.cpp's Hs_LoadArchetypesFromDb() -- `.reload config`
+-- hs_archetype_store.cpp's Hs_LoadArchetypesFromDb(): `.reload config`
 -- re-reads it too. enum_name must match hs_archetype.cpp's kEnumNames
 -- exactly; the thirteen rows below are that fixed set, values from PLAN.md's
 -- archetype table rebalanced 2026-08-21 (CASUAL narrowed from 28 to 13,
 -- the rest widened a little, two new TROLL entries added), then twice more
--- on 2026-08-24: DISTRACTED and LONE_WOLF were both dropped -- "half-present"
+-- on 2026-08-24: DISTRACTED and LONE_WOLF were both dropped: "half-present"
 -- and "answers reluctantly" are per-reply behaviors every personality should
--- show occasionally, not personalities of their own -- and their combined
+-- show occasionally, not personalities of their own: and their combined
 -- weight of 22 was redistributed across the remaining rows (largest share to
 -- CASUAL and SOCIALITE, the two archetypes closest in spirit to what was
 -- removed). No `updates/` delta was needed for either drop: the test realm's
 -- character DB was wiped before this edit landed, so `base/` alone reaches
--- it fresh on the next boot -- see CLAUDE.md's `base/`-vs-`updates/` section
+-- it fresh on the next boot: see CLAUDE.md's `base/`-vs-`updates/` section
 -- if a *populated* realm ever needs this same change applied as a delta.
 --
 -- talks_about, care, verbosity_cap, spawn_weight, min_level, max_level carry
@@ -24,7 +24,7 @@
 -- distracted_chance replaced reply_chance outright on 2026-08-24 (same edit
 -- that dropped DISTRACTED/LONE_WOLF above). reply_chance modelled "this
 -- personality often doesn't answer," which is true of a real player but reads
--- as being ignored -- or as a broken module -- on a realm that is almost
+-- as being ignored: or as a broken module: on a realm that is almost
 -- entirely bots; every row had already been raised to 1.00 for live testing,
 -- making the arbiter's roll a no-op gate. The replacement expresses the same
 -- half-present trait as a *late* reply instead of a missing one: on a hit,
@@ -37,22 +37,22 @@
 -- (0 none, 1 light, 2 vulgar) is new: TROLL_MILD/TROLL_AGGRESSIVE only,
 -- consumed by hs_archetype.cpp's Hs_ArchetypePromptLine to append a
 -- profanity directive. Was scoped to "never at the real person you're
--- talking to" originally; that scoping was dropped 2026-08-24 -- see
--- Claude/PLAN-TUNING.md §3 -- profanity may now be aimed at the listener,
+-- talking to" originally; that scoping was dropped 2026-08-24: see
+-- Claude/PLAN-TUNING.md §3: profanity may now be aimed at the listener,
 -- gated only by profanity_level's intensity.
 
 CREATE TABLE IF NOT EXISTS `hside_archetype` (
-  `enum_name`              VARCHAR(32) NOT NULL COMMENT 'must match hs_archetype.cpp''s fixed enum -- unrecognized names are logged and ignored',
+  `enum_name`              VARCHAR(32) NOT NULL COMMENT 'must match hs_archetype.cpp''s fixed enum; unrecognized names are logged and ignored',
   `talks_about`            VARCHAR(255) NOT NULL COMMENT 'PLAN.md §4.11 "Talks about" column, verbatim',
   `care`                   FLOAT NOT NULL COMMENT '§4.11 style-pass baseline, 0.0-1.0, before combat offset/GUID jitter',
-  `distracted_chance`      FLOAT NOT NULL COMMENT '0.0-1.0 -- per-reply odds of a "sorry, was afk" line before the real reply (hs_queue.cpp); 0.0 disables for this archetype',
-  `verbosity_cap`          SMALLINT UNSIGNED NOT NULL COMMENT 'tokens -- a GPU budget, not a hard chop (§4.11)',
+  `distracted_chance`      FLOAT NOT NULL COMMENT '0.0-1.0, per-reply odds of a "sorry, was afk" line before the real reply (hs_queue.cpp); 0.0 disables for this archetype',
+  `verbosity_cap`          SMALLINT UNSIGNED NOT NULL COMMENT 'tokens: a GPU budget, not a hard chop (§4.11)',
   `spawn_weight`           SMALLINT UNSIGNED NOT NULL COMMENT 'out of 100 across all thirteen rows',
   `has_abbrev_override`    TINYINT(1) NOT NULL DEFAULT 0,
   `abbrev_override_chance` FLOAT NOT NULL DEFAULT 0.0 COMMENT 'meaningful only when has_abbrev_override = 1',
-  `min_level`              TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '§4.13 eligibility -- 0 = no lower bound',
+  `min_level`              TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '§4.13 eligibility: 0 = no lower bound',
   `max_level`              TINYINT UNSIGNED NOT NULL DEFAULT 255 COMMENT '255 = no upper bound',
-  `profanity_level`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0 none, 1 light (damn/hell/crap-tier), 2 vulgar -- TROLL_MILD/TROLL_AGGRESSIVE only',
+  `profanity_level`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0 none, 1 light (damn/hell/crap-tier), 2 vulgar, TROLL_MILD/TROLL_AGGRESSIVE only',
   PRIMARY KEY (`enum_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

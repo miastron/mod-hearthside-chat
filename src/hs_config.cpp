@@ -20,7 +20,7 @@ uint32_t     g_HsLLMTimeoutSeconds = 20;
 uint32_t     g_HsLLMMaxTokens      = 60;
 std::string g_HsLLMTemplate = "llama3";
 
-// A "player, not character" frame -- avoids the terse "Hmph."-collapse
+// A "player, not character" frame, avoids the terse "Hmph."-collapse
 // failure mode seen with an in-fiction frame. This is a placeholder
 // single-sentence frame; the fuller shared-prefix baseline persona +
 // few-shot register examples live elsewhere.
@@ -47,7 +47,7 @@ std::string g_HsExcludeNames = "";
 namespace
 {
     // Guards every std::string global in this file against the `.reload
-    // config` rewrite -- see hs_config.h's "Reading the std::string globals
+    // config` rewrite. See hs_config.h's "Reading the std::string globals
     // from a thread that is not the world thread" for why a stale read is
     // not the failure mode and a freed buffer is. Held for the whole of
     // LoadHearthsideChatConfig (which only touches sConfigMgr and these
@@ -124,7 +124,7 @@ uint32_t g_HsEventBucketBurstCapacity    = 4;
 // unlike an event reaction none of them fires on anything that happened. Six
 // a minute realm-wide is roughly one unprompted line every ten seconds
 // somewhere on the realm, with two bankable for a burst. Starting guesses,
-// not measurements -- and per hs_config.h's asymmetry note, the direction to
+// not measurements. Per hs_config.h's asymmetry note, the direction to
 // tune this from live evidence is up, never down.
 uint32_t g_HsAmbientBucketRepliesPerMinute = 6;
 uint32_t g_HsAmbientBucketBurstCapacity    = 2;
@@ -144,7 +144,7 @@ uint32_t g_HsAmbientSayFireChancePercent      = 60;
 uint32_t g_HsOpenerFireChancePercent          = 60;
 uint32_t g_HsScriptProximityFireChancePercent = 20;
 
-// Starting guesses, not measurements -- the same footing hs_script.cpp's
+// Starting guesses, not measurements, the same footing hs_script.cpp's
 // kScanFireChancePercent is on. 55% decaying at 60% gives roughly a 1.4-hop
 // average chain (0.55 + 0.55*0.33 + 0.55*0.20 over the three permitted
 // depths), which is a short exchange rather than a monologue.
@@ -288,7 +288,7 @@ void LoadHearthsideChatConfig()
 
     // Normalized here rather than at the draw site: hs_queue.cpp feeds these
     // straight to urand(), whose underlying uniform_int_distribution is
-    // undefined when min > max -- an inverted pair in a hand-edited conf
+    // undefined when min > max. An inverted pair in a hand-edited conf
     // would be a crash, not a misbehavior.
     if (g_HsDistractedMinDelaySeconds > g_HsDistractedMaxDelaySeconds)
     {
@@ -329,7 +329,7 @@ void LoadHearthsideChatConfig()
 
     // A decay at or above 100% would flatten the taper into a flat chance (or
     // grow it), turning MaxDepth from a backstop into the only thing ending a
-    // chain -- clamped rather than honoured, since that is never what an
+    // chain. Clamped rather than honoured, since that is never what an
     // operator raising this key means.
     if (g_HsBotChainDecayPercent > 99)
         g_HsBotChainDecayPercent = 99;

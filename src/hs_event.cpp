@@ -16,7 +16,7 @@
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus -- rpgInfo.GetStatus()
+#include "PlayerbotAIConfig.h" // NewRpgStatus, rpgInfo.GetStatus()
 #include "PlayerbotMgr.h"
 #include "SharedDefines.h"
 
@@ -72,7 +72,7 @@ namespace
     }
 
     // ---- Why no trigger below names a zone ---------------------------------
-    // PLAN-ARBITER.md §6 originally called for a bracketed "[Elwynn Forest] ..."
+    // Claude/archive/PLAN-ARBITER.md §6 originally called for a bracketed "[Elwynn Forest] ..."
     // state line on every non-death trigger. Dropped 2026-08-24 (operator
     // decision) for three reasons, in order of weight:
     //
@@ -83,28 +83,28 @@ namespace
     //    twice.
     // 2. It is the one detail no reaction is ever *about*. Nobody reacts to a
     //    ding because of the zone, so the token is pure surface area for the
-    //    model to invent around -- and a zone name is the highest-risk kind,
+    //    model to invent around, and a zone name is the highest-risk kind,
     //    since a model with any WoW pretraining can volunteer Goldshire or
     //    Hogger off "Elwynn Forest", none of it stated and some of it wrong
     //    for the situation. This is §7 rule 1's reasoning ("write to the
     //    ignorance"), which the death triggers already applied; it holds
     //    everywhere, not only for deaths.
     // 3. No bracket in the user slot means no bracket syntax for the model to
-    //    echo back into a reply -- the risk lint_dataset.py's ROLEPLAY guard
+    //    echo back into a reply, the risk lint_dataset.py's ROLEPLAY guard
     //    was widened to catch. That guard stays as belt-and-braces.
     //
     // Player and item names are deliberately NOT covered by this and stay in
     // the triggers below: the reaction *is* the name ("stay down, grimtusk",
     // "gz faeltha"), stripping the addressee would force the model to guess
     // one, and unlike a zone they are runtime-substituted proper nouns it has
-    // no priors about -- all it can do is repeat them.
+    // no priors about: all it can do is repeat them.
 
     // One actor the fire site is offering to the arbiter: the bot, how
     // involved it is, which event type its *own* affinity resolves against,
     // and the trigger text to send if it is the one selected. Keeping the
     // trigger per-actor is what lets a duel end arbitrate once over
     // {winner, loser} and still say the right thing to whichever side wins
-    // the draw (PLAN-ARBITER.md §2).
+    // the draw (Claude/archive/PLAN-ARBITER.md §2).
     struct HsEventActor
     {
         Player*            bot;
@@ -117,7 +117,7 @@ namespace
     {
         if (!bot || !IsBot(bot) || !bot->IsInWorld())
             return false;
-        // HearthsideChat.ExcludeNames -- never spoken through, no tier at
+        // HearthsideChat.ExcludeNames: never spoken through, no tier at
         // all, same rule every chat surface applies.
         if (Hs_IsExcludedBotName(bot->GetName()))
             return false;
@@ -129,7 +129,7 @@ namespace
     // The one place every trigger converges: ceiling, event budget,
     // candidate assembly, arbitration, dispatch.
     //
-    // `origin` is whoever the event happened around -- the player who died,
+    // `origin` is whoever the event happened around: the player who died,
     // the one who dinged, the duel opponent. It becomes the request's
     // "sender", which is what the style pass protects from typo injection
     // and what proximity is measured from. Nothing is scored against it:
@@ -142,8 +142,8 @@ namespace
             return;
 
         // A ceiling is permission, not budget. Events have no corpus
-        // fallback -- a canned line reacting to a specific death or roll
-        // would have to be generic enough to be wrong most of the time -- so
+        // fallback: a canned line reacting to a specific death or roll
+        // would have to be generic enough to be wrong most of the time, so
         // anything below inference is silence, not a downgrade.
         HsTier ceiling = HsParseTier(g_HsMaxTierEvents);
         if (!HsTierAllows(ceiling, HsTier::Inference))
@@ -154,7 +154,7 @@ namespace
         // budget is already gone. This bucket is deliberately separate from
         // the tier-2 reply bucket: unbudgeted ambient reactions would
         // otherwise starve replies to players who actually spoke, which is
-        // the thing players notice (PLAN-ARBITER.md §8).
+        // the thing players notice (Claude/archive/PLAN-ARBITER.md §8).
         if (!Hs_EventBucketTake())
             return;
 
@@ -215,7 +215,7 @@ namespace
         }
     }
 
-    // Party or raid, chosen by the group's own shape -- PlayerbotAI::SayToParty
+    // Party or raid, chosen by the group's own shape: PlayerbotAI::SayToParty
     // and ::SayToRaid are different calls, so this is a delivery fact, not a
     // cosmetic one (hs_queue.h).
     HsReplyChannel GroupChannelFor(Group* group)
@@ -277,11 +277,11 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
 
         if (!anyoneAlive)
         {
-            // Second person for every member -- a wipe happened to all of
+            // Second person for every member: a wipe happened to all of
             // them, so there is no witnessed-from-outside phrasing to pick.
             // No zone, no killer, no combat-state clause: death triggers
             // stay bare so there is nothing for the model to invent from
-            // (PLAN-ARBITER.md §7 rule 1).
+            // (Claude/archive/PLAN-ARBITER.md §7 rule 1).
             for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
             {
                 Player* member = itr->GetSource();
@@ -307,7 +307,7 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
         }
 
         // A real player in the group died. Candidates are the group's bots,
-        // who watched it happen -- third person, naming only the fact the
+        // who watched it happen: third person, naming only the fact the
         // trigger states.
         std::string trigger = std::string(player->GetName()) + ", in your group, has just been killed.";
         for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
@@ -321,8 +321,8 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
         return;
     }
 
-    // Ungrouped. Only a bot's own solo death is a trigger -- a stranger
-    // dying nearby is not one of PLAN-ARBITER.md §5's sixteen.
+    // Ungrouped. Only a bot's own solo death is a trigger: a stranger
+    // dying nearby is not one of Claude/archive/PLAN-ARBITER.md §5's sixteen.
     if (!IsBot(player) || !EligibleBot(player))
         return;
 
@@ -339,7 +339,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     // The hook fires on any change; a GM down-level is not a ding. There is
     // no way to tell an organic ding from a RandomPlayerbotMgr bracket
     // relevel through this signature, and that noise is accepted
-    // (PLAN-ARBITER.md §3).
+    // (Claude/archive/PLAN-ARBITER.md §3).
     uint8 newLevel = player->GetLevel();
     if (newLevel <= oldlevel)
     {
@@ -348,7 +348,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
         // place, keeping its GUID and name. Nothing about the character it
         // was survives that, so its conversation history stops being useful
         // prior-turn context and starts being wrong. This hook is the only
-        // signal that covers every bot -- hside_identity's own retirement
+        // signal that covers every bot: hside_identity's own retirement
         // sweep only walks carded rows.
         if (newLevel < oldlevel && IsBot(player))
             Hs_ForgetBotHistory(player->GetGUID().GetRawValue());
@@ -358,7 +358,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     std::string levelText = std::to_string(static_cast<uint32_t>(newLevel));
     std::vector<HsEventActor> actors;
 
-    // The one who dinged speaks in second person, everyone else in third --
+    // The one who dinged speaks in second person, everyone else in third:
     // one arbitration over the combined pool, each side carrying its own
     // trigger and its own affinity type (the same shape the duel end uses).
     if (IsBot(player) && EligibleBot(player))
@@ -441,9 +441,9 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
             "You have just won the roll for " + itemName + "." });
     }
 
-    // Only bots that actually rolled on it lost anything -- a bot that
+    // Only bots that actually rolled on it lost anything. A bot that
     // passed has nothing to react to, and treating it as a candidate is the
-    // kind of state the trigger never established (PLAN-ARBITER.md §7
+    // kind of state the trigger never established (Claude/archive/PLAN-ARBITER.md §7
     // rule 2).
     std::string lostTrigger = std::string(player->GetName()) +
         " has just won the roll for " + itemName + ".";
@@ -480,7 +480,7 @@ void HsEventDuelHandler::OnPlayerDuelStart(Player* player1, Player* player2)
     addSide(player1, player2);
     addSide(player2, player1);
 
-    // The two participants are the only valid speakers -- a bystander
+    // The two participants are the only valid speakers: a bystander
     // commenting on someone else's duel is not one of the sixteen triggers.
     FireEvent(HsEventType::DuelStart, player1, actors, HsReplyChannel::Say);
 }
@@ -496,9 +496,9 @@ void HsEventDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelComp
 
     // One pass over {winner, loser}, each carrying its own outcome. Which
     // trigger text reaches Hs_CallLLM is therefore decided by which side the
-    // arbiter picks, not fixed here -- and each side's affinity resolves
+    // arbiter picks, not fixed here, and each side's affinity resolves
     // against its own event type, so an archetype can be eager to gloat and
-    // reluctant to admit a loss (PLAN-ARBITER.md §2).
+    // reluctant to admit a loss (Claude/archive/PLAN-ARBITER.md §2).
     if (EligibleBot(winner))
     {
         actors.push_back({ winner, HsEventInvolvement::Subject, HsEventType::DuelWon,

@@ -12,7 +12,7 @@
 namespace
 {
     // Same fixed enum-name list hs_archetype.cpp uses internally to build
-    // its safety-default table -- duplicated here rather than exposed from
+    // its safety-default table, duplicated here rather than exposed from
     // that file, since hs_archetype.h/.cpp stay dependency-free on purpose
     // (pure logic, standalone-testable) and this list is only needed by the
     // one function in this file that matches DB rows to enum slots.

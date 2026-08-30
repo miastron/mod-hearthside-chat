@@ -11,8 +11,8 @@
 //
 // Disabled by default (HearthsideChat.HttpServerPort = 0). A bind failure
 // (port in use, bad address) or a missing HttpServerPrivateKey logs and
-// leaves the server off -- the rest of the module continues normally
-// either way.
+// leaves the server off. The rest of the module continues normally either
+// way.
 
 void Hs_HttpServerStart();
 void Hs_HttpServerStop();

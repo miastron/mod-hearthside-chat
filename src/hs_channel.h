@@ -11,9 +11,9 @@
 // trigger for hs_style.h's Trade `care` offset), and candidate-set ordering
 // for the six real channels mod-playerbots joins every bot to unconditionally
 // (Trade, General, LookingForGroup, GuildRecruitment, LocalDefense,
-// WorldDefense -- trap 20).
+// WorldDefense, trap 20).
 //
-// Pure logic, no AzerothCore dependency -- split like hs_topic_gate.h/
+// Pure logic, no AzerothCore dependency, split like hs_topic_gate.h/
 // hs_archetype.h so it's standalone-testable. hs_handler.cpp's Channel*
 // overload of OnPlayerCanUseChat is the AC-dependent caller: it resolves a
 // live Channel* to an HsChannelKind (via Channel::GetChannelId()/GetName(),
@@ -45,14 +45,14 @@ struct HsChannelPolicy
 // Replaces the whole in-memory per-channel policy table. Called once at
 // startup (and again on `.reload config`) by hs_config.cpp's
 // LoadHearthsideChatConfig, after parsing the 21 HearthsideChat.Channel.*
-// keys -- same split as Hs_SetArchetypeTable (hs_archetype.h).
+// keys, same split as Hs_SetArchetypeTable (hs_archetype.h).
 void Hs_SetChannelPolicyTable(const HsChannelPolicy (&table)[kHsChannelKindCount]);
 
 HsChannelPolicy Hs_ChannelPolicyFor(HsChannelKind kind);
 
-// Case-insensitive WTS/WTB/WTT word match (not a substring match -- a name
+// Case-insensitive WTS/WTB/WTT word match (not a substring match: a name
 // or item link containing "wts" mid-word doesn't count). This is the only
-// signal the Trade `care` offset keys off (hs_style.h) -- deliberately
+// signal the Trade `care` offset keys off (hs_style.h), deliberately
 // narrower than "any Trade channel activity", per operator preference.
 bool Hs_IsWtsWtb(const std::string& text);
 
@@ -67,8 +67,8 @@ struct HsChannelCandidate
 // `maxCandidates`. Deterministic given `rngSeed` so a test can assert exact
 // output; the caller varies the seed per triggering message (e.g. from the
 // speaking player's GUID) so results aren't identical message to message.
-// This is the "sampled, never enumerated" half of §4.17's design (trap 21)
-// -- candidates beyond the cap never reach Hs_ArbitrateReplies at all.
+// This is the "sampled, never enumerated" half of §4.17's design (trap 21):
+// candidates beyond the cap never reach Hs_ArbitrateReplies at all.
 std::vector<HsChannelCandidate> Hs_OrderChannelCandidates(
     std::vector<HsChannelCandidate> candidates,
     uint32_t speakerZoneId,

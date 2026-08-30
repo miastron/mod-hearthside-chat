@@ -6,11 +6,11 @@
 
 // GM commands mirror the read half so an operator in-world never depends on
 // a frontend existing. `.hearthside status` works with no HTTP server
-// running at all; the mutating subcommands (promote/demote/retire/pin/
-// unpin/evict-run) are the same actions the HTTP control API
-// (hs_http_server.h) exposes, reachable from the console even if
-// HttpServerPort is 0. `archetype` (pin/reset a bot's drawn archetype) is
-// this module's own, with no HTTP control API counterpart.
+// running; the mutating subcommands (promote/demote/retire/pin/unpin/
+// evict-run) are the same actions the HTTP control API (hs_http_server.h)
+// exposes, reachable from the console even if HttpServerPort is 0.
+// `archetype` (pin/reset a bot's drawn archetype) is this module's own,
+// with no HTTP control API counterpart.
 class HsCommandScript : public CommandScript
 {
 public:

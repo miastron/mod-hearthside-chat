@@ -4,7 +4,7 @@
 -- row per archetype/channel per interval) and don't fit hside_metrics' flat
 -- one-row-per-interval shape. `dimension` is 'archetype' or 'channel';
 -- `dim_key` is the archetype enum name or the channel name
--- (hs_queue.h's Hs_ReplyChannelName -- say/whisper/party/raid/guild).
+-- (hs_queue.h's Hs_ReplyChannelName: say/whisper/party/raid/guild).
 --
 -- Same retention window as hside_metrics (kHsMetricsRetentionDays,
 -- hs_metrics.cpp), pruned on every sample.

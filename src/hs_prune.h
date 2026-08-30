@@ -9,7 +9,7 @@
 // maps.
 //
 // Several subsystems keep a `key -> last time something happened` map that is
-// only ever *read* through a window -- a cooldown, a sighting decay, a
+// only ever *read* through a window: a cooldown, a sighting decay, a
 // proximity streak. Past that window an old entry answers every query exactly
 // as a missing one would, so it is pure retention with no behavioral effect,
 // and on a long-uptime realm it accumulates for the life of the process.

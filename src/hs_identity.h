@@ -1,7 +1,7 @@
 #ifndef MOD_HS_IDENTITY_H
 #define MOD_HS_IDENTITY_H
 
-#include "hs_gen_validate.h" // reuses HsGenVerdict's shape -- same "accepted/reason" contract
+#include "hs_gen_validate.h" // reuses HsGenVerdict's shape: the "accepted/reason" contract
 #include "hs_json.h"
 
 #include <cstdint>
@@ -26,7 +26,7 @@ constexpr uint32_t kHsScoreWeightGuild           = 2;
 constexpr uint32_t kHsScoreWeightSay             = 1;
 constexpr uint32_t kHsScoreWeightDungeonComplete = 2;
 
-// A settled design constant, not an operator knob -- over-promotion has no
+// A settled design constant, not an operator knob: over-promotion has no
 // expensive failure mode, so the bar is kept low.
 constexpr uint32_t kHsPromotionThreshold = 8;
 
@@ -42,13 +42,13 @@ constexpr uint32_t kHsCardDormancyDays       = 30;
 // The card's fact sheet, eight fields. main_focus/played_since/
 // preferred_content/guild_stance are enum-constrained; current_goal/
 // held_opinion are freeform but format-checked only, not validated against
-// acore_world -- the same place-name-risk tradeoff scripted dialogue accepts
-// elsewhere. alt is checked against the real 10-class list; verbal_tic is a
+// acore_world (the same place-name-risk tradeoff scripted dialogue accepts
+// elsewhere). alt is checked against the real 10-class list; verbal_tic is a
 // short literal, empty meaning "none".
 namespace HsCardFacts
 {
     // main_focus has no fixed external value list like played_since/
-    // preferred_content -- this set is authored to be small, unambiguous,
+    // preferred_content; this set is authored to be small, unambiguous,
     // and level-band-gateable.
     extern const char* const kMainFocusValues[];
     extern const size_t      kMainFocusCount;
@@ -59,9 +59,9 @@ namespace HsCardFacts
     extern const char* const kPreferredContentValues[]; // 5-mans | raids | pvp | solo
     extern const size_t      kPreferredContentCount;
 
-    // guild_stance is made a two-value enum (rather than freeform prose)
-    // specifically so "must agree with the bot's actual guild row" is
-    // mechanically checkable rather than requiring sentiment parsing.
+    // guild_stance is a two-value enum, not freeform prose, so "must agree
+    // with the bot's actual guild row" is mechanically checkable instead of
+    // requiring sentiment parsing.
     extern const char* const kGuildStanceValues[]; // guilded | unguilded
     extern const size_t      kGuildStanceCount;
 
@@ -69,11 +69,11 @@ namespace HsCardFacts
     extern const size_t      kClassNameCount;
 }
 
-// True if `value` is main_focus-plausible for `level` -- e.g. raiding/
-// dailies/achievements require the high/endgame band, leveling doesn't fit
-// endgame. Mirrors hs_corpus.h's Hs_LevelBandFor bands (low/mid/high/
-// endgame) without depending on that header, to keep this file's own
-// dependency surface at zero.
+// True if `value` is main_focus-plausible for `level`: raiding/dailies/
+// achievements require the high/endgame band, leveling doesn't fit endgame.
+// Mirrors hs_corpus.h's Hs_LevelBandFor bands (low/mid/high/endgame) without
+// depending on that header, to keep this file's own dependency surface at
+// zero.
 bool Hs_MainFocusPlausibleForLevel(const std::string& value, uint8_t level);
 
 // Runs the whole gate: presence/type of all eight keys, enum membership,
@@ -86,14 +86,14 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
 
 // The two generation prompts. Pure string-building, deliberately minimal
 // wrappers around the archetype's own "talks about" line and the level/
-// guild context the caller already resolved -- not invented biography, same
+// guild context the caller already resolved, not invented biography. Same
 // discipline as hs_archetype.h's Hs_ArchetypePromptLine.
 std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout);
 std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint8_t level, bool hasGuild,
                                      const std::string& guildName);
 
 // verbal_tic becomes a protected token in the style pass (hs_style.cpp).
-// Empty return means no tic -- a missing key, wrong type, or empty string
+// Empty return means no tic: a missing key, wrong type, or empty string
 // value all collapse to the same case.
 std::string Hs_ExtractVerbalTic(const hs_json& facts);
 
@@ -103,9 +103,9 @@ std::string Hs_ExtractVerbalTic(const hs_json& facts);
 std::string Hs_CardFactField(const hs_json& facts, const std::string& fieldName);
 
 // The voice-block quality bound: short prose, no markdown/quote characters,
-// non-empty. Deliberately not hs_gen_validate.h's Hs_QualityGate -- that
+// non-empty. Deliberately not hs_gen_validate.h's Hs_QualityGate: that
 // gate's 10-180 char bound and question-shape rejection are tuned for
-// closed corpus lines, not a ~50-token persona paragraph, and conflating the
+// closed corpus lines, not a ~50-token persona paragraph. Conflating the
 // two would tie card validation to unrelated corpus tuning.
 HsGenVerdict Hs_ValidateVoiceBlock(const std::string& text);
 

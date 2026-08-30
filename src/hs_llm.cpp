@@ -53,7 +53,7 @@ namespace
         return s;
     }
 
-    // Chat lines are single-line by construction -- style/format is applied
+    // Chat lines are single-line by construction. Style/format is applied
     // at delivery, never baked into stored or cached text; this just makes
     // the raw model output fit one chat line.
     std::string CollapseNewlines(std::string s)
@@ -64,7 +64,7 @@ namespace
         return s;
     }
 
-    // Fixed, byte-identical for every bot -- teaches register (casual/
+    // Fixed, byte-identical for every bot. Teaches register (casual/
     // short/lowercase) rather than subject matter, which would leak answers
     // into unrelated replies. Deliberately off-topic from anything a bot
     // will actually be asked. Widened from the original 5 (all short
@@ -129,7 +129,7 @@ namespace
     }
 
     // Holds a persistent keep-alive client rather than constructing one per
-    // request. Cached thread_local, keyed by host:port -- safe without
+    // request. Cached thread_local, keyed by host:port. Safe without
     // locking because the worker pool is fixed at exactly one thread, so
     // exactly one thread ever calls this.
     hs_httplib::Client& GetPlainClient(const std::string& host, int port, int timeoutSec)
@@ -197,10 +197,10 @@ namespace
         int port = proto == "https" ? 443 : 80;
         if (m[3].matched)
         {
-            // The regex accepts \d+ of any length, so std::stoi throws
+            // The regex accepts \d+ of any length, so std::stoul throws
             // out_of_range on an overlong digit run. This runs on the
             // queue-worker and generator threads, where an escaping exception
-            // is std::terminate -- and LLM.Url/Generator.LLM.Url are both
+            // is std::terminate. LLM.Url/Generator.LLM.Url are both
             // operator-editable and live-reloading, so one conf typo must
             // degrade to a logged failure, not take the worldserver down.
             try
@@ -279,13 +279,13 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         url += "/completion";
 
         // Native /completion bypasses the server's chat template entirely,
-        // so the module must reproduce the model's dialect itself --
+        // so the module must reproduce the model's dialect itself.
         // cfg.templateKind (HearthsideChat.LLM.Template /
         // Generator.LLM.Template) picks which one, since the reactive and
         // generator endpoints can point at differently-tuned models.
         //
         // Layer order matters for prompt caching: system rules, then the
-        // fixed few-shot block (byte-identical for every bot -- this whole
+        // fixed few-shot block (byte-identical for every bot, this whole
         // prefix is what the server reuses), then the archetype delta
         // (byte-identical across bots sharing an archetype, but not across
         // all bots, so it sits after the truly-shared prefix rather than
@@ -319,7 +319,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
 
             stopSequences = json::array({ "<|im_end|>", "\n" });
         }
-        else // "llama3" (default) -- Llama-3.1-Instruct's header-tagged turns
+        else // "llama3" (default): Llama-3.1-Instruct's header-tagged turns
         {
             prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
             for (auto const& ex : Fewshot())
@@ -350,7 +350,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["stop"]         = stopSequences;
 
         // Only meaningful now that history gives DRY a cross-turn window to
-        // look back through (dry_penalty_last_n: 64, never -1 -- that
+        // look back through (dry_penalty_last_n: 64, never -1, that
         // setting suppressed every continuation outright). Off by default
         // (dryMultiplier 0.0) since it costs ~85ms/reply.
         if (cfg.dryMultiplier > 0.0f)
@@ -393,7 +393,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         if (!cfg.apiKey.empty())
             headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
     }
-    else // "openai" -- also the shape llama-server's /v1/chat/completions accepts
+    else // "openai", also the shape llama-server's /v1/chat/completions accepts
     {
         url += "/chat/completions";
 

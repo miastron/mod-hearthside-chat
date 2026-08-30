@@ -5,7 +5,7 @@
 #include <string>
 
 // §4.13's topic gating for the reactive (LLM) tier: gear, group membership/
-// leadership, in-instance, gold, and zone -- the remaining items from
+// leadership, in-instance, gold, and zone. These are the remaining items from
 // PLAN.md §4.13 with no runtime consumer yet (level is already gated by
 // archetype eligibility, hs_archetype.h; combat by the style pass's `care`
 // offset, hs_style.h).
@@ -18,7 +18,7 @@
 // read-only snapshot re-read fresh every request, since group/instance/
 // gold/zone are as volatile as combat.
 //
-// Pure logic, no AzerothCore dependency -- split like hs_archetype.h/
+// Pure logic, no AzerothCore dependency, split like hs_archetype.h/
 // hs_identity.h so it's standalone-testable. The caller (hs_handler.cpp's
 // TryDispatch, hs_engagement.cpp's TryFireFollowUp) reads live Player*/
 // Group* state into this struct on the world thread, then it travels
@@ -35,7 +35,7 @@ struct HsTopicGateContext
 };
 
 // Builds the fact line appended to personaLine (hs_queue.cpp's WorkerLoop),
-// after the archetype line and RPG status hint. Never empty -- every field
+// after the archetype line and RPG status hint. Never empty: every field
 // in HsTopicGateContext always has a true value to state, positive or
 // negative (unlike RpgStatusHint, which omits a line for a status too
 // generic to be worth stating).

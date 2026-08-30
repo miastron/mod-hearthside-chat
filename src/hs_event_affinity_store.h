@@ -11,7 +11,7 @@
 // retunable without a rebuild. SQL is the source of truth; the event
 // vocabulary and the archetype enum both stay fixed in code.
 //
-// The table authors only exceptions -- any (event_type, archetype) pair
+// The table authors only exceptions: any (event_type, archetype) pair
 // with no row weighs 1.0. An empty or missing table is therefore not an
 // error: every archetype is simply equally likely to react to everything.
 // A row naming an unrecognized event_type is skipped and logged rather than

@@ -9,21 +9,21 @@
 
 // The idle-time generator. Runs on its own background thread, only ever
 // firing a generation call when Hs_IsReactiveIdle() (hs_queue.h) says the
-// reactive tier has nothing queued and isn't mid-request -- generation is
+// reactive tier has nothing queued and isn't mid-request: generation is
 // always the lowest-priority work. Picks one under-quota (category,
 // tag-bucket) at a time (quotas are per bucket, never global), generates one
 // candidate line against it, and runs it through hs_gen_validate.h's gate
 // before inserting.
 //
 // Scoped to the tag axes the seeded content actually uses (none, class,
-// level_band) -- same none/faction/zone scoping as hs_corpus.h's selection
+// level_band), same none/faction/zone scoping as hs_corpus.h's selection
 // path. Priority order across work types: cards first, then the script
 // reserve, then corpus buckets.
 
 void Hs_GeneratorStartup();
 void Hs_GeneratorShutdown();
 
-// Rows successfully inserted since this worldserver process started --
+// Rows successfully inserted since this worldserver process started:
 // read-only counter for `.hearthside status`, since the generator has no
 // other visible signal when nothing is happening in-game.
 uint32_t Hs_GeneratorRowsAddedThisSession();
@@ -45,7 +45,7 @@ std::string Hs_LookupCategoryAxis(const std::string& category);
 // tagValueSql are empty for a tag_axis "none" category; otherwise tagColumn
 // is "class_tag"/"level_band_tag" and tagValueSql is a value already safe to
 // drop into a WHERE clause (an integer string, or a single-quoted band
-// label -- never raw player input).
+// label, never raw player input).
 HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::string& tagColumn,
                                     const std::string& tagValueSql, const std::string& candidateText,
                                     const std::string& model, const std::string& promptVersion);
@@ -55,12 +55,12 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
 // removing the most-exposed rows first (generated_at ASC as the tiebreaker
 // for equal exposure, hand-authored/NULL rows protected last). Runs
 // independently of the generator's enable flag (hs_main.cpp's
-// HsCorpusLifecycleWorldScript) -- a bucket can go over quota via
+// HsCorpusLifecycleWorldScript): a bucket can go over quota via
 // `.hearthside capture` or a lowered RowsPerBucket even while generation
 // itself is off. Returns the number of rows evicted, for `.hearthside
 // status`/debug logging.
 //
-// Mechanical and exposure-only -- a row gone unused for months despite
+// Mechanical and exposure-only: a row gone unused for months despite
 // staying under quota is a separate signal, not this sweep's job (see
 // Hs_RunUnusedRowEvictionSweep below).
 uint32_t Hs_RunEvictionSweep();
@@ -69,25 +69,25 @@ uint32_t Hs_RunEvictionSweep();
 // unpicked for kHsGenUnusedRowEvictionDays isn't earning its place even
 // while its bucket stays under quota, so this runs as a second sweep rather
 // than folding into Hs_RunEvictionSweep's per-bucket overflow logic.
-// Hand-authored rows (generated_at NULL) are exempt -- losing seed content
+// Hand-authored rows (generated_at NULL) are exempt: losing seed content
 // isn't the same failure mode as losing an unwanted generator row. Starting
-// threshold, not yet tuned against a live realm (Claude/ISSUES.md). Returns
-// the number of rows evicted.
+// threshold, not yet tuned against a live realm (`Claude/archive/ISSUES.md`,
+// frozen 2026-08-25). Returns the number of rows evicted.
 uint32_t Hs_RunUnusedRowEvictionSweep();
 
-// Rows evicted since this worldserver process started -- `.hearthside
+// Rows evicted since this worldserver process started: `.hearthside
 // status`, same shape as Hs_GeneratorRowsAddedThisSession.
 uint32_t Hs_RowsEvictedThisSession();
 
 // Bulk-evicts by generation run. A run is identified by its prompt_version
-// tag, so this is a single DELETE keyed on that column -- no category/bucket
+// tag, so this is a single DELETE keyed on that column, no category/bucket
 // scoping needed, since a bad run typically spans many buckets. Returns the
 // number of rows deleted.
 uint32_t Hs_EvictGenerationRun(const std::string& promptVersion);
 
 // The most recent rows for a category (optionally narrowed to one
 // prompt_version), for a GM/operator to eyeball a generation run's actual
-// output before deciding whether to evict it -- the read counterpart to
+// output before deciding whether to evict it: the read counterpart to
 // Hs_EvictGenerationRun. Capped at `limit` rows, most-recent (generated_at,
 // falling back to id) first.
 struct HsCorpusReviewRow

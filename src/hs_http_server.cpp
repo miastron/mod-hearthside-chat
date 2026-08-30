@@ -13,7 +13,7 @@
 #include "hs_script.h"
 #include "hs_metrics.h"
 
-// Same rename-on-include technique as hs_llm.cpp -- two other modules in
+// Same rename-on-include technique as hs_llm.cpp. Two other modules in
 // this workspace already vendor different cpp-httplib versions under the
 // unqualified `httplib` namespace, and this is a third translation unit
 // pulling the header into the same worldserver binary.
@@ -226,10 +226,11 @@ namespace
             SendJson(res, arr);
         });
 
-        // Per-archetype/per-channel reply-vs-silence counts -- its own route
-        // rather than folded into /api/metrics, since it's a different row
-        // shape (one row per dimension/key per interval, not one row per
-        // interval) -- see hs_metrics.h's HsMetricsBreakdownRow doc comment.
+        // Per-archetype/per-channel reply-vs-silence counts get their own
+        // route rather than folding into /api/metrics, since it's a
+        // different row shape (one row per dimension/key per interval, not
+        // one row per interval). See hs_metrics.h's HsMetricsBreakdownRow
+        // doc comment.
         svr.Get("/api/metrics/breakdown", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             uint32_t limit = 200;
@@ -401,7 +402,7 @@ void Hs_HttpServerStop()
         // no-op while that flag is false (httplib.h:10973). A startup
         // immediately followed by a shutdown can land in exactly that
         // window, after which the loop would start against a still-valid
-        // socket and never exit -- turning the join below into a hang.
+        // socket and never exit, turning the join below into a hang.
         // wait_until_ready() closes the window (httplib.h:10967).
         s_server->wait_until_ready();
         s_server->stop();

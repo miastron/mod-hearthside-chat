@@ -43,7 +43,7 @@ namespace
         return out;
     }
 
-    // Shared helper -- used by both the casing section below and
+    // Shared helper, used by both the casing section below and
     // StripRestatingLeadIn (LLM-tell stripping).
     std::string CapitalizeFirstAlpha(std::string s)
     {
@@ -66,7 +66,7 @@ namespace
     const std::unordered_set<std::string>& ProtectedWords()
     {
         // The tier-0 reflex vocabulary, plus tokens the abbreviation
-        // transform below produces (e.g. "ty", "w/") -- already the
+        // transform below produces (e.g. "ty", "w/"), already the
         // compressed form, so typo'ing them would destroy their function.
         // Checked here because they must survive the typo pass that runs
         // immediately after abbreviation.
@@ -79,7 +79,7 @@ namespace
     // ---- protected-span extraction (item links, hyperlinks, slash commands) ----
 
     // Full WoW chat hyperlink markup (|cAARRGGBB|Hitem:...|h[Name]|h|r) must
-    // be masked as one atomic unit -- corrupting the |H control sequence
+    // be masked as one atomic unit: corrupting the |H control sequence
     // breaks a clickable link, not just the visible text. Bare [Name]-only
     // brackets and /commands get the same treatment.
     std::string ExtractProtectedSpans(const std::string& text, std::vector<std::string>& spans)
@@ -113,7 +113,7 @@ namespace
     }
 
     // Masks every case-insensitive occurrence of `phrase` as one atomic
-    // span, same placeholder-marker scheme as ExtractProtectedSpans -- so a
+    // span, same placeholder-marker scheme as ExtractProtectedSpans, so a
     // multi-word verbal tic ("no worries") is protected as a unit rather
     // than needing per-word matching the way ProtectedWords() does for
     // single tokens. No-op if `phrase` is empty (the uncarded/no-tic case).
@@ -156,7 +156,7 @@ namespace
     // archetype (Claude/finetune/matrix). Left unmasked, ApplyCasing's
     // low-care ToLowerAscii deletes every shout from exactly the archetypes
     // whose character is shouting (TROLL_AGGRESSIVE and YOUNG_APPRENTICE at
-    // care 0.25) while sparing the meticulous RAIDER_SERIOUS at 0.90 -- the
+    // care 0.25) while sparing the meticulous RAIDER_SERIOUS at 0.90, the
     // inverse of what the training data teaches. So a caps run is masked as
     // a protected span, the same scheme ExtractProtectedSpans and
     // MaskLiteralPhrase already use, and restored verbatim at the end of the
@@ -168,7 +168,7 @@ namespace
     // single spaces. A run counts as emphasis only if it spans 2+ words
     // ("GET OVER IT", "WE WON") or is a single word of 4+ letters ("YEARS",
     // "FINALLY"). That threshold deliberately leaves the chat acronyms (wts,
-    // dps, lfg, brb, pst) to be lowercased by `care` as before -- a sloppy
+    // dps, lfg, brb, pst) to be lowercased by `care` as before: a sloppy
     // typer writes "dps", not "DPS".
     bool IsUpperAlpha(char c)
     {
@@ -203,7 +203,7 @@ namespace
 
         if (letters < 2)
             return false;
-        // "DPSing", "WTS3" -- a lowercase letter or digit butted up against
+        // "DPSing", "WTS3": a lowercase letter or digit butted up against
         // the run means it was never a shout to begin with.
         if (i < text.size() && std::isalnum(static_cast<unsigned char>(text[i])))
             return false;
@@ -280,7 +280,7 @@ namespace
     // ---- LLM-tell stripping ----
 
     // UTF-8 decode/reencode dropping codepoints in the common emoji blocks.
-    // Malformed sequences are passed through unchanged rather than rejected --
+    // Malformed sequences are passed through unchanged rather than rejected:
     // this is a cheap cosmetic filter, not a validator.
     std::string StripEmoji(const std::string& in)
     {
@@ -342,8 +342,8 @@ namespace
     }
 
     // Replaces every occurrence of `dash`, absorbing any spaces immediately
-    // around it, with a single ", " — so "rough -- you'll" becomes
-    // "rough, you'll" rather than "rough ,  you'll".
+    // around it, with a single ", " (so "rough: you'll" becomes
+    // "rough, you'll" rather than "rough ,  you'll").
     std::string StripDashes(std::string s, const std::string& dash)
     {
         size_t pos = 0;
@@ -362,7 +362,7 @@ namespace
     }
 
     // Detects "restating the question" as an LLM tell. A semantic check
-    // against the trigger text would be unsafe -- a bot directly answering a
+    // against the trigger text would be unsafe: a bot directly answering a
     // factual question ("where's the AH?" -> "the AH is in Orgrimmar")
     // legitimately shares nouns with the question, and a word-overlap
     // heuristic would gut real answers along with the tell. Instead this
@@ -386,7 +386,7 @@ namespace
 
             // The restated question ends, and the real answer begins, at
             // the next clause boundary. If none turns up nearby this
-            // probably isn't the tell after all -- leave the text alone
+            // probably isn't the tell after all; leave the text alone
             // rather than guess where to cut.
             size_t searchFrom = leadIn.size();
             size_t searchLimit = std::min(text.size(), searchFrom + 100);
@@ -408,11 +408,77 @@ namespace
         return text;
     }
 
-    // Strips known LLM tells: em dash, leading "Ah,", emoji, restating the
-    // question. All four are literal and mechanical.
-    std::string StripLLMTells(const std::string& text)
+    // Strips a turn label the model prefixed onto its own reply: "A: yeah",
+    // "Assistant: sure", "Bregan: nah working". Measured 2026-08-26 on the
+    // Qwen3.5-2B fine-tune, where 69% of replies (27 of 39) opened with a
+    // literal "A:", the model continuing the Q:/A: few-shot pattern the
+    // benchmark's `terse` frame inlines as system text. That frame is being
+    // retired for this model (Tests/opener_diversity.py's `tuned`), but the
+    // failure mode is generic to base-model tunes and this is the last place
+    // it can be caught: hs_llm.cpp's StripWrappingQuotes handles quotes only,
+    // and without this a bot says "A: yeah, a few times" in party chat.
+    //
+    // Deliberately conservative: this deletes player-visible text, so it
+    // fires only on a fixed label vocabulary plus the two names actually in
+    // play at the call site. No generic "<Capitalized>:" rule: "tip: use the
+    // tram" is a thing a real player types.
+    bool IsRoleLabel(const std::string& lowerLabel, const std::string& botName,
+                      const std::string& senderName)
     {
-        std::string s = StripEmoji(text);
+        static const std::vector<std::string> kLabels = {
+            "a", "q", "assistant", "user", "system", "player", "bot",
+            "reply", "answer", "response",
+        };
+        for (const std::string& label : kLabels)
+            if (lowerLabel == label)
+                return true;
+        // The bot labelling its line with its own name, or with the name of
+        // the person it is answering, is the same tell wearing a costume.
+        if (!botName.empty() && lowerLabel == ToLowerAscii(botName))
+            return true;
+        if (!senderName.empty() && lowerLabel == ToLowerAscii(senderName))
+            return true;
+        return false;
+    }
+
+    std::string StripRoleLabel(const std::string& text, const std::string& botName,
+                                const std::string& senderName)
+    {
+        size_t colon = text.find(':');
+        // Bounded so this never scans a whole reply looking for a colon that
+        // is really punctuation mid-sentence.
+        if (colon == std::string::npos || colon == 0 || colon > 24)
+            return text;
+
+        std::string label = text.substr(0, colon);
+        while (!label.empty() && label.back() == ' ')
+            label.pop_back();
+        if (label.empty())
+            return text;
+        // A label is one bare word. "no idea:" is a sentence, not a label.
+        if (label.find(' ') != std::string::npos)
+            return text;
+
+        if (!IsRoleLabel(ToLowerAscii(label), botName, senderName))
+            return text;
+
+        std::string rest = text.substr(colon + 1);
+        size_t firstNonSpace = rest.find_first_not_of(" \t");
+        if (firstNonSpace == std::string::npos)
+            return text; // label was the entire reply; leave it to the caller
+        return rest.substr(firstNonSpace);
+    }
+
+    // Strips known LLM tells: role label, dashes (em dash and "--"),
+    // leading "Ah,", emoji, restating the question. All literal and mechanical.
+    std::string StripLLMTells(const std::string& text, const std::string& botName,
+                               const std::string& senderName)
+    {
+        // Before anything else: a role label sits in front of the real
+        // reply, so every tell below would otherwise be measured against
+        // the label rather than the text.
+        std::string s = StripRoleLabel(text, botName, senderName);
+        s = StripEmoji(s);
         s = StripDashes(s, "\xE2\x80\x94"); // em dash, U+2014
         s = StripDashes(s, "--");
 
@@ -544,7 +610,7 @@ namespace
 
     // care table abbreviation levels (heavy/moderate/light/minimal) as a
     // per-matching-word substitution chance. Small curated first-pass
-    // dictionary -- extend it as real replies surface more candidates.
+    // dictionary. Extend it as real replies surface more candidates.
     // `abbrevOverrideChance >= 0` bypasses the band entirely: some
     // archetypes (e.g. TRADER) write heavy abbreviation (WTS, pst)
     // regardless of their care band.
@@ -614,7 +680,7 @@ namespace
 
     const std::unordered_map<char, std::string>& QwertyNeighbors()
     {
-        // Same-row horizontal neighbours only — cheap and defensible, not a
+        // Same-row horizontal neighbours only: cheap and defensible, not a
         // full keyboard-distance model.
         static const std::unordered_map<char, std::string> table = {
             { 'q', "w" }, { 'w', "qe" }, { 'e', "wr" }, { 'r', "et" }, { 't', "ry" },
@@ -719,8 +785,8 @@ namespace
 
     // care table: ~3% / ~1.5% / ~0.5% / 0%, per word. `correctionOut` is
     // cleared, then set to the pre-typo form of the *first* word this pass
-    // actually alters -- the self-correction follow-up needs a single
-    // corrected word -- left empty if no word ends up changed.
+    // actually alters (the self-correction follow-up needs a single
+    // corrected word). Left empty if no word ends up changed.
     std::string InjectTypos(const std::string& text, StyleBand band, const std::string& botName,
                              const std::string& senderName, std::mt19937& rng, std::string& correctionOut)
     {
@@ -779,7 +845,7 @@ namespace
 
     uint64_t SeedFor(uint64_t botGuid, const std::string& text)
     {
-        // Not cryptographic -- reproducibility for a given (bot, message)
+        // Not cryptographic; reproducibility for a given (bot, message)
         // pair is all this needs.
         uint64_t h = std::hash<std::string>{}(text);
         h ^= MixBits64(botGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
@@ -792,15 +858,15 @@ namespace
     using TradeClock = std::chrono::steady_clock;
 
     // §4.17: last time each bot witnessed a WTS/WTB Trade-channel message.
-    // Own mutex, separate from every other piece of style-pass state --
+    // Own mutex, separate from every other piece of style-pass state,
     // written from the world thread (hs_handler.cpp's Trade hook) and read
     // from both the world and worker threads (HsStyleContext construction
     // sites), same split as hs_archetype.cpp's override map.
     std::mutex                                    g_TradeSightingMutex;
     std::unordered_map<uint64_t, TradeClock::time_point> g_LastTradeSighting;
 
-    // Linear decay to 0 over two minutes -- a starting guess, same footing
-    // as every other unmeasured constant in this module (Claude/ISSUES.md).
+    // Linear decay to 0 over two minutes, a starting guess on the same
+    // footing as every other unmeasured constant in this module (Claude/archive/ISSUES.md).
     constexpr float                    kTradeCareMaxOffset          = 0.10f;
     constexpr std::chrono::seconds     kTradeSightingWindowSeconds{120};
 }
@@ -814,7 +880,7 @@ void Hs_NoteTradeSighting(uint64_t botGuid)
     // Pure-leak case: Hs_TradeCareOffsetFor below returns 0 for anything past
     // kTradeSightingWindowSeconds, which is exactly what it returns for a
     // missing key, so an expired entry is retention with no effect. Ten
-    // minutes is five times the read window -- far enough clear of it that
+    // minutes is five times the read window, far enough clear of it that
     // this can never drop a sighting that still matters (hs_prune.h).
     HsPrune::PruneStale(g_LastTradeSighting, now,
                         /*staleSeconds=*/600, /*pruneAboveSize=*/512);
@@ -874,7 +940,7 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
     std::string working = ExtractProtectedSpans(text, spans);
     working = MaskLiteralPhrase(working, ctx.verbalTic, spans);
 
-    working = StripLLMTells(working);
+    working = StripLLMTells(working, botName, senderName);
     if (working.empty())
         return { RestoreProtectedSpans(working, spans), "" };
 

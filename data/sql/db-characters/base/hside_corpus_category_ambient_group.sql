@@ -1,4 +1,4 @@
--- PLAN-AMBIENT.md §4: party/raid ambient content -- the three categories
+-- Claude/archive/PLAN-AMBIENT.md §4: party/raid ambient content: the three categories
 -- hs_ambient.cpp's Hs_SelectGroupAmbientLine draws from, plus their seed
 -- rows.
 --
@@ -11,7 +11,7 @@
 -- changed. Re-applying hside_corpus.sql would insert every one of its
 -- existing seed rows a second time: that table has only an AUTO_INCREMENT
 -- PRIMARY KEY and a non-unique idx_name, so nothing would collide and
--- nothing would be skipped -- the corpus would silently double. (This is the
+-- nothing would be skipped: the corpus would silently double. (This is the
 -- same hazard CLAUDE.md records from three separate realm-boot breakages;
 -- the failure shape there was a duplicate-key error, which at least stops
 -- the boot. Silent duplication is worse, because the realm comes up fine and
@@ -54,7 +54,7 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 ('ambient_party_travel',   'none', 0, 'party', 0),
 ('ambient_raid_downtime',  'none', 0, 'raid',  0);
 
--- Text is clean, grammatical prose with no style baked in -- typos,
+-- Text is clean, grammatical prose with no style baked in: typos,
 -- abbreviation and casing are applied at delivery by hs_style.cpp, never
 -- stored (see hside_corpus.sql's header).
 --
@@ -63,7 +63,7 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 -- A plain INSERT in a never-before-hashed file applies exactly once.
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- ambient_party_downtime: between pulls, addressed to the group. Small,
--- low-stakes, and deliberately not asking anything -- an ambient line that
+-- low-stakes, and deliberately not asking anything: an ambient line that
 -- ends in a question invites a reply the bot has no mechanism to follow up
 -- on, which reads worse than saying nothing.
 ('ambient_party_downtime', 'nice pull, that could have gone worse'),
@@ -91,7 +91,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('ambient_party_travel', 'this road goes on forever'),
 
 -- ambient_raid_downtime: larger group, so more anonymous and less 1:1 than
--- the party set -- nobody is addressing anyone in particular, and a line
+-- the party set: nobody is addressing anyone in particular, and a line
 -- that assumes it will be noticed reads wrong at twenty-five people.
 ('ambient_raid_downtime', 'ready here'),
 ('ambient_raid_downtime', 'repairing quick, one moment'),

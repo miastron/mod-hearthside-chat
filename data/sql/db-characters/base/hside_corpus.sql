@@ -1,12 +1,12 @@
 -- The corpus row table: pre-generated chat lines selected by the corpus
 -- tier with no runtime GPU work. enUS only; text_locN stay NULL and are
--- read with COALESCE(text_locN, text). No style baked in here -- text is
+-- read with COALESCE(text_locN, text). No style baked in here: text is
 -- clean, grammatical prose. Typos, abbreviation, and casing are applied at
 -- delivery time by the style pass (hs_style.cpp), never stored.
 --
 -- Seed content matching hside_corpus_category.sql's categories. class_tag
 -- coverage (3 of 11 classes) and card-gated lines beyond the
--- proof-of-concept pair remain a follow-up pass -- the generator grows both
+-- proof-of-concept pair remain a follow-up pass: the generator grows both
 -- over time once seeded.
 
 CREATE TABLE IF NOT EXISTS `hside_corpus` (
@@ -94,7 +94,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_trade_wts', 'have a spare %item_link if anyone''s after one'),
 ('channel_trade_wts', '%item_link up for grabs, pst'),
 -- channel_general_chat: General channel. Resolved per zone, so every reader
--- is standing in the same zone as the speaker -- but one stored row is
+-- is standing in the same zone as the speaker: but one stored row is
 -- replayed in every zone there is, so the text still has to be phrased as a
 -- general statement (not "here"/"this place"), questions, gripes, nothing
 -- checkable
@@ -112,7 +112,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_general_chat', 'never really understood why some zones get so little traffic'),
 -- General opinions/banter with nothing tied to a zone or place. These were
 -- authored for a separate channel_world_chat category; 3.3.5a has no World
--- channel, so they were folded in here rather than discarded -- they already
+-- channel, so they were folded in here rather than discarded: they already
 -- satisfy this category's "true in any zone" rule.
 ('channel_general_chat', 'feels like there''s always something going on somewhere on the server'),
 ('channel_general_chat', 'never gets old finding a new questline to dig into'),
@@ -202,7 +202,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `zone_tag`) VALUES
 INSERT INTO `hside_corpus` (`name`, `text`, `event_id`) VALUES
 -- chat_gripe_general seasonal rows: real AzerothCore game_event ids
 -- (azerothcore-wotlk-pb/data/sql/base/db_world/game_event.sql), unfalsifiable
--- flavor only -- dormant outside the event window via hs_corpus.cpp's
+-- flavor only: dormant outside the event window via hs_corpus.cpp's
 -- EventDormancyWhere
 ('chat_gripe_general', 'this whole zone smells like pumpkin, hallow''s end is really something', 12),
 ('chat_gripe_general', 'been dodging trick-or-treaters all week, hallow''s end never gets old', 12),

@@ -35,11 +35,10 @@ namespace
 {
     using Clock = std::chrono::steady_clock;
 
-    // Opener trigger tuning -- which shared-context events fire openers,
-    // and at what rate before they read as spam -- is a live-realm
-    // judgement, not something to settle in advance, so this is a compiled
-    // constant rather than a config key. 10 minutes is a starting guess,
-    // not a measurement.
+    // Opener trigger tuning (which shared-context events fire openers, and
+    // at what rate before they read as spam) is a live-realm judgement, not
+    // something to settle in advance, so this is a compiled constant rather
+    // than a config key. 10 minutes is a starting guess, not a measurement.
     //
     // The fire chance used to sit here on the same footing. It moved to
     // Openers.FireChancePercent (hs_config.h) when the settled-state gate
@@ -63,7 +62,7 @@ namespace
     }
 
     // HearthsideChat.ExcludeNames keeps a named bot out of this module
-    // entirely -- "no reflex, grounded, corpus, or reactive reply, ever"
+    // entirely: "no reflex, grounded, corpus, or reactive reply, ever"
     // (hs_config.h). An opener is a corpus line the bot speaks unprompted, so
     // the rule has to hold here too; every chat hook in hs_handler.cpp,
     // hs_event.cpp and hs_botchain.cpp already applies it at its own
@@ -79,8 +78,8 @@ namespace
         return IsBot(p) && !Hs_IsExcludedBotName(p->GetName());
     }
 
-    // ---- per (bot, player) opener cooldown -- prevents e.g. a string of
-    // joint kills from firing an opener every single time. ----
+    // Per (bot, player) opener cooldown: prevents a string of joint kills
+    // from firing an opener every single time.
     std::mutex g_OpenerCooldownMutex;
     std::map<std::pair<uint64_t, uint64_t>, Clock::time_point> g_LastOpenerAt;
 
@@ -103,7 +102,7 @@ namespace
         g_LastOpenerAt[{ botGuid, playerGuid }] = now;
 
         // Keyed by (bot, player), so this grows with the *product* of the two
-        // populations rather than either one -- worth pruning even though the
+        // populations rather than either one: worth pruning even though the
         // value is only a timestamp. OpenerCooldownOk reads it purely through
         // kOpenerCooldownSeconds, so an entry four windows old already
         // answers exactly as a missing one does (hs_prune.h).
@@ -112,21 +111,21 @@ namespace
                             /*pruneAboveSize=*/512);
     }
 
-    // ---- fifth trigger: how long each (bot, player) pair has been
-    // continuously observed in range this streak. ----
+    // Fifth trigger: how long each (bot, player) pair has been observed
+    // continuously in range.
     std::mutex g_ProximityMutex;
     std::map<std::pair<uint64_t, uint64_t>, Clock::time_point> g_ProximityStartedAt;
 
     // The one place all five triggers converge: ceiling check, cooldown,
     // chance roll, corpus pick, style pass, delivery. Same "answer without
     // the GPU" shape as hs_handler.cpp's TryReflex/TryGrounded/
-    // TryCorpusFallback -- no bucket, no worker thread, and deliberately no
+    // TryCorpusFallback: no bucket, no worker thread, and deliberately no
     // history or identity write; openers must never feed interaction score
     // or identity state.
     //
     // `channel` is Say for every trigger whose shared moment is a physical
-    // one -- a kill, a rez, a dungeon's last boss, two strangers standing in
-    // the same field -- where the audience is whoever is close enough to see
+    // one (a kill, a rez, a dungeon's last boss, two strangers standing in
+    // the same field), where the audience is whoever is close enough to see
     // what just happened. opener_group_formed is the exception: the moment
     // being remarked on is joining the group itself, its audience is the
     // group, and the joining bot may be nowhere near the player who invited
@@ -140,9 +139,9 @@ namespace
             return;
 
         // Backstop for HearthsideChat.ExcludeNames. Each trigger below
-        // already filters with IsEligibleBot at its own selection site --
-        // it has to, because two of them write an hside_memory row before
-        // calling in here -- but this is the one funnel all five converge
+        // already filters with IsEligibleBot at its own selection site (it
+        // has to, since two of them write an hside_memory row before
+        // calling in here), but this is the one funnel all five converge
         // on, so it is also the one place a future trigger cannot forget.
         if (Hs_IsExcludedBotName(bot->GetName()))
             return;
@@ -167,18 +166,18 @@ namespace
         // grouping itself, it is delivered to party/raid, and a bot that was
         // travelling when the player invited it should still acknowledge the
         // invite. Suppressing that would be the reverse of the problem this
-        // gate solves -- silence where a response is expected.
+        // gate solves: silence where a response is expected.
         if (channel == HsReplyChannel::Say && !Hs_IsBotSettled(bot))
             return;
 
         if (urand(0, 99) >= g_HsOpenerFireChancePercent)
             return;
 
-        // PLAN-AMBIENT.md §2: the shared unprompted-speech budget
+        // Claude/archive/PLAN-AMBIENT.md §2: the shared unprompted-speech budget
         // (hs_queue.h). An opener is one of three producers that speaks
         // without anyone having said anything, so it now spends from the
         // same budget ambient chatter and scripted scenes do rather than
-        // relying only on its own per-pair cooldown -- that cooldown bounds
+        // relying only on its own per-pair cooldown: that cooldown bounds
         // how often *this pair* hears an opener, not how much unprompted
         // speech the realm produces in total.
         //
@@ -195,7 +194,7 @@ namespace
             return;
 
         // Same universal-placeholder pass as hs_handler.cpp's
-        // TryCorpusFallback -- an opener category is ordinary corpus
+        // TryCorpusFallback: an opener category is ordinary corpus
         // content, so a row may carry %zone/%class/%level too. No card pass
         // here, since is_opener categories are never card_gated
         // (Hs_SelectOpenerLine enforces that); a card-only token surviving
@@ -215,7 +214,7 @@ namespace
         styleCtx.inCombat             = bot->IsInCombat();
         styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
         // §4.17: set here for the same reason inCombat is. The sighting is
-        // per-bot and time-decayed, not per-surface -- a bot that just
+        // per-bot and time-decayed, not per-surface, since a bot that just
         // watched a WTS flurry in Trade is keyed up whatever it says next,
         // and an opener is the one HsStyleContext site that used to miss it.
         styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
@@ -230,7 +229,7 @@ namespace
         // is keyed per bot and has no idea an opener just went out. Without
         // this a bot could greet the group and then, seconds later on the next
         // ambient tick, follow it with an unrelated ambient_party_downtime
-        // line -- two unprompted lines from the same bot back to back, which
+        // line: two unprompted lines from the same bot back to back, which
         // is exactly what a player sees as bot spam (hs_ambient.h).
         Hs_MarkAmbientSpoke(botGuid);
 
@@ -249,7 +248,7 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
     bool newIsBot = IsBot(newMember);
 
     // An excluded bot joining is not a greeter and is not the human side
-    // either, so there is nothing to do for this call at all -- and bailing
+    // either, so there is nothing to do for this call at all; bailing
     // here (rather than inside FireOpener) is what keeps the grouped_in_zone
     // memory write below from happening for it.
     if (newIsBot && !IsEligibleBot(newMember))
@@ -284,7 +283,7 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
     if (bot && player)
     {
         // "Grouped in a zone" is a shared-experience memory beat
-        // independent of whether an opener actually fires -- not a player
+        // independent of whether an opener actually fires: not a player
         // utterance, so it's recorded here at the trigger site rather than
         // in hs_queue.cpp's WorkerLoop, same as the dungeon-completion
         // score bump below in HsOpenerEncounterHandler.
@@ -307,7 +306,7 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
 
 void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*killed*/)
 {
-    // Only fires when a bot lands the killing blow -- OnPlayerCreatureKill
+    // Only fires when a bot lands the killing blow: OnPlayerCreatureKill
     // fires once per player who does, not once per player with kill
     // credit, so "jointly" is scoped to this direction rather than a
     // cross-player correlation cache (hs_opener.h).
@@ -330,7 +329,7 @@ void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*kille
 
 void HsOpenerResurrectHandler::OnPlayerResurrect(Player* player, float /*restorePercent*/, bool& /*applySickness*/)
 {
-    // Scoped to the bot-receives-rez direction -- the hook carries no
+    // Scoped to the bot-receives-rez direction: the hook carries no
     // caster/giver reference (hs_opener.h).
     if (!player || !IsEligibleBot(player)) // ExcludeNames: never the speaker
         return;
@@ -367,7 +366,7 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
             continue;
         // IsBot decides which side of the split this member is on;
         // IsEligibleBot decides whether it may be the speaker. An excluded
-        // bot therefore lands in neither slot -- it must not be picked as
+        // bot therefore lands in neither slot: it must not be picked as
         // the greeter, and must not fall through to the `player` branch and
         // be treated as the human the dungeon was run with (which would also
         // write it an hside_memory row below).
@@ -387,7 +386,7 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
     if (bot && player)
     {
         // "Dungeon completed together" is a shared-experience signal
-        // independent of whether an opener fires -- not a player
+        // independent of whether an opener fires: not a player
         // utterance, so it's scored here rather than in hs_queue.cpp's
         // WorkerLoop. One representative bot/player pair; exact
         // multiplicity across a multi-bot group doesn't need to be exact.
@@ -435,7 +434,7 @@ void Hs_ScanProximityOpeners()
             if (!bot->IsAlive() || bot->IsInCombat())
                 continue;
             // A grouped bot is already at this player's side by the
-            // player's own choice -- "we've been standing around a while"
+            // player's own choice: "we've been standing around a while"
             // is not a shared moment worth remarking on when that's just
             // what a party follower does. opener_group_formed already
             // covers the moment grouping itself happens; this trigger is
@@ -456,7 +455,7 @@ void Hs_ScanProximityOpeners()
         Clock::time_point now = Clock::now();
 
         // A pair that dropped out of range (or where either side left/died/
-        // entered combat) loses its streak entirely -- "prolonged" means
+        // entered combat) loses its streak entirely: "prolonged" means
         // continuous, not cumulative.
         for (auto it = g_ProximityStartedAt.begin(); it != g_ProximityStartedAt.end(); )
         {
@@ -478,7 +477,7 @@ void Hs_ScanProximityOpeners()
             if (elapsedSec >= static_cast<int64_t>(kProximityDurationThresholdSeconds))
             {
                 toFire.push_back(pairKey);
-                it->second = now; // restart the streak -- FireOpener's own per-pair cooldown gates repeats from here
+                it->second = now; // restart the streak, FireOpener's own per-pair cooldown gates repeats from here
             }
         }
     }

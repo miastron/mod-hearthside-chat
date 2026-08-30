@@ -4,12 +4,12 @@
 #include "ScriptMgr.h"
 #include <string>
 
-// Chat hooks -- /say and party/raid gather real-player-gated candidates and
+// Chat hooks. /say and party/raid gather real-player-gated candidates and
 // hand them to the arbiter (hs_arbiter.h); whisper and guild are simpler 1:1/
 // membership-scoped surfaces. All route through the tier-ceiling check and
 // admission (hs_queue.h) rather than dispatching an LLM call directly. The
-// Channel* overload (§4.17) is corpus-only -- it never routes through
-// TryDispatch/Hs_TryEnqueue at all, see TryChannelCorpusReply.
+// Channel* overload (§4.17) is corpus-only. It never routes through
+// TryDispatch/Hs_TryEnqueue at all; see TryChannelCorpusReply.
 class HsChatHandler : public PlayerScript
 {
 public:

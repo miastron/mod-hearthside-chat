@@ -1,6 +1,6 @@
 -- typing_base_ms/typing_per_char_ms: per-archetype tier-2 typing-delay
 -- formula (hs_queue.cpp), replacing the flat global
--- HearthsideChat.TypingDelay.BaseMs/PerCharMs (Claude/ISSUES.md). The
+-- HearthsideChat.TypingDelay.BaseMs/PerCharMs (Claude/archive/ISSUES.md). The
 -- operator's TypingDelay.Enable/MaxMs stay the kill switch and ceiling.
 
 ALTER TABLE `hside_archetype`

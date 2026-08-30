@@ -71,7 +71,7 @@ void Hs_RecordMemoryEvent(uint64_t botGuid, uint64_t playerGuid, const std::stri
         "AND occurred_at >= NOW() - INTERVAL {} SECOND LIMIT 1",
         botGuid, playerGuid, eventType, kHsMemoryDedupWindowSeconds);
     if (recent)
-        return; // deduped -- an identical beat already landed within the window
+        return; // deduped: an identical beat already landed within the window
 
     InsertMemoryRow(botGuid, playerGuid, eventType, text);
     EvictOverflow(botGuid, playerGuid);
@@ -137,7 +137,7 @@ void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
         // "We went down together" has to be true of both sides. This hook
         // fires once per death, so the other half of the pair must already be
         // dead for the beat to be a fact rather than a claim the player
-        // watched not happen (§4.13) -- a bot that pulls too much and dies
+        // watched not happen (§4.13): a bot that pulls too much and dies
         // while its human groupmate is standing over the corpse must not
         // record a shared death. hs_event.cpp's wipe detection applies the
         // same IsAlive() test for the same reason. The effect is that the
