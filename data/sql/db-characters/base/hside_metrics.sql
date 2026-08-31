@@ -22,6 +22,15 @@
 -- in hs_metrics.cpp, compiled constants for the same reason every other
 -- unmeasured §6 number in this module has shipped as a placeholder rather
 -- than a config key nobody has grounds to tune yet.
+--
+-- latency_p50/p95/p99_ms and prompt_chars_ring*_mean are §4.19's fuller
+-- metric list (reactive-tier call latency, hs_queue.cpp kMaxLatencySamples;
+-- mean assembled-prompt length by identity ring). ttl_dropped/processed and
+-- bucket_denied/attempted (both _session, cumulative like promotions_session
+-- etc.) are the TTL drop rate and token-bucket saturation counts named in
+-- §4.19's original list but not built until later. Folded straight into
+-- base rather than a same-day updates/ delta: see CLAUDE.md's
+-- `base/`-vs-`updates/` section.
 
 CREATE TABLE IF NOT EXISTS `hside_metrics` (
   `id`                           INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -41,6 +50,16 @@ CREATE TABLE IF NOT EXISTS `hside_metrics` (
   `retirements_session`          INT UNSIGNED NOT NULL,
   `memory_row_count`             INT UNSIGNED NOT NULL,
   `openers_fired_session`        INT UNSIGNED NOT NULL,
+  `latency_p50_ms`               INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'rolling-window reactive-tier call latency, hs_queue.cpp kMaxLatencySamples',
+  `latency_p95_ms`               INT UNSIGNED NOT NULL DEFAULT 0,
+  `latency_p99_ms`               INT UNSIGNED NOT NULL DEFAULT 0,
+  `prompt_chars_ring1_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'mean assembled-prompt length, stranger ring',
+  `prompt_chars_ring2_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'known ring',
+  `prompt_chars_ring3_mean`      INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'carded ring',
+  `ttl_dropped_session`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'requests dropped stale by the worker, hs_queue.cpp WorkerLoop TTL check',
+  `ttl_processed_session`        BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'total requests the worker dequeued (dropped + handled): the drop-rate denominator',
+  `bucket_denied_session`        BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'global tier-2 token-bucket admission attempts that found the bucket empty',
+  `bucket_attempted_session`     BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'total tier-2 token-bucket admission attempts: the saturation-rate denominator',
   PRIMARY KEY (`id`),
   KEY `idx_sampled_at` (`sampled_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

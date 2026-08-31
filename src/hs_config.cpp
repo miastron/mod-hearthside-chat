@@ -25,9 +25,9 @@ std::string g_HsLLMTemplate = "llama3";
 // single-sentence frame; the fuller shared-prefix baseline persona +
 // few-shot register examples live elsewhere.
 std::string g_HsLLMSystemPrompt =
-    "You are an ordinary player in World of Warcraft: Wrath of the Lich King, chatting in game. "
-    "Reply the way a real player types in chat: casual, brief, one short line. "
-    "No roleplay narration, no asterisks, no fantasy dialogue, no mention of being an AI or a game.";
+    "You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. "
+    "No roleplay, no asterisks, no mention of being an AI or a game. If you don't know "
+    "something specific, deflect vaguely instead of making it up.";
 
 // Four lines (2 trigger/reply pairs) per bot-player pair by default;
 // live-tunable without a rebuild.

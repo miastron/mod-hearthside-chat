@@ -145,6 +145,10 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('opener_dungeon_complete', 'that went smoother than i expected.'),
 ('opener_dungeon_complete', 'solid group, that one.'),
 ('opener_dungeon_complete', 'nice, one down.'),
+('opener_prolonged_proximity', 'we keep ending up in the same spot, huh.'),
+('opener_prolonged_proximity', 'small world, running into you out here again.'),
+('opener_prolonged_proximity', 'you sticking around this area too?'),
+('opener_prolonged_proximity', 'guess we had the same idea coming out here.'),
 -- chat_carded_focus: card-gated (%main_focus, %current_goal)
 ('chat_carded_focus', 'still grinding away at %main_focus, honestly'),
 ('chat_carded_focus', 'lately it is all about %current_goal for me'),

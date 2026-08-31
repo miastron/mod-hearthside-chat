@@ -15,7 +15,6 @@
 CREATE TABLE IF NOT EXISTS `hside_identity` (
   `bot_guid`            BIGINT UNSIGNED NOT NULL,
   `archetype`           VARCHAR(64) NOT NULL COMMENT 'snapshot at row creation: deterministic from GUID+level (hs_archetype.h), not re-read from here yet',
-  `style_flags`         INT NOT NULL DEFAULT 0 COMMENT 'reserved: style is already fully deterministic from GUID+archetype (Hs_StyleCareForBot); no consumer reads this column yet',
   `last_known_level`    TINYINT UNSIGNED NOT NULL COMMENT 'snapshot at row creation/last score bump: §4.13 level-reset detection',
   `level_checked_at`    DATETIME NULL DEFAULT NULL,
   `card_voice`          TEXT NULL COMMENT '~50 tok prose, the only card text ever injected into a prompt',

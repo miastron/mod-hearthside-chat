@@ -115,7 +115,7 @@ HearthsideChat.LLM.MaxTokens = 60
 #                  bots as ordinary players, not characters. A fixed
 #                  few-shot example block completes the prefix and is
 #                  hardcoded in hs_llm.cpp, not configurable here.
-HearthsideChat.LLM.SystemPrompt = You are an ordinary player in World of Warcraft: Wrath of the Lich King, chatting in game. Reply the way a real player types in chat: casual, brief, one short line. No roleplay narration, no asterisks, no fantasy dialogue, no mention of being an AI or a game.
+HearthsideChat.LLM.SystemPrompt = You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. No roleplay, no asterisks, no mention of being an AI or a game. If you don't know something specific, deflect vaguely instead of making it up.
 
 # HearthsideChat.LLM.HistoryTurns
 #     Description: Trigger/reply pairs kept per bot-player pair and replayed

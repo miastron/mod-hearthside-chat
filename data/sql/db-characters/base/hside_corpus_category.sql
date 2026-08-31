@@ -26,11 +26,13 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 ('chat_zone_musing',      'zone',       0, NULL, 0),
 ('channel_trade_wts',     'none',       0, 'trade', 0),
 ('channel_general_chat',  'none',       0, 'general', 0),
--- Openers: one per first trigger slice (group formed, mob killed jointly,
--- rez given/received, dungeon completed).
+-- Openers: one per trigger slice (group formed, mob killed jointly, rez
+-- given/received, dungeon completed, prolonged proximity at a shared quest
+-- objective or flight master — hs_engagement.cpp's periodic scan WorldScript).
 ('opener_group_formed',     'none', 0, NULL, 1),
 ('opener_joint_kill',       'none', 0, NULL, 1),
 ('opener_rez',              'none', 0, NULL, 1),
 ('opener_dungeon_complete', 'none', 0, NULL, 1),
+('opener_prolonged_proximity', 'none', 0, NULL, 1),
 -- Card-gated proof-of-concept category (%main_focus, %current_goal placeholders).
 ('chat_carded_focus', 'none', 1, NULL, 0);
