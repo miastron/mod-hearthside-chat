@@ -3,6 +3,8 @@
 #include "Log.h"
 #include "hs_channel.h"
 
+#include <algorithm>
+#include <cctype>
 #include <mutex>
 #include <set>
 #include <sstream>
@@ -64,6 +66,29 @@ namespace
             return "";
         size_t end = s.find_last_not_of(" \t\r\n");
         return s.substr(begin, end - begin + 1);
+    }
+
+    // The four dialects hs_llm.cpp can hand-assemble for ApiType=llamacpp's
+    // native /completion (see HsDialect there). An unrecognised value that
+    // silently renders as llama3 is exactly the failure that produces fluent
+    // garbage or a reply that never stops, and it is invisible in the logs
+    // otherwise -- so it is reported here, once per config load, rather than
+    // per request on the queue worker.
+    std::string NormalizeTemplate(const char* key, const std::string& value)
+    {
+        std::string lowered = value;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (lowered == "llama3" || lowered == "chatml" || lowered == "mistral" || lowered == "gemma")
+            return lowered;
+
+        LOG_ERROR("server.loading",
+            "[HearthsideChat] {} = '{}' is not a chat template this module can render "
+            "(llama3 | chatml | mistral | gemma). Falling back to llama3, which will "
+            "produce garbled or non-terminating replies if the model expects another.",
+            key, value);
+        return "llama3";
     }
 
     void RebuildExcludeNameSet()
@@ -251,7 +276,8 @@ void LoadHearthsideChatConfig()
     g_HsLLMApiKey           = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiKey", "");
     g_HsLLMTimeoutSeconds   = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.TimeoutSeconds", 20);
     g_HsLLMMaxTokens        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.MaxTokens", 60);
-    g_HsLLMTemplate         = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Template", "llama3");
+    g_HsLLMTemplate         = NormalizeTemplate("HearthsideChat.LLM.Template",
+        sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Template", "llama3"));
     g_HsLLMSystemPrompt     = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.SystemPrompt", g_HsLLMSystemPrompt);
     g_HsLLMHistoryTurns     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.HistoryTurns", 2);
     g_HsLLMDryMultiplier    = sConfigMgr->GetOption<float>("HearthsideChat.LLM.DryMultiplier", 0.0f);
@@ -388,7 +414,8 @@ void LoadHearthsideChatConfig()
     g_HsGeneratorLLMApiKey                   = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiKey", "");
     g_HsGeneratorLLMTimeoutSeconds           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.LLM.TimeoutSeconds", 30);
     g_HsGeneratorLLMMaxTokens                = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.LLM.MaxTokens", 60);
-    g_HsGeneratorLLMTemplate                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.Template", "llama3");
+    g_HsGeneratorLLMTemplate                 = NormalizeTemplate("HearthsideChat.Generator.LLM.Template",
+        sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.Template", "llama3"));
     g_HsGeneratorRowsPerBucket               = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.RowsPerBucket", 20);
     g_HsGeneratorPollIntervalSeconds         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.PollIntervalSeconds", 5);
     g_HsGeneratorQuotaSatisfiedBackoffSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds", 300);

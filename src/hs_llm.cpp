@@ -92,6 +92,153 @@ namespace
         return examples;
     }
 
+    // ------------------------------------------------------------------
+    // Chat-markup dialects for apiType=llamacpp's native /completion.
+    //
+    // That endpoint bypasses llama.cpp's own template handling entirely (it
+    // takes raw text), so the module has to reproduce the model's trained
+    // dialect byte for byte. Get it wrong and the model still generates --
+    // it just generates against a prompt shape it never saw, which reads as
+    // fluent garbage, or as a reply that never stops because the stop token
+    // it learned never appears.
+    //
+    // Names match both HearthsideChat.LLM.Template and llama.cpp's own
+    // --chat-template names for the same four formats, so an operator who
+    // knows which flag llama-server needs already knows what to put here.
+    // ------------------------------------------------------------------
+    enum class HsRole { System, User, Assistant };
+
+    enum class HsDialect
+    {
+        Llama3,   // <|start_header_id|>role<|end_header_id|>\n\ncontent<|eot_id|>
+        ChatMl,   // <|im_start|>role\ncontent<|im_end|>\n
+        Mistral,  // [INST] user [/INST] assistant</s>
+        Gemma,    // <start_of_turn>role\ncontent<end_of_turn>\n
+    };
+
+    HsDialect ResolveDialect(const std::string& kind)
+    {
+        if (IEquals(kind, "chatml"))
+            return HsDialect::ChatMl;
+        if (IEquals(kind, "mistral"))
+            return HsDialect::Mistral;
+        if (IEquals(kind, "gemma"))
+            return HsDialect::Gemma;
+        return HsDialect::Llama3;  // also the fallback hs_config.cpp normalises to
+    }
+
+    // Gemma calls the assistant "model"; the other three agree on the names.
+    const char* RoleName(HsDialect dialect, HsRole role)
+    {
+        if (role == HsRole::System)
+            return "system";
+        if (role == HsRole::User)
+            return "user";
+        return dialect == HsDialect::Gemma ? "model" : "assistant";
+    }
+
+    // Mistral and Gemma have no system role at all. Both upstream templates
+    // handle that by folding system content into the following user turn, so
+    // this does the same rather than inventing a system turn those models
+    // never saw. Note what this costs: the archetype delta stops being its
+    // own turn and joins the next user turn, so for these two dialects the
+    // cache-shared prefix ends at the few-shot block.
+    std::vector<std::pair<HsRole, std::string>> FoldSystemTurns(
+        std::vector<std::pair<HsRole, std::string>> turns)
+    {
+        std::vector<std::pair<HsRole, std::string>> folded;
+        std::string pending;
+        for (auto& turn : turns)
+        {
+            if (turn.first == HsRole::System)
+            {
+                pending += (pending.empty() ? "" : "\n\n") + turn.second;
+                continue;
+            }
+            if (turn.first == HsRole::User && !pending.empty())
+            {
+                folded.emplace_back(HsRole::User, pending + "\n\n" + turn.second);
+                pending.clear();
+                continue;
+            }
+            folded.push_back(turn);
+        }
+        // Unreachable today (the trigger is always the last turn and always a
+        // user turn), but dropping operator-authored system text silently is
+        // not an acceptable way to find that out.
+        if (!pending.empty())
+            folded.emplace_back(HsRole::User, pending);
+        return folded;
+    }
+
+    // Renders the dialect-independent turn list into one dialect's markup.
+    // No BOS token is emitted for any of the four (<|begin_of_text|>, <s>,
+    // <bos>): llama-server's /completion adds it when it tokenizes the
+    // prompt, and emitting it here would double it.
+    std::string RenderPrompt(HsDialect dialect, std::vector<std::pair<HsRole, std::string>> turns)
+    {
+        if (dialect == HsDialect::Mistral || dialect == HsDialect::Gemma)
+            turns = FoldSystemTurns(std::move(turns));
+
+        std::string out;
+        for (auto const& turn : turns)
+        {
+            switch (dialect)
+            {
+                case HsDialect::ChatMl:
+                    out += std::string("<|im_start|>") + RoleName(dialect, turn.first) + "\n"
+                            + turn.second + "<|im_end|>\n";
+                    break;
+                case HsDialect::Mistral:
+                    out += turn.first == HsRole::User ? "[INST] " + turn.second + " [/INST]"
+                                                       : " " + turn.second + "</s>";
+                    break;
+                case HsDialect::Gemma:
+                    out += std::string("<start_of_turn>") + RoleName(dialect, turn.first) + "\n"
+                            + turn.second + "<end_of_turn>\n";
+                    break;
+                case HsDialect::Llama3:
+                default:
+                    out += std::string("<|start_header_id|>") + RoleName(dialect, turn.first)
+                            + "<|end_header_id|>\n\n" + turn.second + "<|eot_id|>";
+                    break;
+            }
+        }
+
+        // Open the assistant turn the model is being asked to complete.
+        switch (dialect)
+        {
+            case HsDialect::ChatMl:
+                out += "<|im_start|>assistant\n";
+                break;
+            case HsDialect::Mistral:
+                break;  // the trailing [/INST] above already opens it
+            case HsDialect::Gemma:
+                out += "<start_of_turn>model\n";
+                break;
+            case HsDialect::Llama3:
+            default:
+                out += "<|start_header_id|>assistant<|end_header_id|>\n\n";
+                break;
+        }
+        return out;
+    }
+
+    // "\n" is in every list for the same reason it always was: chat lines are
+    // one line, and without it a model that reads the few-shot block as a
+    // transcript keeps completing turns until n_predict chops it mid-sentence.
+    json StopSequencesFor(HsDialect dialect)
+    {
+        switch (dialect)
+        {
+            case HsDialect::ChatMl:  return json::array({ "<|im_end|>", "\n" });
+            case HsDialect::Mistral: return json::array({ "</s>", "\n" });
+            case HsDialect::Gemma:   return json::array({ "<end_of_turn>", "\n" });
+            case HsDialect::Llama3:
+            default:                 return json::array({ "<|eot_id|>", "\n" });
+        }
+    }
+
     std::string BaseUrlNoTrailingSlash(std::string url)
     {
         if (!url.empty() && url.back() == '/')
@@ -292,53 +439,28 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         // inside it), then this bot-player pair's history as real prior
         // turns so a later turn's prompt is a strict byte extension of an
         // earlier one, then the new trigger.
-        const bool isChatMl = IEquals(cfg.templateKind, "chatml");
-
-        std::string prompt;
-        json        stopSequences;
-        if (isChatMl)
+        //
+        // That order is dialect-independent, so it is built once
+        // as role/content turns and rendered by RenderPrompt above.
+        std::vector<std::pair<HsRole, std::string>> turns;
+        turns.emplace_back(HsRole::System, systemPrompt);
+        for (auto const& ex : Fewshot())
         {
-            auto turn = [](const std::string& role, const std::string& content)
-            { return "<|im_start|>" + role + "\n" + content + "<|im_end|>\n"; };
-
-            prompt = turn("system", systemPrompt);
-            for (auto const& ex : Fewshot())
-            {
-                prompt += turn("user", ex.first);
-                prompt += turn("assistant", ex.second);
-            }
-            if (!archetypeLine.empty())
-                prompt += turn("system", archetypeLine);
-            for (auto const& h : history)
-            {
-                prompt += turn("user", h.trigger);
-                prompt += turn("assistant", h.reply);
-            }
-            prompt += turn("user", trigger);
-            prompt += "<|im_start|>assistant\n";
-
-            stopSequences = json::array({ "<|im_end|>", "\n" });
+            turns.emplace_back(HsRole::User, ex.first);
+            turns.emplace_back(HsRole::Assistant, ex.second);
         }
-        else // "llama3" (default): Llama-3.1-Instruct's header-tagged turns
+        if (!archetypeLine.empty())
+            turns.emplace_back(HsRole::System, archetypeLine);
+        for (auto const& h : history)
         {
-            prompt = "<|start_header_id|>system<|end_header_id|>\n\n" + systemPrompt + "<|eot_id|>";
-            for (auto const& ex : Fewshot())
-            {
-                prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + ex.first + "<|eot_id|>";
-                prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + ex.second + "<|eot_id|>";
-            }
-            if (!archetypeLine.empty())
-                prompt += "<|start_header_id|>system<|end_header_id|>\n\n" + archetypeLine + "<|eot_id|>";
-            for (auto const& h : history)
-            {
-                prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + h.trigger + "<|eot_id|>";
-                prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n" + h.reply + "<|eot_id|>";
-            }
-            prompt += "<|start_header_id|>user<|end_header_id|>\n\n" + trigger + "<|eot_id|>";
-            prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n";
-
-            stopSequences = json::array({ "<|eot_id|>", "\n" });
+            turns.emplace_back(HsRole::User, h.trigger);
+            turns.emplace_back(HsRole::Assistant, h.reply);
         }
+        turns.emplace_back(HsRole::User, trigger);
+
+        const HsDialect dialect = ResolveDialect(cfg.templateKind);
+        std::string prompt        = RenderPrompt(dialect, std::move(turns));
+        json        stopSequences = StopSequencesFor(dialect);
 
         body["prompt"]       = prompt;
         body["n_predict"]    = cfg.maxTokens;

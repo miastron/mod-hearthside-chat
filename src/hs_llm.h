@@ -52,7 +52,13 @@ struct HsLLMConfig
     // send a structured messages array and let the server apply whatever
     // template its own tokenizer_config declares.
     // "llama3" (default): <|start_header_id|>role<|end_header_id|>\n\ncontent<|eot_id|>
-    // "chatml":            <|im_start|>role\ncontent<|im_end|>\n  (Qwen and others)
+    // "chatml":            <|im_start|>role\ncontent<|im_end|>\n   (Qwen and others)
+    // "mistral":           [INST] user [/INST] assistant</s>      (Mistral, Ministral)
+    // "gemma":             <start_of_turn>role\ncontent<end_of_turn>\n
+    // The names match llama.cpp's own --chat-template names for the same
+    // formats. mistral and gemma have no system role: hs_llm.cpp folds
+    // system content into the following user turn, as both upstream
+    // templates do.
     std::string templateKind = "llama3";
 };
 

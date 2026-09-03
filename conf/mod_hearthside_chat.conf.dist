@@ -65,7 +65,23 @@ HearthsideChat.LLM.ApiType = llamacpp
 #                  talking. Check your model's page/README for which format
 #                  it expects. Ignored for ApiType=openai/ollama, since those
 #                  servers format the conversation themselves.
-#     Values:      llama3 | chatml
+#
+#                  These are the same four names llama.cpp uses for its own
+#                  --chat-template flag, so whatever that flag needs for your
+#                  model is what belongs here:
+#                    llama3   Llama 3.x Instruct   <|start_header_id|> ... <|eot_id|>
+#                    chatml   Qwen, and many more  <|im_start|> ... <|im_end|>
+#                    mistral  Mistral, Ministral   [INST] ... [/INST]
+#                    gemma    Gemma 2/3            <start_of_turn> ... <end_of_turn>
+#
+#                  mistral and gemma have no system role of their own, so the
+#                  module folds the system text into the following message --
+#                  the same thing those models' own templates do.
+#
+#                  An unrecognised value is refused with an error in the
+#                  worldserver log and falls back to llama3, rather than being
+#                  quietly rendered as llama3 and blamed on the model.
+#     Values:      llama3 | chatml | mistral | gemma
 #     Default:     llama3
 HearthsideChat.LLM.Template = llama3
 
@@ -900,6 +916,7 @@ HearthsideChat.Generator.Enable = 0
 #                  HearthsideChat.LLM.Template) -- meaningful independently
 #                  since the generator can point at a differently-tuned
 #                  model than the reactive endpoint.
+#     Values:      Template: llama3 | chatml | mistral | gemma
 #     Defaults:    llamacpp / llama3 / http://127.0.0.1:8080 / (empty) / (empty) / 30 / 60
 HearthsideChat.Generator.LLM.ApiType = llamacpp
 HearthsideChat.Generator.LLM.Template = llama3
