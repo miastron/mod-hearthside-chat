@@ -26,7 +26,6 @@ enum class HsArchetype
     PvpSerious,
     PvpCasual,
     Trader,
-    Lootgoblin,
     Casual,
     GrumpyVeteran,
     Mentor,
@@ -36,7 +35,7 @@ enum class HsArchetype
     TrollAggressive,  // very rare, openly hostile about gameplay, vulgar
 };
 
-constexpr size_t kHsArchetypeCount = 13;
+constexpr size_t kHsArchetypeCount = 12;
 
 struct HsArchetypeInfo
 {
@@ -51,7 +50,7 @@ struct HsArchetypeInfo
                                  // (2026-08-24): a reply-chance roll reads as being ignored on a realm
                                  // that is mostly bots, where a late reply beats silence.
     uint32_t    verbosityCap;   // tokens; feeds Hs_CallLLM's maxTokens, capped by HearthsideChat.LLM.MaxTokens (never raised above it)
-    uint32_t    spawnWeight;    // out of 100 across all thirteen entries; used by Hs_ArchetypeForBot's weighted draw
+    uint32_t    spawnWeight;    // out of 100 across all twelve entries; used by Hs_ArchetypeForBot's weighted draw
     bool        hasAbbrevOverride; // only TRADER sets this
     float       abbrevOverrideChance; // meaningful only if hasAbbrevOverride
     uint8_t     minLevel;       // 0 = no lower bound
@@ -93,11 +92,11 @@ void Hs_SetArchetypeOverride(uint64_t botGuid, HsArchetype archetype);
 void Hs_ClearArchetypeOverride(uint64_t botGuid);
 
 // Deterministic weighted draw from the bot's GUID, restricted to the subset
-// of the thirteen stock archetypes whose level requirement `level` satisfies:
+// of the twelve stock archetypes whose level requirement `level` satisfies:
 // a level-22 bot can never draw RAIDER_SERIOUS. Weights are renormalized
 // over just the eligible subset each call, so changing a bot's level band
-// changes what it can draw without any weight retuning. At least six of the
-// thirteen entries carry no level requirement, so the eligible pool is never
+// changes what it can draw without any weight retuning. At least four of the
+// twelve entries carry no level requirement, so the eligible pool is never
 // empty for any level 1-80. Returns the GM override (above) first if one is
 // set for this bot, skipping the draw entirely.
 //

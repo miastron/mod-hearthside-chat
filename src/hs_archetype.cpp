@@ -33,7 +33,7 @@ namespace
     // of truth for "which index is which archetype."
     constexpr std::array<const char*, kHsArchetypeCount> kEnumNames = {{
         "RAIDER_SERIOUS", "RAIDER_CASUAL", "PVP_SERIOUS", "PVP_CASUAL", "TRADER",
-        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "MENTOR",
+        "CASUAL", "GRUMPY_VETERAN", "MENTOR",
         "YOUNG_APPRENTICE", "SOCIALITE", "TROLL_MILD", "TROLL_AGGRESSIVE",
     }};
 
@@ -50,14 +50,13 @@ namespace
         { kEnumNames[2],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[3],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[4],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[5],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[6],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL: the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[5],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL: the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[6],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[7],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[8],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
         { kEnumNames[9],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[10], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[11], "", 0.5f, 0.0f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
-        { kEnumNames[12], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
+        { kEnumNames[10], "", 0.5f, 0.0f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
+        { kEnumNames[11], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
     }};
 
     bool IsEligibleForLevel(const HsArchetypeInfo& info, uint8_t level)

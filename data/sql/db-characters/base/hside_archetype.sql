@@ -49,6 +49,14 @@
 -- regression, see git history for the benchmark) were folded in here too,
 -- since the test realm's character DB was wiped before either change
 -- landed: see CLAUDE.md's `base/`-vs-`updates/` section.
+--
+-- 2026-09-02: LOOTGOBLIN retired and merged into TRADER. TRADER's talks_about
+-- absorbed "drops, gold" from LOOTGOBLIN's "drops, rolls, gold, need-vs-greed";
+-- "rolls"/"need-vs-greed" were dropped rather than merged, so TRADER keeps its
+-- own established sell/offer voice rather than LOOTGOBLIN's hoarding one. The
+-- twelve remaining rows now sum to 100 again: LOOTGOBLIN's freed spawn_weight
+-- (10) went to the four lowest rows (RAIDER_SERIOUS/PVP_SERIOUS/TROLL_MILD/
+-- TROLL_AGGRESSIVE), weighted toward the bottom of that group.
 
 CREATE TABLE IF NOT EXISTS `hside_archetype` (
   `enum_name`              VARCHAR(32) NOT NULL COMMENT 'must match hs_archetype.cpp''s fixed enum; unrecognized names are logged and ignored',
@@ -75,18 +83,17 @@ VALUES
 -- distracted_chance rationale: focus is the axis. RAIDER_SERIOUS/PVP_SERIOUS/
 -- MENTOR are attentive by definition and barely step away; CASUAL and
 -- SOCIALITE sit highest, being the two rows that absorbed the retired
--- DISTRACTED/LONE_WOLF weight; TRADER and LOOTGOBLIN are plausibly alt-tabbed
--- (AH, loot tables) and YOUNG_APPRENTICE is simply scattered.
-('RAIDER_SERIOUS',   'progression, parses, consumables; corrects others harshly, dismisses casuals, contemptuous',                               0.90, 0.02, 45, 4,  0, 0.0,  60,  255, 1, 600,  35),
+-- DISTRACTED/LONE_WOLF weight; TRADER is plausibly alt-tabbed (AH, loot
+-- tables) and YOUNG_APPRENTICE is simply scattered.
+('RAIDER_SERIOUS',   'progression, parses, consumables; corrects others harshly, dismisses casuals, contemptuous',                               0.90, 0.02, 45, 6,  0, 0.0,  60,  255, 1, 600,  35),
 ('RAIDER_CASUAL',    'raid nights, wipes, loot, guild turnover/drama; cynical about officers, grumbles about teammates, never self-deprecating', 0.75, 0.05, 45, 5,  0, 0.0,  60,  255, 0, 800,  45),
-('PVP_SERIOUS',      'rating, comps, matchups; contemptuous of bad players, condescending about skill, never doubts own skill',                  0.55, 0.02, 40, 4,  0, 0.0,  70,  255, 2, 600,  30),
+('PVP_SERIOUS',      'rating, comps, matchups; contemptuous of bad players, condescending about skill, never doubts own skill',                  0.55, 0.02, 40, 5,  0, 0.0,  70,  255, 2, 600,  30),
 ('PVP_CASUAL',       'bgs, gearing up, light trash talk, winning; competitive edge, confident trash talk instead of self-doubt',                 0.35, 0.05, 40, 9,  0, 0.0,  10,  255, 1, 750,  40),
-('TRADER',           'AH prices, mats, flips',                                                                                                   0.55, 0.08, 40, 9,  1, 0.70, 30,  255, 0, 650,  35),
-('LOOTGOBLIN',       'drops, rolls, gold, need-vs-greed',                                                                                        0.30, 0.07, 35, 10, 0, 0.0,   0,  255, 0, 600,  35),
+('TRADER',           'AH prices, mats, flips, drops, gold',                                                                                       0.55, 0.08, 40, 9,  1, 0.70, 30,  255, 0, 650,  35),
 ('CASUAL',           'whatever is in front of them - quests, alts, patch talk, other games',                                                     0.45, 0.10, 45, 17, 0, 0.0,   0,  255, 0, 800,  45),
 ('GRUMPY_VETERAN',   'vanilla was better, complains, corrects people',                                                                           0.70, 0.05, 40, 8,  0, 0.0,  60,  255, 1, 900,  50),
 ('MENTOR',           'explains mechanics, answers new players',                                                                                  0.85, 0.02, 55, 5,  0, 0.0,  60,  255, 0, 1000, 55),
 ('YOUNG_APPRENTICE', 'asks questions, excited, lost',                                                                                            0.25, 0.08, 40, 12, 0, 0.0,   0,  29,  0, 900,  60),
 ('SOCIALITE',        'greets, small talk, guild-chat glue',                                                                                      0.45, 0.09, 45, 12, 0, 0.0,   0,  255, 0, 550,  35),
-('TROLL_MILD',       'sarcastic, backhanded compliments, contrarian nitpicking about gameplay',                                                  0.50, 0.03, 40, 3,  0, 0.0,   0,  255, 1, 700,  40),
-('TROLL_AGGRESSIVE', 'immature, openly hostile, rotations, loot decisions; picks fights, dismissive',                                            0.25, 0.01, 45, 2,  0, 0.0,   0,  255, 2, 500,  35);
+('TROLL_MILD',       'sarcastic, backhanded compliments, contrarian nitpicking about gameplay',                                                  0.50, 0.03, 40, 6,  0, 0.0,   0,  255, 1, 700,  40),
+('TROLL_AGGRESSIVE', 'immature, openly hostile, rotations, loot decisions; picks fights, dismissive',                                            0.25, 0.01, 45, 6,  0, 0.0,   0,  255, 2, 500,  35);

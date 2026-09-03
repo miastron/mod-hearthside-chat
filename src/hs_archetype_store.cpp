@@ -18,7 +18,7 @@ namespace
     // one function in this file that matches DB rows to enum slots.
     constexpr std::array<const char*, kHsArchetypeCount> kEnumNames = {{
         "RAIDER_SERIOUS", "RAIDER_CASUAL", "PVP_SERIOUS", "PVP_CASUAL", "TRADER",
-        "LOOTGOBLIN", "CASUAL", "GRUMPY_VETERAN", "MENTOR",
+        "CASUAL", "GRUMPY_VETERAN", "MENTOR",
         "YOUNG_APPRENTICE", "SOCIALITE", "TROLL_MILD", "TROLL_AGGRESSIVE",
     }};
 }
