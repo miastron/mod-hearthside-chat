@@ -3,6 +3,7 @@
 #include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
+#include "hs_identity_store.h" // review C13: Hs_LookupCardSnapshot for the carded verbal tic
 #include "hs_prune.h"
 #include "hs_queue.h" // §4.17: Hs_ResolveChannelForDelivery, HsReplyChannel::Channel's delivery pattern
 #include "hs_rpgstate.h"
@@ -134,6 +135,11 @@ namespace
     // MaxTier (checked per kind at fire time, not here).
     constexpr uint32_t kChannelScanFireChancePercent = 3;
 
+    // Review C14: how many nearby settled bots TryFireNearPlayer collects
+    // before it stops walking. Two is the minimum a scene needs; a slightly
+    // larger pool is what makes the cast vary between scenes.
+    constexpr size_t   kMaxProximityCandidates      = 8;
+
     bool IsBotInActiveChannelRun(uint64_t botGuid)
     {
         std::lock_guard<std::mutex> lock(g_ChannelRunsMutex);
@@ -174,10 +180,20 @@ namespace
         return false;
     }
 
-    // Claims one available script (single consumer: only this scan ever
-    // writes hside_script.consumed_at, so a plain SELECT-then-UPDATE has
-    // no concurrent claimant to race against) and schedules its turns,
-    // staggered by a per-turn typing delay so they don't land in a burst.
+    // Claims one available script and schedules its turns, staggered by a
+    // per-turn typing delay so they don't land in a burst.
+    //
+    // Review B1: only this scan ever writes hside_script.consumed_at, so
+    // there is no concurrent claimant *thread* -- but the scan calls this
+    // once per real player, so two players in one world tick are two
+    // claimants. An async Execute() of the claiming UPDATE has not landed by
+    // the time the second call's synchronous SELECT runs, so both would take
+    // the same script id and cast the same dialogue with two different bot
+    // pairs at once. DirectExecute runs on the synchronous connection pool
+    // Query() reads from, so the claim is committed and visible before this
+    // function returns. It fires at most a couple of times a minute (30s
+    // scan x a proximity chance roll), so the blocking write is not on any
+    // hot path.
     void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
     {
         QueryResult idResult = CharacterDatabase.Query(
@@ -202,7 +218,14 @@ namespace
         QueryResult turnResult = CharacterDatabase.Query(
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
         if (!turnResult)
-            return; // defensive: a header row with no turns should never exist
+        {
+            // Defensive: a header row with no turns should never exist.
+            // Review C2: refund, because nothing was ever going to be
+            // spoken here -- no listener experiences this as silence, and
+            // the script is left unclaimed for the next scan either way.
+            Hs_AmbientBucketRefund();
+            return;
+        }
 
         std::vector<std::pair<uint8_t, std::string>> turns;
         do
@@ -214,7 +237,7 @@ namespace
         uint64_t bot1Guid    = bot1->GetGUID().GetRawValue();
         uint64_t witnessGuid = witness->GetGUID().GetRawValue();
 
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "UPDATE hside_script SET consumed_at = NOW(), consumed_by_zone = {}, consumed_witness = {} WHERE id = {}",
             witness->GetZoneId(), witnessGuid, scriptId);
 
@@ -240,10 +263,18 @@ namespace
         MarkWitnessCooldown(witnessGuid);
     }
 
+    // Review C14 + G4: the fire-chance roll moved ahead of the realm walk.
+    // It depends on nothing the walk produces, so rolling afterwards meant
+    // 80% of scans did the whole enumeration and threw it away. Same change
+    // TryFireChannelScript gets below, and the same reasoning the channel
+    // scan already applies to ordering its cheap gates first.
     void TryFireNearPlayer(Player* player)
     {
         uint64_t playerGuid = player->GetGUID().GetRawValue();
         if (!WitnessCooldownOk(playerGuid))
+            return;
+
+        if (urand(0, 99) >= g_HsScriptProximityFireChancePercent)
             return;
 
         std::vector<Player*> nearbyBots;
@@ -277,16 +308,31 @@ namespace
             if (IsBotInActiveRun(candidate->GetGUID().GetRawValue()))
                 continue;
             nearbyBots.push_back(candidate);
-            if (nearbyBots.size() >= 2)
+            // Review C14: collect a small pool rather than breaking at
+            // exactly two. Taking the first two ObjectAccessor::GetPlayers()
+            // enumerated meant that on a stable population the same pair
+            // acted out every scene near a given player, forever --
+            // TryFireChannelScript already randomizes its cast and says why.
+            // The cap keeps this bounded: the walk is per real player per
+            // 30s tick, and eight candidates is plenty of variety without
+            // turning an early-out into a full enumeration.
+            if (nearbyBots.size() >= kMaxProximityCandidates)
                 break;
         }
 
         if (nearbyBots.size() < 2)
             return;
-        if (urand(0, 99) >= g_HsScriptProximityFireChancePercent)
-            return;
 
-        ClaimAndSchedule(nearbyBots[0], nearbyBots[1], player);
+        // Two distinct members of the pool, same shape TryFireChannelScript
+        // uses for its own cast.
+        size_t first  = urand(0, static_cast<uint32_t>(nearbyBots.size() - 1));
+        size_t second = first;
+        for (int attempt = 0; attempt < 5 && second == first; ++attempt)
+            second = urand(0, static_cast<uint32_t>(nearbyBots.size() - 1));
+        if (second == first)
+            second = (first + 1) % nearbyBots.size(); // deterministic fallback, never the same bot twice
+
+        ClaimAndSchedule(nearbyBots[first], nearbyBots[second], player);
     }
 
     // Re-checks every abort condition immediately before sending: schedule
@@ -360,12 +406,18 @@ namespace
         // No archetype/persona goes into script generation, but the style
         // pass still runs per speaker at delivery: the same script
         // spoken by two different bots reads as two different people.
-        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
+        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = false; // already confirmed not in combat above
+        // Review C13: the script paths were the only two delivery sites not
+        // populating verbalTic, so a carded bot's tic was styled like any
+        // other word here (typo'd, abbreviated, recased) while every other
+        // surface protected it -- the same bot sounded different inside a
+        // scripted scene than outside one.
+        styleCtx.verbalTic            = Hs_LookupCardSnapshot(scheduled.speakerGuid).verbalTic;
         HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), witness->GetName(), text, styleCtx);
         if (style.text.empty())
             return;
@@ -421,7 +473,10 @@ namespace
         QueryResult turnResult = CharacterDatabase.Query(
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
         if (!turnResult)
-            return; // defensive: a header row with no turns should never exist
+        {
+            Hs_AmbientBucketRefund(); // review C2, as ClaimAndSchedule above
+            return;
+        }
 
         std::vector<std::pair<uint8_t, std::string>> turns;
         do
@@ -432,7 +487,12 @@ namespace
         uint64_t bot0Guid = bot0->GetGUID().GetRawValue();
         uint64_t bot1Guid = bot1->GetGUID().GetRawValue();
 
-        CharacterDatabase.Execute(
+        // Review B1: DirectExecute for the same reason ClaimAndSchedule
+        // documents. Trade and General scan in the same tick and filter on
+        // different `channel` values, so they cannot collide with each
+        // other -- but keeping one claim idiom means a third channel kind
+        // cannot reintroduce the bug by accident.
+        CharacterDatabase.DirectExecute(
             "UPDATE hside_script SET consumed_at = NOW(), consumed_by_zone = {}, consumed_witness = NULL WHERE id = {}",
             bot0->GetZoneId(), scriptId);
 
@@ -473,6 +533,17 @@ namespace
     {
         if (!HsTierAllows(Hs_ChannelPolicyFor(kind).maxTier, HsTier::Corpus))
             return; // this channel's own MaxTier, independent of MaxTier.BotToBot
+
+        // Review G4: the fire-chance roll used to sit after the whole scan,
+        // so 97% of scans walked every online player and ran a
+        // Hs_ResolveChannelForDelivery (a DBC lookup plus a ChannelMgr
+        // string match, by far the most expensive test in the loop) per
+        // eligible bot, only to discard the result. It depends on nothing
+        // the scan produces. Rolling first is free and skips the walk
+        // entirely 97% of the time -- twice per 30s tick, for Trade and
+        // General.
+        if (urand(0, 99) >= kChannelScanFireChancePercent)
+            return;
 
         std::unordered_map<Channel*, std::vector<Player*>> byInstance;
         std::vector<Player*>                                realPlayers;
@@ -555,8 +626,6 @@ namespace
 
         std::vector<Player*>* pool =
             eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
-        if (urand(0, 99) >= kChannelScanFireChancePercent)
-            return;
 
         // Two distinct random members of the same pool.
         Player* bot0 = (*pool)[urand(0, static_cast<uint32_t>(pool->size() - 1))];
@@ -603,13 +672,14 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid, speaker->GetLevel());
+        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
         styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
         styleCtx.inCombat             = speaker->IsInCombat();
         styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(scheduled.speakerGuid);
+        styleCtx.verbalTic            = Hs_LookupCardSnapshot(scheduled.speakerGuid).verbalTic; // review C13
         HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), "", text, styleCtx);
         if (style.text.empty())
             return;

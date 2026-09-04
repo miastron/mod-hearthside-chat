@@ -31,9 +31,16 @@ namespace
     // Populated by Hs_SetChannelPolicyTable, normally called once at startup
     // (and again on `.reload config`) by hs_config.cpp. Defaults to
     // all-Off/zero so a lookup before that call degrades to "every channel
-    // is silent" rather than reading uninitialized data: same precedent as
-    // hs_archetype.cpp's g_Archetypes (no mutex: a plain array assignment on
-    // an infrequent reload, not a per-message write).
+    // is silent" rather than reading uninitialized data.
+    //
+    // Review B6: deliberately *not* under a mutex, and the reason is the
+    // rule hs_config.h states rather than "an infrequent reload". A
+    // HsChannelPolicy is an enum plus two uint32_t and owns no memory, so a
+    // reload racing a read costs one message a wrong tier or rate --
+    // formally UB, benign on x86-64 -- and never a freed buffer. Contrast
+    // hs_archetype.cpp's g_Archetypes and hs_grounded.cpp's g_Questions/
+    // g_Templates, whose rows own std::strings: those are locked, because
+    // there the same race is a use-after-free.
     HsChannelPolicy g_ChannelPolicies[kHsChannelKindCount] = {};
 
     bool IsWordChar(char c)

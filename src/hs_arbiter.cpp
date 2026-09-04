@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
-#include <random>
+
 
 namespace
 {
@@ -124,9 +124,22 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
 
     // Weighted select without replacement: proximity and recency, not
     // uniform.
+    //
+    // Review G2: this used to construct a std::random_device plus a
+    // std::mt19937 here, per call -- and this function runs once per /say,
+    // party, raid, guild and channel message on the realm. random_device is
+    // a syscall (or a /dev/urandom open) and seeding mt19937 initializes
+    // 2.5KB of state, all to draw at most two numbers.
+    // hs_event_arbiter.cpp already solved exactly this and documents why;
+    // the /say arbiter simply never got the same treatment.
+    //
+    // urand() rather than a file-static engine: AzerothCore's urand is
+    // backed by a stateless RandomEngine over a thread_local SFMTRand
+    // (Random.cpp), so it needs no seeding, no lock, and is safe from the
+    // world thread and the queue worker alike. The distribution below is
+    // continuous, so the roll is built from a 32-bit urand scaled into
+    // [0, total) rather than from uniform_real_distribution.
     std::vector<Player*> pool = candidates;
-    std::random_device   rd;
-    std::mt19937          gen(rd());
 
     for (uint32_t i = 0; i < replyCount && !pool.empty(); ++i)
     {
@@ -140,8 +153,13 @@ std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& mes
             total += w;
         }
 
-        std::uniform_real_distribution<double> dist(0.0, total);
-        double roll       = dist(gen);
+        // urand(0, 0xFFFFFFFFu) is the full 32-bit range (verified safe:
+        // AzerothCore's urand asserts only max >= min, unlike TrinityCore's
+        // ASSERT(INT_MAX >= max)). Dividing by 2^32 gives a uniform double
+        // in [0, 1), scaled to [0, total) -- the same half-open interval
+        // uniform_real_distribution(0.0, total) produced.
+        double unit       = static_cast<double>(urand(0, 0xFFFFFFFFu)) / 4294967296.0;
+        double roll       = unit * total;
         size_t pickIndex  = pool.size() - 1;
         double cumulative = 0.0;
         for (size_t idx = 0; idx < weights.size(); ++idx)

@@ -82,7 +82,12 @@ bool Hs_MainFocusPlausibleForLevel(const std::string& value, uint8_t level);
 // markdown/quote chars) on current_goal/held_opinion/verbal_tic. Stops at
 // the first failure, same "cost order, first failure wins" shape as
 // Hs_EvaluateCandidate.
-HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasGuild);
+// ownClassName is the bot's own class in Hs_ClassNameFor's lowercase
+// vocabulary ("death knight", not "Death Knight"). Empty means the caller
+// could not resolve it, and the alt-vs-own-class check (review C10) is
+// skipped rather than guessed at.
+HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasGuild,
+                                   const std::string& ownClassName = "");
 
 // The two generation prompts. Pure string-building, deliberately minimal
 // wrappers around the archetype's own "talks about" line and the level/
@@ -90,7 +95,7 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
 // discipline as hs_archetype.h's Hs_ArchetypePromptLine.
 std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout);
 std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint8_t level, bool hasGuild,
-                                     const std::string& guildName);
+                                     const std::string& guildName, const std::string& ownClassName = "");
 
 // verbal_tic becomes a protected token in the style pass (hs_style.cpp).
 // Empty return means no tic: a missing key, wrong type, or empty string

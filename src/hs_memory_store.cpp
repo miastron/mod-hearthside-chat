@@ -1,5 +1,6 @@
 #include "hs_memory_store.h"
 #include "hs_memory.h"
+#include "hs_locale.h"
 
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
@@ -21,33 +22,58 @@ namespace
         return ai && ai->IsBotAI();
     }
 
+    // Review D1: event_type reaches these statements from module constants
+    // today, but the surrounding statements escape every other
+    // string-valued interpolation and these did not. Escaping it costs one
+    // copy on a path that is already doing a MySQL round trip, and removes
+    // the "inert today" qualifier entirely.
+    std::string EscapedEventType(const std::string& eventType)
+    {
+        std::string escaped = eventType;
+        CharacterDatabase.EscapeString(escaped);
+        return escaped;
+    }
+
     // Enforces the ~20-row cap (first_meeting exempt) by deleting the
     // oldest excess rows for this pair. MySQL's single-table DELETE
     // supports ORDER BY/LIMIT directly, so this is one statement rather
     // than a select-then-delete-by-id round trip.
+    //
+    // Review A4: the DELETE is DirectExecute so the COUNT(*) above is a
+    // measurement of a settled table rather than a prediction made against
+    // one with a previous eviction still queued on the async worker.
     void EvictOverflow(uint64_t botGuid, uint64_t playerGuid)
     {
+        const std::string firstMeeting = EscapedEventType(kHsMemoryEventFirstMeeting);
+
         QueryResult countResult = CharacterDatabase.Query(
             "SELECT COUNT(*) FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type != '{}'",
-            botGuid, playerGuid, kHsMemoryEventFirstMeeting);
+            botGuid, playerGuid, firstMeeting);
         uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
         if (count <= kHsMemoryRowCapPerPair)
             return;
 
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "DELETE FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type != '{}' "
             "ORDER BY occurred_at ASC LIMIT {}",
-            botGuid, playerGuid, kHsMemoryEventFirstMeeting, count - kHsMemoryRowCapPerPair);
+            botGuid, playerGuid, firstMeeting, count - kHsMemoryRowCapPerPair);
     }
 
+    // Review A3: DirectExecute. Both callers below are check-then-act
+    // (SELECT ... LIMIT 1, then insert if absent) and hside_memory has no
+    // unique constraint to fall back on -- only PRIMARY KEY (id) plus two
+    // non-unique indexes -- so an async insert that has not drained leaves
+    // the next check-then-act blind to it and both inserts land. Two bots
+    // replying to one /say each reach Hs_EnsureFirstMeetingRecorded from the
+    // queue worker; that is the concrete duplicate-first_meeting path.
     void InsertMemoryRow(uint64_t botGuid, uint64_t playerGuid, const std::string& eventType, const std::string& text)
     {
         std::string escapedText = text;
         CharacterDatabase.EscapeString(escapedText);
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "INSERT INTO hside_memory (bot_guid, player_guid, event_type, occurred_at, text, source) "
             "VALUES ({}, {}, '{}', NOW(), '{}', 'template')",
-            botGuid, playerGuid, eventType, escapedText);
+            botGuid, playerGuid, EscapedEventType(eventType), escapedText);
     }
 }
 
@@ -55,7 +81,7 @@ void Hs_EnsureFirstMeetingRecorded(uint64_t botGuid, uint64_t playerGuid)
 {
     QueryResult result = CharacterDatabase.Query(
         "SELECT 1 FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type = '{}' LIMIT 1",
-        botGuid, playerGuid, kHsMemoryEventFirstMeeting);
+        botGuid, playerGuid, EscapedEventType(kHsMemoryEventFirstMeeting));
     if (result)
         return;
 
@@ -69,7 +95,7 @@ void Hs_RecordMemoryEvent(uint64_t botGuid, uint64_t playerGuid, const std::stri
     QueryResult recent = CharacterDatabase.Query(
         "SELECT 1 FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type = '{}' "
         "AND occurred_at >= NOW() - INTERVAL {} SECOND LIMIT 1",
-        botGuid, playerGuid, eventType, kHsMemoryDedupWindowSeconds);
+        botGuid, playerGuid, EscapedEventType(eventType), kHsMemoryDedupWindowSeconds);
     if (recent)
         return; // deduped: an identical beat already landed within the window
 
@@ -90,7 +116,7 @@ HsMemoryFact Hs_LookupLastDungeonRun(uint64_t botGuid, uint64_t playerGuid)
     QueryResult result = CharacterDatabase.Query(
         "SELECT text FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type = '{}' "
         "ORDER BY occurred_at DESC LIMIT 1",
-        botGuid, playerGuid, kHsMemoryEventDungeonCompleted);
+        botGuid, playerGuid, EscapedEventType(kHsMemoryEventDungeonCompleted));
     if (result)
     {
         fact.hasFact = true;
@@ -103,7 +129,8 @@ bool Hs_HasGroupedBefore(uint64_t botGuid, uint64_t playerGuid)
 {
     QueryResult result = CharacterDatabase.Query(
         "SELECT 1 FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type IN ('{}', '{}') LIMIT 1",
-        botGuid, playerGuid, kHsMemoryEventDungeonCompleted, kHsMemoryEventGroupedInZone);
+        botGuid, playerGuid, EscapedEventType(kHsMemoryEventDungeonCompleted),
+        EscapedEventType(kHsMemoryEventGroupedInZone));
     return result != nullptr;
 }
 
@@ -159,8 +186,8 @@ void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
     Player* realPlayer = diedIsBot ? other : player;
 
     AreaTableEntry const* entry = sAreaTableStore.LookupEntry(player->GetZoneId());
-    const char* zoneName = entry ? entry->area_name[0] : nullptr;
-    std::string zone = (zoneName && *zoneName) ? zoneName : "the field";
+    std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
+    std::string zone = zoneName.empty() ? "the field" : zoneName;
 
     Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), realPlayer->GetGUID().GetRawValue(),
                           kHsMemoryEventDiedTogether, Hs_BuildDiedTogetherText(zone));

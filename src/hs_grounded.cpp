@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace
@@ -100,21 +101,41 @@ namespace
 
     std::vector<HsGroundedQuestionRow> g_Questions;
     std::vector<HsGroundedTemplateRow> g_Templates;
+
+    // Review B6: guards both tables. Every row owns std::strings, and
+    // `.reload config` replaces the whole vector (hs_main.cpp's
+    // HsGroundedLifecycleWorldScript), so an unguarded replace frees
+    // buffers a reader may be mid-iteration on -- the same hazard, and the
+    // same fix, hs_archetype.cpp applies to g_Archetypes and hs_config.h
+    // documents for the config strings. Both readers are world-thread-only
+    // today, so this was latent; the point is that the module's rule is
+    // "owned strings get a lock, scalars don't" (hs_config.h) and these two
+    // were the exception to it. hs_channel.cpp's g_ChannelPolicies stays
+    // lock-free and is correct to: HsChannelPolicy is an enum plus two
+    // uint32_t with nothing owned, so the worst a torn read can do is give
+    // one message a wrong number.
+    std::mutex g_GroundedTableMutex;
 }
 
 void Hs_SetGroundedQuestionTable(const std::vector<HsGroundedQuestionRow>& rows)
 {
+    std::lock_guard<std::mutex> lock(g_GroundedTableMutex);
     g_Questions = rows;
 }
 
 void Hs_SetGroundedTemplateTable(const std::vector<HsGroundedTemplateRow>& rows)
 {
+    std::lock_guard<std::mutex> lock(g_GroundedTableMutex);
     g_Templates = rows;
 }
 
 HsGroundedKind Hs_MatchGroundedQuestion(const std::string& trigger, uint32_t fuzzyMaxDistance)
 {
     std::string corePhrase = StripOneTrailingMark(NormalizeWhitespace(ToLowerAscii(trigger)));
+
+    // Held for the whole scan (review B6): the loops read q.phrase by
+    // reference. Returns an enum, so nothing outlives the lock.
+    std::lock_guard<std::mutex> lock(g_GroundedTableMutex);
 
     for (auto const& q : g_Questions)
         if (corePhrase == q.phrase)
@@ -161,6 +182,10 @@ std::string Hs_BuildGroundedReply(HsGroundedKind kind, bool hasFact, const std::
 {
     if (kind == HsGroundedKind::None)
         return "";
+
+    // Held past the pick (review B6): `matches` holds pointers into
+    // g_Templates and the return value copies out of the row's strings.
+    std::lock_guard<std::mutex> lock(g_GroundedTableMutex);
 
     std::vector<const HsGroundedTemplateRow*> matches;
     for (auto const& t : g_Templates)

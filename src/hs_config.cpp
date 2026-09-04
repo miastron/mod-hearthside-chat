@@ -36,7 +36,7 @@ std::string g_HsLLMSystemPrompt =
 uint32_t g_HsLLMHistoryTurns  = 2;
 float     g_HsLLMDryMultiplier = 0.0f;
 
-float     g_HsSayDistance             = 30.0f;
+float    g_HsSayDistance             = 20.0f; // review C9: matches the OnStartup default and the .conf.dist value
 uint32_t  g_HsReplyChanceWhisper      = 100;
 bool      g_HsDisableRepliesInCombat  = true;
 
@@ -83,12 +83,41 @@ namespace
         if (lowered == "llama3" || lowered == "chatml" || lowered == "mistral" || lowered == "gemma")
             return lowered;
 
-        LOG_ERROR("server.loading",
+        LOG_ERROR("module.hearthside",
             "[HearthsideChat] {} = '{}' is not a chat template this module can render "
             "(llama3 | chatml | mistral | gemma). Falling back to llama3, which will "
             "produce garbled or non-terminating replies if the model expects another.",
             key, value);
         return "llama3";
+    }
+
+    // Review C8: the same treatment NormalizeTemplate above gets, and for
+    // the same reason. hs_llm.cpp treats anything that is not "llamacpp" or
+    // "ollama" as OpenAI, so a typo ("llamaccp", "openapi") silently posts
+    // an OpenAI-shaped body to <url>/chat/completions against a llama.cpp
+    // server -- a shape mismatch that surfaces only as every reply failing
+    // to parse. Normalized and reported once per config load rather than
+    // discovered.
+    //
+    // The fallback stays "openai": it is the broadest of the three (many
+    // backends speak it) and changing an unrecognised value to llamacpp
+    // would break operators pointed at a real OpenAI-compatible gateway.
+    std::string NormalizeApiType(const char* key, const std::string& value)
+    {
+        std::string lowered = value;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (lowered == "llamacpp" || lowered == "ollama" || lowered == "openai")
+            return lowered;
+
+        LOG_ERROR("module.hearthside",
+            "[HearthsideChat] {} = '{}' is not a backend this module knows "
+            "(llamacpp | ollama | openai). Falling back to openai, which will post an "
+            "OpenAI-shaped request to <Url>/chat/completions -- every reply will fail to "
+            "parse if the backend expects another shape.",
+            key, value);
+        return "openai";
     }
 
     void RebuildExcludeNameSet()
@@ -107,6 +136,15 @@ namespace
 
 bool Hs_IsExcludedBotName(const std::string& botName)
 {
+    // Review B5: under g_ConfigStringMutex, like every other read of state
+    // LoadHearthsideChatConfig replaces. RebuildExcludeNameSet() clears and
+    // refills this set in place on `.reload config`; every caller today is
+    // on the world thread, so this was latent rather than live -- but it is
+    // a node-based container being rebuilt under a reader, which is a
+    // use-after-free rather than a stale read the moment a worker-thread
+    // caller is added, and the header's own hazard note already committed
+    // this file to the opposite discipline.
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
     return g_ExcludeNameSet.count(botName) != 0;
 }
 
@@ -270,7 +308,8 @@ void LoadHearthsideChatConfig()
     g_HsDebugEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugEnabled", false);
     g_HsBridgeEnable = sConfigMgr->GetOption<bool>("HearthsideChat.Bridge.Enable", true);
 
-    g_HsLLMApiType         = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiType", "llamacpp");
+    g_HsLLMApiType         = NormalizeApiType("HearthsideChat.LLM.ApiType",
+        sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiType", "llamacpp"));
     g_HsLLMUrl              = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Url", "http://127.0.0.1:8080");
     g_HsLLMModel            = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.Model", "");
     g_HsLLMApiKey           = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiKey", "");
@@ -318,7 +357,7 @@ void LoadHearthsideChatConfig()
     // would be a crash, not a misbehavior.
     if (g_HsDistractedMinDelaySeconds > g_HsDistractedMaxDelaySeconds)
     {
-        LOG_ERROR("server.loading",
+        LOG_ERROR("module.hearthside",
             "[HearthsideChat] Distracted.MinDelaySeconds ({}) exceeds MaxDelaySeconds ({}) -- clamping max up to min.",
             g_HsDistractedMinDelaySeconds, g_HsDistractedMaxDelaySeconds);
         g_HsDistractedMaxDelaySeconds = g_HsDistractedMinDelaySeconds;
@@ -399,6 +438,37 @@ void LoadHearthsideChatConfig()
             { HsParseTier(g_HsChannelLocalDefenseMaxTier), g_HsChannelLocalDefenseRatePerMin, g_HsChannelLocalDefenseMaxCandidates };
         table[static_cast<size_t>(HsChannelKind::WorldDefense)] =
             { HsParseTier(g_HsChannelWorldDefenseMaxTier), g_HsChannelWorldDefenseRatePerMin, g_HsChannelWorldDefenseMaxCandidates };
+        // Review H3: a channel enabled by MaxTier but left at MaxCandidates
+        // = 0 passes every gate, spends a bucket token, and then selects
+        // nobody -- Hs_OrderChannelCandidates ends in
+        // candidates.resize(maxCandidates). The four off-by-default channels
+        // ship with MaxCandidates = 0, so an operator who flips only MaxTier
+        // to switch one on (the natural thing to do, since MaxTier is what
+        // every other surface is gated by) gets silence with no explanation
+        // anywhere.
+        //
+        // Reported and repaired rather than only reported: leaving the value
+        // at 0 would mean the operator has to read this log line, find the
+        // second key, and reload again. The floor matches the two
+        // on-by-default channels' shipped value, which is the setting an
+        // operator enabling a channel almost certainly wants.
+        for (size_t i = 0; i < kHsChannelKindCount; ++i)
+        {
+            HsChannelPolicy& policy = table[i];
+            if (policy.maxTier == HsTier::Off || policy.maxCandidates > 0)
+                continue;
+
+            constexpr uint32_t kDefaultMaxCandidates = 8;
+            LOG_ERROR("module.hearthside",
+                "[HearthsideChat] Channel.{}.MaxTier is '{}' but Channel.{}.MaxCandidates is 0, "
+                "which would select no bot and silently spend a rate-limit token per message. "
+                "Using {} instead -- set Channel.{}.MaxCandidates explicitly to silence this.",
+                Hs_ChannelKindName(static_cast<HsChannelKind>(i)), HsTierName(policy.maxTier),
+                Hs_ChannelKindName(static_cast<HsChannelKind>(i)), kDefaultMaxCandidates,
+                Hs_ChannelKindName(static_cast<HsChannelKind>(i)));
+            policy.maxCandidates = kDefaultMaxCandidates;
+        }
+
         Hs_SetChannelPolicyTable(table);
     }
 

@@ -12,6 +12,7 @@
 #include "hs_rpgstate.h"
 #include "hs_style.h"
 #include "hs_tier.h"
+#include "hs_locale.h"
 
 #include "DBCStores.h"
 #include "Group.h"
@@ -191,7 +192,14 @@ namespace
         std::string line = Hs_SelectOpenerLine(categoryName, bot->getClass(), bot->GetLevel(),
                                                 static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId());
         if (line.empty())
+        {
+            // Review C2: an opener category with no eligible row is a
+            // content outage, not an attempt. Same rule hs_ambient.cpp now
+            // states: the budget pays for an attempt that had a line, never
+            // for one that never had one.
+            Hs_AmbientBucketRefund();
             return;
+        }
 
         // Same universal-placeholder pass as hs_handler.cpp's
         // TryCorpusFallback: an opener category is ordinary corpus
@@ -206,7 +214,7 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
+        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -288,8 +296,8 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
         // in hs_queue.cpp's WorkerLoop, same as the dungeon-completion
         // score bump below in HsOpenerEncounterHandler.
         AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId());
-        const char* zoneName = entry ? entry->area_name[0] : nullptr;
-        std::string zone = (zoneName && *zoneName) ? zoneName : "the field";
+        std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
+        std::string zone = zoneName.empty() ? "the field" : zoneName;
         Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(),
                               kHsMemoryEventGroupedInZone, Hs_BuildGroupedInZoneText(zone));
 

@@ -13,7 +13,7 @@
 // Bumps this bot's interaction_score by `weight`, lazily creating the
 // identity row on first score event (needs `botLevel` to fill the row's NOT
 // NULL archetype/last_known_level columns; hs_archetype.h's
-// Hs_ArchetypeForBot is pure GUID+level, so the snapshot costs nothing
+// Hs_ArchetypeForBot is pure GUID, so the snapshot costs nothing
 // extra). Promotes (sets promoted_at) the instant the running total crosses
 // kHsPromotionThreshold, if not already promoted. Card generation itself is
 // the generator's job (hs_generator.h), picking up rows with promoted_at set
@@ -49,6 +49,24 @@ struct HsCardSnapshot
     std::string currentGoal;
 };
 HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid);
+
+// Review G1: Hs_LookupCardSnapshot and Hs_LookupCardFactField share a small
+// per-bot cache of the hside_identity row, with a 30s TTL. They are the
+// module's most repeated queries -- run on the world thread inside the chat
+// hook, once per tier tried per replying bot per message -- and a card
+// changes only at four explicit moments, so the DB read is nearly always
+// answering the same "no active card" for the same bot.
+//
+// Every writer that changes a bot's card must call this. The TTL is a
+// backstop for a path that forgets, not the mechanism: without the explicit
+// call a freshly generated card stays invisible for up to 30 seconds.
+// Cheap (one map erase under a mutex) and safe from any thread.
+void Hs_InvalidateCardCache(uint64_t botGuid);
+
+// Drops the whole cache. For the bulk paths that change many rows at once
+// (the daily sweep's decay/demote pass) and anywhere a caller cannot
+// enumerate exactly which bots it touched.
+void Hs_InvalidateAllCardCache();
 
 // One card_facts field, for the three grounded-answer questions that use it
 // (current_goal, played_since, alt, hs_grounded.h). Empty string

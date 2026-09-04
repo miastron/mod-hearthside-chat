@@ -19,7 +19,7 @@ void Hs_LoadEventAffinityFromDb()
         // one means "every archetype reacts to everything equally," which is
         // a valid (if flat) configuration. Logged at info so an operator who
         // *expected* the seed to be there can still see it isn't.
-        LOG_INFO("server.loading",
+        LOG_INFO("module.hearthside",
             "[HearthsideChat] hside_event_affinity is empty -- every (event, archetype) pair "
             "weighs 1.0 and no archetype is favoured for any event.");
         Hs_SetEventAffinityTable({});
@@ -37,7 +37,7 @@ void Hs_LoadEventAffinityFromDb()
         HsEventType type;
         if (!Hs_EventTypeForName(eventName, type))
         {
-            LOG_ERROR("server.loading",
+            LOG_ERROR("module.hearthside",
                 "[HearthsideChat] hside_event_affinity has an unrecognized event_type '{}' -- row skipped.",
                 eventName);
             ++skipped;
@@ -52,7 +52,7 @@ void Hs_LoadEventAffinityFromDb()
         HsArchetype archetype;
         if (!Hs_ArchetypeForName(archetypeName, archetype))
         {
-            LOG_ERROR("server.loading",
+            LOG_ERROR("module.hearthside",
                 "[HearthsideChat] hside_event_affinity references archetype '{}', which is not in "
                 "hside_archetype -- row skipped.",
                 archetypeName);
@@ -66,7 +66,7 @@ void Hs_LoadEventAffinityFromDb()
             // can make a running total move backwards past the roll), so
             // clamp rather than trust it. Zero is the intended "never
             // speaks to this event" floor and is left alone.
-            LOG_ERROR("server.loading",
+            LOG_ERROR("module.hearthside",
                 "[HearthsideChat] hside_event_affinity row ({}, {}) has a negative weight {} -- clamped to 0.",
                 eventName, archetypeName, weight);
             weight = 0.0f;
@@ -76,6 +76,6 @@ void Hs_LoadEventAffinityFromDb()
     } while (result->NextRow());
 
     Hs_SetEventAffinityTable(rows);
-    LOG_INFO("server.loading", "[HearthsideChat] Loaded {} event-affinity row(s) ({} skipped).",
+    LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} event-affinity row(s) ({} skipped).",
         static_cast<uint32_t>(rows.size()), skipped);
 }

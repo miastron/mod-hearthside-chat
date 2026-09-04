@@ -4,6 +4,7 @@
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
+#include "hs_locale.h"
 
 #include "Channel.h" // Player::IsInChannel / Hs_ResolveChannelForDelivery's return
 #include "DBCStores.h"
@@ -103,8 +104,8 @@ namespace
 
         if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
         {
-            const char* name = entry->area_name[0];
-            if (name && *name)
+            std::string name = Hs_LocalizedAreaName(entry); // review H1
+            if (!name.empty())
                 ctx.zoneName = name;
         }
 
@@ -195,13 +196,21 @@ namespace
         ordered = Hs_OrderChannelCandidates(ordered, speaker->GetZoneId(),
                                              Hs_ChannelPolicyFor(kind).maxCandidates, seed);
 
+        // Review G5: a guid -> Player* map rather than the nested scan this
+        // used to run, same change hs_handler.cpp's channel hook gets. On a
+        // General channel holding most of the realm the inner loop was the
+        // quadratic term.
+        std::unordered_map<uint64_t, Player*> byGuid;
+        byGuid.reserve(eligible.size());
+        for (Player* candidate : eligible)
+            byGuid[candidate->GetGUID().GetRawValue()] = candidate;
+
         for (HsChannelCandidate const& c : ordered)
-            for (Player* candidate : eligible)
-                if (candidate->GetGUID().GetRawValue() == c.guid)
-                {
-                    candidates.push_back(candidate);
-                    break;
-                }
+        {
+            auto it = byGuid.find(c.guid);
+            if (it != byGuid.end())
+                candidates.push_back(it->second);
+        }
     }
 }
 
@@ -304,17 +313,36 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     else
         CollectChannelCandidates(speaker, kind, candidates, sawRealPlayer);
 
+    // Review C2: the channel token above is spent before this scan, which
+    // can then find nobody. Each bail-out below returns it -- no hop was
+    // ever going to be spoken, so charging the channel's RatePerMin for it
+    // just throttles the hops that would have worked.
+    auto refundChannelToken = [&]()
+    {
+        if (channel == HsReplyChannel::Channel)
+            Hs_ChannelBucketRefund(kind);
+    };
+
     // Bots talking to each other with nobody there to overhear it is pure GPU
     // spend against no one's experience: the same reasoning that scopes
     // guild replies to a guild with a real member online.
     if (g_HsBotChainRequireRealPlayer && !sawRealPlayer)
+    {
+        refundChannelToken();
         return;
+    }
     if (candidates.empty())
+    {
+        refundChannelToken();
         return;
+    }
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(speaker, text, candidates);
     if (selected.empty())
+    {
+        refundChannelToken();
         return;
+    }
 
     // Exactly one, even though the arbiter may offer two: a second bot
     // answering the same line would fork the chain into two branches sharing
@@ -381,6 +409,25 @@ void Hs_AbortBotChainsInScope(uint64_t scopeId)
     it->second.lastTouchedAt = Clock::now();
 }
 
+// Review C4 raised the worry that a hop generated just before a prune would
+// be discarded here because its scope had been erased. Checked and it cannot
+// happen, and the reason is worth writing down so a later change does not
+// quietly break it:
+//
+//   - PruneStaleLocked only erases a scope untouched for
+//     kChainScopeStaleSeconds (900s), and Hs_NoteBotLine refreshes
+//     lastTouchedAt at the moment a hop is enqueued (see the seq re-check
+//     block above), not merely when the scope is created.
+//   - The longest a hop can be in flight between that refresh and delivery
+//     is bounded by Queue.TTLSeconds (15s default, older entries are
+//     dropped) + LLM.TimeoutSeconds (20s) + TypingDelay.MaxMs (6s) +
+//     kSelfCorrectionMaxDelaySeconds (5s) -- under a minute, against a 900s
+//     staleness threshold.
+//
+// So a missing scope here really does mean the chain is gone, and returning
+// false is right. If either bound ever moves, this is the invariant to
+// re-check: the stale threshold must stay comfortably above the worst-case
+// enqueue-to-delivery latency.
 bool Hs_BotChainHopStillValid(uint64_t scopeId, uint32_t chainSeq)
 {
     std::lock_guard<std::mutex> lock(g_ChainMutex);

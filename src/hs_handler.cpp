@@ -15,6 +15,7 @@
 #include "hs_style.h"
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
+#include "hs_locale.h"
 
 #include "Channel.h"    // §4.17 channel hook: Channel::GetChannelId()/GetName()
 #include "DBCStores.h"
@@ -39,6 +40,7 @@
 #include "SpellInfo.h"
 
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -104,8 +106,8 @@ namespace
 
         if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
         {
-            const char* name = entry->area_name[0];
-            if (name && *name)
+            std::string name = Hs_LocalizedAreaName(entry); // review H1
+            if (!name.empty())
                 ctx.zoneName = name;
         }
 
@@ -140,7 +142,7 @@ namespace
         // this bot's voice rather than a flat string. No history append and
         // no cooldown/last-reply bump: tier 0 writes no identity state at
         // all.
-        HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
+        HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -189,8 +191,8 @@ namespace
                 auto const& mountAuras = bot->GetAuraEffectsByType(SPELL_AURA_MOUNTED);
                 if (mountAuras.empty())
                     return false; // defensive: IsMounted() true but no aura found
-                const char* name = mountAuras.front()->GetSpellInfo()->SpellName[0];
-                fact = (name && *name) ? name : "a mount";
+                std::string name = Hs_LocalizedSpellName(mountAuras.front()->GetSpellInfo()); // review H1
+                fact = name.empty() ? "a mount" : name;
                 break;
             }
             case HsGroundedKind::Level:
@@ -202,19 +204,30 @@ namespace
             {
                 // Same gold/silver split hs_topic_gate.cpp uses for the
                 // persona-line fact. Rounds to whatever denomination a
-                // player would actually say ("47g", "12s"), not an exact
-                // copper count; always resolvable, even at 0 gold.
+                // player would actually say ("47g", "12s", "80c"), not an
+                // exact copper count; always resolvable, even at 0 gold.
+                //
+                // Review C12: the copper case. A bot holding under one
+                // silver answered "how much gold do you have" with "0s",
+                // which reads as broken rather than poor. Falling through to
+                // the smallest denomination that is non-zero says the same
+                // true thing the way a player would.
                 uint32_t copper = bot->GetMoney();
                 uint32_t gold   = copper / 10000;
                 uint32_t silver = (copper / 100) % 100;
-                fact = gold > 0 ? (std::to_string(gold) + "g") : (std::to_string(silver) + "s");
+                if (gold > 0)
+                    fact = std::to_string(gold) + "g";
+                else if (silver > 0)
+                    fact = std::to_string(silver) + "s";
+                else
+                    fact = std::to_string(copper % 100) + "c";
                 break;
             }
             case HsGroundedKind::Zone:
             {
                 AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId());
-                const char* name = entry ? entry->area_name[0] : nullptr;
-                fact = (name && *name) ? name : "around here";
+                std::string name = Hs_LocalizedAreaName(entry); // review H1
+                fact = name.empty() ? "around here" : name;
                 break;
             }
             case HsGroundedKind::Guild:
@@ -270,9 +283,10 @@ namespace
                     {
                         if (ItemTemplate const* tmpl = item->GetTemplate())
                         {
-                            fact    = tmpl->Name1;
-                            hasFact = true;
-                            break;
+                            fact    = Hs_LocalizedItemName(tmpl); // review H1
+                            hasFact = !fact.empty();
+                            if (hasFact)
+                                break;
                         }
                     }
                 }
@@ -424,7 +438,7 @@ namespace
 
         // Same style pass and delivery path as TryReflex; both answer
         // without touching the GPU.
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
+        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -480,7 +494,7 @@ namespace
                 return false;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
+        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -540,7 +554,7 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid, botLevel);
+        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -602,7 +616,7 @@ namespace
         HsTopicGateContext topicGate = BuildTopicGateContext(bot);
 
         if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false) && g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
+            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
 
@@ -804,20 +818,6 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     if (!HsTierAllows(policy.maxTier, HsTier::Corpus))
         return true;
 
-    // §4.17's Trade `care` offset trigger: stamps every bot currently a
-    // member of this channel instance, independent of whether any of them
-    // go on to reply below. "Recently witnessed WTS/WTB activity" is true
-    // for the whole channel, not just whichever bot happens to answer.
-    if (kind == HsChannelKind::Trade && Hs_IsWtsWtb(msg))
-    {
-        for (auto const& itr : ObjectAccessor::GetPlayers())
-        {
-            Player* candidate = itr.second;
-            if (candidate && candidate->IsInWorld() && IsBot(candidate) && candidate->IsInChannel(channel))
-                Hs_NoteTradeSighting(candidate->GetGUID().GetRawValue());
-        }
-    }
-
     Hs_AbortScriptsWitnessedBy(player->GetGUID().GetRawValue());
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
@@ -825,16 +825,37 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     // General, which is the only one hs_botchain.h chains on.
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
-    if (!Hs_ChannelBucketTake(kind))
-        return true; // throttled: no candidate scan at all on a busy channel
+    // Review G5: this hook used to walk ObjectAccessor::GetPlayers() twice on
+    // a Trade WTS/WTB line -- once to stamp the `care` sightings and again to
+    // build the candidate list -- with the same IsBot/IsInWorld/IsInChannel
+    // tests both times. One walk now serves both.
+    //
+    // The sighting stamp is deliberately kept ahead of the bucket check, as
+    // it was before: "this channel recently saw WTS/WTB activity" is true of
+    // the channel whether or not the module is allowed to reply to this
+    // particular message, so throttling must not suppress it. The reply
+    // gate is applied inside the walk instead.
+    const bool stampTradeSightings = (kind == HsChannelKind::Trade && Hs_IsWtsWtb(msg));
+    const bool wantCandidates      = Hs_ChannelBucketTake(kind);
+
+    if (!stampTradeSightings && !wantCandidates)
+        return true; // throttled and nothing to stamp: no walk at all
 
     std::vector<Player*> eligible;
     for (auto const& itr : ObjectAccessor::GetPlayers())
     {
         Player* candidate = itr.second;
-        if (!candidate || candidate == player || !candidate->IsInWorld())
+        if (!candidate || !candidate->IsInWorld() || !IsBot(candidate))
             continue;
-        if (!IsBot(candidate))
+        if (!candidate->IsInChannel(channel))
+            continue; // Channel's own member list is private; this is the public membership check
+
+        // §4.17's Trade `care` offset trigger: every bot in this channel
+        // instance, independent of whether any of them go on to reply.
+        if (stampTradeSightings)
+            Hs_NoteTradeSighting(candidate->GetGUID().GetRawValue());
+
+        if (!wantCandidates || candidate == player)
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
             continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
@@ -842,12 +863,14 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
             continue; // opposing faction can't read this channel
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
-        if (!candidate->IsInChannel(channel))
-            continue; // Channel's own member list is private; this is the public membership check
         eligible.push_back(candidate);
     }
     if (eligible.empty())
+    {
+        if (wantCandidates)
+            Hs_ChannelBucketRefund(kind); // review C2: nobody to speak, so the token bought nothing
         return true;
+    }
 
     std::vector<HsChannelCandidate> candidates;
     candidates.reserve(eligible.size());
@@ -857,17 +880,28 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     uint64_t seed = (static_cast<uint64_t>(urand(0, 0xFFFFFFFFu)) << 32) | urand(0, 0xFFFFFFFFu);
     candidates = Hs_OrderChannelCandidates(candidates, player->GetZoneId(), policy.maxCandidates, seed);
 
+    // Review G5: a guid -> Player* map instead of the nested scan that used
+    // to rebuild this list. The inner loop made it O(selected x eligible),
+    // which on a Trade channel holding most of the realm is the one place
+    // in this hook that grew quadratically with population.
+    std::unordered_map<uint64_t, Player*> byGuid;
+    byGuid.reserve(eligible.size());
+    for (Player* candidate : eligible)
+        byGuid[candidate->GetGUID().GetRawValue()] = candidate;
+
     std::vector<Player*> capped;
     capped.reserve(candidates.size());
     for (HsChannelCandidate const& c : candidates)
-        for (Player* candidate : eligible)
-            if (candidate->GetGUID().GetRawValue() == c.guid)
-            {
-                capped.push_back(candidate);
-                break;
-            }
+    {
+        auto it = byGuid.find(c.guid);
+        if (it != byGuid.end())
+            capped.push_back(it->second);
+    }
     if (capped.empty())
+    {
+        Hs_ChannelBucketRefund(kind); // review C2
         return true;
+    }
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, capped);
     for (Player* bot : selected)

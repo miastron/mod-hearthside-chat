@@ -14,8 +14,10 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -149,14 +151,23 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
         return;
     }
 
-    HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
+    HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
     // Lazily create the row on first score event, otherwise just add to the
     // running total. last_known_level/level_checked_at refresh on every
     // bump too, which is what makes the retirement check above trustworthy
     // on the next call.
-    CharacterDatabase.Execute(
+    //
+    // Review A2: DirectExecute, not Execute. The promotion check immediately
+    // below reads interaction_score back with Query(), which runs on the
+    // synchronous connection pool while Execute() enqueues onto the async
+    // worker -- the read would routinely observe the pre-bump value, so
+    // promotion at kHsPromotionThreshold lagged by one qualifying
+    // interaction and g_PromotionsThisSession could double-count when two
+    // bumps landed between two reads. DirectExecute commits on the same pool
+    // the read uses, so the read-after-write is ordered.
+    CharacterDatabase.DirectExecute(
         "INSERT INTO hside_identity (bot_guid, archetype, last_known_level, level_checked_at, interaction_score, last_used_at) "
         "VALUES ({}, '{}', {}, NOW(), {}, NOW()) "
         "ON DUPLICATE KEY UPDATE interaction_score = interaction_score + {}, last_known_level = {}, level_checked_at = NOW(), last_used_at = NOW()",
@@ -176,49 +187,138 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
             "UPDATE hside_identity SET promoted_at = NOW() WHERE bot_guid = {} AND promoted_at IS NULL", botGuid);
         g_PromotionsThisSession.fetch_add(1);
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Bot {} promoted (score {}).", botGuid, score);
+            LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} promoted (score {}).", botGuid, score);
     }
+}
+
+// ---- card lookup cache (review G1) -------------------------------------
+//
+// Hs_LookupCardSnapshot is the single most repeated query in the module. It
+// runs on the world thread inside the chat hook, once per tier tried per
+// replying bot per message: TryReflex, TryGrounded, TryCorpusFallback and
+// TryChannelCorpusReply each take a snapshot, and TryGrounded additionally
+// called Hs_LookupCardFactField (another query) per fact-backed question
+// kind. With CharacterDatabase.SynchThreads = 1 by default, every one of
+// those blocks the world tick against the single synchronous connection,
+// which the queue worker and generator are also using.
+//
+// The overwhelmingly common answer is "this bot has no active card", and a
+// card changes only at four explicit moments: generation, demotion,
+// retirement, and a GM/HTTP edit. So the row is cached per bot with a short
+// TTL, and every writer invalidates explicitly -- the TTL is a backstop for
+// a path that forgets to, not the primary mechanism.
+//
+// One cache entry serves both accessors: the raw card_facts text is kept so
+// Hs_LookupCardFactField can answer any field without its own query.
+namespace
+{
+    using CacheClock = std::chrono::steady_clock;
+
+    // Short enough that an unnoticed direct DB edit corrects itself within a
+    // minute, long enough that a burst of replies to one message costs one
+    // query rather than six.
+    constexpr int64_t kCardCacheTtlSeconds = 30;
+
+    // Bounded so a long-running realm cannot accumulate an entry per bot
+    // that ever spoke. Cleared wholesale rather than LRU-evicted: the
+    // contents are reconstructible by definition, and this happens rarely.
+    constexpr size_t  kCardCacheMaxEntries = 4096;
+
+    struct CardCacheEntry
+    {
+        HsCardSnapshot          snapshot;
+        std::string             factsText;  // raw card_facts, "" if NULL/absent
+        CacheClock::time_point  cachedAt;
+    };
+
+    std::mutex                                     g_CardCacheMutex;
+    std::unordered_map<uint64_t, CardCacheEntry>   g_CardCache;
+
+    // Reads the row and refreshes the cache entry. Caller must not hold
+    // g_CardCacheMutex: this blocks on the DB.
+    CardCacheEntry FetchCardEntry(uint64_t botGuid)
+    {
+        CardCacheEntry entry;
+        entry.cachedAt = CacheClock::now();
+
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT card_voice, card_facts FROM hside_identity WHERE bot_guid = {} AND card_active = 1", botGuid);
+        if (!result)
+            return entry; // active stays false: no row, or the card is dormant/retired
+
+        entry.snapshot.active     = true;
+        entry.snapshot.voiceBlock = (*result)[0].IsNull() ? "" : (*result)[0].Get<std::string>();
+
+        if (!(*result)[1].IsNull())
+        {
+            entry.factsText = (*result)[1].Get<std::string>();
+            hs_json facts = hs_json::parse(entry.factsText, nullptr, /*allow_exceptions=*/false);
+            if (!facts.is_discarded())
+            {
+                entry.snapshot.verbalTic = Hs_ExtractVerbalTic(facts);
+                // Same already-parsed JSON the verbal tic comes from. Reading
+                // these two here is what lets TryCorpusFallback resolve the
+                // card-only placeholders without two more round trips for the
+                // row it already has.
+                entry.snapshot.mainFocus   = Hs_CardFactField(facts, "main_focus");
+                entry.snapshot.currentGoal = Hs_CardFactField(facts, "current_goal");
+            }
+        }
+        return entry;
+    }
+
+    CardCacheEntry CardEntryFor(uint64_t botGuid)
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_CardCacheMutex);
+            auto it = g_CardCache.find(botGuid);
+            if (it != g_CardCache.end())
+            {
+                auto age = std::chrono::duration_cast<std::chrono::seconds>(
+                    CacheClock::now() - it->second.cachedAt).count();
+                if (age < kCardCacheTtlSeconds)
+                    return it->second;
+            }
+        }
+
+        CardCacheEntry entry = FetchCardEntry(botGuid);
+
+        std::lock_guard<std::mutex> lock(g_CardCacheMutex);
+        if (g_CardCache.size() >= kCardCacheMaxEntries)
+            g_CardCache.clear();
+        g_CardCache[botGuid] = entry;
+        return entry;
+    }
+}
+
+void Hs_InvalidateCardCache(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_CardCacheMutex);
+    g_CardCache.erase(botGuid);
+}
+
+void Hs_InvalidateAllCardCache()
+{
+    std::lock_guard<std::mutex> lock(g_CardCacheMutex);
+    g_CardCache.clear();
 }
 
 HsCardSnapshot Hs_LookupCardSnapshot(uint64_t botGuid)
 {
-    HsCardSnapshot snapshot;
-
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT card_voice, card_facts FROM hside_identity WHERE bot_guid = {} AND card_active = 1", botGuid);
-    if (!result)
-        return snapshot;
-
-    snapshot.active     = true;
-    snapshot.voiceBlock = (*result)[0].IsNull() ? "" : (*result)[0].Get<std::string>();
-
-    if (!(*result)[1].IsNull())
-    {
-        std::string factsText = (*result)[1].Get<std::string>();
-        hs_json facts = hs_json::parse(factsText, nullptr, /*allow_exceptions=*/false);
-        if (!facts.is_discarded())
-        {
-            snapshot.verbalTic = Hs_ExtractVerbalTic(facts);
-            // Same already-parsed JSON the verbal tic comes from. Reading
-            // these two here is what lets TryCorpusFallback resolve the
-            // card-only placeholders without two more round trips for the
-            // row it already has.
-            snapshot.mainFocus   = Hs_CardFactField(facts, "main_focus");
-            snapshot.currentGoal = Hs_CardFactField(facts, "current_goal");
-        }
-    }
-
-    return snapshot;
+    return CardEntryFor(botGuid).snapshot;
 }
 
 std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldName)
 {
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT card_facts FROM hside_identity WHERE bot_guid = {} AND card_active = 1", botGuid);
-    if (!result || (*result)[0].IsNull())
+    // Review G1: served from the same cached row as the snapshot, so the
+    // three fact-backed grounded answers (current_goal, played_since, alt)
+    // no longer cost a query each on top of the snapshot the caller has
+    // already taken.
+    CardCacheEntry entry = CardEntryFor(botGuid);
+    if (!entry.snapshot.active || entry.factsText.empty())
         return "";
 
-    hs_json facts = hs_json::parse((*result)[0].Get<std::string>(), nullptr, /*allow_exceptions=*/false);
+    hs_json facts = hs_json::parse(entry.factsText, nullptr, /*allow_exceptions=*/false);
     if (facts.is_discarded())
         return "";
 
@@ -242,7 +342,7 @@ void Hs_ApplyExcludeVectorsFromIdentityTable()
     } while (result->NextRow());
 
     if (g_HsDebugEnabled)
-        LOG_INFO("server.loading", "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
+        LOG_INFO("module.hearthside", "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
 }
 
 void Hs_DrainExcludeVectorQueue()
@@ -279,7 +379,7 @@ void Hs_RemoveBotFromExcludeVectors(uint64_t botGuid)
 
 void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel)
 {
-    HsArchetype archetype = Hs_ArchetypeForBot(botGuid, newLevel);
+    HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
     CharacterDatabase.Execute(
@@ -289,12 +389,13 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel)
         "WHERE bot_guid = {}",
         archetypeName, static_cast<uint32_t>(newLevel), botGuid);
 
+    Hs_InvalidateCardCache(botGuid); // review G1: the card is gone as of now
     Hs_DropMemoryRowsForBot(botGuid);
     RemoveNameFromExcludeVectors(LookupBotName(botGuid));
 
     g_RetirementsThisSession.fetch_add(1);
     if (g_HsDebugEnabled)
-        LOG_INFO("server.loading", "[HearthsideChat] Bot {} retired (level dropped to {}).", botGuid, newLevel);
+        LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} retired (level dropped to {}).", botGuid, newLevel);
 }
 
 void Hs_RunIdentityDailySweep()
@@ -309,6 +410,16 @@ void Hs_RunIdentityDailySweep()
         "SELECT bot_guid, pinned_by_friend, promoted_at FROM hside_identity");
     if (rows)
     {
+        // Review G8: collect the guids that need each transition, then issue
+        // one statement per transition instead of one UPDATE per identity
+        // row. The old loop sent up to three statements per row over the
+        // whole table -- on a realm with a few thousand identity rows that
+        // is thousands of round trips for a sweep whose actual effect is
+        // usually a handful of flips.
+        std::vector<uint64_t> toPin;
+        std::vector<uint64_t> toUnpin;
+        std::vector<uint64_t> toPromote;
+
         do
         {
             uint64_t botGuid  = (*rows)[0].Get<uint64_t>();
@@ -318,21 +429,50 @@ void Hs_RunIdentityDailySweep()
 
             if (isFriended && !pinned)
             {
-                CharacterDatabase.Execute("UPDATE hside_identity SET pinned_by_friend = 1 WHERE bot_guid = {}", botGuid);
+                toPin.push_back(botGuid);
                 if (!promoted)
-                {
-                    CharacterDatabase.Execute(
-                        "UPDATE hside_identity SET promoted_at = NOW() WHERE bot_guid = {} AND promoted_at IS NULL", botGuid);
-                    g_PromotionsThisSession.fetch_add(1);
-                    if (g_HsDebugEnabled)
-                        LOG_INFO("server.loading", "[HearthsideChat] Bot {} promoted (friended).", botGuid);
-                }
+                    toPromote.push_back(botGuid);
             }
             else if (!isFriended && pinned)
             {
-                CharacterDatabase.Execute("UPDATE hside_identity SET pinned_by_friend = 0 WHERE bot_guid = {}", botGuid);
+                toUnpin.push_back(botGuid);
             }
         } while (rows->NextRow());
+
+        // Comma-joined guid list for an IN (...) clause. Values are
+        // uint64_t read back out of our own table, so no escaping applies.
+        auto guidList = [](const std::vector<uint64_t>& guids)
+        {
+            std::string out;
+            for (uint64_t guid : guids)
+            {
+                if (!out.empty())
+                    out += ",";
+                out += std::to_string(guid);
+            }
+            return out;
+        };
+
+        if (!toPin.empty())
+            CharacterDatabase.Execute(
+                "UPDATE hside_identity SET pinned_by_friend = 1 WHERE bot_guid IN ({})", guidList(toPin));
+        if (!toUnpin.empty())
+            CharacterDatabase.Execute(
+                "UPDATE hside_identity SET pinned_by_friend = 0 WHERE bot_guid IN ({})", guidList(toUnpin));
+        if (!toPromote.empty())
+        {
+            // promoted_at IS NULL is kept in the predicate, exactly as the
+            // per-row version had it: the read above and this write are on
+            // different connections, so the guard is what makes a
+            // concurrent promotion (Hs_BumpInteractionScore) idempotent
+            // rather than a second promotion.
+            CharacterDatabase.Execute(
+                "UPDATE hside_identity SET promoted_at = NOW() WHERE promoted_at IS NULL AND bot_guid IN ({})",
+                guidList(toPromote));
+            g_PromotionsThisSession.fetch_add(static_cast<uint32_t>(toPromote.size()));
+            if (g_HsDebugEnabled)
+                LOG_INFO("module.hearthside", "[HearthsideChat] {} bot(s) promoted (friended).", toPromote.size());
+        }
     }
 
     // 2. Score decay: one point per day once a row has gone quiet for
@@ -367,10 +507,11 @@ void Hs_RunIdentityDailySweep()
         {
             uint64_t botGuid = (*toDemote)[0].Get<uint64_t>();
             CharacterDatabase.Execute("UPDATE hside_identity SET card_active = 0 WHERE bot_guid = {}", botGuid);
+            Hs_InvalidateCardCache(botGuid); // review G1
             RemoveNameFromExcludeVectors(LookupBotName(botGuid));
             g_DemotionsThisSession.fetch_add(1);
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Bot {} demoted (dormant).", botGuid);
+                LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} demoted (dormant).", botGuid);
         } while (toDemote->NextRow());
     }
 
@@ -423,10 +564,15 @@ void Hs_RunIdentityDailySweep()
         } while (orphans->NextRow());
 
         if (orphanCount > 0)
-            LOG_INFO("server.loading",
+            LOG_INFO("module.hearthside",
                 "[HearthsideChat] Cleaned up {} orphaned identity row(s) (bot no longer exists -- "
                 "likely a DeleteRandomBotAccounts wipe).", orphanCount);
     }
+
+    // Review G1: this sweep demotes, retires and deletes rows in bulk, so
+    // rather than tracking every guid each pass touched, drop the whole
+    // card cache once at the end. It runs daily and rebuilds lazily.
+    Hs_InvalidateAllCardCache();
 }
 
 uint32_t Hs_PromotionsThisSession()
@@ -446,7 +592,7 @@ uint32_t Hs_RetirementsThisSession()
 
 bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
 {
-    HsArchetype archetype = Hs_ArchetypeForBot(botGuid, botLevel);
+    HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
     // Read the prior state *before* the upsert. Reading it afterwards cannot
@@ -478,6 +624,7 @@ bool Hs_ForceDemote(uint64_t botGuid)
         return false;
 
     CharacterDatabase.Execute("UPDATE hside_identity SET card_active = 0 WHERE bot_guid = {}", botGuid);
+    Hs_InvalidateCardCache(botGuid); // review G1
     RemoveNameFromExcludeVectors(LookupBotName(botGuid));
     g_DemotionsThisSession.fetch_add(1);
     return true;
@@ -512,12 +659,17 @@ HsIdentityInspection Hs_InspectIdentity(uint64_t botGuid)
 
 void Hs_GmPinBot(uint64_t botGuid)
 {
-    PushNameIntoExcludeVectors(LookupBotName(botGuid));
+    // Review C18: actually the "thin wrapper" the header describes.
+    // Hs_RemoveBotFromExcludeVectors was publicly declared but had no caller
+    // anywhere, because both GM entry points reached past it to the
+    // file-local helper -- so the exported half of a documented pair was
+    // dead code while its duplicate was the one in use.
+    Hs_PushBotIntoExcludeVectors(botGuid);
 }
 
 void Hs_GmUnpinBot(uint64_t botGuid)
 {
-    RemoveNameFromExcludeVectors(LookupBotName(botGuid));
+    Hs_RemoveBotFromExcludeVectors(botGuid);
 }
 
 uint32_t Hs_IdentityRowCount()

@@ -22,6 +22,21 @@ inline HsTier HsParseTier(const std::string& value)
     return HsTier::Off;
 }
 
+// The config spelling of a tier: the exact string HsParseTier accepts, so a
+// log line naming a tier reads back as something the operator can paste
+// into a config key. Added for review H3's Channel.MaxCandidates warning.
+inline const char* HsTierName(HsTier tier)
+{
+    switch (tier)
+    {
+        case HsTier::Inference: return "inference";
+        case HsTier::Corpus:    return "corpus";
+        case HsTier::Reflex:    return "reflex";
+        case HsTier::Off:
+        default:                 return "off";
+    }
+}
+
 // True if the ceiling permits at least the given tier.
 inline bool HsTierAllows(HsTier ceiling, HsTier requested)
 {

@@ -9,14 +9,6 @@
 #include "DatabaseEnv.h"
 #include "QueryResult.h"
 
-namespace
-{
-    uint32_t CorpusRowCount()
-    {
-        QueryResult result = CharacterDatabase.Query("SELECT COUNT(*) FROM hside_corpus");
-        return result ? (*result)[0].Get<uint32_t>() : 0;
-    }
-}
 
 void Hs_SampleMetrics()
 {
@@ -25,6 +17,24 @@ void Hs_SampleMetrics()
     HsTtlDropStats           ttlDrops     = Hs_TtlDropStatsSnapshot();
     HsBucketSaturationStats  bucketSat    = Hs_GlobalBucketSaturationSnapshot();
 
+    // Review G6: the six DB-sourced counters (corpus rows, /say script
+    // reserve, scripts consumed in 24h, identity rows, card-active rows,
+    // memory rows) used to be six *synchronous* Query() calls evaluated as
+    // arguments to this Execute -- six blocking round trips on the world
+    // thread every 300s, serialized against everything else using
+    // CharacterDatabase's single synchronous connection.
+    //
+    // They are now scalar subqueries inside the INSERT itself, so this whole
+    // function makes zero synchronous reads: one async Execute that the
+    // worker evaluates on its own connection. The in-memory counters
+    // (session totals, latency percentiles, queue depth) stay as
+    // format arguments -- they are atomics and mutex reads, not DB work.
+    //
+    // The subqueries are the exact statements CorpusRowCount /
+    // Hs_ScriptReserveDepth / Hs_ScriptsConsumedLast24h /
+    // Hs_IdentityRowCount / Hs_CardActiveCount / Hs_MemoryRowCount ran; those
+    // accessors still exist for `.hearthside status` and the HTTP routes,
+    // where a caller genuinely wants the value back.
     CharacterDatabase.Execute(
         "INSERT INTO hside_metrics (backend_down, queue_depth, corpus_row_count, "
         "corpus_rows_added_session, corpus_rows_evicted_session, script_reserve_depth, "
@@ -33,11 +43,21 @@ void Hs_SampleMetrics()
         "openers_fired_session, latency_p50_ms, latency_p95_ms, latency_p99_ms, "
         "prompt_chars_ring1_mean, prompt_chars_ring2_mean, prompt_chars_ring3_mean, "
         "ttl_dropped_session, ttl_processed_session, bucket_denied_session, bucket_attempted_session) "
-        "VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
-        Hs_IsBackendDown() ? 1 : 0, Hs_PendingQueueDepth(), CorpusRowCount(),
-        Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession(), Hs_ScriptReserveDepth(),
-        Hs_ActiveScriptRunCount(), Hs_ScriptsConsumedLast24h(), Hs_IdentityRowCount(), Hs_CardActiveCount(),
-        Hs_PromotionsThisSession(), Hs_DemotionsThisSession(), Hs_RetirementsThisSession(), Hs_MemoryRowCount(),
+        "SELECT {}, {}, "
+        "(SELECT COUNT(*) FROM hside_corpus), "
+        "{}, {}, "
+        "(SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL), "
+        "{}, "
+        "(SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NOT NULL AND consumed_at >= NOW() - INTERVAL 1 DAY), "
+        "(SELECT COUNT(*) FROM hside_identity), "
+        "(SELECT COUNT(*) FROM hside_identity WHERE card_active = 1), "
+        "{}, {}, {}, "
+        "(SELECT COUNT(*) FROM hside_memory), "
+        "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+        Hs_IsBackendDown() ? 1 : 0, Hs_PendingQueueDepth(),
+        Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession(),
+        Hs_ActiveScriptRunCount(),
+        Hs_PromotionsThisSession(), Hs_DemotionsThisSession(), Hs_RetirementsThisSession(),
         Hs_OpenersFiredThisSession(), latency.p50Ms, latency.p95Ms, latency.p99Ms,
         promptByRing.ring1Mean, promptByRing.ring2Mean, promptByRing.ring3Mean,
         ttlDrops.droppedCount, ttlDrops.processedCount, bucketSat.deniedCount, bucketSat.attemptCount);

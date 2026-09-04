@@ -4,6 +4,7 @@
 #include "hs_queue.h"
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
+#include "hs_locale.h"
 
 #include "DBCStores.h"
 #include "Group.h"
@@ -171,8 +172,8 @@ namespace
         topicGate.goldCopper = bot->GetMoney();
         if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
         {
-            const char* zoneName = entry->area_name[0];
-            if (zoneName && *zoneName)
+            std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
+            if (!zoneName.empty())
                 topicGate.zoneName = zoneName;
         }
 

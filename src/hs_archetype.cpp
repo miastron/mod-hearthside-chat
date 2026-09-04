@@ -39,30 +39,25 @@ namespace
 
     // Populated by Hs_SetArchetypeTable, normally called once at startup by
     // hs_archetype_store.cpp's Hs_LoadArchetypesFromDb(). Defaults to a
-    // single safe entry (CASUAL at full weight, no eligibility bound) so a
+    // single safe entry (CASUAL at full weight) so a
     // lookup before that call, or a missing/misconfigured hside_archetype
     // table, degrades to "every bot is CASUAL" rather than reading
     // uninitialized data. hs_archetype_store.cpp logs an error on that path;
     // this file has no logging dependency of its own by design.
     std::array<HsArchetypeInfo, kHsArchetypeCount> g_Archetypes = {{
-        { kEnumNames[0],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[1],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[2],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[3],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[4],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[5],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 255, 0, 800, 45 }, // CASUAL: the one real fallback row, weight 100 so it's always drawn until the DB table loads
-        { kEnumNames[6],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[7],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[8],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[9],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 },
-        { kEnumNames[10], "", 0.5f, 0.0f, 25, 0, false, 0.0f, 0, 255, 1, 800, 45 },
-        { kEnumNames[11], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 2, 800, 45 },
+        { kEnumNames[0],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[1],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[2],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[3],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[4],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[5],  "whatever is in front of them", 0.45f, 0.0f, 30, 100, false, 0.0f, 0, 800, 45 }, // CASUAL: the one real fallback row, weight 100 so it's always drawn until the DB table loads
+        { kEnumNames[6],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[7],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[8],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[9],  "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 },
+        { kEnumNames[10], "", 0.5f, 0.0f, 25, 0, false, 0.0f, 1, 800, 45 },
+        { kEnumNames[11], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 2, 800, 45 },
     }};
-
-    bool IsEligibleForLevel(const HsArchetypeInfo& info, uint8_t level)
-    {
-        return level >= info.minLevel && level <= info.maxLevel;
-    }
 
     // GM-set pins (hs_command.cpp's `.hearthside archetype`). Own mutex,
     // separate from g_ArchetypeTableMutex, since this map is written on
@@ -120,7 +115,7 @@ void Hs_ClearArchetypeOverride(uint64_t botGuid)
     g_ArchetypeOverrides.erase(botGuid);
 }
 
-HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level)
+HsArchetype Hs_ArchetypeForBot(uint64_t botGuid)
 {
     {
         std::lock_guard<std::mutex> lock(g_ArchetypeOverrideMutex);
@@ -133,27 +128,28 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level)
 
     std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
 
-    uint32_t eligibleTotal = 0;
+    // Review C1: one draw over the whole table, no level-eligible subset.
+    // Because neither the modulus nor the cumulative ordering depends on
+    // anything but the GUID any more, a bot's archetype is fixed for the
+    // life of the character -- which is the property the identity system
+    // was already assuming when it generated a card_voice from
+    // archetypeInfo.talksAbout once and never regenerated it.
+    uint32_t total = 0;
     for (auto const& info : g_Archetypes)
-        if (IsEligibleForLevel(info, level))
-            eligibleTotal += info.spawnWeight;
+        total += info.spawnWeight;
 
-    // The safety-default table above (single CASUAL at weight 100, no level
-    // bound) guarantees eligibleTotal is nonzero even before a real table
-    // loads; the seeded hside_archetype table keeps at least six
-    // no-level-requirement entries, so this stays provably nonzero for
-    // every level 1-80 once loaded too. This guard is defensive, not
+    // The safety-default table above (single CASUAL at weight 100)
+    // guarantees this is nonzero even before a real table loads, and the
+    // seeded hside_archetype weights sum to exactly 100. Defensive, not
     // reachable in practice.
-    if (eligibleTotal == 0)
+    if (total == 0)
         return HsArchetype::Casual;
 
-    uint32_t roll = static_cast<uint32_t>(h % static_cast<uint64_t>(eligibleTotal));
+    uint32_t roll = static_cast<uint32_t>(h % static_cast<uint64_t>(total));
 
     uint32_t cumulative = 0;
     for (size_t i = 0; i < g_Archetypes.size(); ++i)
     {
-        if (!IsEligibleForLevel(g_Archetypes[i], level))
-            continue;
         cumulative += g_Archetypes[i].spawnWeight;
         if (roll < cumulative)
             return static_cast<HsArchetype>(i);

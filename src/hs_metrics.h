@@ -82,6 +82,21 @@ std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit);
 // repliedCount/silentCount hold granted/denied token-bucket takes rather
 // than a reply/silence outcome (same two-counter shape, different meaning,
 // not worth a second table for).
+//
+// Review C17 -- counters are SESSION-CUMULATIVE, not per-interval. The
+// snapshots these rows are built from (Hs_ArchetypeReplyCountsSnapshot,
+// Hs_ChannelReplyCountsSnapshot, Hs_ChannelBucketSaturationSnapshot) are
+// running totals since worldserver start, so each sample re-writes a
+// monotonically growing number and a consumer wanting per-interval rates
+// must diff consecutive rows itself. The header used to describe these as
+// "one row per dimension/key per interval", which is true of the row
+// cadence and false of the values, and nothing said so.
+//
+// They also reset to zero on restart, so a diff across a restart boundary
+// goes negative: treat any decrease as a new session rather than as
+// negative traffic. Left cumulative rather than converted to deltas because
+// the in-memory counters are the module's own status-command source of
+// truth and resetting them per sample would break `.hearthside status`.
 struct HsMetricsBreakdownRow
 {
     std::string sampledAt;

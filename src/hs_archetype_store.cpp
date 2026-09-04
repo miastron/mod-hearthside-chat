@@ -26,8 +26,12 @@ namespace
 void Hs_LoadArchetypesFromDb()
 {
     QueryResult result = CharacterDatabase.Query(
+        // min_level/max_level are deliberately not selected (review C1):
+        // level no longer gates the archetype draw. The columns stay in the
+        // schema because editing an already-hash-tracked base/*.sql would
+        // make UpdateFetcher re-apply the whole file.
         "SELECT enum_name, talks_about, care, distracted_chance, verbosity_cap, spawn_weight, "
-        "has_abbrev_override, abbrev_override_chance, min_level, max_level, profanity_level, "
+        "has_abbrev_override, abbrev_override_chance, profanity_level, "
         "typing_base_ms, typing_per_char_ms "
         "FROM hside_archetype");
 
@@ -36,11 +40,11 @@ void Hs_LoadArchetypesFromDb()
     for (size_t i = 0; i < kHsArchetypeCount; ++i)
         // distracted_chance defaults to 0.0f, not a midpoint: a row that failed
         // to load should never invent an "afk" pause it has no configured basis for.
-        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 255, 0, 800, 45 };
+        table[i] = HsArchetypeInfo{ kEnumNames[i], "", 0.5f, 0.0f, 30, 0, false, 0.0f, 0, 800, 45 };
 
     if (!result)
     {
-        LOG_ERROR("server.loading",
+        LOG_ERROR("module.hearthside",
             "[HearthsideChat] hside_archetype returned no rows -- every archetype falls back to a "
             "zero-weight placeholder (bots will draw CASUAL by Hs_ArchetypeForBot's own defensive "
             "fallback). Check that the module's base SQL installed correctly.");
@@ -63,7 +67,7 @@ void Hs_LoadArchetypesFromDb()
         }
         if (slot == kHsArchetypeCount)
         {
-            LOG_ERROR("server.loading", "[HearthsideChat] hside_archetype has an unrecognized enum_name '{}' -- ignored.", enumName);
+            LOG_ERROR("module.hearthside", "[HearthsideChat] hside_archetype has an unrecognized enum_name '{}' -- ignored.", enumName);
             continue;
         }
 
@@ -75,11 +79,9 @@ void Hs_LoadArchetypesFromDb()
         info.spawnWeight           = (*result)[5].Get<uint32_t>();
         info.hasAbbrevOverride     = (*result)[6].Get<bool>();
         info.abbrevOverrideChance  = (*result)[7].Get<float>();
-        info.minLevel              = (*result)[8].Get<uint8_t>();
-        info.maxLevel              = (*result)[9].Get<uint8_t>();
-        info.profanityLevel        = (*result)[10].Get<uint8_t>();
-        info.typingBaseMs          = (*result)[11].Get<uint32_t>();
-        info.typingPerCharMs       = (*result)[12].Get<uint32_t>();
+        info.profanityLevel        = (*result)[8].Get<uint8_t>();
+        info.typingBaseMs          = (*result)[9].Get<uint32_t>();
+        info.typingPerCharMs       = (*result)[10].Get<uint32_t>();
         found[slot] = true;
         ++matched;
     } while (result->NextRow());
@@ -87,13 +89,13 @@ void Hs_LoadArchetypesFromDb()
     for (size_t i = 0; i < kHsArchetypeCount; ++i)
     {
         if (!found[i])
-            LOG_ERROR("server.loading", "[HearthsideChat] hside_archetype is missing '{}' -- it will never be drawn (weight 0) until the row is added.", kEnumNames[i]);
+            LOG_ERROR("module.hearthside", "[HearthsideChat] hside_archetype is missing '{}' -- it will never be drawn (weight 0) until the row is added.", kEnumNames[i]);
     }
 
     Hs_SetArchetypeTable(table);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("server.loading", "[HearthsideChat] Loaded {} of {} archetype row(s) from hside_archetype.", matched, kHsArchetypeCount);
+        LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} of {} archetype row(s) from hside_archetype.", matched, kHsArchetypeCount);
 }
 
 void Hs_LoadArchetypeOverridesFromDb()
@@ -111,7 +113,7 @@ void Hs_LoadArchetypeOverridesFromDb()
         HsArchetype archetype;
         if (!Hs_ArchetypeForName(enumName, archetype))
         {
-            LOG_ERROR("server.loading",
+            LOG_ERROR("module.hearthside",
                 "[HearthsideChat] hside_archetype_override names unrecognized enum_name '{}' for bot {} -- skipped.",
                 enumName, botGuid);
             continue;
@@ -122,7 +124,7 @@ void Hs_LoadArchetypeOverridesFromDb()
     } while (result->NextRow());
 
     if (g_HsDebugEnabled)
-        LOG_INFO("server.loading", "[HearthsideChat] Loaded {} archetype override(s) from hside_archetype_override.", loaded);
+        LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} archetype override(s) from hside_archetype_override.", loaded);
 }
 
 void Hs_SetArchetypeOverrideAndPersist(uint64_t botGuid, HsArchetype archetype)

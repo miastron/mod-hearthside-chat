@@ -119,6 +119,10 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
 // Hs_TryEnqueue's own gates per bot on top of this.
 bool Hs_EventBucketTake();
 
+// Review C2: refund for an event whose EligibleBot filtering left no actor
+// able to speak, so the budget paid for nothing.
+void Hs_EventBucketRefund();
+
 // Claude/archive/PLAN-AMBIENT.md §2: the shared *unprompted-speech* budget
 // (HearthsideChat.Ambient.Bucket.*). Unlike every other bucket in this file,
 // this one is not owned by a single surface: all three producers that
@@ -144,6 +148,17 @@ bool Hs_EventBucketTake();
 // buckets. Deliberately checked late, after the cheap eligibility filters
 // but before the corpus query, so a denied line costs no DB work.
 bool Hs_AmbientBucketTake();
+
+// Review C2: returns a token taken by Hs_AmbientBucketTake that the caller
+// then discovered it could not use, rolling the grant tally back with it.
+// For abandon paths where *nothing was ever going to be spoken and no
+// listener could tell*: an empty corpus reserve, a candidate scan that found
+// nobody, a script header whose turn rows are missing.
+//
+// Not for the ambient scan's own late drops. hs_ambient.cpp argues that a
+// line dropped after the budget said yes is silence the player experiences,
+// and silence is not free; that reasoning is deliberately preserved.
+void Hs_AmbientBucketRefund();
 
 // Session-cumulative grant/deny counts for the shared bucket above, for
 // `.hearthside status` and the HTTP metrics route. Saturation here is the
@@ -216,6 +231,12 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
 // empty. Checked by hs_handler.cpp's Channel* hook before building any
 // candidate list: a cheap early-out on a throttled channel.
 bool Hs_ChannelBucketTake(HsChannelKind kind);
+
+// Review C2: the channel counterpart of Hs_AmbientBucketRefund. The
+// channel-scene path spends *both* this bucket and the shared ambient one,
+// and the shared take can deny after the channel token is already gone --
+// that double-spend is the case this exists for.
+void Hs_ChannelBucketRefund(HsChannelKind kind);
 
 // §4.17: resolves the live Channel* a bot should speak into for delivery,
 // building the same name Player::UpdateLocalChannels does: the zone name for

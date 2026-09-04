@@ -64,6 +64,13 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Generator: {}  Reactive idle: {}  Rows added this session: {}  Rows evicted this session: {}",
             g_HsGeneratorEnabled ? "on" : "off", Hs_IsReactiveIdle() ? "yes" : "no",
             Hs_GeneratorRowsAddedThisSession(), Hs_RowsEvictedThisSession());
+        // Review B2: only shown when non-zero. A parked card is a real
+        // problem worth naming, but a permanent "Parked cards: 0" line in a
+        // status block this long is noise.
+        if (uint32_t parked = Hs_ParkedCardCount())
+            handler->PSendSysMessage(
+                "[HearthsideChat] Parked cards: {} (card generation gave up; restart to retry -- see the WARN in the log)",
+                parked);
         handler->PSendSysMessage("[HearthsideChat] Openers fired this session: {}", Hs_OpenersFiredThisSession());
         {
             // The three unprompted producers share one budget, so the grant/

@@ -264,15 +264,24 @@ namespace
         return out;
     }
 
+    // Review C6: replaces *every* occurrence of each token, not just the
+    // first. No transform in the pipeline duplicates a placeholder today,
+    // so this is defence-in-depth -- but the failure mode it guards against
+    // is a literal N shipping to a chat packet, which is worth one
+    // loop. Scanning forward from the end of each replacement also means a
+    // span whose own text happened to contain a token cannot be rescanned.
     std::string RestoreProtectedSpans(const std::string& text, const std::vector<std::string>& spans)
     {
         std::string out = text;
         for (size_t i = 0; i < spans.size(); ++i)
         {
             std::string token = std::string(1, kPlaceholderMark) + std::to_string(i) + kPlaceholderMark;
-            size_t pos = out.find(token);
-            if (pos != std::string::npos)
+            size_t pos = 0;
+            while ((pos = out.find(token, pos)) != std::string::npos)
+            {
                 out.replace(pos, token.size(), spans[i]);
+                pos += spans[i].size();
+            }
         }
         return out;
     }
@@ -334,8 +343,11 @@ namespace
             out += c;
             lastWasSpace = isSpace;
         }
-        size_t start = out.find_first_not_of(' ');
-        size_t end   = out.find_last_not_of(' ');
+        // Review C16: trim the same character set the collapse above ran
+        // over. Trimming only ' ' left a single leading or trailing tab in
+        // place, since the collapse had already reduced any run to one.
+        size_t start = out.find_first_not_of(" 	");
+        size_t end   = out.find_last_not_of(" 	");
         if (start == std::string::npos)
             return "";
         return out.substr(start, end - start + 1);
@@ -693,9 +705,34 @@ namespace
         return table;
     }
 
+    // Copies `model`'s leading capitalization onto `replacement` (review
+    // C15). ASCII-only, matching the rest of this file's case handling.
+    std::string MatchLeadingCase(const std::string& model, const std::string& replacement)
+    {
+        if (model.empty() || replacement.empty())
+            return replacement;
+        if (!std::isupper(static_cast<unsigned char>(model[0])))
+            return replacement;
+        std::string out = replacement;
+        out[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(out[0])));
+        return out;
+    }
+
     // word already has trailing punctuation stripped by the caller.
     std::string ApplyOneTypoMechanism(const std::string& word, std::mt19937& rng)
     {
+        // Review C5: every mechanism below indexes, swaps, erases and
+        // inserts on raw `char` positions. StripEmoji removes emoji but
+        // leaves other non-ASCII intact (accented player names, a localized
+        // item name outside a masked hyperlink), so a typo landing inside a
+        // multi-byte sequence would emit a broken code unit into a chat
+        // packet. A word carrying any non-ASCII byte is left alone rather
+        // than made UTF-8-aware: typos are cosmetic, the words this skips
+        // are rare, and "no typo" is a correct outcome for any of them.
+        for (unsigned char c : word)
+            if (c >= 0x80)
+                return word;
+
         std::string lower = ToLowerAscii(word);
         bool hasApostrophe = word.find('\'') != std::string::npos;
         bool hasHomophone  = HomophoneTable().count(lower) > 0;
@@ -738,7 +775,13 @@ namespace
                 return out;
             }
             case TypoMechanism::Homophone:
-                return HomophoneTable().at(lower);
+                // Review C15: the table is keyed and valued in lowercase, so
+                // returning it verbatim turned a sentence-initial "Your"
+                // into "you're". Carry the original word's leading capital
+                // across. Only the first character is considered: these are
+                // ordinary words, and an all-caps word never reaches the
+                // typo pass (the emphatic-caps transform runs after it).
+                return MatchLeadingCase(word, HomophoneTable().at(lower));
             case TypoMechanism::Transposition:
             {
                 std::uniform_int_distribution<size_t> pos(0, word.size() - 2);

@@ -5,6 +5,7 @@
 #include "hs_queue.h"
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
+#include "hs_locale.h"
 
 #include "DBCStores.h"
 #include "Group.h"
@@ -63,8 +64,8 @@ namespace
 
         if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
         {
-            const char* name = entry->area_name[0];
-            if (name && *name)
+            std::string name = Hs_LocalizedAreaName(entry); // review H1
+            if (!name.empty())
                 ctx.zoneName = name;
         }
 
@@ -178,7 +179,7 @@ namespace
             candidate.involvement           = actor.involvement;
             candidate.trigger               = actor.trigger;
 
-            HsArchetype archetype = Hs_ArchetypeForBot(botGuid, actor.bot->GetLevel());
+            HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
             candidate.affinityWeight = Hs_EventAffinityWeight(actor.affinityType,
                 Hs_ArchetypeInfoFor(archetype).enumName);
 
@@ -187,7 +188,14 @@ namespace
         }
 
         if (candidates.empty())
+        {
+            // Review C2: the event token was spent before EligibleBot
+            // filtering, so an event whose actors are all excluded (bots
+            // offline, in an excluded-name list, already mid-script) used to
+            // cost a token for a reaction nobody could ever have heard.
+            Hs_EventBucketRefund();
             return;
+        }
 
         std::vector<size_t> selected = Hs_ArbitrateEventReplies(
             Hs_EventCountBiasFor(primaryType), g_HsSayDistance, candidates);
@@ -210,7 +218,7 @@ namespace
             if (admitted)
                 g_EventsFiredThisSession.fetch_add(1);
             else if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Event {} enqueue rejected for bot {}.",
+                LOG_INFO("module.hearthside.chat", "[HearthsideChat] Event {} enqueue rejected for bot {}.",
                     Hs_EventTypeName(primaryType), bot->GetName());
         }
     }
@@ -432,7 +440,7 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
     if (!group)
         return;
 
-    std::string itemName = proto->Name1;
+    std::string itemName = Hs_LocalizedItemName(proto); // review H1
     std::vector<HsEventActor> actors;
 
     if (EligibleBot(player))

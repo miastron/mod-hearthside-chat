@@ -119,6 +119,7 @@ namespace
             {"enabled",               g_HsGeneratorEnabled},
             {"rows_added_session",    Hs_GeneratorRowsAddedThisSession()},
             {"rows_evicted_session", Hs_RowsEvictedThisSession()},
+            {"parked_cards",          Hs_ParkedCardCount()}, // review B2
         };
         j["openers_fired_session"]         = Hs_OpenersFiredThisSession();
         j["events_fired_session"]          = Hs_EventsFiredThisSession();
@@ -343,7 +344,7 @@ void Hs_HttpServerStart()
 
     if (g_HsHttpServerPrivateKey.empty())
     {
-        LOG_ERROR("server.loading",
+        LOG_ERROR("module.hearthside",
             "[HearthsideChat] HTTP server not started: HearthsideChat.HttpServerPrivateKey is not set.");
         return;
     }
@@ -357,7 +358,7 @@ void Hs_HttpServerStart()
 
         if (!svr->bind_to_port(g_HsHttpServerBind.c_str(), static_cast<int>(g_HsHttpServerPort)))
         {
-            LOG_ERROR("server.loading",
+            LOG_ERROR("module.hearthside",
                 "[HearthsideChat] HTTP server failed to bind to {}:{} -- port may be in use or address invalid. "
                 "HTTP server disabled; the rest of the module continues normally.",
                 g_HsHttpServerBind, g_HsHttpServerPort);
@@ -375,15 +376,15 @@ void Hs_HttpServerStart()
         std::string bindAddr = g_HsHttpServerBind;
         uint32_t    bindPort = g_HsHttpServerPort;
         s_thread = std::make_unique<std::thread>([bindAddr, bindPort]() {
-            LOG_INFO("server.loading", "[HearthsideChat] HTTP server listening on {}:{}", bindAddr, bindPort);
+            LOG_INFO("module.hearthside", "[HearthsideChat] HTTP server listening on {}:{}", bindAddr, bindPort);
             s_server->listen_after_bind();
             s_running.store(false);
-            LOG_INFO("server.loading", "[HearthsideChat] HTTP server stopped.");
+            LOG_INFO("module.hearthside", "[HearthsideChat] HTTP server stopped.");
         });
     }
     catch (const std::exception& ex)
     {
-        LOG_ERROR("server.loading",
+        LOG_ERROR("module.hearthside",
             "[HearthsideChat] HTTP server exception during startup: {}. HTTP server disabled; "
             "the rest of the module continues normally.", ex.what());
         s_server.reset();
@@ -427,7 +428,3 @@ void Hs_HttpServerStop()
     s_running.store(false);
 }
 
-bool Hs_HttpServerIsRunning()
-{
-    return s_running.load();
-}

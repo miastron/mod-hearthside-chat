@@ -53,8 +53,11 @@ struct HsArchetypeInfo
     uint32_t    spawnWeight;    // out of 100 across all twelve entries; used by Hs_ArchetypeForBot's weighted draw
     bool        hasAbbrevOverride; // only TRADER sets this
     float       abbrevOverrideChance; // meaningful only if hasAbbrevOverride
-    uint8_t     minLevel;       // 0 = no lower bound
-    uint8_t     maxLevel;       // 255 = no upper bound; only YOUNG_APPRENTICE sets this (low band only, 1-29)
+    // No minLevel/maxLevel: level no longer gates the draw (see
+    // Hs_ArchetypeForBot). hside_archetype's min_level/max_level columns are
+    // left in the schema -- editing a base/*.sql file that has already been
+    // hash-tracked would make UpdateFetcher re-apply it -- but nothing reads
+    // them any more.
     uint8_t     profanityLevel; // 0 = none, 1 = light (damn/hell/crap-tier), 2 = vulgar (TROLL_MILD/TROLL_AGGRESSIVE only)
                                  // Orthogonal to `care`: a careful typer can still swear precisely. Its own
                                  // independent axis, same as abbreviation/typo/caps.
@@ -84,26 +87,39 @@ HsArchetypeInfo Hs_ArchetypeInfoFor(HsArchetype a);
 bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out);
 
 // GM override: pins a bot to one specific stock archetype, bypassing the
-// GUID-weighted draw entirely (Hs_ArchetypeForBot checks this first, no
-// level-eligibility filter: an explicit pin is trusted as-is). In-memory
-// only and thread-safe; hs_archetype_store.cpp owns loading/persisting
-// these across restarts, same split as the archetype table itself.
+// GUID-weighted draw entirely (Hs_ArchetypeForBot checks this first).
+// In-memory only and thread-safe; hs_archetype_store.cpp owns loading/
+// persisting these across restarts, same split as the archetype table
+// itself.
 void Hs_SetArchetypeOverride(uint64_t botGuid, HsArchetype archetype);
 void Hs_ClearArchetypeOverride(uint64_t botGuid);
 
-// Deterministic weighted draw from the bot's GUID, restricted to the subset
-// of the twelve stock archetypes whose level requirement `level` satisfies:
-// a level-22 bot can never draw RAIDER_SERIOUS. Weights are renormalized
-// over just the eligible subset each call, so changing a bot's level band
-// changes what it can draw without any weight retuning. At least four of the
-// twelve entries carry no level requirement, so the eligible pool is never
-// empty for any level 1-80. Returns the GM override (above) first if one is
-// set for this bot, skipping the draw entirely.
+// Deterministic weighted draw from the bot's GUID over all twelve stock
+// archetypes. Returns the GM override (above) first if one is set for this
+// bot, skipping the draw entirely.
 //
-// Pure and called fresh per request (hs_queue.cpp's WorkerLoop) from the
-// bot's current level, so redrawing on a level change is automatic and
-// costs nothing extra.
-HsArchetype Hs_ArchetypeForBot(uint64_t botGuid, uint8_t level);
+// A function of the GUID alone (review C1, 2026-09-03). It used to take the
+// bot's level and renormalize the weighted draw over only the
+// level-eligible subset, which meant both the modulus and the cumulative
+// ordering changed at every band boundary, so *any* bot could land on a
+// different archetype after a ding -- not just one holding a
+// band-restricted archetype. That interacted badly with the identity
+// system: a carded bot's card_voice is generated from the archetype's
+// talksAbout at generation time and never regenerated, while Hs_RetireCard
+// only fires on a level *drop*, so a bot dinging 59 -> 60 kept a voice
+// block written for a personality it no longer had.
+//
+// The gating itself is gone rather than merely pinned, per operator
+// direction: players routinely level alts after reaching max level, so a
+// level-14 character talking about a level-80 raid is not out of the
+// ordinary, and the level bands were buying realism the realm does not
+// actually have. Archetype is now a stable property of the character for
+// its whole life.
+//
+// Still pure and still called fresh per request (hs_queue.cpp's
+// WorkerLoop), so it costs nothing extra to keep recomputing rather than
+// caching.
+HsArchetype Hs_ArchetypeForBot(uint64_t botGuid);
 
 // The archetype delta line for the LLM prompt: "You mostly talk about:
 // <talksAbout>." plus a profanity directive when profanityLevel > 0.

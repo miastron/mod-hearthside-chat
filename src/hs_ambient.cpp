@@ -23,9 +23,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <map>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -184,14 +186,14 @@ namespace
                 // here. Silent before this log, and indistinguishable from
                 // the surface never firing.
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading",
+                    LOG_INFO("module.hearthside.chat",
                              "[HearthsideChat] Bot {} dropped an ambient line: unresolved placeholder in \"{}\"",
                              bot->GetName(), line);
                 return;
             }
         }
 
-        HsArchetype           archetype     = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
+        HsArchetype           archetype     = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         HsStyleContext styleCtx;
         styleCtx.baselineCare         = archetypeInfo.care;
@@ -272,6 +274,37 @@ namespace
         if (g_HsAmbientRequireRealPlayer && realPlayers.empty())
             return;
 
+        // Review G3: bucket by (map, zone, team) before the distance walks.
+        //
+        // The two inner loops below used to scan the whole realm-wide vector
+        // for every candidate bot -- O(bots x bots) for the companion test
+        // and O(bots x players) for the audience test, every 30s. The
+        // kMaxCandidates cap bounds only the *outer* loop, and only once 32
+        // candidates have actually been collected, so on a realm where few
+        // bots are settled it never binds and the walk is the full product:
+        // ~110k IsWithinDistInMap calls at the 334 bots this realm runs,
+        // ~1M at 1000.
+        //
+        // Bucketing is exact, not an approximation: IsWithinDistInMap is
+        // false across maps, the companion/audience tests already require
+        // the same team, and two players in different zones cannot be within
+        // Say.Distance (20 yards) of each other. So a bucket contains every
+        // possible match and the per-bot walk shrinks to "bots standing in
+        // the same zone as this one". Phase is still decided by
+        // IsWithinDistInMap itself, exactly as before -- this only narrows
+        // which pairs it is asked about.
+        using Cell = std::tuple<uint32_t, uint32_t, uint8_t>; // map, zone, team
+        auto cellOf = [](Player* p) {
+            return Cell{ p->GetMapId(), p->GetZoneId(), static_cast<uint8_t>(p->GetTeamId()) };
+        };
+
+        std::map<Cell, std::vector<Player*>> botsByCell;
+        std::map<Cell, std::vector<Player*>> playersByCell;
+        for (Player* bot : bots)
+            botsByCell[cellOf(bot)].push_back(bot);
+        for (Player* player : realPlayers)
+            playersByCell[cellOf(player)].push_back(player);
+
         // (speaker, the nearby player whose name the style pass protects).
         std::vector<std::pair<Player*, Player*>> candidates;
         for (Player* bot : bots)
@@ -284,17 +317,22 @@ namespace
             if (!Hs_IsBotSettled(bot))
                 continue;
 
+            const Cell cell = cellOf(bot);
+
             Player* audience = nullptr;
-            for (Player* player : realPlayers)
+            auto playerCell = playersByCell.find(cell);
+            if (playerCell != playersByCell.end())
             {
-                if (bot->GetTeamId() != player->GetTeamId())
-                    continue;
-                // Map- and phase-aware; see hs_handler.cpp's /say
-                // eligibility filter for why a bare GetDistance is wrong.
-                if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
-                    continue;
-                audience = player;
-                break; // one is enough: this is a presence test, not a count
+                for (Player* player : playerCell->second)
+                {
+                    // Map- and phase-aware; see hs_handler.cpp's /say
+                    // eligibility filter for why a bare GetDistance is wrong.
+                    // Team and map are already guaranteed by the bucket.
+                    if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
+                        continue;
+                    audience = player;
+                    break; // one is enough: this is a presence test, not a count
+                }
             }
 
             if (!audience && g_HsAmbientRequireRealPlayer)
@@ -304,18 +342,20 @@ namespace
             // above, and the same map/phase-aware distance test: one
             // companion in earshot is the whole requirement.
             bool hasCompanion = false;
-            for (Player* other : bots)
+            auto botCell = botsByCell.find(cell);
+            if (botCell != botsByCell.end())
             {
-                if (other == bot)
-                    continue;
-                if (other->GetTeamId() != bot->GetTeamId())
-                    continue;
-                if (!other->IsAlive()) // a corpse is not company
-                    continue;
-                if (!bot->IsWithinDistInMap(other, g_HsSayDistance))
-                    continue;
-                hasCompanion = true;
-                break;
+                for (Player* other : botCell->second)
+                {
+                    if (other == bot)
+                        continue;
+                    if (!other->IsAlive()) // a corpse is not company
+                        continue;
+                    if (!bot->IsWithinDistInMap(other, g_HsSayDistance))
+                        continue;
+                    hasCompanion = true;
+                    break;
+                }
             }
             if (!hasCompanion)
                 continue;
@@ -351,7 +391,18 @@ namespace
                                                 static_cast<uint8_t>(speaker->GetTeamId()),
                                                 speaker->GetZoneId(), snapshot.active);
         if (line.empty())
+        {
+            // Review C2. The rule this file now follows: a token is spent on
+            // an attempt that *had a line* -- SpeakAmbient's placeholder and
+            // empty-style drops keep their spend, and the comment there says
+            // why -- but a dry corpus reserve means this surface had nothing
+            // to say at all. That is a content outage, not silence the
+            // player experiences, and charging the realm-wide unprompted
+            // budget for it would let an empty bucket starve the other two
+            // producers that do have content.
+            Hs_AmbientBucketRefund();
             return;
+        }
 
         SpeakAmbient(speaker, line, HsReplyChannel::Say, HsChannelKind::Trade,
                       audience ? audience->GetName() : "");
@@ -413,7 +464,10 @@ namespace
                                                        static_cast<uint8_t>(speaker->GetTeamId()),
                                                        speaker->GetZoneId());
         if (line.empty())
+        {
+            Hs_AmbientBucketRefund(); // review C2, as the /say path above
             return;
+        }
 
         // No listener name to protect: a party line is addressed to the
         // group, not to one person, so there is no name the style pass must
@@ -487,7 +541,7 @@ namespace
         auto bail = [kind](const char* why)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] ambient {} skipped: {}",
+                LOG_INFO("module.hearthside.chat", "[HearthsideChat] ambient {} skipped: {}",
                          Hs_ChannelKindName(kind), why);
         };
 
@@ -537,13 +591,26 @@ namespace
         if (!Hs_ChannelBucketTake(kind))
             return bail("channel RatePerMin bucket is empty");
         if (!Hs_AmbientBucketTake())
+        {
+            // Review C2: the channel token is already gone at this point.
+            // Without this refund a saturated shared budget quietly drained
+            // the per-channel budget too, on a scene nobody was ever going
+            // to hear -- the one case in this file that was clearly
+            // unintended rather than argued for.
+            Hs_ChannelBucketRefund(kind);
             return bail("shared Ambient.Bucket is empty");
+        }
 
         std::string line = Hs_SelectChannelLine(kind, speaker->getClass(), speaker->GetLevel(),
                                                  static_cast<uint8_t>(speaker->GetTeamId()),
                                                  speaker->GetZoneId());
         if (line.empty())
+        {
+            // Both budgets refunded: nothing was ever going to be spoken.
+            Hs_ChannelBucketRefund(kind);
+            Hs_AmbientBucketRefund();
             return bail("corpus returned no line for this speaker");
+        }
 
         SpeakAmbient(speaker, line, HsReplyChannel::Channel, kind, "");
     }

@@ -145,7 +145,7 @@ namespace
 
         if (wire.size() > kMaxWireLength)
         {
-            LOG_WARN("modules", "[HearthsideChat] HSI bridge TX dropped, wireBytes={} exceeds {}", wire.size(), kMaxWireLength);
+            LOG_WARN("module.hearthside", "[HearthsideChat] HSI bridge TX dropped, wireBytes={} exceeds {}", wire.size(), kMaxWireLength);
             return;
         }
 
@@ -238,7 +238,7 @@ namespace
         // once promoted. This is deliberately not insp.archetype (below):
         // that field is only populated once hasIdentityRow is true, and
         // would leave freshly-met bots showing nothing at all.
-        HsArchetype const       archetype = Hs_ArchetypeForBot(botGuid, bot->GetLevel());
+        HsArchetype const       archetype = Hs_ArchetypeForBot(botGuid);
         HsArchetypeInfo const   info      = Hs_ArchetypeInfoFor(archetype);
         HsIdentityInspection    insp      = Hs_InspectIdentity(botGuid);
 

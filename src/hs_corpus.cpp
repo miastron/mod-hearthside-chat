@@ -1,4 +1,5 @@
 #include "hs_corpus.h"
+#include "hs_locale.h"
 
 #include "Bag.h"
 #include "DBCStores.h"
@@ -67,10 +68,18 @@ namespace
     // Hs_SelectCorpusLine and Hs_SelectOpenerLine below.
     std::string PickAntiRepeatRow(const std::string& categoryName, const std::string& tagWhere)
     {
+        // Review D1: categoryName arrives from hside_corpus_category.name,
+        // which `.hearthside capture <bot> <category>` can populate from GM
+        // console input. hs_generator.cpp escapes it on every equivalent
+        // statement; this one did not. tagWhere is module-built (a fixed
+        // column name plus an integer or a fixed band label) and needs none.
+        std::string escapedCategory = categoryName;
+        CharacterDatabase.EscapeString(escapedCategory);
+
         QueryResult rowResult = CharacterDatabase.Query(
             "SELECT id, text FROM hside_corpus WHERE name = '{}' {} {} "
             "ORDER BY times_used ASC, last_used_at IS NULL DESC, last_used_at ASC LIMIT {}",
-            categoryName, tagWhere, EventDormancyWhere(), kAntiRepeatPoolSize);
+            escapedCategory, tagWhere, EventDormancyWhere(), kAntiRepeatPoolSize);
         if (!rowResult)
             return "";
 
@@ -129,8 +138,12 @@ std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClas
     // card_gated categories are unconditionally excluded here. No
     // is_opener=1 category is card_gated yet, so this is a defensive floor
     // rather than plumbing for a real signal.
+    std::string escapedCategory = categoryName; // Review D1, as PickAntiRepeatRow
+    CharacterDatabase.EscapeString(escapedCategory);
+
     QueryResult catResult = CharacterDatabase.Query(
-        "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}' AND is_opener = 1 AND card_gated = 0", categoryName);
+        "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}' AND is_opener = 1 AND card_gated = 0",
+        escapedCategory);
     if (!catResult)
         return ""; // category missing, or not flagged as an opener category
 
@@ -244,7 +257,7 @@ namespace
         std::ostringstream stream;
         stream << "|c" << std::hex << ItemQualityColors[tmpl->Quality] << std::dec
                << "|Hitem:" << tmpl->ItemId << ":0:0:0:0:0:0:0:0:0|h["
-               << tmpl->Name1 << "]|h|r";
+               << Hs_LocalizedItemName(tmpl) << "]|h|r"; // review H1
         return stream.str();
     }
 
@@ -373,8 +386,8 @@ HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot)
 
     if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
     {
-        const char* name = entry->area_name[0];
-        if (name && *name)
+        std::string name = Hs_LocalizedAreaName(entry); // review H1
+        if (!name.empty())
             ctx.zone = name;
     }
 

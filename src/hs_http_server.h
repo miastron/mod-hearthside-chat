@@ -16,6 +16,11 @@
 
 void Hs_HttpServerStart();
 void Hs_HttpServerStop();
-bool Hs_HttpServerIsRunning();
+// Review C18: Hs_HttpServerIsRunning() was declared and defined here and
+// had no caller anywhere in the module -- removed rather than left as an
+// export nothing exercises. The state it exposed is still tracked
+// internally (s_running in the .cpp), which is what Hs_HttpServerStop
+// needs; an operator reads the server's state from the startup log line,
+// which reports the bind result directly.
 
 #endif // MOD_HS_HTTP_SERVER_H

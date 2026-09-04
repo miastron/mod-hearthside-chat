@@ -18,10 +18,60 @@
 #include "hs_script.h"
 
 #include "ScriptMgr.h"
+#include "DatabaseEnv.h"
 #include "Log.h"
+#include "QueryResult.h"
+
+#include <cstdint>
 
 namespace
 {
+    // Review B4: the two once-daily sweeps below used to accumulate
+    // worldserver `diff` from process start with no persistence, so on a
+    // realm restarted more often than once a day the accumulator never
+    // reached 86400000ms and *neither sweep ever ran* -- score decay,
+    // friend-poll pinning, card demotion, level-drop retirement, orphan
+    // cleanup, corpus over-quota eviction and unused-row eviction were all
+    // silently dead. Nothing logged it.
+    //
+    // hside_sweep_state carries the last run time across restarts. The
+    // per-tick accumulator stays (it is what makes the common case free);
+    // these two helpers only seed it at startup and stamp it on each fire,
+    // so this costs one query at boot plus one write per sweep per day.
+    constexpr char const* kSweepIdentityDaily  = "identity_daily";
+    constexpr char const* kSweepCorpusEviction = "corpus_eviction";
+
+    // Milliseconds still to wait before `sweepName` is due, given the
+    // persisted last-run time and the sweep's interval. Returns 0 when it is
+    // due now (never run, or the interval has already elapsed while the
+    // realm was down), which makes the sweep fire on the first tick.
+    uint32 SweepBacklogMs(char const* sweepName, uint32 intervalMs)
+    {
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT TIMESTAMPDIFF(SECOND, last_run_at, NOW()) FROM hside_sweep_state WHERE sweep_name = '{}'",
+            sweepName);
+        if (!result || (*result)[0].IsNull())
+            return intervalMs; // never run: due immediately
+
+        int64 elapsedSec = (*result)[0].Get<int64>();
+        if (elapsedSec < 0)
+            elapsedSec = 0; // clock moved backwards; treat as just-run
+        uint64 elapsedMs = static_cast<uint64>(elapsedSec) * 1000ull;
+        return elapsedMs >= intervalMs ? intervalMs : static_cast<uint32>(elapsedMs);
+    }
+
+    // DirectExecute, not Execute: the startup read above and this write are
+    // the same read-after-write pair the rest of the module now runs
+    // synchronously (review A2/A3), and a sweep stamp that has not landed
+    // before the next restart's query would replay the sweep.
+    void StampSweepRun(char const* sweepName)
+    {
+        CharacterDatabase.DirectExecute(
+            "INSERT INTO hside_sweep_state (sweep_name, last_run_at) VALUES ('{}', NOW()) "
+            "ON DUPLICATE KEY UPDATE last_run_at = NOW()",
+            sweepName);
+    }
+
     // Loads hside_archetype into memory so weights/care/reply/cap/talksAbout/
     // profanity are retunable without a rebuild. Registered right after
     // HsConfigWorldScript and before anything that could draw an archetype
@@ -134,7 +184,12 @@ namespace
     {
     public:
         HsIdentityLifecycleWorldScript() : WorldScript("HsIdentityLifecycleWorldScript") {}
-        void OnStartup() override { Hs_ApplyExcludeVectorsFromIdentityTable(); }
+        void OnStartup() override
+        {
+            Hs_ApplyExcludeVectorsFromIdentityTable();
+            // Review B4: carry the daily sweep's clock across the restart.
+            _msSinceSweep = SweepBacklogMs(kSweepIdentityDaily, kIdentitySweepIntervalMs);
+        }
         void OnAfterConfigLoad(bool reload) override
         {
             if (reload)
@@ -160,6 +215,7 @@ namespace
             {
                 _msSinceSweep = 0;
                 Hs_RunIdentityDailySweep();
+                StampSweepRun(kSweepIdentityDaily);
             }
         }
 
@@ -181,6 +237,11 @@ namespace
     {
     public:
         HsCorpusLifecycleWorldScript() : WorldScript("HsCorpusLifecycleWorldScript") {}
+        void OnStartup() override
+        {
+            // Review B4, as HsIdentityLifecycleWorldScript above.
+            _msSinceEviction = SweepBacklogMs(kSweepCorpusEviction, kCorpusEvictionIntervalMs);
+        }
         void OnUpdate(uint32 diff) override
         {
             _msSinceEviction += diff;
@@ -189,6 +250,7 @@ namespace
             _msSinceEviction = 0;
             Hs_RunEvictionSweep();
             Hs_RunUnusedRowEvictionSweep();
+            StampSweepRun(kSweepCorpusEviction);
         }
 
     private:
@@ -231,7 +293,7 @@ namespace
 
 void Addmod_hearthside_chatScripts()
 {
-    LOG_INFO("server.loading", "[HearthsideChat] Registering mod-hearthside-chat scripts.");
+    LOG_INFO("module.hearthside", "[HearthsideChat] Registering mod-hearthside-chat scripts.");
     new HsConfigWorldScript();
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();

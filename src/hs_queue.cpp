@@ -44,6 +44,11 @@ namespace
     // Self-correction follow-up: a settled design constant, not an operator
     // knob, so it lives here rather than in hs_config.h.
     constexpr uint32_t kSelfCorrectionChancePercent   = 5;
+    // Review G7: how many ready replies Hs_DeliverPending sends in one world
+    // tick. Sized well above ordinary traffic (Bucket.RepliesPerMinute
+    // defaults to 90, i.e. ~1-2 per tick) so it binds only on a burst.
+    constexpr size_t   kMaxDeliveriesPerTick         = 16;
+
     constexpr uint32_t kSelfCorrectionMinDelaySeconds = 2;
     constexpr uint32_t kSelfCorrectionMaxDelaySeconds = 5;
 
@@ -444,6 +449,15 @@ namespace
             ++g_TtlDroppedSession;
     }
 
+    // Lock ordering (review B9). g_MetricsMutex is the innermost lock in
+    // this file: it may be taken while holding any other mutex here, and no
+    // path may take another mutex while holding it. That was already true by
+    // accident -- RecordBucketAttempt used to be called under g_BucketMutex
+    // and RecordChannelBucketAttempt still is under g_ChannelBucketMutex --
+    // but it was nowhere written down, so one metrics reader that wanted to
+    // report a live bucket depth would have closed the cycle. Every
+    // Hs_*Snapshot() accessor below takes g_MetricsMutex alone, and must
+    // keep doing so.
     void RecordBucketAttempt(bool denied)
     {
         std::lock_guard<std::mutex> lock(g_MetricsMutex);
@@ -483,6 +497,31 @@ namespace
         g_BucketTokens = std::min(static_cast<double>(g_HsBucketBurstCapacity), g_BucketTokens + elapsedSec * ratePerSec);
     }
 
+    // Review B7: refill, test and spend in one critical section. This used
+    // to be a peek under g_BucketMutex, an unlocked run through three more
+    // gates, and a decrement under a fresh acquisition -- correct only
+    // because every Hs_TryEnqueue caller happens to be the world thread. Two
+    // concurrent callers both passed the peek and drove the bucket negative.
+    // Taking up front and refunding on the later bail-outs (below) keeps the
+    // spend atomic without reordering the gates.
+    bool TryTakeBucketToken()
+    {
+        std::lock_guard<std::mutex> lock(g_BucketMutex);
+        RefillBucketLocked();
+        if (g_BucketTokens < 1.0)
+            return false;
+        g_BucketTokens -= 1.0;
+        return true;
+    }
+
+    // Capped at burst capacity so a refund can never bank a token the
+    // refill schedule would not have produced.
+    void RefundBucketToken()
+    {
+        std::lock_guard<std::mutex> lock(g_BucketMutex);
+        g_BucketTokens = std::min(static_cast<double>(g_HsBucketBurstCapacity), g_BucketTokens + 1.0);
+    }
+
     // Updates the consecutive-failure count and flips the breaker open/closed
     // as needed. Edge-triggered logging only: one line per transition,
     // never per request; the breaker stays silent while open.
@@ -492,13 +531,13 @@ namespace
         {
             g_ConsecutiveFailures.store(0);
             if (g_BreakerOpen.exchange(false))
-                LOG_INFO("server.loading", "[HearthsideChat] Circuit breaker closed - backend recovered.");
+                LOG_INFO("module.hearthside.llm", "[HearthsideChat] Circuit breaker closed - backend recovered.");
             return;
         }
 
         uint32_t failures = g_ConsecutiveFailures.fetch_add(1) + 1;
         if (failures >= g_HsBreakerFailureThreshold && !g_BreakerOpen.exchange(true))
-            LOG_ERROR("server.loading", "[HearthsideChat] Circuit breaker opened after {} consecutive failures.", failures);
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Circuit breaker opened after {} consecutive failures.", failures);
     }
 
     void WorkerLoop()
@@ -509,7 +548,18 @@ namespace
             {
                 std::unique_lock<std::mutex> lock(g_QueueMutex);
                 g_QueueCv.wait(lock, [] { return g_StopWorker || !g_Queue.empty(); });
-                if (g_StopWorker && g_Queue.empty())
+                // Review B3: stop on the flag alone, without draining. The
+                // old condition (g_StopWorker && g_Queue.empty()) made
+                // Hs_QueueShutdown's join wait for every queued request to
+                // run a full Hs_CallLLM first -- worst case Queue.MaxDepth x
+                // LLM.TimeoutSeconds (20 x 20s = 400s) of worldserver hang
+                // on OnShutdown, and exactly when the backend has just gone
+                // slow, which is when the queue is deepest. The work is
+                // wasted regardless: the replies are delivered by
+                // Hs_DeliverPending() from the world thread, which is not
+                // going to tick again, and draining them would keep touching
+                // CharacterDatabase during core shutdown.
+                if (g_StopWorker)
                     return;
                 req = std::move(g_Queue.front());
                 g_Queue.pop_front();
@@ -522,7 +572,7 @@ namespace
                 if (req.isProbe)
                     g_ProbeInFlight.store(false);
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] Dropping stale request for bot {} (age {}s > TTL {}s).",
+                    LOG_INFO("module.hearthside.chat", "[HearthsideChat] Dropping stale request for bot {} (age {}s > TTL {}s).",
                         req.botGuid, ageSec, g_HsQueueTTLSeconds);
                 continue;
             }
@@ -532,7 +582,7 @@ namespace
             // restricted to the level-eligible pool (hs_archetype.h). Feeds
             // both the LLM prompt's delta layer and the style pass's `care`
             // baseline below.
-            HsArchetype archetype = Hs_ArchetypeForBot(req.botGuid, req.botLevel);
+            HsArchetype archetype = Hs_ArchetypeForBot(req.botGuid);
             HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
 
             // The voice block is the only card text that ever enters a
@@ -599,7 +649,7 @@ namespace
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
+                    LOG_INFO("module.hearthside.llm", "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
                         req.botGuid, static_cast<int>(result.failure), result.httpStatus);
                 RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/false);
                 continue; // silence, not a canned fallback
@@ -853,13 +903,26 @@ void Hs_QueueStartup()
 
 void Hs_QueueShutdown()
 {
+    size_t abandoned = 0;
     {
         std::lock_guard<std::mutex> lock(g_QueueMutex);
         g_StopWorker = true;
+        // Review B3: dropped, not drained -- see WorkerLoop. Cleared here
+        // rather than left for the worker so the count is exact and the
+        // requests release their strings immediately.
+        abandoned = g_Queue.size();
+        g_Queue.clear();
     }
     g_QueueCv.notify_all();
     if (g_WorkerThread.joinable())
         g_WorkerThread.join();
+
+    if (abandoned)
+        LOG_INFO("module.hearthside",
+            "[HearthsideChat] Shutdown: dropped {} queued reply request(s) rather than draining them.", abandoned);
+    // A shutdown arriving mid-Hs_CallLLM still waits out that one call's
+    // remaining LLM.TimeoutSeconds. Bounded by a single timeout now instead
+    // of the whole queue's worth.
 }
 
 bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
@@ -868,18 +931,14 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
                     HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq)
 {
-    // 1. Token bucket. Peek only; the spend is committed once the request
-    // actually clears every later gate.
+    // 1. Token bucket. Taken atomically (review B7) and refunded on every
+    // later bail-out, so the bucket can never be driven negative by two
+    // concurrent callers passing the same peek.
+    if (!TryTakeBucketToken())
     {
-        std::lock_guard<std::mutex> lock(g_BucketMutex);
-        RefillBucketLocked();
-        if (g_BucketTokens < 1.0)
-        {
-            RecordBucketAttempt(/*denied=*/true);
-            return false;
-        }
+        RecordBucketAttempt(/*denied=*/true);
+        return false;
     }
-    RecordBucketAttempt(/*denied=*/false);
 
     // 2. Per-bot cooldown.
     {
@@ -889,13 +948,24 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         {
             auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - it->second).count();
             if (elapsedSec < static_cast<int64_t>(g_HsBotCooldownSeconds))
+            {
+                RefundBucketToken();
                 return false;
+            }
         }
     }
 
     // 3. Circuit breaker. Silent while open, except for the single claimed
     // probe request per interval.
-    bool isProbe = false;
+    //
+    // Review B8: the interval stamp is *claimed* here and only *committed*
+    // once the request is actually enqueued. Stamping g_LastProbeAt here
+    // unconditionally meant a probe rejected a few lines later by queue
+    // depth consumed the whole interval without ever reaching the backend,
+    // so the breaker sat closed-mouthed for another full
+    // ProbeIntervalSeconds with nothing to show for it.
+    bool              isProbe    = false;
+    Clock::time_point probeStamp = Clock::time_point{};
     if (g_BreakerOpen.load())
     {
         std::lock_guard<std::mutex> lock(g_ProbeMutex);
@@ -903,55 +973,88 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         bool intervalElapsed = !g_HasProbedOnce ||
             std::chrono::duration_cast<std::chrono::seconds>(now - g_LastProbeAt).count() >= static_cast<int64_t>(g_HsBreakerProbeIntervalSeconds);
         if (!intervalElapsed)
+        {
+            RefundBucketToken();
             return false;
+        }
         if (g_ProbeInFlight.exchange(true))
+        {
+            RefundBucketToken();
             return false; // another probe already claimed this interval
+        }
 
-        g_LastProbeAt   = now;
-        g_HasProbedOnce = true;
-        isProbe          = true;
+        probeStamp = now;
+        isProbe     = true;
     }
 
     // 4. Bounded queue depth.
+    //
+    // The refund and the probe release happen *after* g_QueueMutex is
+    // released, not inside the critical section. Both are correct either
+    // way today, but nesting g_BucketMutex inside g_QueueMutex would create
+    // a second lock-order edge with nothing enforcing it -- the exact shape
+    // review B9 asked to stop relying on luck for.
+    bool queueFull = false;
     {
         std::lock_guard<std::mutex> lock(g_QueueMutex);
-        if (g_Queue.size() >= g_HsQueueMaxDepth)
+        queueFull = (g_Queue.size() >= g_HsQueueMaxDepth);
+        if (!queueFull)
         {
-            if (isProbe)
-                g_ProbeInFlight.store(false);
-            if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Dropping request for bot {} - queue at max depth {}.", botGuid, g_HsQueueMaxDepth);
-            return false;
+            HsQueuedRequest req;
+            req.botGuid    = botGuid;
+            req.botName    = botName;
+            req.senderGuid = senderGuid;
+            req.senderName = senderName;
+            req.channel    = channel;
+            req.prompt     = userPrompt;
+            req.enqueuedAt = Clock::now();
+            req.isProbe    = isProbe;
+            req.inCombat   = inCombat;
+            req.botLevel   = botLevel;
+            req.rpgStatus  = rpgStatus;
+            req.topicGate  = topicGate;
+            req.isFollowUp = isFollowUp;
+            req.isEvent    = isEvent;
+            req.channelKind  = channelKind;
+            req.chainScopeId = chainScopeId;
+            req.chainSeq     = chainSeq;
+            g_Queue.push_back(std::move(req));
         }
-
-        HsQueuedRequest req;
-        req.botGuid    = botGuid;
-        req.botName    = botName;
-        req.senderGuid = senderGuid;
-        req.senderName = senderName;
-        req.channel    = channel;
-        req.prompt     = userPrompt;
-        req.enqueuedAt = Clock::now();
-        req.isProbe    = isProbe;
-        req.inCombat   = inCombat;
-        req.botLevel   = botLevel;
-        req.rpgStatus  = rpgStatus;
-        req.topicGate  = topicGate;
-        req.isFollowUp = isFollowUp;
-        req.isEvent    = isEvent;
-        req.channelKind  = channelKind;
-        req.chainScopeId = chainScopeId;
-        req.chainSeq     = chainSeq;
-        g_Queue.push_back(std::move(req));
     }
+
+    if (queueFull)
+    {
+        if (isProbe)
+            g_ProbeInFlight.store(false); // review B8: interval not consumed
+        RefundBucketToken();               // review B7/C2
+        if (g_HsDebugEnabled)
+            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Dropping request for bot {} - queue at max depth {}.", botGuid, g_HsQueueMaxDepth);
+        return false;
+    }
+
     g_QueueCv.notify_one();
 
-    // Only now commit the token spend and the cooldown timestamp: the
-    // request is actually admitted.
+    // Admitted. Review C3: the grant is counted here rather than at the
+    // bucket peek, so Hs_GlobalBucketSaturationSnapshot reports requests the
+    // bucket admitted *and* that survived the cooldown, breaker and depth
+    // gates. Counting it at the peek reported "bucket admitted" for requests
+    // dropped a few lines later, understating pressure. A request the bucket
+    // let through and a later gate rejected is counted as neither a grant
+    // nor a deny: it is not bucket pressure, and the bucket's token was
+    // refunded on that path.
+    RecordBucketAttempt(/*denied=*/false);
+
+    // Review B8: the probe interval is consumed only now, by a probe that
+    // was really enqueued.
+    if (isProbe)
     {
-        std::lock_guard<std::mutex> lock(g_BucketMutex);
-        g_BucketTokens -= 1.0;
+        std::lock_guard<std::mutex> lock(g_ProbeMutex);
+        g_LastProbeAt   = probeStamp;
+        g_HasProbedOnce = true;
     }
+
+    // Only the cooldown timestamp is left to commit: the token was taken
+    // atomically at gate 1 (review B7).
     {
         std::lock_guard<std::mutex> lock(g_CooldownMutex);
         Clock::time_point now = Clock::now();
@@ -1002,6 +1105,16 @@ bool Hs_EventBucketTake()
     return true;
 }
 
+// Review C2: refund for an event whose actor filtering left nobody to
+// speak. Nothing was ever going to be heard, so the budget should not have
+// paid for it.
+void Hs_EventBucketRefund()
+{
+    std::lock_guard<std::mutex> lock(g_EventBucketMutex);
+    g_EventBucketTokens = std::min(static_cast<double>(g_HsEventBucketBurstCapacity),
+                                    g_EventBucketTokens + 1.0);
+}
+
 bool Hs_AmbientBucketTake()
 {
     if (g_HsAmbientBucketRepliesPerMinute == 0 || g_HsAmbientBucketBurstCapacity == 0)
@@ -1043,6 +1156,27 @@ bool Hs_AmbientBucketTake()
     return true;
 }
 
+// Review C2: returns a token taken by Hs_AmbientBucketTake that the caller
+// then found it could not use. The grant count is rolled back with it, so
+// `.hearthside status`'s granted/denied split keeps meaning "lines actually
+// spoken" rather than "claims attempted". Capped at burst capacity, so a
+// refund can never bank a token the refill schedule would not have made.
+//
+// Deliberately *not* used for the ambient scan's own bail-outs: hs_ambient.h
+// argues, correctly, that a line dropped after the budget said yes is
+// silence the player experiences, and silence is not free. This exists for
+// the cases where nothing was ever going to be spoken and no listener could
+// tell -- an empty corpus reserve, a candidate scan that found nobody, a
+// script whose turn rows are missing.
+void Hs_AmbientBucketRefund()
+{
+    std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
+    g_AmbientBucketTokens = std::min(static_cast<double>(g_HsAmbientBucketBurstCapacity),
+                                      g_AmbientBucketTokens + 1.0);
+    if (g_AmbientBucketGranted > 0)
+        --g_AmbientBucketGranted;
+}
+
 HsAmbientBucketStats Hs_AmbientBucketStatsSnapshot()
 {
     std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
@@ -1082,6 +1216,26 @@ bool Hs_ChannelBucketTake(HsChannelKind kind)
     state.tokens -= 1.0;
     RecordChannelBucketAttempt(kind, /*denied=*/false);
     return true;
+}
+
+// Review C2: the channel counterpart of Hs_AmbientBucketRefund, including
+// rolling back the "replied" tally so the per-channel saturation breakdown
+// still counts lines rather than claims.
+void Hs_ChannelBucketRefund(HsChannelKind kind)
+{
+    {
+        std::lock_guard<std::mutex> lock(g_ChannelBucketMutex);
+        HsChannelBucketState& state = g_ChannelBuckets[kind];
+        double cap = static_cast<double>(Hs_ChannelPolicyFor(kind).ratePerMin);
+        state.tokens = std::min(cap, state.tokens + 1.0);
+    }
+    // Outside g_ChannelBucketMutex is not required (g_MetricsMutex is the
+    // innermost lock, see RecordChannelBucketAttempt), but there is no
+    // reason to hold two locks to decrement one counter.
+    std::lock_guard<std::mutex> lock(g_MetricsMutex);
+    ReplyCounts& counts = g_ChannelBucketCountsByKind[kind];
+    if (counts.replied > 0)
+        --counts.replied;
 }
 
 Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
@@ -1175,8 +1329,28 @@ void Hs_DeliverPending()
         Clock::time_point now = Clock::now();
         auto notYetReady = std::stable_partition(g_DeliveryQueue.begin(), g_DeliveryQueue.end(),
             [now](const HsPendingReply& r) { return r.deliverAt <= now; });
-        ready.assign(g_DeliveryQueue.begin(), notYetReady);
-        g_DeliveryQueue.erase(g_DeliveryQueue.begin(), notYetReady);
+
+        // Review G7: bounded per tick. Delivery is not free -- each entry
+        // does two ObjectAccessor::FindPlayer lookups, possibly a
+        // Hs_ResolveChannelForDelivery (a DBC lookup plus a ChannelMgr
+        // string match), and a Hs_NoteBotLine that can trigger a realm scan
+        // for a chain hop. Draining every ready entry in one tick meant a
+        // backend that had been slow and then caught up delivered its whole
+        // backlog inside a single world tick.
+        //
+        // The cap is generous relative to normal traffic (the global bucket
+        // defaults to 90 replies/minute, so a tick is ordinarily one or two
+        // entries) and only binds on a burst; what does not fit stays at the
+        // front of the queue in order and goes out on the next tick, a few
+        // tens of milliseconds later. The partition is stable, so a
+        // distracted reply's filler/real pair keeps its relative order even
+        // when the cap splits them across two ticks.
+        size_t readyCount = static_cast<size_t>(std::distance(g_DeliveryQueue.begin(), notYetReady));
+        size_t takeCount  = std::min(readyCount, kMaxDeliveriesPerTick);
+
+        auto takeEnd = g_DeliveryQueue.begin() + static_cast<long>(takeCount);
+        ready.assign(g_DeliveryQueue.begin(), takeEnd);
+        g_DeliveryQueue.erase(g_DeliveryQueue.begin(), takeEnd);
         if (ready.empty())
             return;
     }
@@ -1224,7 +1398,7 @@ void Hs_DeliverPending()
                     // this is otherwise indistinguishable from the surface
                     // never having produced a line at all.
                     if (g_HsDebugEnabled)
-                        LOG_INFO("server.loading",
+                        LOG_INFO("module.hearthside.chat",
                                  "[HearthsideChat] Bot {} dropped a {} line: channel did not resolve",
                                  bot->GetName(), Hs_ChannelKindName(reply.channelKind));
                     continue;
@@ -1247,7 +1421,7 @@ void Hs_DeliverPending()
                 where += '/';
                 where += Hs_ChannelKindName(reply.channelKind);
             }
-            LOG_INFO("server.loading", "[HearthsideChat] Bot {} replied [{}]: {}",
+            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Bot {} replied [{}]: {}",
                      bot->GetName(), where, reply.text);
         }
 

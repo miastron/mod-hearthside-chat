@@ -75,6 +75,14 @@ uint32_t Hs_RunEvictionSweep();
 // frozen 2026-08-25). Returns the number of rows evicted.
 uint32_t Hs_RunUnusedRowEvictionSweep();
 
+// Promoted bots whose card generation failed repeatedly enough that the
+// generator gave up on them for this session (review B2). Non-zero means
+// some bots will stay uncarded until the worldserver is restarted -- but
+// also that generation as a whole is still running, which is the thing the
+// livelock this guards against used to take away silently. `.hearthside
+// status` surfaces it; the parking itself is logged at WARN when it happens.
+uint32_t Hs_ParkedCardCount();
+
 // Rows evicted since this worldserver process started: `.hearthside
 // status`, same shape as Hs_GeneratorRowsAddedThisSession.
 uint32_t Hs_RowsEvictedThisSession();

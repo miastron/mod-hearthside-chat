@@ -21,7 +21,9 @@
 #include <cctype>
 #include <chrono>
 #include <condition_variable>
+#include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -209,10 +211,21 @@ namespace
             bool        cardGated = (*catResult)[2].Get<uint8_t>() != 0;
             std::string channel   = (*catResult)[3].IsNull() ? "" : (*catResult)[3].Get<std::string>();
 
+            // Review D1: the five count queries below interpolate the
+            // category name straight into a WHERE clause. AllRowsInBucket /
+            // SampleRows above already escape it and say why (`.hearthside
+            // capture <bot> <category>` can create a row whose name came
+            // from GM console input); these did not. Escaped once here so
+            // the whole function shares one value -- HsGenBucket::category
+            // still carries the raw name, which is what the prompt text and
+            // the log lines want.
+            std::string escapedCategory = category;
+            CharacterDatabase.EscapeString(escapedCategory);
+
             if (axis == "none")
             {
                 QueryResult countResult = CharacterDatabase.Query(
-                    "SELECT COUNT(*) FROM hside_corpus WHERE name = '{}'", category);
+                    "SELECT COUNT(*) FROM hside_corpus WHERE name = '{}'", escapedCategory);
                 uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
                 result.push_back({ HsGenBucket{ category, "", "", "", cardGated, channel }, count });
             }
@@ -220,7 +233,7 @@ namespace
             {
                 QueryResult countResult = CharacterDatabase.Query(
                     "SELECT class_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND class_tag IS NOT NULL GROUP BY class_tag",
-                    category);
+                    escapedCategory);
                 std::vector<std::pair<uint8_t, uint32_t>> counts;
                 if (countResult)
                 {
@@ -238,7 +251,7 @@ namespace
             {
                 QueryResult countResult = CharacterDatabase.Query(
                     "SELECT level_band_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND level_band_tag IS NOT NULL GROUP BY level_band_tag",
-                    category);
+                    escapedCategory);
                 std::vector<std::pair<std::string, uint32_t>> counts;
                 if (countResult)
                 {
@@ -256,7 +269,7 @@ namespace
             {
                 QueryResult countResult = CharacterDatabase.Query(
                     "SELECT faction_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND faction_tag IS NOT NULL GROUP BY faction_tag",
-                    category);
+                    escapedCategory);
                 std::vector<std::pair<uint8_t, uint32_t>> counts;
                 if (countResult)
                 {
@@ -274,7 +287,7 @@ namespace
             {
                 QueryResult countResult = CharacterDatabase.Query(
                     "SELECT zone_tag, COUNT(*) FROM hside_corpus WHERE name = '{}' AND zone_tag IS NOT NULL GROUP BY zone_tag",
-                    category);
+                    escapedCategory);
                 std::vector<std::pair<uint32_t, uint32_t>> counts;
                 if (countResult)
                 {
@@ -414,7 +427,7 @@ namespace
         if (!result.success || result.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
+                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
                     bucket.category, bucket.tagValueLabel, static_cast<int>(result.failure));
             return false;
         }
@@ -422,7 +435,7 @@ namespace
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(bucket.category, bucket.tagColumn, bucket.tagValueSql,
                                                       result.text, gen.model, gen.promptVersion);
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Generator: bucket {}/{} candidate {} -- \"{}\"",
+            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: bucket {}/{} candidate {} -- \"{}\"",
                 bucket.category, bucket.tagValueLabel,
                 verdict.accepted ? "accepted" : ("rejected (" + verdict.reason + ")"), result.text);
 
@@ -517,7 +530,7 @@ namespace
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
+                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
                 return false;
             }
@@ -528,7 +541,7 @@ namespace
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
+                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
                 return false;
             }
@@ -543,9 +556,20 @@ namespace
         // connections (LAST_INSERT_ID() is session-scoped and the pool does
         // not guarantee two calls share a connection). Only this generator
         // thread ever writes to hside_script, so MAX(id)+1 has no concurrent
-        // writer to race against: application-side id generation, the
-        // same idiom ObjectMgr uses for mail/auction ids, without needing a
-        // persistent in-memory counter for something this infrequent.
+        // *writer* to race against: application-side id generation, the
+        // same idiom ObjectMgr uses for mail/auction ids.
+        //
+        // Review A1: it does, however, race against *itself*. Execute()
+        // enqueues onto the async worker while Query() runs on a different,
+        // synchronous connection, so a second generation cycle finishing
+        // before the first cycle's queued INSERT drained would read the same
+        // MAX(id) and mint a duplicate id: the second header insert then
+        // fails on the primary key while its turn rows still land against
+        // the first script. Every write below is therefore DirectExecute
+        // (same synchronous connection pool Query() uses, so it is committed
+        // and visible before this function returns). This thread already
+        // blocks for seconds per LLM call, so a handful of synchronous
+        // inserts costs nothing here.
         QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
         uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
 
@@ -556,7 +580,7 @@ namespace
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "INSERT INTO hside_script (id, turn_count, generated_at, model, prompt_version) VALUES ({}, {}, NOW(), {}, {})",
             scriptId, turnCount, modelSql, versionSql);
 
@@ -564,13 +588,13 @@ namespace
         {
             std::string escapedText = turns[i].second;
             CharacterDatabase.EscapeString(escapedText);
-            CharacterDatabase.Execute(
+            CharacterDatabase.DirectExecute(
                 "INSERT INTO hside_script_turn (script_id, turn_no, speaker_slot, text) VALUES ({}, {}, {}, '{}')",
                 scriptId, static_cast<uint32_t>(i), turns[i].first, escapedText);
         }
 
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
+            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
@@ -632,7 +656,7 @@ namespace
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
+                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
                 return false;
             }
@@ -643,7 +667,7 @@ namespace
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
+                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
                 return false;
             }
@@ -667,7 +691,10 @@ namespace
         std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
             [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-        CharacterDatabase.Execute(
+        // Review A1: DirectExecute, for the same reason the /say variant
+        // above documents -- the next cycle's MAX(id)+1 read must see this
+        // row.
+        CharacterDatabase.DirectExecute(
             "INSERT INTO hside_script (id, turn_count, channel, generated_at, model, prompt_version) VALUES ({}, {}, '{}', NOW(), {}, {})",
             scriptId, kChannelScriptTurnCount, channelColumn, modelSql, versionSql);
 
@@ -675,43 +702,122 @@ namespace
         {
             std::string escapedText = turns[i].second;
             CharacterDatabase.EscapeString(escapedText);
-            CharacterDatabase.Execute(
+            CharacterDatabase.DirectExecute(
                 "INSERT INTO hside_script_turn (script_id, turn_no, speaker_slot, text) VALUES ({}, {}, {}, '{}')",
                 scriptId, static_cast<uint32_t>(i), turns[i].first, escapedText);
         }
 
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
+            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
                 scriptId, channelColumn, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
     }
 
+    // Review B2: card generation has absolute priority in GeneratorLoop, and
+    // a pending row that fails deterministically (the model will not comply
+    // with a validator, most plausibly Hs_ValidateCardFacts) was re-selected
+    // forever -- every cycle picked the same row, failed, slept the
+    // quota-satisfied backoff, and picked it again, so no corpus line, /say
+    // script or channel script was ever generated again for the life of the
+    // process, with `Generator.RowsAdded` sitting at a constant as the only
+    // symptom.
+    //
+    // Parked rows are the fix: after kCardAttemptsBeforeParking consecutive
+    // failures a bot's guid is set aside, excluded from both the pending
+    // count and the claim, so the loop falls through to the other work
+    // types. In-memory rather than a card_attempts column deliberately: a
+    // worldserver restart is exactly when an operator has changed a model,
+    // a prompt or a validator, so retrying then is the behaviour you want,
+    // and it needs no schema migration. Touched only from the generator
+    // thread.
+    constexpr uint32_t kCardAttemptsBeforeParking = 3;
+
+    std::map<uint64_t, uint32_t> g_CardAttempts;   // botGuid -> consecutive failures
+    std::set<uint64_t>            g_ParkedCards;    // botGuid, given up on this session
+
+    // Read from the world thread by `.hearthside status`; written by the
+    // generator thread. A plain counter rather than locking g_ParkedCards.
+    std::atomic<uint32_t> g_ParkedCardCount{0};
+
+    // A parked-guid exclusion list, ready to drop into a WHERE clause.
+    // Empty (no fragment) in the overwhelmingly common case of nothing
+    // parked, so the normal path is byte-identical to what it was.
+    std::string ParkedCardsWhere()
+    {
+        if (g_ParkedCards.empty())
+            return "";
+        std::string ids;
+        for (uint64_t guid : g_ParkedCards)
+        {
+            if (!ids.empty())
+                ids += ",";
+            ids += std::to_string(guid);
+        }
+        return "AND bot_guid NOT IN (" + ids + ")";
+    }
+
+    void NoteCardGenerationFailed(uint64_t botGuid)
+    {
+        uint32_t attempts = ++g_CardAttempts[botGuid];
+        if (attempts < kCardAttemptsBeforeParking)
+            return;
+
+        g_CardAttempts.erase(botGuid);
+        if (g_ParkedCards.insert(botGuid).second)
+        {
+            g_ParkedCardCount.store(static_cast<uint32_t>(g_ParkedCards.size()));
+            // Not debug-gated: this is the signal whose absence made the
+            // livelock invisible. An operator seeing it knows exactly which
+            // bot to look at, and that generation has moved on rather than
+            // stopped.
+            LOG_WARN("module.hearthside.generator",
+                "[HearthsideChat] Generator: card generation for bot {} failed {} times in a row; "
+                "parking it for this session so the other generation work can run. "
+                "Restart the worldserver (or fix the model/prompt) to retry it.",
+                botGuid, kCardAttemptsBeforeParking);
+        }
+    }
+
+    void NoteCardGenerationSucceeded(uint64_t botGuid)
+    {
+        g_CardAttempts.erase(botGuid);
+    }
+
     uint32_t PendingCardCount()
     {
         QueryResult result = CharacterDatabase.Query(
-            "SELECT COUNT(*) FROM hside_identity WHERE promoted_at IS NOT NULL AND card_voice IS NULL");
+            "SELECT COUNT(*) FROM hside_identity WHERE promoted_at IS NOT NULL AND card_voice IS NULL {}",
+            ParkedCardsWhere());
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
 
     // One promoted-but-uncarded bot's row (archetype is recomputed from
-    // Hs_ArchetypeForBot(guid, lastKnownLevel) rather than parsed back from
-    // the stored name column: that function is pure and already the
-    // source of truth hs_queue.cpp's WorkerLoop uses, so this avoids
-    // needing a second string->enum lookup that would exist only for this
-    // one call site).
+    // Hs_ArchetypeForBot(guid) rather than parsed back from the stored name
+    // column: that function is pure and already the source of truth
+    // hs_queue.cpp's WorkerLoop uses, so this avoids needing a second
+    // string->enum lookup that would exist only for this one call site).
+    // last_known_level is still read: the card *facts* prompt uses it, even
+    // though the archetype draw no longer does (review C1).
     struct PendingCard
     {
         uint64_t botGuid;
         uint8_t  lastKnownLevel;
     };
 
+    // Review B2: parked guids excluded, and an explicit ORDER BY. The bare
+    // LIMIT 1 took whatever the storage engine handed back first, which is
+    // stable in practice -- so a row that could not be carded was not just
+    // retried, it was retried to the exclusion of every other pending card.
+    // Oldest promotion first is both deterministic and the fair order.
     bool ClaimOnePendingCard(PendingCard& out)
     {
         QueryResult result = CharacterDatabase.Query(
             "SELECT bot_guid, last_known_level FROM hside_identity "
-            "WHERE promoted_at IS NOT NULL AND card_voice IS NULL LIMIT 1");
+            "WHERE promoted_at IS NOT NULL AND card_voice IS NULL {} "
+            "ORDER BY promoted_at ASC, bot_guid ASC LIMIT 1",
+            ParkedCardsWhere());
         if (!result)
             return false;
         out.botGuid        = (*result)[0].Get<uint64_t>();
@@ -727,20 +833,31 @@ namespace
     {
         bool        hasGuild = false;
         std::string name;
+        std::string className; // review C10: lowercase, Hs_ClassNameFor's vocabulary
     };
 
+    // Review C10 turned the two inner JOINs into LEFT JOINs and added
+    // c.class, so one query now answers both "is this bot guilded" and
+    // "what class is it" -- the card-facts prompt and validator need the
+    // second to enforce "alt must be a different class", and an unguilded
+    // bot previously produced no row at all, which is why the JOINs had to
+    // become outer ones.
     GuildLookup LookupGuildFor(uint64_t botGuid)
     {
         GuildLookup lookup;
         QueryResult result = CharacterDatabase.Query(
-            "SELECT g.name FROM characters c "
-            "JOIN guild_member gm ON gm.guid = c.guid "
-            "JOIN guild g ON g.guildid = gm.guildid "
+            "SELECT g.name, c.class FROM characters c "
+            "LEFT JOIN guild_member gm ON gm.guid = c.guid "
+            "LEFT JOIN guild g ON g.guildid = gm.guildid "
             "WHERE c.guid = {}", botGuid);
         if (result)
         {
-            lookup.hasGuild = true;
-            lookup.name     = (*result)[0].Get<std::string>();
+            if (!(*result)[0].IsNull())
+            {
+                lookup.hasGuild = true;
+                lookup.name     = (*result)[0].Get<std::string>();
+            }
+            lookup.className = Hs_ClassNameFor((*result)[1].Get<uint8_t>());
         }
         return lookup;
     }
@@ -758,7 +875,7 @@ namespace
         if (!ClaimOnePendingCard(pending))
             return false;
 
-        HsArchetype archetype = Hs_ArchetypeForBot(pending.botGuid, pending.lastKnownLevel);
+        HsArchetype archetype = Hs_ArchetypeForBot(pending.botGuid);
         HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
         GuildLookup guild = LookupGuildFor(pending.botGuid);
 
@@ -771,39 +888,43 @@ namespace
         if (!voiceResult.success || voiceResult.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
+                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(voiceResult.failure));
+            NoteCardGenerationFailed(pending.botGuid);
             return false;
         }
         HsGenVerdict voiceVerdict = Hs_ValidateVoiceBlock(voiceResult.text);
         if (!voiceVerdict.accepted)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
+                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
                     pending.botGuid, voiceVerdict.reason, voiceResult.text);
+            NoteCardGenerationFailed(pending.botGuid);
             return false;
         }
 
         std::string factsPrompt = Hs_BuildCardFactsPrompt(archetypeInfo.talksAbout, pending.lastKnownLevel,
-                                                            guild.hasGuild, guild.name);
+                                                            guild.hasGuild, guild.name, guild.className);
         HsLLMResult factsResult = Hs_CallLLM(cfg, factsPrompt, "", {},
             "Reply now with only the JSON, all on one line, no line breaks.");
         if (!factsResult.success || factsResult.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Generator: card facts call failed for bot {} (failure={}).",
+                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card facts call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(factsResult.failure));
+            NoteCardGenerationFailed(pending.botGuid);
             return false;
         }
         hs_json facts = hs_json::parse(factsResult.text, nullptr, /*allow_exceptions=*/false);
         HsGenVerdict factsVerdict = facts.is_discarded()
             ? HsGenVerdict{ false, "not_valid_json" }
-            : Hs_ValidateCardFacts(facts, pending.lastKnownLevel, guild.hasGuild);
+            : Hs_ValidateCardFacts(facts, pending.lastKnownLevel, guild.hasGuild, guild.className);
         if (!factsVerdict.accepted)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("server.loading", "[HearthsideChat] Generator: card facts rejected for bot {} ({}) -- \"{}\"",
+                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card facts rejected for bot {} ({}) -- \"{}\"",
                     pending.botGuid, factsVerdict.reason, factsResult.text);
+            NoteCardGenerationFailed(pending.botGuid);
             return false;
         }
 
@@ -818,21 +939,21 @@ namespace
         std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
         std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
-        // archetype is written back here too: it's recomputed above from
-        // (guid, lastKnownLevel) rather than trusted from the stored column,
-        // same as hs_archetype.h's Hs_ArchetypeForBot always recomputing for
-        // the level passed in. Without this the stored column can go stale
-        // relative to the card actually generated if the bot's level
-        // changed between promotion and this cycle running.
+        // archetype is written back here too: it's recomputed above from the
+        // guid rather than trusted from the stored column, so the stored
+        // value can never disagree with the card actually generated (for
+        // instance after a GM pin via `.hearthside archetype`).
         CharacterDatabase.Execute(
             "UPDATE hside_identity SET archetype = '{}', card_voice = '{}', card_facts = '{}', "
             "card_model = {}, card_prompt_version = {}, card_active = 1 WHERE bot_guid = {}",
             archetypeInfo.enumName, escapedVoice, factsCompact, modelSql, versionSql, pending.botGuid);
 
+        Hs_InvalidateCardCache(pending.botGuid); // review G1: a brand-new card must be visible immediately
         Hs_PushBotIntoExcludeVectors(pending.botGuid);
+        NoteCardGenerationSucceeded(pending.botGuid);
 
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Generator: card for bot {} generated and activated.", pending.botGuid);
+            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card for bot {} generated and activated.", pending.botGuid);
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
@@ -905,6 +1026,11 @@ uint32_t Hs_RowsEvictedThisSession()
     return g_RowsEvictedThisSession.load();
 }
 
+uint32_t Hs_ParkedCardCount()
+{
+    return g_ParkedCardCount.load();
+}
+
 uint32_t Hs_ScriptReserveDepth()
 {
     return ScriptReserveDepthQuery();
@@ -924,18 +1050,28 @@ uint32_t Hs_RunEvictionSweep()
         uint32_t overflow = count - g_HsGeneratorRowsPerBucket;
         std::string tagWhere = bucket.tagColumn.empty() ? "" : ("AND " + bucket.tagColumn + " = " + bucket.tagValueSql);
 
+        // Review D1: escaped, like every other statement that takes a
+        // category name. This is the destructive one -- a name that broke
+        // out of its quotes here would widen a DELETE.
+        std::string escapedCategory = bucket.category;
+        CharacterDatabase.EscapeString(escapedCategory);
+
         // Exposure first (most-heard evicted first), generated_at second --
         // NULL (hand-authored) rows sort last among ties, so a tie between a
         // hand-authored line and a generator line evicts the generator one.
-        CharacterDatabase.Execute(
+        //
+        // Review A4: DirectExecute, so the counts EnumerateBucketsWithCounts
+        // reads on the next sweep reflect this one rather than racing an
+        // eviction still queued on the async worker.
+        CharacterDatabase.DirectExecute(
             "DELETE FROM hside_corpus WHERE name = '{}' {} "
             "ORDER BY times_used DESC, (generated_at IS NULL) ASC, generated_at ASC LIMIT {}",
-            bucket.category, tagWhere, overflow);
+            escapedCategory, tagWhere, overflow);
         evictedTotal += overflow;
         g_RowsEvictedThisSession.fetch_add(overflow);
 
         if (g_HsDebugEnabled)
-            LOG_INFO("server.loading", "[HearthsideChat] Eviction: bucket {}/{} trimmed {} row(s) ({} -> {}).",
+            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Eviction: bucket {}/{} trimmed {} row(s) ({} -> {}).",
                 bucket.category, bucket.tagValueLabel, overflow, count, g_HsGeneratorRowsPerBucket);
     }
 
@@ -955,14 +1091,18 @@ uint32_t Hs_RunUnusedRowEvictionSweep()
     if (count == 0)
         return 0;
 
-    CharacterDatabase.Execute(
+    // Review A4: DirectExecute. The COUNT(*) above is what this function
+    // returns and what g_RowsEvictedThisSession is credited with, so it has
+    // to describe a DELETE that actually ran against the same table state,
+    // not one still queued behind whatever else is on the async worker.
+    CharacterDatabase.DirectExecute(
         "DELETE FROM hside_corpus WHERE generated_at IS NOT NULL "
         "AND COALESCE(last_used_at, generated_at) < NOW() - INTERVAL {} DAY",
         kHsGenUnusedRowEvictionDays);
     g_RowsEvictedThisSession.fetch_add(count);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("server.loading",
+        LOG_INFO("module.hearthside.generator",
             "[HearthsideChat] Eviction: unused-row sweep removed {} row(s) unpicked for {}+ days.",
             count, kHsGenUnusedRowEvictionDays);
 
@@ -980,7 +1120,10 @@ uint32_t Hs_EvictGenerationRun(const std::string& promptVersion)
     if (count == 0)
         return 0;
 
-    CharacterDatabase.Execute("DELETE FROM hside_corpus WHERE prompt_version = '{}'", escaped);
+    // Review A4: DirectExecute, same reasoning as the unused-row sweep --
+    // the count returned to the GM command / HTTP route has to describe a
+    // delete that happened.
+    CharacterDatabase.DirectExecute("DELETE FROM hside_corpus WHERE prompt_version = '{}'", escaped);
     g_RowsEvictedThisSession.fetch_add(count);
     return count;
 }

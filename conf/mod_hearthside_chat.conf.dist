@@ -19,6 +19,41 @@
 # database instead of this file.
 
 # --------------------------------------------
+# LOGGING (worldserver.conf, not this file)
+# --------------------------------------------
+#
+# Review H2 (2026-09-03): this module used to log everything -- backend
+# outages, per-reply delivery traces, generator output, circuit-breaker
+# transitions -- to the core's `server.loading` channel, alongside genuine
+# startup diagnostics. An operator who filtered that channel down to boot
+# messages could not see a backend outage; one who left it on got per-reply
+# noise mixed into boot logs.
+#
+# It now uses its own logger tree. AzerothCore resolves a logger name by
+# walking up dot-separated parents, so configuring `module` (or `root`)
+# alone still catches everything, and any of these can be given its own
+# level and appenders in worldserver.conf:
+#
+#   module.hearthside            startup, config, table loads, identity
+#                                lifecycle (promote/demote/retire), the
+#                                HTTP control server
+#   module.hearthside.llm        backend request failures, response-shape
+#                                errors, circuit-breaker open/close
+#   module.hearthside.generator  idle-time generation, quality-gate
+#                                rejections, eviction sweeps, parked cards
+#   module.hearthside.chat       per-request and per-reply traces, ambient
+#                                bail reasons (mostly gated behind
+#                                HearthsideChat.DebugEnabled below)
+#
+# Example -- backend problems to the console, per-reply traces off entirely:
+#
+#   Logger.module.hearthside.llm = 4,Console Server
+#   Logger.module.hearthside.chat = 1,Server
+#
+# The level is the first field (1 = fatal only ... 5 = trace); the rest are
+# appender names already defined in worldserver.conf.
+
+# --------------------------------------------
 # CORE MODULE TOGGLES & DEBUGGING
 # --------------------------------------------
 

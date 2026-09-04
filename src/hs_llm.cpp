@@ -334,7 +334,7 @@ namespace
         std::smatch m;
         if (!std::regex_match(url, m, urlRe))
         {
-            LOG_ERROR("server.loading", "[HearthsideChat] Invalid LLM URL: {}", url);
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Invalid LLM URL: {}", url);
             return { "", HsLLMFailure::ConnectionFailed, 0 };
         }
 
@@ -359,7 +359,7 @@ namespace
             }
             catch (const std::exception&)
             {
-                LOG_ERROR("server.loading", "[HearthsideChat] Invalid port in LLM URL: {}", url);
+                LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Invalid port in LLM URL: {}", url);
                 return { "", HsLLMFailure::ConnectionFailed, 0 };
             }
         }
@@ -375,7 +375,7 @@ namespace
             hs_httplib::SSLClient& cli = GetSSLClient(host, port, timeoutSec);
             res = cli.Post(path, headers, body, "application/json");
 #else
-            LOG_ERROR("server.loading", "[HearthsideChat] HTTPS requested but OpenSSL not compiled in.");
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] HTTPS requested but OpenSSL not compiled in.");
             return { "", HsLLMFailure::ConnectionFailed, 0 };
 #endif
         }
@@ -388,14 +388,14 @@ namespace
         if (!res)
         {
             HsLLMFailure failure = ClassifyTransportError(res.error());
-            LOG_ERROR("server.loading", "[HearthsideChat] LLM request failed for {}:{}{} — {}",
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] LLM request failed for {}:{}{} — {}",
                 host, port, path, failure == HsLLMFailure::Timeout ? "timeout" : "connection failed");
             return { "", failure, 0 };
         }
         if (res->status != 200)
         {
             HsLLMFailure failure = res->status >= 500 ? HsLLMFailure::ServerError : HsLLMFailure::ClientError;
-            LOG_ERROR("server.loading", "[HearthsideChat] LLM HTTP {} from {}:{}{} — {}",
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] LLM HTTP {} from {}:{}{} — {}",
                 res->status, host, port, path, failure == HsLLMFailure::ServerError ? "backend error" : "our bug (malformed request?)");
             return { "", failure, res->status };
         }
@@ -567,7 +567,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
             std::string errMsg = resp["error"].is_object() && resp["error"].contains("message")
                 ? resp["error"]["message"].get<std::string>()
                 : outcome.body;
-            LOG_ERROR("server.loading", "[HearthsideChat] LLM API error: {}", errMsg);
+            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] LLM API error: {}", errMsg);
             result.failure = HsLLMFailure::ParseError;
             return result;
         }
@@ -577,7 +577,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         {
             if (!resp.contains("content"))
             {
-                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected llama.cpp /completion response shape.");
+                LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Unexpected llama.cpp /completion response shape.");
                 result.failure = HsLLMFailure::ParseError;
                 return result;
             }
@@ -585,9 +585,10 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         }
         else if (isOllama)
         {
-            if (!resp.contains("message") || !resp["message"].contains("content"))
+            if (!resp.contains("message") || !resp["message"].contains("content") ||
+                !resp["message"]["content"].is_string())
             {
-                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected Ollama response shape.");
+                LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Unexpected Ollama response shape.");
                 result.failure = HsLLMFailure::ParseError;
                 return result;
             }
@@ -595,9 +596,21 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         }
         else
         {
-            if (!resp.contains("choices") || resp["choices"].empty())
+            // Review C7: the llamacpp and Ollama branches above check every
+            // level of their shape explicitly; this one checked only the
+            // outer array and then indexed ["message"]["content"] blind.
+            // resp is non-const, so operator[] on a missing key *inserts a
+            // null* and get<std::string>() throws type_error, caught by the
+            // handler below -- the right outcome by the wrong route, and it
+            // logs "JSON parse error" for what is actually a shape
+            // mismatch. Checked explicitly so the three branches read the
+            // same and the log names the real problem.
+            if (!resp.contains("choices") || resp["choices"].empty() ||
+                !resp["choices"][0].contains("message") ||
+                !resp["choices"][0]["message"].contains("content") ||
+                !resp["choices"][0]["message"]["content"].is_string())
             {
-                LOG_ERROR("server.loading", "[HearthsideChat] Unexpected OpenAI-compatible response shape.");
+                LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Unexpected OpenAI-compatible response shape.");
                 result.failure = HsLLMFailure::ParseError;
                 return result;
             }
@@ -616,7 +629,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
     }
     catch (const std::exception& ex)
     {
-        LOG_ERROR("server.loading", "[HearthsideChat] LLM response JSON parse error: {}", ex.what());
+        LOG_ERROR("module.hearthside.llm", "[HearthsideChat] LLM response JSON parse error: {}", ex.what());
         result.failure = HsLLMFailure::ParseError;
         return result;
     }

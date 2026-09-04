@@ -53,8 +53,15 @@ namespace
     // derived from an external spec.
     bool MainFocusAllowedInBand(const std::string& value, Band band)
     {
+        // Review C11: High (60-79) is the Northrend levelling range in
+        // WotLK, so "leveling" is not merely plausible there, it is the
+        // single most likely answer for a character in that band. Rejecting
+        // it produced a main_focus_not_plausible_for_level verdict the model
+        // could hit repeatedly on the same bot, which is one of the two
+        // deterministic card-generation failures behind the generator
+        // livelock (review B2).
         if (value == "leveling")
-            return band == Band::Low || band == Band::Mid;
+            return band == Band::Low || band == Band::Mid || band == Band::High;
         if (value == "gearing_up")
             return band == Band::Mid || band == Band::High || band == Band::Endgame;
         if (value == "dailies")
@@ -107,7 +114,8 @@ std::string Hs_ExtractVerbalTic(const hs_json& facts)
     return Hs_CardFactField(facts, "verbal_tic");
 }
 
-HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasGuild)
+HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasGuild,
+                                   const std::string& ownClassName)
 {
     if (!facts.is_object())
         return { false, "not_an_object" };
@@ -147,6 +155,14 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
     std::string alt = facts.at("alt").get<std::string>();
     if (!Contains(HsCardFacts::kClassNames, HsCardFacts::kClassNameCount, alt))
         return { false, "alt_not_a_real_class_name" };
+    // Review C10: Hs_BuildCardFactsPrompt asks for "a different WoW class
+    // than this character's own", and nothing enforced it -- a card could
+    // claim a warrior alt on a warrior. ownClassName is lowercase and drawn
+    // from the same vocabulary as kClassNames (hs_corpus.h's
+    // Hs_ClassNameFor); empty means the caller could not determine it, in
+    // which case the check is skipped rather than guessed.
+    if (!ownClassName.empty() && alt == ownClassName)
+        return { false, "alt_is_the_characters_own_class" };
 
     if (!IsPlausibleFreeform(facts.at("current_goal").get<std::string>()))
         return { false, "current_goal_bad_format" };
@@ -182,7 +198,7 @@ std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout)
 }
 
 std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint8_t level, bool hasGuild,
-                                     const std::string& guildName)
+                                     const std::string& guildName, const std::string& ownClassName)
 {
     std::string prompt =
         "You are helping fill out a structured fact sheet for a World of Warcraft: Wrath of the "
@@ -210,6 +226,15 @@ std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint
         "guild_stance: \"" + std::string(hasGuild ? "guilded" : "unguilded") + "\" -- must match "
         "this character's actual guild status above.\n"
         "alt: the name of a different WoW class than this character's own, lowercase.";
+
+    // Review C10: naming the class the model must avoid, rather than
+    // leaving "this character's own" for it to infer from the personality
+    // summary, which never states it. The validator rejects a match either
+    // way; telling the model up front is what keeps that from becoming a
+    // repeated rejection on the same bot (review B2's livelock shape).
+    if (!ownClassName.empty())
+        prompt += " This character is a " + ownClassName +
+                  ", so alt must NOT be \"" + ownClassName + "\".";
 
     return prompt;
 }
