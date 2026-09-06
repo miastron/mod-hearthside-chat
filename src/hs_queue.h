@@ -197,10 +197,12 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 // any of them is no longer true of it. Prior-turn context from before that
 // point is worse than no context, so it goes.
 //
-// Deliberately narrow: only the history, which is the only one of this
-// module's in-memory maps that holds *content* about a prior relationship
-// rather than a timestamp. A stale 8-second reply cooldown surviving a reset
-// is not worth a hook.
+// Also drops this bot's recent-public-utterance context (Hs_RecentUtteranceContext):
+// same staleness argument as the history above, a pre-reset ad is no longer
+// true of the character. Deliberately narrow beyond those two: every other
+// in-memory map in this file holds only a timestamp, not content about a
+// prior relationship or the bot's own words, so a stale 8-second reply
+// cooldown surviving a reset is not worth a hook.
 void Hs_ForgetBotHistory(uint64_t botGuid);
 
 // Delivers a tier-0 reflex reply, and also a grounded-answer reply: both are
@@ -220,6 +222,25 @@ void Hs_ForgetBotHistory(uint64_t botGuid);
 // ignored otherwise, default value arbitrary.
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
                             HsChannelKind channelKind = HsChannelKind::Trade);
+
+// Records that this bot said `text` somewhere with no bounded/membership
+// audience (Say or Channel; see hs_queue.cpp's g_RecentUtterances comment
+// for why Whisper/Party/Raid/Guild are excluded). Called from every actual
+// delivery point regardless of tier -- Hs_DeliverPending's dispatch loop
+// covers reflex/grounded/corpus/ambient/opener/reactive, hs_script.cpp's two
+// direct Say() sites call it themselves. A no-op on empty text. This is not
+// a relationship or identity write (contrast hs_identity_store.h/
+// hs_memory_store.h): it only ever feeds this same bot's own future
+// Hs_RecentUtteranceContext.
+void Hs_RecordBotUtterance(uint64_t botGuid, const std::string& text);
+
+// Short first-person context block of this bot's most recent public lines
+// (empty string if it hasn't said anything eligible lately), meant to be
+// concatenated onto the archetype/persona line passed to Hs_CallLLM --
+// see hs_queue.cpp's reactive-path personaLine assembly for the existing
+// precedent (cardSnapshot/rpgHint/topicGate already fold in there rather
+// than widening Hs_CallLLM's signature).
+std::string Hs_RecentUtteranceContext(uint64_t botGuid);
 
 // §4.17: attempts to spend one token from this channel's own rate-limit
 // bucket (HearthsideChat.Channel.<name>.RatePerMin), independent of the
@@ -247,14 +268,42 @@ void Hs_ChannelBucketRefund(HsChannelKind kind);
 // this used to take (and that PlayerbotMgr.cpp still takes) resolves to
 // nullptr instead. Note ChannelMgr::GetChannel is a pure name lookup and does
 // *not* test membership, so a hit here proves the channel exists, not that the
-// bot is in it: every caller that needs the latter checks
-// Player::IsInChannel itself. Called fresh at delivery time from the bot's
-// *then-current* zone by both Hs_DeliverPending (a corpus-fallback channel
-// reply) and hs_script.cpp's channel-script delivery, not a name captured
-// earlier: the bot may have moved zones during the typing delay for a
-// zone-scoped channel (General/LocalDefense). Returns nullptr if the bot no
-// longer resolves to that channel instance; caller must not misdeliver.
-Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind);
+// bot is in it. Called fresh at delivery time from the bot's *then-current*
+// zone by both Hs_DeliverPending (a corpus-fallback channel reply) and
+// hs_script.cpp's channel-script delivery, not a name captured earlier: the
+// bot may have moved zones during the typing delay for a zone-scoped channel
+// (General/LocalDefense). Returns nullptr if the bot no longer resolves to
+// that channel instance; caller must not misdeliver.
+//
+// Real per-instance membership (as opposed to "this name resolves to some
+// live channel object") has no public API on this AzerothCore revision:
+// Channel::IsOn(GUID)/GetPlayerFlags are both private, and Player::m_channels
+// is protected, so the only two things module code can legally ask are "what
+// channel does the DBC/zone say this player belongs to" (this function) and
+// "does this player's own joined-channel list contain a channel of this DBC
+// *type*" (Player::IsInChannel(Channel*), which compares type id, not
+// instance -- every zone's General shares one type id, so it cannot on its
+// own tell one zone's instance from another's). Testing candidate X against
+// a channel resolved from X itself is still sound: IsInChannel(type) being
+// true then means X's one membership of that type (UpdateLocalChannels holds
+// a player to at most one channel per type) is the type this function just
+// asked about, which -- given the two are asking about the same zone -- is
+// the same object. Testing candidate X against a channel resolved from a
+// *different* player Y is not sound the same way (X's General and Y's
+// General share a type id even in different zones): that comparison has to
+// go through this function a second time, resolved from X, and compare the
+// two Channel* pointers for identity instead.
+//
+// sendPacketOnMiss forwards to ChannelMgr::GetChannel's own `pkt` (default
+// true there, matching every pre-existing caller of this function): on a
+// miss it sends the passed-in `bot` a "not on channel" client message. Every
+// existing caller passes a bot, so that message lands on nobody. The
+// exception is exactly the "resolve Y to compare pointers" case above, where
+// Y can be a real player who has never actually done anything wrong --
+// callers doing that pass false, or `bot` here would occasionally hand a
+// real player a spurious system message purely because a corpus/channel scan
+// happened to probe their zone.
+Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool sendPacketOnMiss = true);
 
 // Seconds since this bot's last *successfully delivered* reply, or
 // UINT32_MAX if never. Read-only query for hs_arbiter's recent-speaker

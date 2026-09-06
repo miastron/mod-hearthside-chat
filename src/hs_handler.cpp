@@ -847,8 +847,17 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         Player* candidate = itr.second;
         if (!candidate || !candidate->IsInWorld() || !IsBot(candidate))
             continue;
-        if (!candidate->IsInChannel(channel))
-            continue; // Channel's own member list is private; this is the public membership check
+        // `channel` is the real Channel* the core hook handed us for the
+        // triggering player's own message -- not something resolved from
+        // `candidate`. Player::IsInChannel(Channel*) would wrongly accept
+        // any bot resolved into any zone's same-type channel (every zone's
+        // General shares one DBC type id); re-resolving candidate's own
+        // channel and comparing Channel* identity is the actual per-instance
+        // test (see hs_queue.h's Hs_ResolveChannelForDelivery comment).
+        // pkt=false is belt-and-suspenders here (candidate is always a bot,
+        // confirmed above), matching every other cross-individual call site.
+        if (Hs_ResolveChannelForDelivery(candidate, kind, /*sendPacketOnMiss=*/false) != channel)
+            continue;
 
         // §4.17's Trade `care` offset trigger: every bot in this channel
         // instance, independent of whether any of them go on to reply.

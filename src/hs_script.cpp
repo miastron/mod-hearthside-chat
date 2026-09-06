@@ -423,6 +423,7 @@ namespace
             return;
 
         speakerAI->Say(style.text);
+        Hs_RecordBotUtterance(scheduled.speakerGuid, style.text);
     }
 
     void DeliverPendingTurns()
@@ -519,9 +520,13 @@ namespace
     // Finds two same-team bots that both resolve to the same live channel
     // instance for `kind` (Hs_ResolveChannelForDelivery, hs_queue.h: the
     // same zone-qualified resolution delivery uses, so "grouped by resolved
-    // Channel*" is equivalent to "members of the same channel instance"),
-    // confirmed via the public Player::IsInChannel rather than trusted on
-    // Hs_ResolveChannelForDelivery's return alone. No proximity or combat
+    // Channel*" is equivalent to "members of the same channel instance").
+    // Bot candidates are tested with Player::IsInChannel(Channel*) against a
+    // channel resolved from that same candidate -- sound despite its
+    // type-only comparison, since a candidate holds at most one channel of a
+    // given DBC type at a time (see hs_queue.h's Hs_ResolveChannelForDelivery
+    // comment for why that self-consistency argument doesn't extend to
+    // testing a *different* player against it). No proximity or combat
     // check (§4.17's channel cast needn't be co-located). Only alive,
     // same team, and not already mid-script (either mechanism).
     //
@@ -607,10 +612,15 @@ namespace
             if (entry.second.size() < 2)
                 continue;
 
+            // Cross-individual, same reasoning as hs_ambient.cpp's channel
+            // scan: entry.first was resolved from a bot, not from `player`,
+            // so re-resolve `player`'s own channel (pkt=false: `player` is a
+            // real human) and compare Channel* identity rather than trusting
+            // Player::IsInChannel(Channel*)'s type-only comparison.
             bool heard = false;
             for (Player* player : realPlayers)
             {
-                if (player->IsInChannel(entry.first))
+                if (Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == entry.first)
                 {
                     heard = true;
                     break; // presence test, not a count
@@ -688,6 +698,7 @@ namespace
         if (!channel)
             return; // speaker no longer resolves to that channel instance (e.g. moved zones): drop, don't misdeliver
         channel->Say(speaker->GetGUID(), style.text, LANG_UNIVERSAL);
+        Hs_RecordBotUtterance(scheduled.speakerGuid, style.text);
     }
 
     void DeliverPendingChannelTurns()

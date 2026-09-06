@@ -524,6 +524,13 @@ namespace
             if (!BotBaseEligible(candidate))
                 continue;
 
+            // Self-resolved and self-tested (see hs_queue.h's
+            // Hs_ResolveChannelForDelivery comment): channel is resolved
+            // from candidate's own zone, so Player::IsInChannel(Channel*)'s
+            // type-only comparison is sound here even though it can't tell
+            // instances apart in general -- candidate holds at most one
+            // channel of this DBC type at a time, and it can only be the one
+            // this function just asked about for candidate's own zone.
             Channel* channel = Hs_ResolveChannelForDelivery(candidate, kind);
             if (!channel || !candidate->IsInChannel(channel))
                 continue;
@@ -562,10 +569,19 @@ namespace
 
             if (g_HsAmbientRequireRealPlayer)
             {
+                // Cross-individual: entry.first was resolved from a bot, not
+                // from `player`, so Player::IsInChannel(Channel*)'s
+                // type-only comparison would wrongly accept a real player
+                // standing in a *different* zone's same-type channel (the
+                // exact bug this module used to have). Re-resolve `player`'s
+                // own channel and compare Channel* identity instead --
+                // pkt=false since `player` is a genuine human here and a
+                // miss must not hand them a spurious "not on channel"
+                // message just because this scan probed their zone.
                 bool heard = false;
                 for (Player* player : realPlayers)
                 {
-                    if (player->IsInChannel(entry.first))
+                    if (Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == entry.first)
                     {
                         heard = true;
                         break; // presence test, not a count

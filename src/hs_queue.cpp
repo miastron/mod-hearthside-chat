@@ -356,6 +356,35 @@ namespace
                             [](const HsHistoryEntry& e) { return e.touchedAt; });
     }
 
+    // ---- recent public utterances: what a bot has said out loud lately,
+    // keyed by bot alone, in memory only. Separate from g_History above (a
+    // *pair's* back-and-forth) and from hs_identity/hs_memory_store (social
+    // rings, shared-experience beats): this holds no relationship, just an
+    // echo of the bot's own words, folded into that same bot's next
+    // personaLine so a later question about something it said keeps the
+    // thread instead of the reactive tier inventing an unrelated answer
+    // (the corpus/ambient tiers that produce most of these lines are
+    // template-based and never touch g_History themselves). ----
+    //
+    // Deliberately scoped to *unaddressed* surfaces only -- Say and Channel
+    // (Trade/General/etc.), both audible to anyone in range/subscribed with
+    // no membership list. Whisper, Party, Raid, and Guild are excluded even
+    // though they're also "things the bot said": each has a bounded,
+    // specific audience, and folding one into every future reply's prompt
+    // would leak that audience's conversation to an unrelated player who
+    // whispers the bot later. Whisper content stays exactly as
+    // well-scoped as it already is, via g_History's (bot, sender) pairing.
+    constexpr size_t kUtteranceCapPerBot = 3;
+
+    struct HsUtteranceEntry
+    {
+        std::deque<std::string> lines;
+        Clock::time_point       touchedAt{};
+    };
+
+    std::mutex                                  g_UtteranceMutex;
+    std::unordered_map<uint64_t, HsUtteranceEntry> g_RecentUtterances;
+
     // ---- circuit breaker ----
     std::atomic<uint32_t>  g_ConsecutiveFailures{0};
     std::atomic<bool>      g_BreakerOpen{false};
@@ -606,6 +635,14 @@ namespace
             if (!rpgHint.empty())
                 personaLine += "\n" + rpgHint;
             personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
+
+            // Grounds a reply in what this bot itself said publicly (a
+            // corpus/ambient WTS line, a reflex/grounded answer, an opener)
+            // even though none of those tiers write to g_History. No-op
+            // concat when the bot hasn't spoken audibly lately.
+            std::string recentPublic = Hs_RecentUtteranceContext(req.botGuid);
+            if (!recentPublic.empty())
+                personaLine += "\n" + recentPublic;
 
             // One snapshot per request instead of six reads of the live
             // globals. This is the worker thread; `.reload config` reassigns
@@ -1076,6 +1113,36 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
     g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind });
 }
 
+void Hs_RecordBotUtterance(uint64_t botGuid, const std::string& text)
+{
+    if (text.empty())
+        return;
+    std::lock_guard<std::mutex> lock(g_UtteranceMutex);
+    Clock::time_point now = Clock::now();
+
+    HsUtteranceEntry& entry = g_RecentUtterances[botGuid];
+    entry.lines.push_back(text);
+    entry.touchedAt = now;
+    while (entry.lines.size() > kUtteranceCapPerBot)
+        entry.lines.pop_front();
+
+    HsPrune::PruneStale(g_RecentUtterances, now, kHistoryStaleSeconds, kHistoryPruneThreshold,
+                        [](const HsUtteranceEntry& e) { return e.touchedAt; });
+}
+
+std::string Hs_RecentUtteranceContext(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_UtteranceMutex);
+    auto it = g_RecentUtterances.find(botGuid);
+    if (it == g_RecentUtterances.end() || it->second.lines.empty())
+        return "";
+
+    std::string out = "You recently said, where others could overhear:";
+    for (auto const& line : it->second.lines)
+        out += "\n- \"" + line + "\"";
+    return out;
+}
+
 bool Hs_EventBucketTake()
 {
     if (g_HsEventBucketRepliesPerMinute == 0 || g_HsEventBucketBurstCapacity == 0)
@@ -1238,7 +1305,7 @@ void Hs_ChannelBucketRefund(HsChannelKind kind)
         --counts.replied;
 }
 
-Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
+Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool sendPacketOnMiss)
 {
     ChannelMgr* cMgr = ChannelMgr::forTeam(bot->GetTeamId());
     if (!cMgr)
@@ -1264,7 +1331,7 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
 
     uint8 locale = sWorld->GetDefaultDbcLocale();
     if (isGlobal)
-        return cMgr->GetChannel(entry->pattern[locale], bot);
+        return cMgr->GetChannel(entry->pattern[locale], bot, sendPacketOnMiss);
 
     // The substituted half of the channel name. City-scoped channels take it
     // from the same acore_string the core does, deliberately, not from
@@ -1299,7 +1366,7 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind)
 
     char nameBuf[100];
     snprintf(nameBuf, sizeof(nameBuf), entry->pattern[locale], areaName.c_str());
-    return cMgr->GetChannel(nameBuf, bot);
+    return cMgr->GetChannel(nameBuf, bot, sendPacketOnMiss);
 }
 
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)
@@ -1408,6 +1475,12 @@ void Hs_DeliverPending()
             }
         }
 
+        // Feeds Hs_RecentUtteranceContext for this bot's next reactive
+        // reply. Say/Channel only -- see g_RecentUtterances' comment for
+        // why Whisper/Party/Raid/Guild stay out of this shared pool.
+        if (reply.channel == HsReplyChannel::Say || reply.channel == HsReplyChannel::Channel)
+            Hs_RecordBotUtterance(bot->GetGUID().GetRawValue(), reply.text);
+
         if (g_HsDebugEnabled)
         {
             // Surface, not just text: /say and party lines are proximity- or
@@ -1450,6 +1523,11 @@ void Hs_ForgetBotHistory(uint64_t botGuid)
         else
             ++it;
     }
+
+    // A recycled bot's pre-reset ad/utterance is exactly as stale as its
+    // pair history above: the character that said it no longer exists.
+    std::lock_guard<std::mutex> lockUtterance(g_UtteranceMutex);
+    g_RecentUtterances.erase(botGuid);
 }
 
 uint32_t Hs_SecondsSinceLastReply(uint64_t botGuid)

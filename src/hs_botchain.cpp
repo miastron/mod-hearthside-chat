@@ -6,7 +6,7 @@
 #include "hs_topic_gate.h"
 #include "hs_locale.h"
 
-#include "Channel.h" // Player::IsInChannel / Hs_ResolveChannelForDelivery's return
+#include "Channel.h" // Hs_ResolveChannelForDelivery's return
 #include "DBCStores.h"
 #include "Group.h"
 #include "GroupReference.h"
@@ -164,7 +164,12 @@ namespace
             Player* candidate = itr.second;
             if (!candidate || !candidate->IsInWorld() || candidate == speaker)
                 continue;
-            if (!candidate->IsInChannel(channel))
+            // Cross-individual: channel was resolved from `speaker`, not
+            // `candidate` (which can be a real player here, tested before
+            // the IsBot split below), so re-resolve candidate's own channel
+            // and compare Channel* identity -- pkt=false since a miss must
+            // not hand a real human a spurious "not on channel" message.
+            if (Hs_ResolveChannelForDelivery(candidate, kind, /*sendPacketOnMiss=*/false) != channel)
                 continue;
 
             if (!IsBot(candidate))
