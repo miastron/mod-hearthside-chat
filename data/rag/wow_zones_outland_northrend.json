@@ -1,0 +1,107 @@
+[
+  {
+    "id": "zone_hellfire_peninsula",
+    "title": "Hellfire Peninsula",
+    "content": "Hellfire Peninsula is the level 58 to 63 entry zone of Outland, the red broken land on the far side of the Dark Portal. Honor Hold serves the Alliance and Thrallmar the Horde. Hellfire Citadel sits at the center with Ramparts, Blood Furnace, Shattered Halls, and Magtheridon's Lair, and the zone has a heavy world PvP presence around its towers.",
+    "keywords": ["hellfire peninsula", "hellfire", "honor hold", "thrallmar", "dark portal", "hellfire citadel", "ramparts", "blood furnace", "magtheridon", "outland entry"],
+    "tags": ["zone", "contested", "outland", "leveling"]
+  },
+  {
+    "id": "zone_zangarmarsh",
+    "title": "Zangarmarsh",
+    "content": "Zangarmarsh is a level 60 to 64 Outland zone of giant mushrooms and standing water, home to the Cenarion Expedition at Cenarion Refuge and the sporeggar mushroom folk. Telredor serves the Alliance and Zabra'jin the Horde. The Coilfang Reservoir instances, including Slave Pens, Underbog, Steamvault, and Serpentshrine Cavern, all open here.",
+    "keywords": ["zangarmarsh", "cenarion expedition", "sporeggar", "telredor", "zabrajin", "coilfang reservoir", "slave pens", "underbog", "steamvault", "serpentshrine cavern", "mushrooms"],
+    "tags": ["zone", "contested", "outland", "leveling"]
+  },
+  {
+    "id": "zone_terokkar_forest",
+    "title": "Terokkar Forest",
+    "content": "Terokkar Forest is a level 62 to 65 Outland zone of tall bone-white trees, and it surrounds Shattrath City. Allerian Stronghold serves the Alliance and Stonebreaker Hold the Horde. Auchindoun sits in the Bone Wastes at its center with four wings, and the Skettis arakkoa hold the southeast.",
+    "keywords": ["terokkar forest", "terokkar", "shattrath", "allerian stronghold", "stonebreaker hold", "auchindoun", "bone wastes", "skettis", "arakkoa", "lower city"],
+    "tags": ["zone", "contested", "outland", "leveling"]
+  },
+  {
+    "id": "zone_nagrand",
+    "title": "Nagrand",
+    "content": "Nagrand is a level 64 to 67 Outland zone of green plains and floating islands, widely considered the best-looking zone of the Burning Crusade. Telaar serves the Alliance and Garadar the Horde, and the Mag'har orcs quest chain runs from Garadar. Halaa in the center is a world PvP objective, and the Ring of Blood is a well-known group quest gauntlet.",
+    "keywords": ["nagrand", "telaar", "garadar", "maghar orcs", "halaa", "ring of blood", "floating islands", "throne of the elements", "world pvp"],
+    "tags": ["zone", "contested", "outland", "leveling", "pvp"]
+  },
+  {
+    "id": "zone_blades_edge_mountains",
+    "title": "Blade's Edge Mountains",
+    "content": "Blade's Edge Mountains is a level 65 to 68 Outland zone of jagged spires, ogre holds, and dragon bones driven into the rock. Sylvanaar serves the Alliance and Thunderlord Stronghold the Horde. Gruul's Lair opens in the northwest and the Ogri'la plateau in the east unlocks daily quests at level 70.",
+    "keywords": ["blades edge mountains", "blades edge", "sylvanaar", "thunderlord stronghold", "gruuls lair", "ogrila", "bladespire", "dragon bones", "skyguard"],
+    "tags": ["zone", "contested", "outland", "leveling"]
+  },
+  {
+    "id": "zone_netherstorm",
+    "title": "Netherstorm",
+    "content": "Netherstorm is a level 67 to 70 Outland zone of shattered floating landmass and arcane storms in the northeast. Area 52 is the neutral goblin hub, and the Consortium and Kirin Tor both operate here. Tempest Keep, with the Arcatraz, Botanica, Mechanar, and Eye, sits at the zone's western edge as Kael'thas Sunstrider's stronghold.",
+    "keywords": ["netherstorm", "area 52", "tempest keep", "arcatraz", "botanica", "mechanar", "the eye", "kaelthas sunstrider", "manaforge", "consortium"],
+    "tags": ["zone", "contested", "outland", "leveling", "endgame"]
+  },
+  {
+    "id": "zone_shadowmoon_valley",
+    "title": "Shadowmoon Valley",
+    "content": "Shadowmoon Valley is a level 67 to 70 Outland zone of black rock and lava in the southeast, and the last leveling zone of the Burning Crusade. Wildhammer Stronghold serves the Alliance and Shadowmoon Village the Horde. The Black Temple, Illidan Stormrage's fortress, dominates the middle of the zone, and the Netherwing ledge offers drake mount dailies at level 70.",
+    "keywords": ["shadowmoon valley", "black temple", "illidan stormrage", "wildhammer stronghold", "shadowmoon village", "netherwing ledge", "netherwing drake", "altar of sha", "coilskar"],
+    "tags": ["zone", "contested", "outland", "leveling", "endgame"]
+  },
+  {
+    "id": "zone_dragonblight",
+    "title": "Dragonblight",
+    "content": "Dragonblight is a level 71 to 74 Northrend zone at the center of the continent, where dragons come to die. Wintergarde Keep serves the Alliance and Agmar's Hammer the Horde, with the neutral Wyrmrest Temple rising at the middle. Azjol-Nerub and the Old Kingdom open in the north, Naxxramas floats in the northeast, and the Wrathgate questline plays out here.",
+    "keywords": ["dragonblight", "wyrmrest temple", "wintergarde keep", "agmars hammer", "azjolnerub", "old kingdom", "naxxramas entrance", "wrathgate", "dragon graveyard"],
+    "tags": ["zone", "contested", "northrend", "leveling"]
+  },
+  {
+    "id": "zone_grizzly_hills",
+    "title": "Grizzly Hills",
+    "content": "Grizzly Hills is a level 73 to 75 Northrend zone of dense pine forest and logging camps, known for its music. Amberpine Lodge serves the Alliance and Conquest Hold the Horde. The Drakkari trolls, the Venture Company, and the worgen of Grizzlemaw drive most of the questing, and Drak'Tharon Keep sits on the border with Zul'Drak.",
+    "keywords": ["grizzly hills", "amberpine lodge", "conquest hold", "grizzlemaw", "draktharon keep", "venture company", "furbolg", "worgen", "pine forest"],
+    "tags": ["zone", "contested", "northrend", "leveling"]
+  },
+  {
+    "id": "zone_zuldrak",
+    "title": "Zul'Drak",
+    "content": "Zul'Drak is a level 74 to 76 Northrend zone, the ice troll homeland, where the Drakkari are killing their own gods for power. The Argent Crusade holds Light's Breach and the Ebon Blade operates at Ebon Watch. Gundrak sits at the northern end of the zone, and the Amphitheater of Anguish runs a well-known gauntlet of group quests.",
+    "keywords": ["zuldrak", "drakkari", "ice trolls", "gundrak", "lights breach", "ebon watch", "amphitheater of anguish", "troll gods", "argent crusade"],
+    "tags": ["zone", "contested", "northrend", "leveling"]
+  },
+  {
+    "id": "zone_sholazar_basin",
+    "title": "Sholazar Basin",
+    "content": "Sholazar Basin is a level 76 to 78 Northrend zone, a tropical valley sealed inside the ice and untouched by the Lich King. Nesingwary's camp runs the hunting quests, and the Oracles and the Frenzyheart Tribe are opposed reputations: siding with one locks out the other, and each offers its own dailies and pets.",
+    "keywords": ["sholazar basin", "sholazar", "the oracles", "frenzyheart tribe", "nesingwary", "river mouth", "tropical", "titan", "mysterious egg"],
+    "tags": ["zone", "neutral", "northrend", "leveling"]
+  },
+  {
+    "id": "zone_storm_peaks",
+    "title": "The Storm Peaks",
+    "content": "The Storm Peaks is a level 76 to 80 Northrend zone of high mountains and titan architecture in the north, home to the Sons of Hodir. K3 is the goblin hub and Dun Niffelem the Sons of Hodir's. The Sons of Hodir reputation is the only source of shoulder enchants in Wrath, and Ulduar opens from the western side of the zone.",
+    "keywords": ["the storm peaks", "storm peaks", "sons of hodir", "dun niffelem", "k3", "ulduar entrance", "titan", "brunnhildar", "shoulder enchants", "hyldnir"],
+    "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
+  },
+  {
+    "id": "zone_icecrown",
+    "title": "Icecrown",
+    "content": "Icecrown is the level 77 to 80 Northrend zone below the Lich King's fortress, and the last leveling zone of Wrath. The Argent Crusade, the Knights of the Ebon Blade, and the Alliance and Horde all hold camps here. The Argent Tournament grounds run mounted daily quests, and Icecrown Citadel with the Trial of the Crusader sits at the zone's heart.",
+    "keywords": ["icecrown", "icecrown citadel", "lich king", "argent tournament", "knights of the ebon blade", "argent crusade", "trial of the crusader", "shadow vault", "saronite"],
+    "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
+  },
+  {
+    "id": "zone_crystalsong_forest",
+    "title": "Crystalsong Forest",
+    "content": "Crystalsong Forest is a level 77 to 80 Northrend zone of crystalline trees at the center of the continent, directly beneath the floating city of Dalaran. It has very few quests of its own and exists mostly as the approach to Dalaran and a passage between Dragonblight, Zul'Drak, and the Storm Peaks.",
+    "keywords": ["crystalsong forest", "crystalsong", "dalaran below", "crystalline trees", "windrunners overlook", "sunreavers command", "few quests", "transit zone"],
+    "tags": ["zone", "contested", "northrend"]
+  },
+  {
+    "id": "zone_wintergrasp",
+    "title": "Wintergrasp",
+    "content": "Wintergrasp is a level 77 to 80 Northrend zone that works as an open world PvP battleground rather than a leveling zone. Alliance and Horde fight over the Wintergrasp Fortress on a timer using siege vehicles and destructible walls. Holding the fortress grants the winning faction access to the Vault of Archavon raid and a damage buff, and losing it locks that out until the next battle.",
+    "keywords": ["wintergrasp", "world pvp", "siege vehicles", "wintergrasp fortress", "vault of archavon", "tenacity", "battle timer", "destructible walls", "pvp zone"],
+    "tags": ["zone", "contested", "northrend", "pvp", "endgame"]
+  }
+]

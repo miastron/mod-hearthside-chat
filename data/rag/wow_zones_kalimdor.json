@@ -1,0 +1,114 @@
+[
+  {
+    "id": "zone_bloodmyst_isle",
+    "title": "Bloodmyst Isle",
+    "content": "Bloodmyst Isle is a level 10 to 20 draenei zone north of Azuremyst Isle, stained red by the crash of the Exodar. Blood Watch is the quest hub. It follows straight on from the draenei starting experience and ends around the level where players leave for Darkshore or Darnassus.",
+    "keywords": ["bloodmyst isle", "bloodmyst", "blood watch", "draenei", "exodar crash", "vector coil", "wrathscale naga"],
+    "tags": ["zone", "alliance", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_darkshore",
+    "title": "Darkshore",
+    "content": "Darkshore is a level 10 to 20 night elf zone along the western coast of Kalimdor, below Teldrassil. Auberdine is the port and quest hub, with boats to Menethil Harbor, Rut'theran Village, and the Exodar. Ruins, murlocs, and the Twilight's Hammer occupy the coast, and Blackfathom Deeps lies at the southern end.",
+    "keywords": ["darkshore", "auberdine", "night elf zone", "blackfathom deeps entrance", "twilights hammer", "master craftsman", "coast", "boat"],
+    "tags": ["zone", "alliance", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_the_barrens",
+    "title": "The Barrens",
+    "content": "The Barrens is the great level 10 to 25 Horde zone across central Kalimdor, split by the Gold Road and remembered for its chat channel. Crossroads is the main quest hub, with Camp Taurajo south and Ratchet on the eastern coast as a neutral goblin port. Wailing Caverns sits in the Wailing Caverns oasis in the north.",
+    "keywords": ["the barrens", "barrens", "crossroads", "camp taurajo", "ratchet", "wailing caverns entrance", "gold road", "barrens chat", "razorfen"],
+    "tags": ["zone", "horde", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_stonetalon_mountains",
+    "title": "Stonetalon Mountains",
+    "content": "Stonetalon Mountains is a level 15 to 27 contested zone of pine ridges northwest of the Barrens. Sun Rock Retreat serves the Horde and Stonetalon Peak the Alliance. Venture Company goblins are logging the forest, which drives most of the zone's quests, and the Charred Vale lies burnt in the south.",
+    "keywords": ["stonetalon mountains", "stonetalon", "sun rock retreat", "stonetalon peak", "venture company", "charred vale", "windshear crag", "logging"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_ashenvale",
+    "title": "Ashenvale",
+    "content": "Ashenvale is a level 18 to 30 contested night elf forest north of the Barrens, heavily fought over by Warsong loggers and the Sentinels. Astranaar is the Alliance hub and Splintertree Post the Horde's. Blackfathom Deeps lies on its western coast and the Warsong Lumber Camp drives the faction conflict here.",
+    "keywords": ["ashenvale", "astranaar", "splintertree post", "warsong lumber camp", "sentinels", "silverwing", "night elf forest", "furbolg"],
+    "tags": ["zone", "contested", "kalimdor", "leveling", "pvp"]
+  },
+  {
+    "id": "zone_thousand_needles",
+    "title": "Thousand Needles",
+    "content": "Thousand Needles is a level 25 to 35 contested zone of towering mesas and dry canyons south of the Barrens. Freewind Post sits atop a mesa as the Horde hub. The Shimmering Flats in the southeast host the goblin racetrack, and centaur and Grimtotem tauren hold the canyon floor.",
+    "keywords": ["thousand needles", "freewind post", "shimmering flats", "mirage raceway", "goblin racetrack", "centaur", "grimtotem", "mesas", "razorfen downs"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_desolace",
+    "title": "Desolace",
+    "content": "Desolace is a level 30 to 40 contested wasteland on Kalimdor's western coast, grey and thinly populated. Nijel's Point serves the Alliance and Shadowprey Village the Horde. Centaur clans war across the middle of the zone and Maraudon's entrance lies in the Valley of Spears in the south.",
+    "keywords": ["desolace", "nijels point", "shadowprey village", "maraudon entrance", "valley of spears", "centaur clans", "kodo graveyard", "wasteland"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_dustwallow_marsh",
+    "title": "Dustwallow Marsh",
+    "content": "Dustwallow Marsh is a level 35 to 45 contested swamp on Kalimdor's eastern coast, holding the Alliance city of Theramore Isle under Jaina Proudmoore and the Horde camp at Brackenwall Village. Onyxia's Lair sits in the wyrmbog to the south, and Mudsprocket in the southwest was added as a later goblin hub.",
+    "keywords": ["dustwallow marsh", "theramore isle", "theramore", "jaina proudmoore", "brackenwall village", "onyxias lair entrance", "the wyrmbog", "mudsprocket", "swamp"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_feralas",
+    "title": "Feralas",
+    "content": "Feralas is a level 40 to 50 contested jungle in southwestern Kalimdor, thick with yeti, ogres, and gorillas. Feathermoon Stronghold serves the Alliance from an island in the west and Camp Mojache the Horde. Dire Maul lies in the ruins of Eldre'Thalas at the center of the zone.",
+    "keywords": ["feralas", "feathermoon stronghold", "camp mojache", "dire maul entrance", "eldrethalas", "yeti", "gordunni ogres", "high wilderness"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_tanaris",
+    "title": "Tanaris",
+    "content": "Tanaris is a level 40 to 50 contested desert in southern Kalimdor, with the neutral goblin port of Gadgetzan as its hub and an auction house. The Caverns of Time open in the Tanaris cliffs, and Zul'Farrak lies in the northwest. Silithid, pirates at Lost Rigger Cove, and basilisks fill the sands.",
+    "keywords": ["tanaris", "gadgetzan", "caverns of time", "zulfarrak entrance", "lost rigger cove", "steamwheedle port", "desert", "silithid", "noggenfogger"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_azshara",
+    "title": "Azshara",
+    "content": "Azshara is a level 45 to 55 contested zone in northeastern Kalimdor, overgrown and lightly quested before Cataclysm reworked it. Valormok is the Horde camp and Talrendis Point the Alliance's. Naga hold the ruins along the coast and the Timbermaw and blue dragonflight both have interests in the north.",
+    "keywords": ["azshara", "valormok", "talrendis point", "naga", "ruins of eldarath", "bay of storms", "blue dragonflight", "legash encampment"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_felwood",
+    "title": "Felwood",
+    "content": "Felwood is a level 48 to 55 contested zone north of Ashenvale, corrupted by demonic taint into sickly green forest. Emerald Sanctuary and Whisperwind Grove hold the Cenarion Circle's efforts to cleanse it. Timbermaw Hold in the north is a neutral furbolg faction worth grinding for the shortcut it opens to Winterspring and Moonglade.",
+    "keywords": ["felwood", "emerald sanctuary", "whisperwind grove", "timbermaw hold", "cenarion circle", "corrupted furbolg", "demonic taint", "irontree woods"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_ungoro_crater",
+    "title": "Un'Goro Crater",
+    "content": "Un'Goro Crater is a level 48 to 55 contested prehistoric basin south of Silithus, full of devilsaurs, raptors, and elementals. Marshal's Refuge in the middle is the neutral hub, and the crater is one of the best places in the old world for herbs, ore, and power crystals. A devilsaur will kill an unprepared player of its level range.",
+    "keywords": ["ungoro crater", "ungoro", "marshals refuge", "devilsaur", "dinosaurs", "power crystals", "fire plume ridge", "golakka hot springs", "raptors"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_silithus",
+    "title": "Silithus",
+    "content": "Silithus is a level 55 to 60 contested desert in southwestern Kalimdor, crawling with silithid and the Twilight's Hammer cult. Cenarion Hold is the quest hub and the Cenarion Circle reputation grind runs from there. The gates of Ahn'Qiraj stand at the zone's southern edge, opening onto the two Ahn'Qiraj raids.",
+    "keywords": ["silithus", "cenarion hold", "silithid", "twilights hammer", "ahnqiraj gates", "scarab lord", "cenarion circle", "bug hives"],
+    "tags": ["zone", "contested", "kalimdor", "leveling", "endgame"]
+  },
+  {
+    "id": "zone_winterspring",
+    "title": "Winterspring",
+    "content": "Winterspring is a level 55 to 60 contested snow zone in northeastern Kalimdor, with the neutral goblin town of Everlook as its hub. Frostsabers, yeti, and chimaera roam the drifts. It holds the Frostsaber mount grind for night elves and heavy thorium and arcane crystal mining in the Mazthoril caves.",
+    "keywords": ["winterspring", "everlook", "frostsaber", "yeti", "chimaera", "mazthoril", "starfall village", "snow", "arcane crystal"],
+    "tags": ["zone", "contested", "kalimdor", "leveling"]
+  },
+  {
+    "id": "zone_moonglade",
+    "title": "Moonglade",
+    "content": "Moonglade is a small neutral sanctuary valley in northern Kalimdor, sacred to druids and reachable by the Teleport: Moonglade spell any druid learns at level 14. Nighthaven is its only settlement, home to the Cenarion Circle and Remulos. It has no hostile mobs and no level range: druids come here for class quests and everyone else for the Lunar Festival.",
+    "keywords": ["moonglade", "nighthaven", "druid sanctuary", "teleport moonglade", "cenarion circle", "keeper remulos", "lunar festival", "no mobs", "timbermaw tunnel"],
+    "tags": ["zone", "neutral", "kalimdor", "sanctuary", "druid"]
+  }
+]

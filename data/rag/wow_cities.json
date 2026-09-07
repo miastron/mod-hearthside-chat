@@ -1,0 +1,79 @@
+[
+  {
+    "id": "city_rules_general",
+    "title": "Capital Cities",
+    "content": "Capital cities are safe hubs, not leveling ground. They contain no hostile mobs to kill and no quest grinding areas. Dueling is disabled inside city limits, so players who want to duel step outside the gates first. Every capital has a bank, auction house, mailbox, inn with an innkeeper for setting your hearthstone, flight master, stable master, guild master, barber shop, and the full set of class and profession trainers. Resting in a city accumulates rested experience faster than resting in the wild.",
+    "keywords": ["capital", "capital city", "city", "cities", "safe", "no mobs", "cannot duel", "dueling disabled", "duel", "hub", "rested experience", "barber shop", "city limits"],
+    "tags": ["city", "mechanics", "safe_zone"]
+  },
+  {
+    "id": "city_stormwind",
+    "title": "Stormwind City",
+    "content": "Stormwind City is the human capital and the main Alliance hub in the Eastern Kingdoms, sitting in the north of Elwynn Forest. It is divided into the Trade District, Old Town, the Mage Quarter, Cathedral Square, the Dwarven District, and the Park, with the Valley of Heroes at the front gates. King Varian Wrynn rules from Stormwind Keep. The Deeprun Tram runs underground from the Dwarven District to Ironforge, and the harbor carries boats to Northrend and Kalimdor.",
+    "keywords": ["stormwind", "stormwind city", "human capital", "alliance capital", "trade district", "old town", "mage quarter", "cathedral square", "dwarven district", "valley of heroes", "stormwind keep", "varian wrynn", "deeprun tram", "stormwind harbor"],
+    "tags": ["city", "alliance", "eastern_kingdoms"]
+  },
+  {
+    "id": "city_ironforge",
+    "title": "Ironforge",
+    "content": "Ironforge is the dwarven capital, carved into the mountain of Dun Morogh and centered on the Great Forge. Its districts include the Commons, Tinker Town, the Mystic Ward, the Military Ward, and the Hall of Explorers, which houses the Explorers' League and the museum. King Magni Bronzebeard rules here. The Deeprun Tram connects Ironforge to Stormwind, and the gryphon roost handles Alliance flight paths across the Eastern Kingdoms.",
+    "keywords": ["ironforge", "dwarven capital", "dwarf capital", "great forge", "tinker town", "mystic ward", "military ward", "hall of explorers", "explorers league", "magni bronzebeard", "deeprun tram", "gryphon roost"],
+    "tags": ["city", "alliance", "eastern_kingdoms"]
+  },
+  {
+    "id": "city_darnassus",
+    "title": "Darnassus",
+    "content": "Darnassus is the night elf capital, built among the branches of Teldrassil across the sea in northern Kalimdor. Its districts include the Temple of the Moon, the Cenarion Enclave, the Craftsmen's Terrace, the Warrior's Terrace, and the Tradesmen's Terrace. High Priestess Tyrande Whisperwind leads from the temple. Players reach it through the portal at Rut'theran Village at the base of the tree, which also connects by boat to Darkshore and Azuremyst Isle.",
+    "keywords": ["darnassus", "night elf capital", "temple of the moon", "cenarion enclave", "craftsmens terrace", "warriors terrace", "tyrande whisperwind", "rutheran village", "teldrassil capital"],
+    "tags": ["city", "alliance", "kalimdor"]
+  },
+  {
+    "id": "city_exodar",
+    "title": "The Exodar",
+    "content": "The Exodar is the draenei capital, a crashed naaru vessel embedded in the western edge of Azuremyst Isle off the coast of Kalimdor. Its wings include the Trader's Tier, the Crystal Hall, the Vault of Lights, and the Seat of the Naaru, where Prophet Velen resides. It is the least-trafficked Alliance capital, and a boat from Azuremyst Isle connects it to Darnassus and the rest of Kalimdor.",
+    "keywords": ["exodar", "the exodar", "draenei capital", "traders tier", "crystal hall", "vault of lights", "seat of the naaru", "velen", "prophet velen", "azuremyst capital"],
+    "tags": ["city", "alliance", "kalimdor"]
+  },
+  {
+    "id": "city_orgrimmar",
+    "title": "Orgrimmar",
+    "content": "Orgrimmar is the orc capital and the main Horde hub, built into the canyons of Durotar. Its districts are the Valley of Strength, the Valley of Honor, the Valley of Wisdom, the Valley of Spirits, the Drag, and the Cleft of Shadow, where warlocks and rogues train and the entrance to Ragefire Chasm sits. Warchief Thrall rules from Grommash Hold. Zeppelin towers outside the gates run to Undercity, Grom'gol in Stranglethorn, and Northrend.",
+    "keywords": ["orgrimmar", "orc capital", "horde capital", "valley of strength", "valley of honor", "valley of wisdom", "valley of spirits", "cleft of shadow", "the drag", "grommash hold", "thrall", "warchief", "zeppelin tower"],
+    "tags": ["city", "horde", "kalimdor"]
+  },
+  {
+    "id": "city_thunder_bluff",
+    "title": "Thunder Bluff",
+    "content": "Thunder Bluff is the tauren capital, a cluster of mesas rising above the plains of Mulgore and joined by rope bridges and wooden elevators. Elder Rise, Spirit Rise, and Hunter Rise ring the central High Rise, where Cairne Bloodhoof leads. It is the Horde's center for shamanism, druidism, and leatherworking, and the long fall from its bridges is a hazard for players who miss the lift.",
+    "keywords": ["thunder bluff", "tauren capital", "mulgore capital", "elder rise", "spirit rise", "hunter rise", "high rise", "cairne bloodhoof", "mesa", "rope bridges", "elevators"],
+    "tags": ["city", "horde", "kalimdor"]
+  },
+  {
+    "id": "city_undercity",
+    "title": "Undercity",
+    "content": "Undercity is the Forsaken capital, built in the catacombs beneath the ruined city of Lordaeron in Tirisfal Glades. It is laid out as a ring of quarters around a central well: the Trade Quarter, the War Quarter, the Magic Quarter, the Rogues' Quarter, and the Apothecarium, where Lady Sylvanas Windrunner and the Royal Apothecary Society plot. A zeppelin tower outside the ruins connects it to Orgrimmar and Northrend.",
+    "keywords": ["undercity", "forsaken capital", "undead capital", "lordaeron", "ruins of lordaeron", "trade quarter", "war quarter", "magic quarter", "rogues quarter", "apothecarium", "sylvanas windrunner", "royal apothecary society"],
+    "tags": ["city", "horde", "eastern_kingdoms"]
+  },
+  {
+    "id": "city_silvermoon",
+    "title": "Silvermoon City",
+    "content": "Silvermoon City is the blood elf capital in northern Eversong Woods, the last great city of Quel'Thalas. Its districts include the Royal Exchange, the Bazaar, the Walk of Elders, and Sunfury Spire, where Lor'themar Theron rules as regent. It is the most remote Horde capital: players usually arrive through the orb of translocation linking Undercity to Silvermoon, rather than travelling overland through the Ghostlands.",
+    "keywords": ["silvermoon", "silvermoon city", "blood elf capital", "quelthalas", "royal exchange", "the bazaar", "walk of elders", "sunfury spire", "lorthemar theron", "orb of translocation"],
+    "tags": ["city", "horde", "eastern_kingdoms"]
+  },
+  {
+    "id": "city_shattrath",
+    "title": "Shattrath City",
+    "content": "Shattrath City is the neutral hub of Outland, in western Terokkar Forest, where both factions trade and quest side by side. It is a sanctuary: all player versus player combat is disabled inside, including dueling. The Terrace of Light holds the naaru A'dal and portals to every capital city, while the Lower City below is home to refugees and the Sha'tar's quartermasters. Players choose between the Aldor and the Scryers here, and the choice locks out the other faction's rewards.",
+    "keywords": ["shattrath", "shattrath city", "outland hub", "neutral city", "sanctuary", "no pvp", "terrace of light", "lower city", "adal", "the shatar", "aldor", "scryers", "terokkar"],
+    "tags": ["city", "neutral", "outland", "sanctuary"]
+  },
+  {
+    "id": "city_dalaran",
+    "title": "Dalaran",
+    "content": "Dalaran is the neutral magical city of Northrend, floating above Crystalsong Forest, and the main hub for level 75 and above. Like Shattrath it is a sanctuary, so faction combat and dueling are disabled in the streets above. Runeweaver Square holds portals to every capital, and the Violet Citadel houses the Kirin Tor under Rhonin. The exception is the Underbelly, the sewer level beneath the city, where free-for-all combat is allowed and players do fight.",
+    "keywords": ["dalaran", "northrend hub", "floating city", "neutral city", "sanctuary", "kirin tor", "runeweaver square", "violet citadel", "rhonin", "the underbelly", "dalaran sewers", "crystalsong forest"],
+    "tags": ["city", "neutral", "northrend", "sanctuary"]
+  }
+]

@@ -1,0 +1,149 @@
+[
+  {
+    "id": "zone_westfall",
+    "title": "Westfall",
+    "content": "Westfall is a level 10 to 20 Alliance zone of failing farmland west of Elwynn Forest. The Defias Brotherhood and their harvest golems have overrun the farms, and the People's Militia works out of Sentinel Hill. It holds the entrance to the Deadmines and the long-running Defias questline, and Alliance players usually quest here right after Elwynn.",
+    "keywords": ["westfall", "sentinel hill", "defias brotherhood", "harvest golem", "peoples militia", "deadmines entrance", "moonbrook", "farmland"],
+    "tags": ["zone", "alliance", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_loch_modan",
+    "title": "Loch Modan",
+    "content": "Loch Modan is a level 10 to 20 dwarven zone east of Dun Morogh, built around a great lake and the Stonewrought Dam. Thelsamar is the quest hub. Troggs, kobolds, and the Dark Iron dwarves press in from the hills, and the Explorers' League digs at the Farstrider Lodge and Ironband's excavation site.",
+    "keywords": ["loch modan", "thelsamar", "stonewrought dam", "the loch", "ironbands excavation", "farstrider lodge", "troggs", "dark iron dwarves"],
+    "tags": ["zone", "alliance", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_silverpine_forest",
+    "title": "Silverpine Forest",
+    "content": "Silverpine Forest is a level 10 to 20 Horde zone south of Tirisfal Glades, dark and worgen-haunted. The Sepulcher is the Forsaken quest hub, and Shadowfang Keep sits at its southern edge above Pyrewood Village. Dalaran's old magical dome once stood here, and the Dalaran mages still hold ruins in the east.",
+    "keywords": ["silverpine forest", "silverpine", "the sepulcher", "shadowfang keep entrance", "pyrewood village", "worgen", "ambermill", "forsaken zone"],
+    "tags": ["zone", "horde", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_ghostlands",
+    "title": "Ghostlands",
+    "content": "Ghostlands is a level 10 to 20 blood elf zone south of Eversong Woods, scarred by the Scourge's march on Quel'Thalas. Tranquillien is the quest hub, and the Dead Scar cuts through the middle of the zone. It leads on to Zul'Aman and connects Silvermoon's territory to the rest of the Eastern Kingdoms.",
+    "keywords": ["ghostlands", "tranquillien", "dead scar", "quelthalas", "zulaman entrance", "blood elf leveling", "scourge"],
+    "tags": ["zone", "horde", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_redridge_mountains",
+    "title": "Redridge Mountains",
+    "content": "Redridge Mountains is a level 15 to 25 Alliance zone east of Elwynn Forest, centered on Lakeshire and its broken bridge. Blackrock orcs push down from Render's Camp in the north and gnolls hold the southern hills. It borders Duskwood to the south and the Burning Steppes far to the north.",
+    "keywords": ["redridge mountains", "redridge", "lakeshire", "blackrock orcs", "renders camp", "lake everstill", "stonewatch", "gnolls"],
+    "tags": ["zone", "alliance", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_duskwood",
+    "title": "Duskwood",
+    "content": "Duskwood is a level 18 to 30 zone of permanent night south of Elwynn Forest, with Darkshire as its quest hub. Worgen, undead, and spiders roam the roads, and the Night Watch patrols nervously. It holds the Stalvan Mistmantle and Mor'Ladim questlines, Raven Hill Cemetery, and the entrance to Deadwind Pass in the east.",
+    "keywords": ["duskwood", "darkshire", "night watch", "raven hill", "raven hill cemetery", "morladim", "stalvan mistmantle", "worgen", "twilight grove"],
+    "tags": ["zone", "alliance", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_hillsbrad_foothills",
+    "title": "Hillsbrad Foothills",
+    "content": "Hillsbrad Foothills is a level 20 to 30 contested zone below Alterac, famous for open world PvP between Tarren Mill and Southshore. The Forsaken hold Tarren Hill in the north and the Alliance hold Southshore on the coast. Durnholde Keep and the Syndicate occupy the eastern hills.",
+    "keywords": ["hillsbrad foothills", "hillsbrad", "tarren mill", "southshore", "durnholde keep", "the syndicate", "world pvp", "azurelode mine"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling", "pvp"]
+  },
+  {
+    "id": "zone_wetlands",
+    "title": "Wetlands",
+    "content": "Wetlands is a level 20 to 30 Alliance-leaning zone of marsh and rain north of Dun Morogh, with Menethil Harbor as its port and quest hub. Raptors, murlocs, and crocolisks make the roads dangerous for the level range. Boats from Menethil run to Theramore in Kalimdor and to Howling Fjord in Northrend.",
+    "keywords": ["wetlands", "menethil harbor", "raptors", "murlocs", "crocolisk", "dun modr", "grim batol", "boat to theramore"],
+    "tags": ["zone", "alliance", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_arathi_highlands",
+    "title": "Arathi Highlands",
+    "content": "Arathi Highlands is a level 30 to 40 contested zone of open grassland, with Refuge Pointe for the Alliance and Hammerfall for the Horde. Stromgarde Keep lies ruined in the southwest, contested by the Syndicate and Boulderfist ogres. The Arathi Basin battleground takes its name and setting from this zone.",
+    "keywords": ["arathi highlands", "arathi", "refuge pointe", "hammerfall", "stromgarde keep", "boulderfist ogres", "the syndicate", "arathi basin"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_alterac_mountains",
+    "title": "Alterac Mountains",
+    "content": "Alterac Mountains is a level 30 to 40 contested snow zone between Hillsbrad and the Hinterlands. The ruins of Alterac city are held by the Syndicate, and yetis and ogres fill the valleys. It is thinly quested compared to its neighbours, and its main draw is the entrance to Alterac Valley in the north.",
+    "keywords": ["alterac mountains", "alterac", "ruins of alterac", "the syndicate", "yeti", "ogres", "alterac valley entrance", "dalaran crater"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_stranglethorn_vale",
+    "title": "Stranglethorn Vale",
+    "content": "Stranglethorn Vale is a level 30 to 45 contested jungle at the south end of the Eastern Kingdoms, notorious for world PvP along its single road. Booty Bay in the far south is a neutral goblin port with an auction house. Grom'gol Base Camp serves the Horde, Rebel Camp the Alliance, and Zul'Gurub sits in the eastern jungle.",
+    "keywords": ["stranglethorn vale", "stranglethorn", "booty bay", "gromgol base camp", "rebel camp", "nesingwary", "zulgurub entrance", "jungle", "world pvp", "bloodsail buccaneers"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling", "pvp"]
+  },
+  {
+    "id": "zone_badlands",
+    "title": "Badlands",
+    "content": "Badlands is a level 35 to 45 contested canyon zone south of Loch Modan, all red rock and dust. Kargath serves the Horde and the Dwarven District of Thelsamar supplies the Alliance side from the north. Its main feature is the entrance to Uldaman, and black dragonkin and Dark Iron dwarves contest the excavation sites.",
+    "keywords": ["badlands", "kargath", "uldaman entrance", "angor fortress", "black dragonkin", "dark iron", "canyon", "lethlor ravine"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_swamp_of_sorrows",
+    "title": "Swamp of Sorrows",
+    "content": "Swamp of Sorrows is a level 35 to 45 contested marsh east of Duskwood, sunk in permanent fog and rain. Stonard is the Horde outpost, and the Alliance has no real foothold. The Sunken Temple lies beneath the Temple of Atal'Hakkar in the north of the zone, and the Dark Portal sits just east in the Blasted Lands.",
+    "keywords": ["swamp of sorrows", "stonard", "sunken temple", "temple of atalhakkar", "misty valley", "pool of tears", "marsh", "dragonkin"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_hinterlands",
+    "title": "The Hinterlands",
+    "content": "The Hinterlands is a level 40 to 50 contested forest north of the Plaguelands, home to the Wildhammer dwarves at Aerie Peak and the Revantusk trolls on the eastern coast. Vilebranch and Witherbark forest trolls hold most of the zone. Aerie Peak is also the entrance to Seradane and a common Alliance flight point.",
+    "keywords": ["the hinterlands", "hinterlands", "aerie peak", "wildhammer dwarves", "revantusk village", "vilebranch trolls", "witherbark", "forest trolls", "jintha alor"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_searing_gorge",
+    "title": "Searing Gorge",
+    "content": "Searing Gorge is a level 43 to 50 contested zone of ash and open flame between the Badlands and the Burning Steppes. The Thorium Brotherhood works out of Thorium Point, and the Dark Iron dwarves hold the Slag Pit and Blackrock. It is the surface approach to Blackrock Depths and a prime mining zone for thorium.",
+    "keywords": ["searing gorge", "thorium point", "thorium brotherhood", "dark iron dwarves", "the slag pit", "blackrock depths approach", "thorium mining", "cauldrons"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_blasted_lands",
+    "title": "Blasted Lands",
+    "content": "Blasted Lands is a level 45 to 55 contested wasteland at the southern tip of the Eastern Kingdoms, and it holds the Dark Portal to Outland. Nethergarde Keep serves the Alliance and Dreadmaul Hold the Horde. Players crossing to Outland at level 58 pass through here, so the zone stays busy well past its own level range.",
+    "keywords": ["blasted lands", "dark portal", "nethergarde keep", "dreadmaul hold", "outland entrance", "portal to outland", "rise of the defiler", "felhounds"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling", "outland_gateway"]
+  },
+  {
+    "id": "zone_burning_steppes",
+    "title": "Burning Steppes",
+    "content": "Burning Steppes is a level 50 to 58 contested zone of lava and black rock, north of Redridge and below Blackrock Mountain. Morgan's Vigil holds the Alliance camp and Flame Crest the Horde. The zone is the front door to Blackrock Spire and Molten Core, and Dark Iron dwarves and black dragonkin patrol the roads.",
+    "keywords": ["burning steppes", "morgans vigil", "flame crest", "blackrock mountain", "blackrock spire entrance", "molten core entrance", "black dragonkin", "dark iron"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_western_plaguelands",
+    "title": "Western Plaguelands",
+    "content": "Western Plaguelands is a level 51 to 58 contested zone of Scourge-blighted farmland, with Chillwind Camp for the Alliance and the Bulwark on the Horde approach. Andorhal lies ruined at its center and Hearthglen in the north is held by the Scarlet Crusade. Scholomance sits on Caer Darrow in the southeast.",
+    "keywords": ["western plaguelands", "chillwind camp", "andorhal", "hearthglen", "caer darrow", "scholomance entrance", "scarlet crusade", "the bulwark", "scourge"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_eastern_plaguelands",
+    "title": "Eastern Plaguelands",
+    "content": "Eastern Plaguelands is a level 53 to 60 contested zone and the darkest ground in the Eastern Kingdoms, with the Argent Dawn holding Light's Hope Chapel against the Scourge. Stratholme lies in the northwest behind its gates, and Naxxramas floated above the zone before it moved to Northrend. The plaguewood and Blackwood are thick with undead.",
+    "keywords": ["eastern plaguelands", "lights hope chapel", "argent dawn", "stratholme entrance", "plaguewood", "tyrs hand", "scourge", "corins crossing"],
+    "tags": ["zone", "contested", "eastern_kingdoms", "leveling"]
+  },
+  {
+    "id": "zone_deadwind_pass",
+    "title": "Deadwind Pass",
+    "content": "Deadwind Pass is a level 55 to 60 contested corridor between Duskwood and the Swamp of Sorrows, and it has almost no quests of its own. Its reason to exist is Karazhan, Medivh's tower, which looms over the southern end of the pass and is the entry raid of the Burning Crusade.",
+    "keywords": ["deadwind pass", "karazhan", "medivh", "medivhs tower", "deadwind", "ogres", "no quests"],
+    "tags": ["zone", "contested", "eastern_kingdoms"]
+  },
+  {
+    "id": "zone_isle_of_queldanas",
+    "title": "Isle of Quel'Danas",
+    "content": "Isle of Quel'Danas is a level 70 daily quest island north of Quel'Thalas, added at the end of the Burning Crusade. Both factions share the Shattered Sun Offensive base there, and the zone unlocks progressively through server-wide phases. It holds Magisters' Terrace and the Sunwell Plateau raid.",
+    "keywords": ["isle of queldanas", "queldanas", "shattered sun offensive", "sunwell plateau", "magisters terrace", "daily quests", "sunwell", "level 70 dailies"],
+    "tags": ["zone", "neutral", "eastern_kingdoms", "endgame"]
+  }
+]
