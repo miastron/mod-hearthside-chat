@@ -263,12 +263,21 @@ void Hs_ChannelBucketRefund(HsChannelKind kind);
 // building the same name Player::UpdateLocalChannels does: the zone name for
 // General/LocalDefense, and for the city-scoped Trade/GuildRecruitment the
 // LANG_CHANNEL_CITY acore_string rather than AreaTable 3459. That function is
-// what actually joins anyone to these channels, so matching it is what makes
-// the lookup hit; see the block in the .cpp for why the AreaID 3459 route
-// this used to take (and that PlayerbotMgr.cpp still takes) resolves to
-// nullptr instead. Note ChannelMgr::GetChannel is a pure name lookup and does
-// *not* test membership, so a hit here proves the channel exists, not that the
-// bot is in it. Called fresh at delivery time from the bot's *then-current*
+// what actually joins *real players*, so matching it is what makes the
+// lookup hit the instance worth reaching. It is deliberately not the name
+// PlayerbotMgr.cpp builds: its AreaID 3459 route yields an empty suffix, so
+// bots are all joined to a second, differently-named channel sharing the
+// same DBC id. See the block in the .cpp; Hs_DeliverPending bridges the two.
+//
+// Note ChannelMgr::GetChannel is a pure name lookup and does *not* test
+// membership, so a hit here proves the channel exists, not that the bot is
+// in it -- with one exception: for the city-scoped Trade/GuildRecruitment
+// this returns nullptr unless the bot's zone carries AREA_FLAG_SLAVE_CAPITAL,
+// because their name is a constant and the lookup alone would otherwise
+// resolve every bot on the realm into the one live instance. See the .cpp
+// for why the zone is the only membership signal available for those two.
+//
+// Called fresh at delivery time from the bot's *then-current*
 // zone by both Hs_DeliverPending (a corpus-fallback channel reply) and
 // hs_script.cpp's channel-script delivery, not a name captured earlier: the
 // bot may have moved zones during the typing delay for a zone-scoped channel

@@ -18,6 +18,7 @@
 
 #include "CharacterCache.h"
 #include "Channel.h"
+#include "ChannelMgr.h" // .hearthside channels: enumerate the live channel list
 #include "Chat.h"
 #include "ChatCommand.h"
 #include "DatabaseEnv.h"
@@ -391,9 +392,38 @@ namespace
     bool HandleHearthsideChannels(ChatHandler* handler, Optional<std::string_view>)
     {
         Player* player = handler->GetPlayer();
+
+        // Ground truth, independent of every name this module builds: which
+        // constant channels actually exist, and how many players each holds.
+        // ChannelMgr::GetChannels() is public, and enumerating it is what
+        // mod-playerbots' own (working) PlayerbotAI::SayToChannel does rather
+        // than reconstructing a name -- it matches on GetChannelId() and the
+        // bot's zone name against the *live* channel list. This section owes
+        // nothing to any name this module builds; the per-kind breakdown that
+        // follows is the opposite, and comparing the two is the point. A
+        // channel we resolve into holding almost nobody, next to a same-id
+        // channel holding hundreds, is the signature of bots sitting in a
+        // different instance than the one we speak to.
+        // Runs before the player check on purpose: it needs no character, so
+        // `.hearthside channels` from the server console prints this half --
+        // the half worth reading when something is wrong -- somewhere it can
+        // actually be copied out of, unlike the in-game chat frame.
+        if (ChannelMgr* cMgr = ChannelMgr::forTeam(player ? player->GetTeamId() : TEAM_ALLIANCE))
+        {
+            handler->SendSysMessage("[HearthsideChat] Live constant channels (id / name / members):");
+            for (auto const& keyed : cMgr->GetChannels())
+            {
+                Channel* ch = keyed.second;
+                if (!ch || !ch->IsConstant())
+                    continue;
+                handler->PSendSysMessage("  id {} '{}' -- {} member(s)",
+                                         ch->GetChannelId(), ch->GetName(), ch->GetNumPlayers());
+            }
+        }
+
         if (!player)
         {
-            handler->SendSysMessage("[HearthsideChat] .hearthside channels needs a logged-in character -- channel instances are zone-scoped.");
+            handler->SendSysMessage("[HearthsideChat] (the per-zone breakdown below needs a logged-in character; channel instances are zone-scoped)");
             return true;
         }
 
@@ -486,7 +516,7 @@ ChatCommandTable HsCommandScript::GetCommands() const
     static ChatCommandTable hearthsideSubCommands =
     {
         { "status",     HandleHearthsideStatus,    SEC_GAMEMASTER, Console::Yes },
-        { "channels",   HandleHearthsideChannels,  SEC_GAMEMASTER, Console::No  },
+        { "channels",   HandleHearthsideChannels,  SEC_GAMEMASTER, Console::Yes },
         { "capture",    HandleHearthsideCapture,   SEC_GAMEMASTER, Console::Yes },
         { "inspect",    HandleHearthsideInspect,   SEC_GAMEMASTER, Console::Yes },
         { "archetype",  HandleHearthsideArchetype, SEC_GAMEMASTER, Console::Yes },

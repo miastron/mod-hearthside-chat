@@ -1334,26 +1334,55 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
         return cMgr->GetChannel(entry->pattern[locale], bot, sendPacketOnMiss);
 
     // The substituted half of the channel name. City-scoped channels take it
-    // from the same acore_string the core does, deliberately, not from
+    // from the same acore_string the core does (LANG_CHANNEL_CITY), not from
     // AreaTable 3459.
     //
     // This used to read GetAreaEntryByAreaID(3459), mirroring PlayerbotMgr's
-    // own join-time substitution. Both are broken, for a reason the function
-    // name hides: GetAreaEntryByAreaID maps an area ID to its exploreFlag and
-    // then looks *that* up as a row ID (DBCStores.cpp). For 3459 (a dummy
-    // row that exists only to carry the string "City") it returns nullptr,
-    // so Trade and GuildRecruitment resolved to nullptr for every caller and
-    // the whole surface was silently inert.
+    // own join-time substitution, and switching away from it (5f46e47) is
+    // what silently broke Trade. GetAreaEntryByAreaID maps an area ID to its
+    // exploreFlag and then looks *that* up as a row ID (DBCStores.cpp); for
+    // 3459 (a dummy row that exists only to carry the string "City") it
+    // returns nullptr.
     //
-    // Player::UpdateLocalChannels is what actually puts anyone in these
-    // channels (mod-playerbots' login-time join hits the same nullptr and is
-    // a no-op), so the name it builds is by definition the name of the live
-    // object. Reading the same string back is exact rather than inferred:
-    // sAreaTableStore.LookupEntry(3459) would agree on an enUS realm, but
-    // only by coincidence of the two tables carrying the same word.
+    // An earlier revision of this comment concluded from that nullptr that
+    // the old form "resolved to nullptr for every caller and the whole
+    // surface was silently inert". That was reasoned from the API and is
+    // wrong; measuring the live realm (2026-09-07) settled it. Localized
+    // area names come back empty rather than absent, so the old form built
+    // the literal name "Trade - " -- and found a real channel there, because
+    // PlayerbotMgr's login-time join makes the identical mistake and creates
+    // it. Every bot on the realm sits in "Trade - "; Player::UpdateLocalChannels
+    // puts every real player in "Trade - City". Two live Channel objects,
+    // both DBC id 2, disjoint membership.
+    //
+    // Naming alone cannot bridge that, whichever of the two names is picked.
+    // Build the name the core builds -- the players' instance is the one
+    // worth reaching -- and let the delivery site in Hs_DeliverPending join
+    // the bot to it.
     std::string areaName;
     if (isCityScoped)
     {
+        // A city-scoped channel is one object realm-wide, so the name built
+        // below is the *same string* for a bot standing anywhere -- and
+        // ChannelMgr::GetChannel is a pure name lookup, so without this gate
+        // it hands back the live "Trade - City" for a bot out in Durotar
+        // that the core never joined to it. Player::IsInChannel cannot catch
+        // that either: it compares DBC type, and the bot is in some
+        // Trade-type channel. So for these two channels the zone is the only
+        // thing that carries membership, exactly as the zone *name* does for
+        // General/LocalDefense below.
+        //
+        // Mirrors Player::CanJoinConstantChannelInZone: a CHANNEL_DBC_FLAG_
+        // CITY_ONLY channel requires AREA_FLAG_SLAVE_CAPITAL on the zone.
+        // Measured on the test realm before this existed: 434 of 2789 online
+        // characters were in a city, so ~85% of Trade speakers picked by the
+        // scans were not in the channel at all. Channel::Say drops those at
+        // its own IsOn check and returns void, while Hs_DeliverPending logs a
+        // delivery on the next line -- "in the log, never in game".
+        AreaTableEntry const* cityZone = sAreaTableStore.LookupEntry(bot->GetZoneId());
+        if (!cityZone || !(cityZone->flags & AREA_FLAG_SLAVE_CAPITAL))
+            return nullptr;
+
         areaName = sObjectMgr->GetAcoreStringForDBCLocale(LANG_CHANNEL_CITY);
     }
     else
@@ -1491,6 +1520,35 @@ void Hs_DeliverPending()
                                  bot->GetName(), Hs_ChannelKindName(reply.channelKind));
                     continue;
                 }
+                // Trade/GuildRecruitment are a single object realm-wide that
+                // the bot is not in: PlayerbotMgr's login join lands every
+                // bot in "Trade - " while the core puts real players in
+                // "Trade - City" (see Hs_ResolveChannelForDelivery). Without
+                // this join, Channel::Say tests its own private IsOn, drops
+                // the line, and answers the bot alone -- the log below would
+                // still report a delivery, which is exactly how this hid.
+                //
+                // Safe to call unconditionally: JoinChannel returns straight
+                // away when already a member, and built-in channels are
+                // constructed with _announce = false, so nobody already in
+                // the channel sees a join notice.
+                //
+                // Restricted to city-scoped channels on purpose. General and
+                // LocalDefense are named per zone and already share one
+                // instance with the players standing there; joining those
+                // could stack a second, stale instance onto a bot whose zone
+                // change the core has not processed yet.
+                if (channel->HasFlag(CHANNEL_FLAG_CITY))
+                    channel->JoinChannel(bot, "");
+
+                // Membership is the one thing a resolve cannot prove, so log
+                // the count the core does expose. A city channel reporting
+                // only the human population is this bug coming back.
+                if (g_HsDebugEnabled)
+                    LOG_INFO("module.hearthside.chat",
+                             "[HearthsideChat] Bot {} (zone {}) speaking into '{}': {} player(s) in that instance",
+                             bot->GetName(), bot->GetZoneId(), channel->GetName(), channel->GetNumPlayers());
+
                 channel->Say(bot->GetGUID(), reply.text, LANG_UNIVERSAL);
                 break;
             }
