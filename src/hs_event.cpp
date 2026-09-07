@@ -1,5 +1,6 @@
 #include "hs_event.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_config.h"
 #include "hs_event_arbiter.h"
 #include "hs_queue.h"
@@ -29,14 +30,6 @@
 namespace
 {
     std::atomic<uint32_t> g_EventsFiredThisSession{ 0 };
-
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
 
     // Same read hs_handler.cpp's BuildTopicGateContext does, duplicated for
     // the same reason it is already duplicated in hs_engagement.cpp:
@@ -116,7 +109,7 @@ namespace
 
     bool EligibleBot(Player* bot)
     {
-        if (!bot || !IsBot(bot) || !bot->IsInWorld())
+        if (!bot || !Hs_IsBot(bot) || !bot->IsInWorld())
             return false;
         // HearthsideChat.ExcludeNames: never spoken through, no tier at
         // all, same rule every chat surface applies.
@@ -304,7 +297,7 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
             return;
         }
 
-        if (IsBot(player))
+        if (Hs_IsBot(player))
         {
             if (!EligibleBot(player))
                 return;
@@ -331,7 +324,7 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
 
     // Ungrouped. Only a bot's own solo death is a trigger: a stranger
     // dying nearby is not one of Claude/archive/PLAN-ARBITER.md §5's sixteen.
-    if (!IsBot(player) || !EligibleBot(player))
+    if (!Hs_IsBot(player) || !EligibleBot(player))
         return;
 
     actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::DeathSolo,
@@ -358,7 +351,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
         // prior-turn context and starts being wrong. This hook is the only
         // signal that covers every bot: hside_identity's own retirement
         // sweep only walks carded rows.
-        if (newLevel < oldlevel && IsBot(player))
+        if (newLevel < oldlevel && Hs_IsBot(player))
             Hs_ForgetBotHistory(player->GetGUID().GetRawValue());
         return;
     }
@@ -369,7 +362,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     // The one who dinged speaks in second person, everyone else in third:
     // one arbitration over the combined pool, each side carrying its own
     // trigger and its own affinity type (the same shape the duel end uses).
-    if (IsBot(player) && EligibleBot(player))
+    if (Hs_IsBot(player) && EligibleBot(player))
     {
         actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::LevelUpSelf,
             "You have just reached level " + levelText + "." });
@@ -400,7 +393,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     // LEVEL_UP_SELF drives the reply count when the bot itself dinged, since
     // that is the more constrained draw; a real player's ding falls back to
     // the witness bias, which is the one that almost always produces a "gz".
-    HsEventType primary = (IsBot(player) && EligibleBot(player))
+    HsEventType primary = (Hs_IsBot(player) && EligibleBot(player))
         ? HsEventType::LevelUpSelf : HsEventType::LevelUpGroup;
 
     FireEvent(primary, player, actors, group ? GroupChannelFor(group) : HsReplyChannel::Say);

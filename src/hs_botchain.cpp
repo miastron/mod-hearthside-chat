@@ -1,5 +1,6 @@
 #include "hs_botchain.h"
 #include "hs_arbiter.h"
+#include "hs_bot.h"
 #include "hs_config.h" // every g_Hs* key below, and Hs_IsExcludedBotName
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
@@ -50,14 +51,6 @@ namespace
     std::mutex                                  g_ChainMutex;
     std::unordered_map<uint64_t, ChainScope>    g_Chains;
     std::atomic<uint32_t>                       g_HopsFiredThisSession{0};
-
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
 
     // Caller holds g_ChainMutex. Only walks the map once it has grown past a
     // threshold, so the common case (a handful of live scopes) costs nothing.
@@ -127,7 +120,7 @@ namespace
             if (!member || !member->IsInWorld() || member == speaker)
                 continue;
 
-            if (!IsBot(member))
+            if (!Hs_IsBot(member))
             {
                 sawRealPlayer = true;
                 continue; // a real player is an audience, never a chain candidate
@@ -164,15 +157,13 @@ namespace
             Player* candidate = itr.second;
             if (!candidate || !candidate->IsInWorld() || candidate == speaker)
                 continue;
-            // Cross-individual: channel was resolved from `speaker`, not
-            // `candidate` (which can be a real player here, tested before
-            // the IsBot split below), so re-resolve candidate's own channel
-            // and compare Channel* identity -- pkt=false since a miss must
-            // not hand a real human a spurious "not on channel" message.
-            if (Hs_ResolveChannelForDelivery(candidate, kind, /*sendPacketOnMiss=*/false) != channel)
+            // Per-instance: `channel` came from `speaker`, and `candidate`
+            // can be a real player (the Hs_IsBot split is below). See
+            // Hs_IsInChannelInstance (hs_queue.h).
+            if (!Hs_IsInChannelInstance(candidate, kind, channel))
                 continue;
 
-            if (!IsBot(candidate))
+            if (!Hs_IsBot(candidate))
             {
                 sawRealPlayer = true;
                 continue;

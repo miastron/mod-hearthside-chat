@@ -1,5 +1,6 @@
 #include "hs_script.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -48,25 +49,6 @@ namespace
     constexpr uint32_t kFirstTurnDelayMaxMs     = 2000;
     constexpr uint32_t kTurnGapMinSeconds       = 4;
     constexpr uint32_t kTurnGapMaxSeconds       = 7;
-
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
-
-    // HearthsideChat.ExcludeNames: "no reflex, grounded, corpus, or
-    // reactive reply, ever" (hs_config.h). A scripted turn is corpus content
-    // the bot speaks unprompted, so an excluded bot may not be cast as
-    // either speaker in a /say scene or a channel scene. Both scans below
-    // use this in place of a bare IsBot: unlike hs_opener.cpp, neither scan
-    // needs to tell bots from real players, so there is no second predicate.
-    bool IsEligibleBot(Player* p)
-    {
-        return IsBot(p) && !Hs_IsExcludedBotName(p->GetName());
-    }
 
     struct HsActiveScriptRun
     {
@@ -283,7 +265,7 @@ namespace
             Player* candidate = itr.second;
             if (!candidate || candidate == player || !candidate->IsInWorld())
                 continue;
-            if (!IsEligibleBot(candidate)) // incl. HearthsideChat.ExcludeNames
+            if (!Hs_IsEligibleBot(candidate)) // incl. HearthsideChat.ExcludeNames
                 continue;
             if (candidate->GetTeamId() != player->GetTeamId())
                 continue;
@@ -569,7 +551,7 @@ namespace
             // Note this is a bare IsBot, not IsEligibleBot: an excluded bot
             // is not a valid speaker, but it is also not the human whose
             // presence makes a scene worth performing.
-            if (!IsBot(candidate))
+            if (!Hs_IsBot(candidate))
             {
                 realPlayers.push_back(candidate);
                 continue;
@@ -579,7 +561,7 @@ namespace
             // deliberately ahead of the Hs_ResolveChannelForDelivery call
             // below: that one is a DBC lookup plus a ChannelMgr string
             // match, by far the most expensive test in this loop.
-            if (!IsEligibleBot(candidate) || !candidate->IsAlive())
+            if (!Hs_IsEligibleBot(candidate) || !candidate->IsAlive())
                 continue;
             uint64_t guid = candidate->GetGUID().GetRawValue();
             if (IsBotInActiveRun(guid) || IsBotInActiveChannelRun(guid))
@@ -612,15 +594,13 @@ namespace
             if (entry.second.size() < 2)
                 continue;
 
-            // Cross-individual, same reasoning as hs_ambient.cpp's channel
-            // scan: entry.first was resolved from a bot, not from `player`,
-            // so re-resolve `player`'s own channel (pkt=false: `player` is a
-            // real human) and compare Channel* identity rather than trusting
-            // Player::IsInChannel(Channel*)'s type-only comparison.
+            // Per-instance, not per-type -- same audience gate as
+            // hs_ambient.cpp's channel scan. See Hs_IsInChannelInstance
+            // (hs_queue.h).
             bool heard = false;
             for (Player* player : realPlayers)
             {
-                if (Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == entry.first)
+                if (Hs_IsInChannelInstance(player, kind, entry.first))
                 {
                     heard = true;
                     break; // presence test, not a count
@@ -741,7 +721,7 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
             for (auto const& itr : ObjectAccessor::GetPlayers())
             {
                 Player* player = itr.second;
-                if (!player || !player->IsInWorld() || IsBot(player))
+                if (!player || !player->IsInWorld() || Hs_IsBot(player))
                     continue;
                 TryFireNearPlayer(player);
             }

@@ -43,7 +43,7 @@
 
 // Deaths, all four of Claude/archive/PLAN-ARBITER.md §5's death triggers off one hook.
 // OnPlayerJustDied carries whichever Player* died, bot or real player, so
-// branching on IsBot() inside covers both candidate sets without a second
+// branching on Hs_IsBot() inside covers both candidate sets without a second
 // hook. HsMemoryDeathHandler (hs_memory_store.h) also registers this hook
 // for its own "died together" memory beat; two PlayerScripts may both take
 // it, and neither depends on the other's ordering.

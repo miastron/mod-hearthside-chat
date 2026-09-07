@@ -1,5 +1,6 @@
 #include "hs_ambient.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_channel.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
@@ -81,25 +82,6 @@ namespace
     std::mutex                                      g_CooldownMutex;
     std::unordered_map<uint64_t, Clock::time_point>  g_LastAmbientAt;
 
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
-
-    // HearthsideChat.ExcludeNames: "no reflex, grounded, corpus, or
-    // reactive reply, ever" (hs_config.h). An ambient line is corpus content
-    // spoken unprompted, so an excluded bot may never be the speaker. Same
-    // predicate hs_script.cpp uses, and for the same reason: unlike
-    // hs_opener.cpp, no scan in this file needs to tell an excluded bot from
-    // a real player, so one predicate suffices.
-    bool IsEligibleBot(Player* p)
-    {
-        return IsBot(p) && !Hs_IsExcludedBotName(p->GetName());
-    }
-
     bool AmbientCooldownOk(uint64_t botGuid)
     {
         std::lock_guard<std::mutex> lock(g_CooldownMutex);
@@ -132,7 +114,7 @@ namespace
     // top of this.
     bool BotBaseEligible(Player* bot)
     {
-        if (!bot || !bot->IsInWorld() || !IsEligibleBot(bot))
+        if (!bot || !bot->IsInWorld() || !Hs_IsEligibleBot(bot))
             return false;
         if (!bot->IsAlive() || bot->IsInCombat())
             return false;
@@ -257,9 +239,9 @@ namespace
             // nor a real player. Letting it fall into realPlayers would make
             // other bots treat it as the human whose presence justifies the
             // line: the same trap hs_opener.cpp documents for its own scan.
-            if (IsBot(candidate))
+            if (Hs_IsBot(candidate))
             {
-                if (IsEligibleBot(candidate))
+                if (Hs_IsEligibleBot(candidate))
                     bots.push_back(candidate);
             }
             else
@@ -438,7 +420,7 @@ namespace
                 Player* member = ref->GetSource();
                 if (!member || member == bot || !member->IsInWorld())
                     continue;
-                if (!IsBot(member))
+                if (!Hs_IsBot(member))
                 {
                     hasRealPlayer = true;
                     break;
@@ -512,7 +494,7 @@ namespace
             // Membership is tested below against the bot-resolved Channel*
             // instead, which is exact because it is the same object, whatever
             // that object happens to be called.
-            if (!IsBot(candidate))
+            if (!Hs_IsBot(candidate))
             {
                 realPlayers.push_back(candidate);
                 continue;
@@ -569,19 +551,14 @@ namespace
 
             if (g_HsAmbientRequireRealPlayer)
             {
-                // Cross-individual: entry.first was resolved from a bot, not
-                // from `player`, so Player::IsInChannel(Channel*)'s
-                // type-only comparison would wrongly accept a real player
-                // standing in a *different* zone's same-type channel (the
-                // exact bug this module used to have). Re-resolve `player`'s
-                // own channel and compare Channel* identity instead --
-                // pkt=false since `player` is a genuine human here and a
-                // miss must not hand them a spurious "not on channel"
-                // message just because this scan probed their zone.
+                // Per-instance, not per-type: entry.first was resolved from
+                // a bot, so a bare Player::IsInChannel would accept a human
+                // standing in a different zone's same-type channel. See
+                // Hs_IsInChannelInstance (hs_queue.h).
                 bool heard = false;
                 for (Player* player : realPlayers)
                 {
-                    if (Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == entry.first)
+                    if (Hs_IsInChannelInstance(player, kind, entry.first))
                     {
                         heard = true;
                         break; // presence test, not a count

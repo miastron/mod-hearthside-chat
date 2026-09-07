@@ -1,4 +1,5 @@
 #include "hs_memory_store.h"
+#include "hs_bot.h"
 #include "hs_memory.h"
 #include "hs_locale.h"
 
@@ -14,14 +15,6 @@
 
 namespace
 {
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
-
     // Review D1: event_type reaches these statements from module constants
     // today, but the surrounding statements escape every other
     // string-valued interpolation and these did not. Escaping it costs one
@@ -154,7 +147,7 @@ void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
     if (!group)
         return;
 
-    bool    diedIsBot = IsBot(player);
+    bool    diedIsBot = Hs_IsBot(player);
     Player* other      = nullptr;
     for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
     {
@@ -173,7 +166,7 @@ void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
         // stops a full wipe writing one row per corpse.
         if (member->IsAlive())
             continue;
-        if (IsBot(member) != diedIsBot)
+        if (Hs_IsBot(member) != diedIsBot)
         {
             other = member;
             break;
@@ -198,11 +191,11 @@ void HsMemoryGuildHandler::OnAddMember(Guild* guild, Player* player, uint8& /*pl
     if (!guild || !player || !player->IsInWorld())
         return;
 
-    bool    joinerIsBot = IsBot(player);
+    bool    joinerIsBot = Hs_IsBot(player);
     Player* other        = nullptr;
     auto findOtherSide = [&](Player* member)
     {
-        if (!other && member && member->IsInWorld() && IsBot(member) != joinerIsBot)
+        if (!other && member && member->IsInWorld() && Hs_IsBot(member) != joinerIsBot)
             other = member;
     };
     guild->BroadcastWorker(findOtherSide, player);

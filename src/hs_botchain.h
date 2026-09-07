@@ -39,7 +39,7 @@ enum class HsReplyChannel : uint8_t;
 // chat hook. A bot's line goes out through PlayerbotAI::SayToParty /
 // Channel::Say and never reaches OnPlayerCanUseChat, so there is nothing for
 // a hook-side approach to see, which is also why every hook in
-// hs_handler.cpp can keep its `if (IsBot(player)) return true` guard
+// hs_handler.cpp can keep its `if (Hs_IsBot(player)) return true` guard
 // unchanged.
 
 // ---- pure logic (no AzerothCore dependency, Tests/test_hs_botchain.cpp) ---

@@ -1369,6 +1369,27 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
     return cMgr->GetChannel(nameBuf, bot, sendPacketOnMiss);
 }
 
+bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel)
+{
+    if (!player || !channel)
+        return false;
+
+    // Half one: has this player joined *any* channel of this DBC type -- i.e.
+    // not `/leave`d it. Type-only, so it cannot tell one zone's General from
+    // another's; that is half two's job. Deliberately first: it is a walk of
+    // a list that holds a handful of entries, and it short-circuits the
+    // resolve below (a DBC lookup plus a ChannelMgr string match) for every
+    // player who has left the channel.
+    if (!player->IsInChannel(channel))
+        return false;
+
+    // Half two: does this player's *current zone* resolve to this exact
+    // instance. pkt=false: `player` is a candidate being probed, often a real
+    // human, and a miss must not hand them a "not on channel" system message
+    // just because a scan looked at their zone.
+    return Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == channel;
+}
+
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)
 {
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);

@@ -274,36 +274,52 @@ void Hs_ChannelBucketRefund(HsChannelKind kind);
 // bot may have moved zones during the typing delay for a zone-scoped channel
 // (General/LocalDefense). Returns nullptr if the bot no longer resolves to
 // that channel instance; caller must not misdeliver.
-//
-// Real per-instance membership (as opposed to "this name resolves to some
-// live channel object") has no public API on this AzerothCore revision:
-// Channel::IsOn(GUID)/GetPlayerFlags are both private, and Player::m_channels
-// is protected, so the only two things module code can legally ask are "what
-// channel does the DBC/zone say this player belongs to" (this function) and
-// "does this player's own joined-channel list contain a channel of this DBC
-// *type*" (Player::IsInChannel(Channel*), which compares type id, not
-// instance -- every zone's General shares one type id, so it cannot on its
-// own tell one zone's instance from another's). Testing candidate X against
-// a channel resolved from X itself is still sound: IsInChannel(type) being
-// true then means X's one membership of that type (UpdateLocalChannels holds
-// a player to at most one channel per type) is the type this function just
-// asked about, which -- given the two are asking about the same zone -- is
-// the same object. Testing candidate X against a channel resolved from a
-// *different* player Y is not sound the same way (X's General and Y's
-// General share a type id even in different zones): that comparison has to
-// go through this function a second time, resolved from X, and compare the
-// two Channel* pointers for identity instead.
-//
 // sendPacketOnMiss forwards to ChannelMgr::GetChannel's own `pkt` (default
 // true there, matching every pre-existing caller of this function): on a
 // miss it sends the passed-in `bot` a "not on channel" client message. Every
 // existing caller passes a bot, so that message lands on nobody. The
-// exception is exactly the "resolve Y to compare pointers" case above, where
-// Y can be a real player who has never actually done anything wrong --
-// callers doing that pass false, or `bot` here would occasionally hand a
-// real player a spurious system message purely because a corpus/channel scan
-// happened to probe their zone.
+// exception is Hs_IsInChannelInstance below, which resolves a candidate who
+// may be a real player who has never done anything wrong: it passes false, or
+// probing that player's zone would occasionally hand them a spurious system
+// message purely because a corpus/channel scan ran.
 Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool sendPacketOnMiss = true);
+
+// True if `player` is in the specific channel *instance* `channel` -- the test
+// every candidate scan in this module wants, and the one that has to be
+// written out longhand because the core will not answer it directly.
+//
+// Channel::IsOn(GUID) is that answer, and it is private on this AzerothCore
+// revision (Channel.h), as are GetPlayerFlags and Player::m_channels. So only
+// two questions can legally be asked, and neither alone is the one we want:
+//
+//   - Hs_ResolveChannelForDelivery(player, kind): "which instance does this
+//     player's *current zone* map to". Says nothing about whether they ever
+//     joined it -- ChannelMgr::GetChannel is a pure name lookup.
+//   - Player::IsInChannel(channel): "is some channel in this player's joined
+//     list", but it compares GetChannelId(), the DBC *type* (Player.cpp).
+//     Every zone's General shares one type id, so on its own it cannot tell
+//     one zone's instance from another's -- which is exactly the bug that
+//     made General chatter fire into zones with nobody in them while the
+//     player standing in Orgrimmar heard nothing.
+//
+// This asks both and requires both, which is precisely what the private
+// IsOn would have answered: joined-something-of-this-type AND this-zone-
+// resolves-to-this-instance. Neither half is redundant. Drop the first and a
+// player who typed `/leave General` while standing in the zone still counts
+// as an audience, so bots perform to an empty room -- a milder cousin of the
+// original bug. Drop the second and every zone's General collapses into one,
+// which was the original bug itself.
+//
+// IsInChannel is tested first because it is the cheap half (a walk of a
+// short list) and it short-circuits the resolve, which the channel scans
+// call once per candidate and which their own comments flag as by far the
+// most expensive test in the loop.
+//
+// Self-resolved call sites (hs_ambient.cpp, hs_script.cpp, hs_command.cpp)
+// deliberately do not route through this function: they need the resolved
+// Channel* itself to group by instance, and already spell out the same two
+// halves with a single resolve. Calling this there would resolve twice.
+bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel);
 
 // Seconds since this bot's last *successfully delivered* reply, or
 // UINT32_MAX if never. Read-only query for hs_arbiter's recent-speaker

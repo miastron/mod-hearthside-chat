@@ -1,5 +1,6 @@
 #include "hs_bridge.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_config.h"
 #include "hs_identity_store.h"
 #include "hs_memory_store.h"
@@ -40,14 +41,6 @@ namespace
     std::size_t constexpr kMaxMemoryRawLength = 150;
     std::size_t constexpr kMaxMemoryLines     = 2;
     std::chrono::milliseconds constexpr kRateLimitWindow(500);
-
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
 
     bool HasControlCharacter(std::string const& value)
     {
@@ -224,7 +217,7 @@ namespace
             return;
         }
 
-        if (!IsBot(bot))
+        if (!Hs_IsBot(bot))
         {
             SendInspectStatus(player, token, "NOT_A_BOT");
             return;

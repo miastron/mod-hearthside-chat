@@ -1,6 +1,7 @@
 #include "hs_handler.h"
 #include "hs_arbiter.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_botchain.h"
 #include "hs_channel.h"
 #include "hs_config.h"
@@ -46,14 +47,6 @@
 
 namespace
 {
-    bool IsBot(Player* p)
-    {
-        if (!p)
-            return false;
-        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(p);
-        return ai && ai->IsBotAI();
-    }
-
     // Copper -> the way a player writes a price: "2g50s", "80s", "35c".
     // Trailing zero denominations are dropped, so a round 5 gold is "5g" and
     // not "5g0s0c".
@@ -625,7 +618,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     if (!g_HsEnable || type != CHAT_MSG_SAY || msg.empty())
         return true;
 
-    if (!player || IsBot(player))
+    if (!player || Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet; see hs_config.h
 
     // A real player speaking aborts any scripted bot-to-bot conversation
@@ -645,7 +638,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         Player* candidate = itr.second;
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
-        if (!IsBot(candidate))
+        if (!Hs_IsBot(candidate))
             continue;
         if (Hs_IsExcludedBotName(candidate->GetName()))
             continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
@@ -679,14 +672,14 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     if (!player || !receiver || player == receiver)
         return true;
-    if (IsBot(player))
+    if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     // Whisper is a full engagement-follow-up surface, unlike scripted
     // bot-to-bot which is only ever witnessed via /say, so this handler
     // needs the same abort-on-interrupt call the /say path already has.
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
-    if (!IsBot(receiver))
+    if (!Hs_IsBot(receiver))
         return true;
     if (Hs_IsExcludedBotName(receiver->GetName()))
         return true; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
@@ -714,7 +707,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     if (type != CHAT_MSG_PARTY && type != CHAT_MSG_PARTY_LEADER &&
         type != CHAT_MSG_RAID && type != CHAT_MSG_RAID_LEADER)
         return true;
-    if (IsBot(player))
+    if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
@@ -733,7 +726,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         Player* candidate = itr.second;
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
-        if (!IsBot(candidate))
+        if (!Hs_IsBot(candidate))
             continue;
         if (candidate->GetGroup() != group)
             continue;
@@ -762,7 +755,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 {
     if (!g_HsEnable || type != CHAT_MSG_GUILD || msg.empty() || !player || !guild)
         return true;
-    if (IsBot(player))
+    if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
@@ -774,7 +767,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         Player* candidate = itr.second;
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
-        if (!IsBot(candidate))
+        if (!Hs_IsBot(candidate))
             continue;
         if (candidate->GetGuildId() != guildId)
             continue;
@@ -807,7 +800,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 {
     if (!g_HsEnable || type != CHAT_MSG_CHANNEL || msg.empty() || !player || !channel)
         return true;
-    if (IsBot(player))
+    if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     HsChannelKind kind;
@@ -845,18 +838,13 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     for (auto const& itr : ObjectAccessor::GetPlayers())
     {
         Player* candidate = itr.second;
-        if (!candidate || !candidate->IsInWorld() || !IsBot(candidate))
+        if (!candidate || !candidate->IsInWorld() || !Hs_IsBot(candidate))
             continue;
         // `channel` is the real Channel* the core hook handed us for the
-        // triggering player's own message -- not something resolved from
-        // `candidate`. Player::IsInChannel(Channel*) would wrongly accept
-        // any bot resolved into any zone's same-type channel (every zone's
-        // General shares one DBC type id); re-resolving candidate's own
-        // channel and comparing Channel* identity is the actual per-instance
-        // test (see hs_queue.h's Hs_ResolveChannelForDelivery comment).
-        // pkt=false is belt-and-suspenders here (candidate is always a bot,
-        // confirmed above), matching every other cross-individual call site.
-        if (Hs_ResolveChannelForDelivery(candidate, kind, /*sendPacketOnMiss=*/false) != channel)
+        // triggering player's own message, not something resolved from
+        // `candidate`, so this must be the per-instance test. See
+        // Hs_IsInChannelInstance (hs_queue.h).
+        if (!Hs_IsInChannelInstance(candidate, kind, channel))
             continue;
 
         // §4.17's Trade `care` offset trigger: every bot in this channel
