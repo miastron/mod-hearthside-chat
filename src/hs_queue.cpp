@@ -1359,6 +1359,14 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
     // Build the name the core builds -- the players' instance is the one
     // worth reaching -- and let the delivery site in Hs_DeliverPending join
     // the bot to it.
+
+    // Both remaining kinds need the bot's zone row: the city-scoped pair to
+    // test AREA_FLAG_SLAVE_CAPITAL, the zone-scoped pair to build the name
+    // out of it. A zone with no row resolves to nothing either way.
+    AreaTableEntry const* zone = sAreaTableStore.LookupEntry(bot->GetZoneId());
+    if (!zone)
+        return nullptr;
+
     std::string areaName;
     if (isCityScoped)
     {
@@ -1379,18 +1387,14 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
         // scans were not in the channel at all. Channel::Say drops those at
         // its own IsOn check and returns void, while Hs_DeliverPending logs a
         // delivery on the next line -- "in the log, never in game".
-        AreaTableEntry const* cityZone = sAreaTableStore.LookupEntry(bot->GetZoneId());
-        if (!cityZone || !(cityZone->flags & AREA_FLAG_SLAVE_CAPITAL))
+        if (!(zone->flags & AREA_FLAG_SLAVE_CAPITAL))
             return nullptr;
 
         areaName = sObjectMgr->GetAcoreStringForDBCLocale(LANG_CHANNEL_CITY);
     }
     else
     {
-        AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(bot->GetZoneId());
-        if (!areaEntry)
-            return nullptr;
-        areaName = PlayerbotAI::GetLocalizedAreaName(areaEntry);
+        areaName = PlayerbotAI::GetLocalizedAreaName(zone);
     }
 
     char nameBuf[100];

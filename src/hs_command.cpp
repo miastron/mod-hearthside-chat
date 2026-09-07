@@ -1,6 +1,7 @@
 #include "hs_ambient.h"
 #include "hs_archetype.h"
 #include "hs_archetype_store.h"
+#include "hs_bot.h"
 #include "hs_botchain.h"
 #include "hs_channel.h"
 #include "hs_command.h"
@@ -112,8 +113,7 @@ namespace
             handler->PSendSysMessage("[HearthsideChat] Bot '{}' not found or not online.", botName);
             return true;
         }
-        PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot);
-        if (!botAI || !botAI->IsBotAI())
+        if (!Hs_IsBot(bot))
         {
             handler->PSendSysMessage("[HearthsideChat] '{}' is not a bot.", botName);
             return true;
@@ -387,8 +387,9 @@ namespace
     // case from silence, which is exactly the confusion this command exists
     // to end.
     //
-    // In-game only (Console::No): a channel instance is resolved from the
-    // caller's zone, and a console caller has none.
+    // Console::Yes, but only the live-channel census above the player check
+    // runs there: the per-kind breakdown resolves instances from the caller's
+    // zone, and a console caller has none.
     bool HandleHearthsideChannels(ChatHandler* handler, Optional<std::string_view>)
     {
         Player* player = handler->GetPlayer();
@@ -423,7 +424,7 @@ namespace
 
         if (!player)
         {
-            handler->SendSysMessage("[HearthsideChat] (the per-zone breakdown below needs a logged-in character; channel instances are zone-scoped)");
+            handler->SendSysMessage("[HearthsideChat] (the per-kind breakdown is in-game only; channel instances are resolved from the caller's zone)");
             return true;
         }
 
@@ -433,8 +434,7 @@ namespace
             Player* candidate = itr.second;
             if (!candidate || !candidate->IsInWorld())
                 continue;
-            PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(candidate);
-            if (botAI && botAI->IsBotAI())
+            if (Hs_IsBot(candidate))
                 bots.push_back(candidate);
         }
 
