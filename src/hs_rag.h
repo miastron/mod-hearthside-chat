@@ -89,6 +89,25 @@ size_t Hs_RagEntryCount();
 // one-shot accessors below, which never let the pointer escape the lock.
 std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore);
 
+// How many retrieval-bearing terms `query` actually carries: normalized,
+// stopword-dropped, stemmed -- exactly the terms the scorer would weigh.
+// Pure function of the string; no table, no lock.
+//
+// This exists because a *score* alone cannot tell a caller that a query was
+// too thin to trust. Query mass is normalized, so a two-word line scores on
+// the one term it has and scores it high: measured against the seed corpus,
+// "good run." retrieves Stratholme at 0.820 and "nice, one down." retrieves
+// Razorfen Downs at 0.647, both above anything a raised threshold could
+// exclude without also discarding the genuine matches beneath them. Term
+// count is the axis that separates them -- those two carry 1 and 2 terms
+// against 4-6 for every correct hit in that range.
+//
+// A caller retrieving against a *player's* message does not need this: a
+// player who types two words meant those two words. It is for a caller
+// retrieving against generated text, where a short line is an artifact of the
+// generator rather than a narrow request (hs_generator.cpp's script turns).
+size_t Hs_RagQueryTermCount(const std::string& query);
+
 // Formats hits into the block appended to the persona line. Returns "" for
 // no hits. Truncated to `maxChars` on an entry boundary where possible, so
 // a large retrieval cannot blow the prompt budget; the first entry is
@@ -134,5 +153,31 @@ std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, floa
 // knowing the entry's id scheme.
 std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,
                                  const std::string& prefix = kHsRagReplyPrefix);
+
+// One arbitrary entry, formatted the same way. No query, no key, no
+// threshold: this is for a caller that has nothing to look anything up
+// *with* and still wants the model working from a real fact.
+//
+// The generator's untagged buckets are why this exists. A zone_tag bucket
+// addresses its own entry above, but chat_gripe_general, the two channel
+// categories and the openers have no label at all, so before this they were
+// prompted with no ground truth whatsoever and the model filled the gap by
+// inventing game vocabulary. A random real paragraph is not "about" the
+// bucket, but the generator prefix already frames it as detail rather than
+// subject matter, and an ordinary player gripe informed by a real mechanic
+// beats a fluent one about a mechanic that does not exist.
+//
+// The second caller is a bot-to-bot script's first turn, which is the same
+// problem wearing different clothes: turn 1 replies to a fixed opening
+// trigger, so there is no previous turn to retrieve against. Turns 2+ score
+// the turn they are answering, and they answer a first turn that is now
+// actually about something.
+//
+// `selector` is any value; it is reduced modulo the live entry count inside
+// the lock. Callers therefore never read Hs_RagEntryCount() to pick an index,
+// which would race a `.reload config` replacing the table between the two
+// calls. Returns "" only when the table is empty.
+std::string Hs_RagContextRandom(uint32_t selector, uint32_t maxChars,
+                                const std::string& prefix = kHsRagReplyPrefix);
 
 #endif // MOD_HS_RAG_H

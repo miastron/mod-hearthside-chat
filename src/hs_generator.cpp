@@ -341,6 +341,59 @@ namespace
                "place' or anything implying the reader can see what you see.";
     }
 
+    // The keys that address a bucket label's own entry in hside_rag.
+    //
+    // The bare label alone is not enough, and this is the whole reason class
+    // buckets were being written against the wrong paragraph: entry titles are
+    // authored as nouns a player would say ("Warrior Class", "Alliance
+    // Faction"), while Hs_ClassNameFor yields the bare adjective ("warrior").
+    // The keyed lookup wants an exact id or an exact normalized title, so every
+    // class bucket missed it and fell through to the scored pass -- where
+    // "warrior" retrieved *Best Professions for Warriors* over *Warrior Class*,
+    // and "rogue" did the same. Zone titles already match their labels
+    // verbatim, so they need no suffix.
+    std::vector<std::string> RagKeysFor(const HsGenBucket& bucket)
+    {
+        if (bucket.tagColumn == "class_tag")
+            return { bucket.tagValueLabel, bucket.tagValueLabel + " class" };
+        if (bucket.tagColumn == "faction_tag")
+            return { bucket.tagValueLabel, bucket.tagValueLabel + " faction" };
+        return { bucket.tagValueLabel };
+    }
+
+    // Grounding for a bucket whose label names something the corpus has an
+    // entry for. Returns "" (no block) rather than falling back to a random
+    // entry: the prompt has already told the model to write as a player in
+    // this specific zone/class, so unrelated source material reads as a
+    // contradiction there in a way it does not in an untagged bucket.
+    std::string RagBlockForLabel(const HsGenBucket& bucket)
+    {
+        if (!g_HsRagGeneratorEnable)
+            return "";
+
+        std::string rag = Hs_RagContextForKeys(RagKeysFor(bucket), g_HsRagGeneratorMaxChars,
+                                               kHsRagGeneratorPrefix);
+        if (rag.empty())
+            rag = Hs_RagContextFor(bucket.tagValueLabel, 1, g_HsRagMinScore,
+                                   g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+
+        return rag.empty() ? "" : " " + rag;
+    }
+
+    // Grounding for a bucket with no label to address: one entry drawn per
+    // generation cycle. Drawing per cycle rather than per bucket also spreads
+    // topic coverage, since an untagged bucket otherwise circles whatever the
+    // five sample rows already talk about.
+    std::string RagBlockRandom()
+    {
+        if (!g_HsRagGeneratorEnable)
+            return "";
+
+        std::string rag = Hs_RagContextRandom(urand(0, 0xFFFFFF), g_HsRagGeneratorMaxChars,
+                                              kHsRagGeneratorPrefix);
+        return rag.empty() ? "" : " " + rag;
+    }
+
     std::string BuildGenerationPrompt(const HsGenBucket& bucket, const std::vector<std::string>& promptSampleRows,
                                        bool sampleIsSiblingFallback, bool requiresPlaceholder)
     {
@@ -375,14 +428,26 @@ namespace
                 prompt += " Write this one as something a " + bucket.tagValueLabel + " player specifically would say.";
 
             // Ground the bucket in what is actually true of its subject
-            // (hs_rag.h). This is the reason the paragraph above about never
-            // describing scenery and never referencing a trend had to be so
-            // restrictive: with no ground truth the only safe zone line was a
-            // generic one, so a zone_tag bucket produced lines that could have
-            // been about anywhere. With the zone's own entry in the prompt the
-            // model can be concrete about the crystals in Un'Goro or the
-            // Sons of Hodir dailies in the Storm Peaks, which is the whole
-            // point of tagging a bucket by zone.
+            // (hs_rag.h). The two rules above are not the same kind of rule,
+            // and grounding changed only one of them.
+            //
+            // "Never describe scenery" was a workaround: with no ground truth
+            // the only safe thing to say about a place was what it looked
+            // like, so a zone_tag bucket produced lines that could have been
+            // about anywhere. The rule stays -- scenery is still not what a
+            // player talks about -- but it is no longer the constraint it was,
+            // because the zone's own entry is now in the prompt and the model
+            // can be concrete about the Wrathgate questline in Dragonblight or
+            // the Argent Tournament dailies in Icecrown instead. That is the
+            // whole point of tagging a bucket by zone, and it is why the
+            // hand-authored zone rows in base/hside_corpus.sql were rewritten:
+            // they were authored under the old constraint, and the generator
+            // samples them as its tone reference, so a scenery row here now
+            // teaches against the entry sitting next to it in the same prompt.
+            //
+            // "Never reference a trend" is not a workaround and grounding does
+            // not relax it. A stored row is replayed for any player at any
+            // time, so "lately" can never be true of the moment it is said in.
             //
             // Generation is the safest place in the module to inject
             // retrieval, which is why it is on by default while the reactive
@@ -393,26 +458,24 @@ namespace
             // read back and evicted wholesale before any player sees it. The
             // same mistake on the reactive path is already in the chat window.
             //
-            // Keyed first, because the bucket label is a name the *server*
-            // supplied (a zone from kZoneIds, a class from Hs_ClassNameFor),
-            // not a guess from free text: an address, not a query, so it skips
-            // the threshold and its narrowing margin entirely. The scored pass
-            // is only a fallback for a corpus whose title is phrased
-            // differently from the label ("Warrior" vs "Warrior Class"), and a
-            // one-word query is about the easiest case the scorer has.
+            // RagBlockForLabel addresses the entry by key, because the bucket
+            // label is a name the *server* supplied (a zone from kZoneIds, a
+            // class from Hs_ClassNameFor), not a guess from free text: an
+            // address, not a query, so it skips the threshold and its
+            // narrowing margin entirely.
             //
-            // level_band_tag is excluded on purpose: no entry describes "the
-            // 40s", so retrieval on that label can only produce a near-miss.
-            if (g_HsRagGeneratorEnable && bucket.tagColumn != "level_band_tag")
-            {
-                std::string rag = Hs_RagContextForKeys({ bucket.tagValueLabel },
-                    g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
-                if (rag.empty())
-                    rag = Hs_RagContextFor(bucket.tagValueLabel, 1, g_HsRagMinScore,
-                        g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
-                if (!rag.empty())
-                    prompt += " " + rag;
-            }
+            // level_band_tag takes the untagged draw instead: no entry
+            // describes "the 40s", so addressing that label can only miss and
+            // scoring it can only produce a near-miss.
+            prompt += bucket.tagColumn == "level_band_tag" ? RagBlockRandom()
+                                                           : RagBlockForLabel(bucket);
+        }
+        else
+        {
+            // Nothing to address. See Hs_RagContextRandom: an untagged bucket
+            // is exactly the case that produced invented vocabulary, because
+            // it was the one reaching the model with no ground truth at all.
+            prompt += RagBlockRandom();
         }
 
         if (requiresPlaceholder)
@@ -532,26 +595,67 @@ namespace
         "(You've just noticed another player standing nearby. Say something casual to strike up "
         "a short conversation.)";
 
-    // World knowledge for a script turn (hs_rag.h). Retrieved from the turn
-    // being *replied to* rather than from a topic chosen up front, which is
-    // the only framing that works here: a script is written once and later
-    // replayed by an arbitrary pair of bots standing in an arbitrary zone
-    // (that is what the %my_zone/%other_class placeholders exist for), so
-    // seeding a subject the conversation never raised would produce two bots
-    // in Northrend discussing Un'Goro. Answering what the previous turn
-    // actually brought up is safe anywhere.
+    // Repeated on every script RAG block rather than left to the system
+    // prompt, because retrieval is what makes violating it tempting: hand a
+    // model the Storm Peaks paragraph and "the wind up here is brutal" is the
+    // natural next line, and it would be wrong for every replay outside that
+    // zone.
+    const std::string kScriptRagPlaceReminder =
+        " Keep it true anywhere -- this exchange is replayed by other players in other zones, so "
+        "nothing may assume where either of you is standing.";
+
+    // How many retrieval-bearing terms a turn must carry before its own text
+    // is trusted as a query (hs_rag.h's Hs_RagQueryTermCount).
     //
-    // It also only fires from turn 2 on, since turn 1 replies to a fixed
-    // opening trigger with no content to retrieve against.
+    // Measured, not guessed. Scoring all 148 seed corpus rows -- the closest
+    // stand-in there is for what a script turn produces -- put the three worst
+    // false matches at the *top* of the ranking, not the bottom: "good run."
+    // retrieved Stratholme at 0.820, "good teamwork there." retrieved Group
+    // and Raid Quests at 0.808, "nice, one down." retrieved Razorfen Downs at
+    // 0.647. Query mass is normalized, so a line with one surviving term
+    // scores that term at full weight. No threshold can exclude those without
+    // also discarding the genuine matches underneath them; a floor of three
+    // terms excludes exactly those three plus "solid group, that one." and
+    // costs nothing else.
+    constexpr size_t kScriptTurnMinRagTerms = 3;
+
+    // World knowledge for a script turn (hs_rag.h), in two shapes, because a
+    // script's first turn and its later turns are not the same problem.
     //
-    // The place-independence reminder is repeated here rather than left to
-    // the system prompt because retrieval is what makes violating it
-    // tempting: hand a model the Storm Peaks paragraph and "the wind up here
-    // is brutal" is the natural next line, and it would be wrong for every
-    // replay outside that zone.
+    // Turn 1 replies to a fixed opening trigger, so there is no content to
+    // retrieve *against* -- it was previously the one turn in the module
+    // reaching the model with no ground truth at all, which is the same
+    // condition that had untagged corpus buckets inventing game vocabulary.
+    // It therefore takes the untagged draw (Hs_RagContextRandom): a random
+    // real paragraph is not a subject the conversation raised, but it gives
+    // the exchange somewhere true to start, and turns 2+ then retrieve
+    // against a first turn that is actually about something.
+    //
+    // Turns 2+ still retrieve from the turn being *replied to* rather than
+    // from a subject chosen up front. That framing is the only one that works
+    // here: a script is written once and later replayed by an arbitrary pair
+    // of bots standing in an arbitrary zone (what the %my_zone/%other_class
+    // placeholders exist for), so answering what the previous turn actually
+    // brought up is safe anywhere.
     std::string ScriptTurnRagBlock(const std::string& prevText)
     {
         if (!g_HsRagGeneratorEnable)
+            return "";
+
+        if (prevText.empty())
+        {
+            std::string rag = Hs_RagContextRandom(urand(0, 0xFFFFFF), g_HsRagGeneratorMaxChars,
+                kHsRagGeneratorPrefix);
+            if (rag.empty())
+                return "";
+
+            return rag + " Open on this if it makes for natural small talk; otherwise open on "
+                         "something else." + kScriptRagPlaceReminder;
+        }
+
+        // A turn too thin to be a query gets no block at all, rather than the
+        // high-scoring wrong one it would otherwise be handed.
+        if (Hs_RagQueryTermCount(prevText) < kScriptTurnMinRagTerms)
             return "";
 
         std::string rag = Hs_RagContextFor(prevText, 1, g_HsRagMinScore,
@@ -559,9 +663,7 @@ namespace
         if (rag.empty())
             return "";
 
-        return rag + " Only bring this up if it answers what was just said, and keep it true "
-                     "anywhere -- this exchange is replayed by other players in other zones, so "
-                     "nothing may assume where either of you is standing.";
+        return rag + " Only bring this up if it answers what was just said." + kScriptRagPlaceReminder;
     }
 
     // §4.17: the channel-script equivalent of kScriptOpeningTrigger above --

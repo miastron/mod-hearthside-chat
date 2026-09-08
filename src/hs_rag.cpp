@@ -400,6 +400,14 @@ std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntri
     return RetrieveLocked(query, maxEntries, minScore);
 }
 
+size_t Hs_RagQueryTermCount(const std::string& query)
+{
+    // Terms() is the same reduction RetrieveLocked scores through, so this
+    // counts precisely what the scorer would see -- not words, and not
+    // characters.
+    return Terms(Normalize(query)).size();
+}
+
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
                              const std::string& prefix)
 {
@@ -443,6 +451,25 @@ std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t 
     }
 
     return "";
+}
+
+std::string Hs_RagContextRandom(uint32_t selector, uint32_t maxChars, const std::string& prefix)
+{
+    if (maxChars == 0)
+        return "";
+
+    std::shared_lock<std::shared_mutex> guard(TableMutex());
+    const RagIndex& idx = Index();
+
+    if (idx.entries.empty())
+        return "";
+
+    const size_t pick = static_cast<size_t>(selector) % idx.entries.size();
+
+    // Score 1.0 is cosmetic, same as the keyed path: nothing downstream reads
+    // it, and a drawn entry has no score to report.
+    std::vector<HsRagHit> hits{ { &idx.entries[pick], 1.0f } };
+    return Hs_RagContextLine(hits, maxChars, prefix);
 }
 
 std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars, const std::string& prefix)

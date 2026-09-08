@@ -1004,9 +1004,16 @@ HearthsideChat.Rag.MaxChars = 700
 #                  placeholder discipline and dedup, lands in hside_corpus
 #                  tagged with the run's prompt_version, and can be read with
 #                  `.hearthside review` and dropped wholesale before any
-#                  player sees it. It is also where retrieval buys the most:
-#                  a zone-tagged bucket could only ever produce generic lines
-#                  while the model had no ground truth about the zone.
+#                  player sees it. It is also where retrieval buys the most,
+#                  and it now reaches every generation prompt rather than only
+#                  the tagged ones: a zone or class bucket addresses its own
+#                  entry by name, while an untagged bucket, a level-band bucket
+#                  and a script's opening turn -- none of which have a label to
+#                  address or a query to score -- are each handed one real
+#                  entry drawn per cycle. Turning this off does not fall back
+#                  to slightly vaguer lines; it returns those prompts to having
+#                  no ground truth at all, which is what produced invented game
+#                  vocabulary ("augs", "reenchant") in the first place.
 #
 #                  If you want to trial retrieval, turn this on first and
 #                  Rag.Enable second.
@@ -1087,7 +1094,7 @@ HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds = 300
 #                  bulk-evicted later by this value alone. Bump it when the
 #                  generation prompt changes meaningfully.
 #     Default:     v1
-HearthsideChat.Generator.PromptVersion = v2
+HearthsideChat.Generator.PromptVersion = v3
 
 # HearthsideChat.Generator.ScriptReserveTarget
 #     Description: Target number of unconsumed scripted bot-to-bot

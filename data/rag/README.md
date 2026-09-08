@@ -20,33 +20,45 @@ The four files added here on 2026-09-07 (`wow_cities.json`,
 `wow_zones_eastern_kingdoms.json`, `wow_zones_kalimdor.json`, `wow_zones_outland_northrend.json`)
 were authored for this module and verified against the test realm.
 
-### Fact-check status (2026-09-07) — PARTIAL, and the gap matters
+### Fact-check status (2026-09-07) — two agent passes, both landed
 
-A pass over the inherited ten was started and **did not finish**: the agent doing it was cut off
-by a rate limit partway, and produced no report. What that leaves:
+The inherited ten files were fact-checked in two passes. The first was cut off by a rate limit
+partway through and left no report; the second finished the remainder and is what the corpus
+reflects today. Neither agent run left a standalone report file — the record of what was checked
+is the diff itself (`git diff 50b3e0c..bff4f5a -- data/rag/`), which is what the summary below is
+built from, not a claim carried over from either agent's own prose.
 
 **Corrected, and these were not small.** The inherited files carried content from the wrong
 expansion — Shadowfang Keep listed its *Cataclysm* boss roster (Lord Godfrey, Baron Ashbury, Lord
 Walden) instead of Arugal and Baron Silverlaine; Naxxramas was still a level-60 raid over the
-Eastern Plaguelands; Onyxia was pre-3.2.2; pet battles (Mists of Pandaria) were described as a live
-system; the Dungeon Finder was attributed to Cataclysm rather than patch 3.3; PvP was described
-with the vanilla 1–14 rank grind; Archmage Antonidas (dead before Wrath) was named as Dalaran's
-quest hub; and most racial traits were simply invented ("+10% Spirit", "six-armed" draenei).
-Corrections landed in `wow_classes_factions.json`, `wow_dungeons_raids.json`, `wow_general_tips.json`,
-`wow_items_equipment.json`, `wow_mechanics.json`, `wow_npcs_creatures.json`, `wow_pvp.json`.
+Eastern Plaguelands; Onyxia was pre-3.2.2; pet battles (Mists of Pandaria) and the pet-battle
+mini-game were described as live systems, when 3.3.5a only has combat pets (hunter/warlock/mage/DK)
+and non-combat vanity followers; the Dungeon Finder was attributed to Cataclysm rather than patch
+3.3; PvP was described with the vanilla 1–14 rank grind rather than the TBC-era honor-for-gear
+overhaul with seasonal Gladiator titles; Archmage Antonidas (dead before Wrath) was named as
+Dalaran's quest hub instead of Archmage Rhonin; racial traits across all nine playable races were
+largely invented (flat "+10% Spirit"/"+5% reputation" style numbers, a "six-armed" draenei) and
+were rewritten to the real WotLK-era racial abilities (Stoneform, Shadowmeld, Berserking, Arcane
+Torrent, Blood Fury, and so on); the Cache of the Legion was placed in Karazhan when its
+`gameobject` spawns are on map 554, `Map.dbc`'s Tempest Keep: The Mechanar; Karazhan's attunement
+key was named "Key to the City" rather than "The Master's Key"; and Cosmetic Items described
+Transmogrification, weapon illusions, and a Toy Box, none of which exist before Cataclysm/Legion —
+rewritten around vanity pets and enchant glow, the actual appearance customization available in
+3.3.5a.
+
+Corrections landed in `wow_classes_factions.json`, `wow_dungeons_raids.json` (later deleted, see
+below), `wow_general_tips.json`, `wow_items_equipment.json`, `wow_mechanics.json`,
+`wow_npcs_creatures.json`, `wow_professions.json`, `wow_pvp.json`.
 
 **Added:** `wow_battlegrounds.json` (7), `wow_mechanics_wotlk.json` (6), `wow_world_events.json` (8).
 
-**NOT done, and still open:**
-
-- **No fact-check report exists**, so there is no record of which corrected claims were verified
-  against the realm (`creature_template`, the DBCs) versus corrected from knowledge. Treat the
-  above as improved but unaudited.
-- The remaining inherited entries were not reached at all. Assume they still carry retail- or
-  wrong-expansion content until someone checks.
+**Also in scope for the second pass, no diff resulted:** `wow_professions.json` beyond First Aid,
+`wow_quests_storylines.json`, `wow_zones.json`. Whether that means those entries were checked and
+already accurate, or the run didn't reach every one of them, isn't recorded — treat entries in
+those files you haven't personally spot-checked as unaudited rather than confirmed clean.
 
 `wow_bosses.json` and `wow_instances.json` were written separately, on 2026-09-07, and are
-covered below rather than by the partial pass above.
+covered below rather than by the pass above.
 
 `Tests/verify_rag_against_realm.py` re-runs the city/zone checks; it does not cover any of the
 above.
@@ -273,14 +285,31 @@ place that check happens — nothing enforces it at load time.
 
 ## Who retrieves, and how
 
-Two different access patterns, and the difference matters more than it looks:
+Three access patterns, and the differences matter more than they look:
 
 | Caller | Accessor | Why |
 |---|---|---|
 | Direct replies, event reactions | `Hs_RagContextFor` (scored) | The key is the player's own words. Free text, so it has to be scored. |
 | Inside a named instance | `Hs_RagContextForKeys` | The map name came from the *game*. |
 | Generator: zone/class/faction buckets | `Hs_RagContextForKeys` | The bucket label came from the *server*. |
-| Generator: bot-to-bot script turns | `Hs_RagContextFor` (scored) | Retrieves against the turn being replied to. |
+| Generator: untagged and level-band buckets | `Hs_RagContextRandom` | No label to address and no query to score. One entry drawn per cycle. |
+| Generator: bot-to-bot script, turn 1 | `Hs_RagContextRandom` | Turn 1 replies to a fixed trigger, so there is nothing to retrieve *against*. |
+| Generator: bot-to-bot script, turns 2+ | `Hs_RagContextFor` (scored) | Retrieves against the turn being replied to — behind a term floor, below. |
+
+**The random draw is not a fallback, it is the answer to "no query exists."** Every bucket in the
+generator reaches the model with a real paragraph now; before it, nine of the thirteen categories
+and every script's opening turn were prompted with no ground truth at all, and that is where
+invented game vocabulary came from. A drawn entry is not *about* the bucket, but the generator's
+prefix frames it as detail rather than subject matter, and an ordinary gripe informed by a real
+mechanic beats a fluent one about a mechanic that does not exist.
+
+**A short generated line is not a query — check `Hs_RagQueryTermCount` first.** Scoring normalizes
+by query mass, so a line with one surviving term scores that term at full weight and lands high:
+measured against the seed corpus, `"good run."` retrieves *Stratholme* at 0.820 and
+`"nice, one down."` retrieves *Razorfen Downs* at 0.647, both above genuine zone matches. No
+threshold separates them; term count does. `hs_generator.cpp` requires three terms before it will
+treat a script turn's own text as a query. This does **not** apply to a player's message — someone
+who types two words meant those two words.
 
 **Prefer the keyed accessor whenever the caller already knows what it wants.** A zone name from
 `AreaTable` or a map name from `Map::GetMapName` is an *address*, not a query — matching it by id
@@ -298,10 +327,8 @@ Config: the six `HearthsideChat.Rag.*` keys, documented in
 
 ## Known data defects
 
-- `quest_lore_quests` (inherited) claims `"dark portal"` among ~50 keywords, so "where is the dark
-  portal" ranks it 0.01 above `zone_blasted_lands`. The harness asserts the weaker
-  "Blasted Lands is in the top 2" for that question. Left alone deliberately — tuning the scorer
-  around one query is how a retriever ends up fitted to its own test set.
-- The inherited files' keyword arrays are uniformly too broad (rule 2). Tightening them would
-  likely improve precision across the board, but it means editing data the operator asked to leave
-  as-is; treat it as a separate, deliberate decision rather than drive-by cleanup.
+- The inherited files' keyword arrays are still broad in the entries neither fact-check pass
+  touched (rule 2) — see the "no diff resulted" list above for which files those are. Tightening
+  them would likely improve precision further, but it's a separate, deliberate pass rather than
+  drive-by cleanup: do it with the harness open, since tightening a keyword list changes which
+  entry wins ties on unrelated queries.
