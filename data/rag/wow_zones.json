@@ -9,8 +9,8 @@
   {
     "id": "zone_durotar",
     "title": "Durotar",
-    "content": "Durotar is the starting zone for Orc and Troll players in Orgrimmar. This harsh desert and canyon region contains the Valley of Trials where new players learn basic skills. Key locations include Orgrimmar (the main city), Razor Hill, and the Echo Isles. Common enemies include boars, scorpids, quilboars, and centaurs. Players receive quests from various NPCs and learn about Horde culture and combat. This zone introduces players to shamanistic elements and Horde traditions.",
-    "keywords": ["durotar", "orc", "troll", "starting", "zone", "orgrimmar", "razor hill", "valley of trials", "harsh desert", "canyon region", "new players", "learn basic skills", "key locations", "main city", "echo isles", "common enemies", "boars", "scorpids", "quilboars", "centaurs", "receive quests", "various npcs", "learn about", "horde culture", "combat", "introduces players", "shamanistic elements", "horde traditions"],
+    "content": "Durotar is the starting zone for Orc and Troll players in Orgrimmar. This harsh desert and canyon region contains the Valley of Trials where new players learn basic skills. Key locations include Orgrimmar (the main city), Razor Hill, and the Echo Isles. Common enemies include mottled boars, scorpids, Razormane quilboar, makrura along the coast, and Burning Blade cultists inland. Players receive quests from various NPCs and learn about Horde culture and combat. This zone introduces players to shamanistic elements and Horde traditions.",
+    "keywords": ["durotar", "orc", "troll", "starting", "zone", "orgrimmar", "razor hill", "valley of trials", "harsh desert", "canyon region", "new players", "learn basic skills", "key locations", "main city", "echo isles", "common enemies", "boars", "scorpids", "razormane quilboar", "makrura", "burning blade", "receive quests", "various npcs", "learn about", "horde culture", "combat", "introduces players", "shamanistic elements", "horde traditions"],
     "tags": ["zone", "starting_area", "horde", "leveling"]
   },
   {
@@ -23,15 +23,15 @@
   {
     "id": "zone_mulgore",
     "title": "Mulgore",
-    "content": "Mulgore is the starting zone for Tauren players in Thunder Bluff. This vast plains region contains Bloodhoof Village where new players learn basic skills. Key locations include Thunder Bluff (the main city), Red Cloud Mesa, and the plains of Mulgore. Players learn about shamanism, hunting, and Tauren spirituality. Common enemies include wolves, cougars, and hostile centaurs. This zone teaches players about the elements and Tauren culture.",
-    "keywords": ["mulgore", "tauren", "starting", "zone", "thunder bluff", "bloodhoof", "plains", "vast plains region", "bloodhoof village", "new players", "learn basic skills", "key locations", "main city", "red cloud mesa", "plains of mulgore", "learn about", "shamanism", "hunting", "tauren spirituality", "common enemies", "wolves", "cougars", "hostile centaurs", "teaches players", "about the elements", "tauren culture"],
+    "content": "Mulgore is the starting zone for Tauren players in Thunder Bluff. This vast plains region contains Bloodhoof Village where new players learn basic skills. Key locations include Thunder Bluff (the main city), Red Cloud Mesa, and the plains of Mulgore. Players learn about shamanism, hunting, and Tauren spirituality. Common enemies include prairie wolves, plainstriders, cougars, Palemane gnolls, Bristleback quilboar, and Venture Company diggers. This zone teaches players about the elements and Tauren culture.",
+    "keywords": ["mulgore", "tauren", "starting", "zone", "thunder bluff", "bloodhoof", "plains", "vast plains region", "bloodhoof village", "new players", "learn basic skills", "key locations", "main city", "red cloud mesa", "plains of mulgore", "learn about", "shamanism", "hunting", "tauren spirituality", "common enemies", "prairie wolves", "cougars", "plainstriders", "palemane gnolls", "bristleback quilboar", "teaches players", "about the elements", "tauren culture"],
     "tags": ["zone", "starting_area", "horde", "tauren", "leveling"]
   },
   {
     "id": "zone_dun_morogh",
     "title": "Dun Morogh",
-    "content": "Dun Morogh is the starting zone for Dwarf and Gnome players in Ironforge. This mountainous region contains Anvilmar where new players begin. Key locations include Ironforge (the main city), Kharanos, and the Coldridge Valley. Players learn engineering, mining, and blacksmithing. Common enemies include troggs, wolves, and dark iron dwarves. This zone emphasizes technology, crafting, and dwarven culture.",
-    "keywords": ["dun morogh", "dwarf", "gnome", "starting", "zone", "ironforge", "kharanos", "coldridge", "mountainous region", "anvilmar", "new players", "begin", "key locations", "main city", "coldridge valley", "learn engineering", "mining", "blacksmithing", "common enemies", "troggs", "wolves", "dark iron dwarves", "emphasizes technology", "crafting", "dwarven culture"],
+    "content": "Dun Morogh is the starting zone for Dwarf and Gnome players in Ironforge. This mountainous region contains Anvilmar where new players begin. Key locations include Ironforge (the main city), Kharanos, and the Coldridge Valley. Players learn engineering, mining, and blacksmithing. Common enemies include Rockjaw troggs, Frostmane trolls, crag boars, and wolves. This zone emphasizes technology, crafting, and dwarven culture.",
+    "keywords": ["dun morogh", "dwarf", "gnome", "starting", "zone", "ironforge", "kharanos", "coldridge", "mountainous region", "anvilmar", "new players", "begin", "key locations", "main city", "coldridge valley", "learn engineering", "mining", "blacksmithing", "common enemies", "rockjaw troggs", "frostmane trolls", "crag boars", "emphasizes technology", "crafting", "dwarven culture"],
     "tags": ["zone", "starting_area", "alliance", "dwarf", "gnome", "leveling"]
   },
   {
@@ -44,8 +44,8 @@
   {
     "id": "zone_azuremyst_isle",
     "title": "Azuremyst Isle",
-    "content": "Azuremyst Isle is the starting zone for Draenei players in the Exodar. This crashed spaceship island contains the Crash Site where new players begin. Key locations include the Exodar (the capital city), Azure Watch, and the forests of Azuremyst. Players learn about the Light, technology, and Draenei culture. Common enemies include nagas, owlbears, and corrupted wildlife. This zone introduces players to the Draenei exodus and their technological heritage.",
-    "keywords": ["azuremyst", "isle", "draenei", "starting", "zone", "exodar", "crash site", "azure watch", "crashed spaceship island", "new players", "begin", "key locations", "capital city", "forests of azuremyst", "learn about", "the light", "technology", "draenei culture", "common enemies", "nagas", "owlbears", "corrupted wildlife", "introduces players", "draenei exodus", "technological heritage"],
+    "content": "Azuremyst Isle is the starting zone for Draenei players in the Exodar. This crashed spaceship island contains the Crash Site where new players begin. Key locations include the Exodar (the capital city), Azure Watch, and the forests of Azuremyst. Players learn about the Light, technology, and Draenei culture. Common enemies include owlkin, Bristlelimb furbolgs, threshers, and wildlife mutated by the crash; the naga are across the water on Bloodmyst Isle rather than here. This zone introduces players to the Draenei exodus and their technological heritage.",
+    "keywords": ["azuremyst", "isle", "draenei", "starting", "zone", "exodar", "crash site", "azure watch", "crashed spaceship island", "new players", "begin", "key locations", "capital city", "forests of azuremyst", "learn about", "the light", "technology", "draenei culture", "common enemies", "owlkin", "bristlelimb furbolgs", "threshers", "introduces players", "draenei exodus", "technological heritage"],
     "tags": ["zone", "starting_area", "alliance", "draenei", "leveling"]
   },
   {

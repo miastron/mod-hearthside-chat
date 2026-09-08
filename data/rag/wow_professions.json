@@ -44,7 +44,7 @@
   {
     "id": "profession_jewelcrafting",
     "title": "Jewelcrafting Profession",
-    "content": "Jewelcrafting creates rings, necklaces, gems, and figurines using gems and metals. Jewelcrafters can cut gems to add socket bonuses, create epic jewelry with powerful stats, and craft trinkets. Specializations include gem cutting and metalworking. It's highly valuable for creating high-end gear and auction house profits.",
+    "content": "Jewelcrafting creates rings, necklaces, gems, and figurines using gems and metals. Jewelcrafters can cut gems to add socket bonuses, create epic jewelry with powerful stats, and craft trinkets. Unlike blacksmithing or tailoring it has no specializations to pick between, though jewelcrafters do get prismatic gems only they can wear. It's highly valuable for creating high-end gear and auction house profits.",
     "keywords": ["jewelcrafting", "gems", "rings", "necklaces", "sockets", "jewelry", "trinkets"],
   "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"]
   },
@@ -58,21 +58,21 @@
   {
     "id": "profession_mining",
     "title": "Mining Profession",
-    "content": "Mining is a gathering profession that collects ores and stones from mineral nodes for use in Blacksmithing, Engineering, and Jewelcrafting. Miners can find copper, tin, iron, gold, and rare ores like adamantite and fel iron. Mining provides essential materials for crafting professions and can be combined with Engineering for explosives to find more nodes.",
+    "content": "Mining is a gathering profession that collects ores and stones from mineral nodes for use in Blacksmithing, Engineering, and Jewelcrafting. Miners can find copper, tin, iron, gold, and rare ores like adamantite and fel iron. Mining provides essential materials for crafting professions, and Find Minerals puts every nearby node on the minimap as the miner travels.",
     "keywords": ["mining", "ores", "stones", "copper", "iron", "gold", "adamantite", "blacksmithing", "engineering", "jewelcrafting"],
     "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"]
   },
   {
     "id": "profession_skinning",
     "title": "Skinning Profession",
-    "content": "Skinning allows players to skin dead animal and humanoid corpses for leather and hides used in Leatherworking. Skinners can gather light leather, medium leather, heavy leather, and rare hides. It's often paired with Leatherworking for self-sufficiency and provides materials for armor crafting. Skinning is essential for leather-based professions.",
+    "content": "Skinning allows players to skin the corpses of beasts, and some dragonkin, for leather and hides used in Leatherworking; humanoids drop cloth instead and cannot be skinned. Skinners can gather light leather, medium leather, heavy leather, and rare hides. It's often paired with Leatherworking for self-sufficiency and provides materials for armor crafting. Skinning is essential for leather-based professions.",
   "keywords": ["skinning", "leather", "hides", "corpses", "light leather", "medium leather", "leatherworking"],
     "tags": ["profession", "gathering", "materials", "leatherworking"]
   },
   {
     "id": "profession_tailoring",
     "title": "Tailoring Profession",
-    "content": "Tailoring creates cloth armor, bags, shirts, and other cloth goods using cloth from tailors or drops. Tailors can craft robes, cloaks, bags, and specialty items. Specializations include Mooncloth, Shadoweave, and Spellfire tailoring, each with unique recipes. Essential for cloth-wearing classes like mages, priests, and warlocks.",
+    "content": "Tailoring creates cloth armor, bags, shirts, and other cloth goods from cloth looted off humanoid enemies. Tailors can craft robes, cloaks, bags, and specialty items. Specializations include Mooncloth, Shadoweave, and Spellfire tailoring, each with unique recipes. Essential for cloth-wearing classes like mages, priests, and warlocks.",
     "keywords": ["tailoring", "cloth", "armor", "bags", "robes", "cloaks", "mage", "priest", "warlock"],
   "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"]
   },
@@ -115,7 +115,7 @@
   {
     "id": "profession_first_aid",
     "title": "First Aid Profession",
-    "content": "First Aid is a secondary profession every character can learn, used to craft bandages for out-of-combat healing (and, at lower ranks, limited use in combat, subject to a shared cooldown between bandages). The current top-rank bandage, Dense Frostweave Bandage, needs 450 skill and Frostweave Cloth from Northrend cloth drops. It is especially valuable for classes without a reliable self-heal, and doesn't require reagents beyond the bandage itself.",
+    "content": "First Aid is a secondary profession every character can learn, used to craft bandages that heal over a short channel. A bandage can be applied in combat, but any damage taken interrupts it, and a bandaged target cannot be bandaged again until the Recently Bandaged debuff falls off. The current top-rank bandage, Dense Frostweave Bandage, needs 450 skill and Frostweave Cloth from Northrend cloth drops. It is especially valuable for classes without a reliable self-heal, and doesn't require reagents beyond the bandage itself.",
     "keywords": ["first aid","bandages","healing","consumables","out of combat","survival"],
     "tags": ["profession","secondary","consumables","healing","solo"]
   },
@@ -150,7 +150,7 @@
   {
     "id": "rogue_professions_guide",
     "title": "Best Professions for Rogues",
-    "content": "For rogues, the best professions are Leatherworking (for leather armor), Skinning (for materials), Engineering (for utility gadgets and lockpicking), and Enchanting (for agility and critical strike enchants). Leatherworking enables rogues to create their own leather armor. Engineering provides useful gadgets and potentially lockpicking tools. Enchanting offers agility and critical strike enhancements crucial for rogue damage.",
+    "content": "For rogues, the best professions are Leatherworking (for leather armor), Skinning (for materials), Engineering (for utility gadgets and escape devices), and Enchanting (for agility and critical strike enchants). Leatherworking enables rogues to create their own leather armor. Engineering provides useful gadgets, and rogues pick locks with their own class skill rather than a crafted tool. Enchanting offers agility and critical strike enhancements crucial for rogue damage.",
     "keywords": ["rogue", "professions", "profession", "leatherworking", "skinning", "engineering", "enchanting", "agility", "critical strike", "stealth"],
     "tags": ["profession", "rogue", "leather classes", "melee", "stealth"]
   },
@@ -171,7 +171,7 @@
   {
     "id": "warlock_professions_guide",
     "title": "Best Professions for Warlocks",
-    "content": "For warlocks, the best professions are Tailoring (for cloth armor), Enchanting (for spell power enchants), Alchemy (for mana and health potions), and Jewelcrafting (for soul stones and trinkets). Tailoring allows warlocks to create their own cloth armor. Enchanting provides spell power enchants for damage spells. Alchemy creates essential mana and health potions for warlock sustainability.",
+    "content": "For warlocks, the best professions are Tailoring (for cloth armor), Enchanting (for spell power enchants), Alchemy (for mana and health potions), and Jewelcrafting (for gems and trinkets; soulstones are a warlock spell, not a crafted item). Tailoring allows warlocks to create their own cloth armor. Enchanting provides spell power enchants for damage spells. Alchemy creates essential mana and health potions for warlock sustainability.",
     "keywords": ["warlock", "professions", "profession", "tailoring", "enchanting", "alchemy", "jewelcrafting", "cloth", "spell power", "demonology"],
     "tags": ["profession", "warlock", "cloth classes", "caster"]
   },

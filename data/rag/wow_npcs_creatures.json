@@ -2,15 +2,15 @@
   {
     "id": "npc_world_bosses",
     "title": "World Bosses",
-    "content": "World bosses are powerful creatures that spawn in the open world and can be attacked by any player. They drop valuable loot and provide challenging combat. Examples include Doom Lord Kazzak (a Burning Legion commander at the Dark Portal in the Blasted Lands) and Azuregos (a blue dragon in Azshara). World bosses require coordination and often drop epic items. They respawn on timers and are popular targets for guilds and groups.",
-    "keywords": ["world bosses", "lord kazzak", "azuregos", "doom lord kazzak", "loot", "coordination", "powerful creatures", "spawn in open world", "attacked by any player", "valuable loot", "challenging combat", "burning legion", "blue dragon", "require coordination", "epic items", "respawn on timers", "popular targets", "guilds", "groups"],
+    "content": "World bosses are powerful creatures that spawn in the open world and can be attacked by any player. They drop valuable loot and provide challenging combat. Examples include Doom Lord Kazzak, a Burning Legion commander who roams Hellfire Peninsula in Outland, and Azuregos, a blue dragon in Azshara. World bosses require coordination and often drop epic items. They respawn on timers and are popular targets for guilds and groups.",
+    "keywords": ["world bosses", "lord kazzak", "azuregos", "doom lord kazzak", "loot", "coordination", "powerful creatures", "spawn in open world", "attacked by any player", "valuable loot", "challenging combat", "burning legion", "hellfire peninsula", "azshara", "blue dragon", "require coordination", "epic items", "respawn on timers", "popular targets", "guilds", "groups"],
     "tags": ["npcs", "bosses", "world", "loot"]
   },
   {
     "id": "npc_rare_elites",
     "title": "Rare Elite Creatures",
-    "content": "Rare elites are powerful monsters that spawn occasionally in the world. They drop rare items and achievements. Examples include the Bone Witch (Eastern Plaguelands), Snarler (Un'Goro Crater), or Krellack (Winterspring). Rare elites often have unique abilities and require strategy to defeat. Many players hunt rares for achievements and valuable drops.",
-    "keywords": ["rare elites", "bone witch", "snarler", "krellack", "achievements", "drops", "powerful monsters", "spawn occasionally", "rare items", "eastern plaguelands", "un goro crater", "winterspring", "unique abilities", "require strategy", "hunt rares", "valuable drops"],
+    "content": "Rare elites are powerful monsters that spawn occasionally in the world. They drop rare items and achievements. Examples include The Bone Witch (Icecrown), Snarler (Feralas), or Krellack (Silithus). Rare elites often have unique abilities and require strategy to defeat. Many players hunt rares for achievements and valuable drops.",
+    "keywords": ["rare elites", "bone witch", "snarler", "krellack", "achievements", "drops", "powerful monsters", "spawn occasionally", "rare items", "icecrown", "feralas", "silithus", "unique abilities", "require strategy", "hunt rares", "valuable drops"],
     "tags": ["npcs", "rare", "elite", "achievements"]
   },
   {
@@ -23,8 +23,8 @@
   {
     "id": "npc_class_trainers",
     "title": "Class and Profession Trainers",
-    "content": "Class trainers teach new abilities and talents as players level up. Profession trainers teach crafting skills and recipes. Examples include Uthel'nay (mage trainer in Orgrimmar) or Fenthwick (rogue trainer in Stormwind). Trainers are essential for character progression. Some trainers require reputation or special access.",
-    "keywords": ["class trainers", "profession trainers", "uthelnay", "fenthwick", "abilities", "talents", "teach new abilities", "level up", "crafting skills", "recipes", "mage trainer", "orgrimmar", "hunter trainer", "stormwind", "essential", "character progression", "require reputation", "special access"],
+    "content": "Class trainers teach new abilities and talents as players level up. Profession trainers teach crafting skills and recipes. Examples include Uthel'nay (mage trainer in Orgrimmar) or Fenthwick (rogue trainer in Ironforge's Forlorn Cavern). Trainers are essential for character progression. Some trainers require reputation or special access.",
+    "keywords": ["class trainers", "profession trainers", "uthelnay", "fenthwick", "abilities", "talents", "teach new abilities", "level up", "crafting skills", "recipes", "mage trainer", "orgrimmar", "rogue trainer", "ironforge", "essential", "character progression", "require reputation", "special access"],
     "tags": ["npcs", "training", "progression", "skills"]
   },
   {
@@ -44,7 +44,7 @@
   {
     "id": "npc_innkeepers",
     "title": "Innkeepers and Hearthstones",
-    "content": "Innkeepers allow players to set their hearthstone location and provide rest benefits. Hearthstones provide instant travel back to the set location with a cooldown. Different innkeepers offer different rest rates. Some inns have special features like mailboxes or vendors. Managing hearthstone location is important for efficient gameplay.",
+    "content": "Innkeepers allow players to set their hearthstone location and provide rest benefits. Hearthstones provide instant travel back to the set location with a cooldown. Rested experience builds at the same rate in any inn or capital city, so the choice of inn is about where it sits, not how fast it rests you. Some inns have special features like mailboxes or vendors. Managing hearthstone location is important for efficient gameplay.",
     "keywords": ["innkeepers", "hearthstones", "rest", "travel", "cooldown", "mailbox"],
     "tags": ["npcs", "travel", "rest", "hearthstone"]
   },
@@ -65,8 +65,8 @@
   {
     "id": "npc_stable_masters",
     "title": "Stable Masters",
-    "content": "Stable masters allow players to store mounts and pets when not in use. Players can have multiple mounts and switch between them. Stables are located near major cities. Some stables offer special services or have unique mounts available. Managing mounts through stables helps keep inventory space free for other items.",
-    "keywords": ["stable_masters", "mounts", "pets", "storage", "inventory", "management"],
+    "content": "Stable masters hold a hunter's tamed beasts, letting one hunter keep several pets and swap between them. They do nothing for mounts, which live in the spellbook once learned. Stables are found in most towns and every capital. Swapping at a stable is how a hunter changes to a pet better suited to the fight ahead.",
+    "keywords": ["stable master", "stable", "hunter pet", "stabled pet", "swap pet"],
     "tags": ["npcs", "mounts", "pets", "storage"]
   },
   {

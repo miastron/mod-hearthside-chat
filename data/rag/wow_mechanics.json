@@ -30,7 +30,7 @@
   {
     "id": "mechanic_glyphs",
     "title": "Glyph System",
-    "content": "Glyphs are magical inscriptions that modify spell and ability effects. Players can learn glyph recipes from inscription or purchase them from vendors. Glyphs are applied to spellbooks and provide various effects like changing spell visuals, adding procs, or modifying cooldowns. There are major glyphs (learned from recipes) and minor glyphs (purchased). Glyphs allow players to customize their abilities and optimize for specific playstyles or content.",
+    "content": "Glyphs are magical inscriptions that modify spell and ability effects. Players can learn glyph recipes from inscription or purchase them from vendors. Glyphs are applied to spellbooks and provide various effects like changing spell visuals, adding procs, or modifying cooldowns. Both major and minor glyphs are crafted by scribes and traded freely; major glyphs change how a combat ability behaves, while minor glyphs cover convenience and cosmetic effects. Glyphs allow players to customize their abilities and optimize for specific playstyles or content.",
     "keywords": ["glyphs", "inscription", "spells", "abilities", "modification", "customization"],
     "tags": ["mechanic", "customization", "spells", "inscription"]
   },
@@ -65,14 +65,14 @@
   {
     "id": "mechanic_guilds",
     "title": "Guild System",
-    "content": "Guilds are player organizations that provide social structure and benefits. Guild members can chat, share quests, and access guild banks. Guilds can own guild houses and have guild achievements. Guild leaders can promote members to different ranks with varying permissions. Guilds participate in guild vs guild activities and can earn guild reputations. Being in a guild provides a sense of community and shared goals.",
-    "keywords": ["guilds", "organizations", "guild bank", "ranks", "community", "guild vs guild", "player organizations", "social structure", "benefits", "guild members", "chat", "share quests", "access", "guild houses", "guild achievements", "guild leaders", "promote members", "permissions", "activities", "guild reputations", "sense of community", "shared goals"],
+    "content": "Guilds are player organizations that provide social structure and benefits. Guild members can chat, share quests, and access guild banks. Guild leaders can promote members to different ranks with varying permissions, and control which ranks may withdraw from each guild bank tab. Guilds have no levels, perks, or reputation of their own in this expansion; a guild is a social roster with shared storage and a chat channel. Being in a guild provides a sense of community and shared goals.",
+    "keywords": ["guilds", "guild bank", "guild ranks", "guild leader", "guild permissions", "guild invite", "guild chat", "player organizations"],
     "tags": ["mechanic", "social", "guilds", "community"]
   },
   {
     "id": "mechanic_instances",
     "title": "Instance System",
-    "content": "Instances are separate areas of the game world that provide focused gameplay experiences. Dungeons are 5-player instances with quests and bosses. Raids are larger instances for coordinated groups. Instances have different difficulty levels and lockout timers. Players can reset instances or extend lockouts with special items. Instances provide better loot and challenges than open world content. They require coordination and strategy to complete successfully.",
+    "content": "Instances are separate areas of the game world that provide focused gameplay experiences. Dungeons are 5-player instances with quests and bosses. Raids are larger instances for coordinated groups. Instances have different difficulty levels and lockout timers. A player saved to a dungeon can reset it manually from the group portrait menu, but a raid lockout cannot be extended and simply expires on its weekly reset. Instances provide better loot and challenges than open world content. They require coordination and strategy to complete successfully.",
     "keywords": ["instances", "dungeons", "raids", "lockout", "difficulty", "coordination"],
     "tags": ["mechanic", "instances", "group_content", "difficulty"]
   },
@@ -93,7 +93,7 @@
   {
     "id": "mechanic_currency",
     "title": "Currency Systems",
-    "content": "World of Warcraft has multiple currency systems beyond gold. Honor points buy PvP gear and arena points buy rated gear, while Emblems -- earned from heroic dungeons and raids -- buy PvE gear; the Emblem tier has advanced over Wrath from Heroism through Valor and Conquest to today's Emblem of Triumph and Emblem of Frost, with older Emblems auto-converting to the current tier. Various faction tokens exist for specific reputations. Managing multiple currencies is important for gearing up characters efficiently.",
+    "content": "World of Warcraft has multiple currency systems beyond gold. Honor points buy PvP gear and arena points buy rated gear, while Emblems -- earned from heroic dungeons and raids -- buy PvE gear; the Emblem tier has advanced over Wrath from Heroism through Valor and Conquest to today's Emblem of Triumph and Emblem of Frost, and older Emblems can be traded down to a lower tier at a vendor rather than converting on their own. Various faction tokens exist for specific reputations. Managing multiple currencies is important for gearing up characters efficiently.",
     "keywords": ["currency", "honor", "arena points", "emblem of triumph", "emblem of frost", "emblems", "gold", "pvp gear", "rated gear", "heroic gear", "tokens", "specific reputations", "raid gear", "managing", "gearing up", "efficiently"],
     "tags": ["mechanic", "currency", "gearing", "progression"]
   }

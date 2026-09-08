@@ -58,8 +58,8 @@
   {
     "id": "general_gear_optimization",
     "title": "Gear Optimization",
-    "content": "Stat priority depends on class and spec. Use gear comparison tools. Enchantments and gems improve gear significantly. Don't neglect off-hand items. Reforging allows stat conversion. Understanding your class guides optimal gearing decisions. Regular gear upgrades improve performance.",
-    "keywords": ["gear optimization", "stat priority", "enchantments", "gems", "reforging", "performance", "class", "spec", "comparison tools", "off hand", "stat conversion", "upgrades"],
+    "content": "Stat priority depends on class and spec. Use gear comparison tools. Enchantments and gems improve gear significantly. Don't neglect off-hand items. There is no way to convert one stat into another on a finished piece, so gems and enchants are the whole of the tuning available. Understanding your class guides optimal gearing decisions. Regular gear upgrades improve performance.",
+    "keywords": ["gear optimization", "stat priority", "enchantments", "gems", "performance", "class", "spec", "comparison tools", "off hand", "upgrades"],
     "tags": ["general", "gear", "optimization", "stats"]
   },
   {
@@ -135,7 +135,7 @@
   {
     "id": "general_inventory_management",
     "title": "Managing Inventory and Bags",
-    "content": "Use bag space efficiently by selling junk to vendors. Bank important items you don't need immediately. Use profession bags for materials. Sort your bags regularly. Don't carry too much weight. Some items can be disenchanted or milled for profit. Bag space is limited so prioritize what you keep.",
+    "content": "Use bag space efficiently by selling junk to vendors. Bank important items you don't need immediately. Use profession bags for materials. Sort your bags regularly. Items have no weight, so the only limit is the number of slots. Some items can be disenchanted or milled for profit. Bag space is limited so prioritize what you keep.",
     "keywords": ["inventory management", "bags", "bag space", "vendors", "bank", "profession bags", "materials", "sort", "weight", "disenchanted", "milled", "profit", "limited", "prioritize"],
     "tags": ["general", "inventory", "management", "organization"]
   },

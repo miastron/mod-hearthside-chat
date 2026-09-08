@@ -195,7 +195,12 @@ INSTANCES = [
      "It is full of undead draenei, and Shirrak the Dead Watcher slows casting for the whole room.",
      ["Shirrak the Dead Watcher", "Exarch Maladaar"],
      ["auchenai crypts", "crypts", "ac"]),
-    ("Opening of the Dark Portal", 66, 68, "five-player dungeon", "the Caverns of Time in Tanaris",
+    # 68-70, not 66-68: LFGDungeons row 171 (The Black Morass) has targetLevelMin/Max
+    # zeroed like every other pre-3.3 Burning Crusade dungeon, and the 66-68 that used to
+    # sit here is row 170's -- The Escape From Durnholde, the *other* Caverns of Time
+    # instance. Realm-checked 2026-09-08: dungeon_access_template says map 269 admits at
+    # 66, and every Black Morass wave creature is level 70 (its three bosses are 72).
+    ("Opening of the Dark Portal", 68, 70, "five-player dungeon", "the Caverns of Time in Tanaris",
      "Players usually call it the Black Morass. It is a timed defence of Medivh through eighteen portal waves at the moment the Dark Portal was first opened, and it was the attunement step for Karazhan. The Dark Portal itself stands in the Blasted Lands, and this instance is only a vision of its past.",
      ["Chrono Lord Deja", "Temporus", "Aeonus"],
      ["black morass", "bm", "opening of the dark portal", "cot2"]),

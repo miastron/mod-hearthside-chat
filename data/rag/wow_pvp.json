@@ -16,7 +16,7 @@
   {
     "id": "pvp_world_pvp",
     "title": "World PvP",
-    "content": "World PvP occurs in the open world where players can attack each other. Popular spots include Tarren Mill vs Southshore in the Hillsbrad Foothills and the Gurubashi Arena in Stranglethorn Vale, plus Wintergrasp, Northrend's dedicated open-world PvP zone where up to 40 players a side besiege a fortress with siege vehicles on a recurring timer. World PvP requires awareness and can be very rewarding. World PvP creates memorable moments and rivalries.",
+    "content": "World PvP occurs in the open world where players can attack each other. Popular spots include Tarren Mill vs Southshore in the Hillsbrad Foothills and the Gurubashi Arena in Stranglethorn Vale, plus Wintergrasp, Northrend's dedicated open-world PvP zone where raid-sized forces well over a hundred players strong besiege a fortress with siege vehicles on a recurring timer. World PvP requires awareness and can be very rewarding. World PvP creates memorable moments and rivalries.",
     "keywords": ["world pvp", "tarren mill", "gurubashi", "awareness", "rivalries", "open world", "players can attack", "popular spots", "southshore", "wintergrasp", "gurubashi arena", "requires awareness", "very rewarding", "special rules", "objectives", "creates memorable moments"],
     "tags": ["pvp", "world", "open_world", "rivalries"]
   },
@@ -30,8 +30,8 @@
   {
     "id": "pvp_gear_progression",
     "title": "PvP Gear Progression",
-    "content": "PvP gear is obtained through honor and arena points. Low-level PvP gear from battleground marks, higher level gear from honor purchases, top-tier gear from arena points. PvP sets provide resilience and PvP power. Players can mix PvP and PvE gear for hybrid builds. Good PvP gear is essential for competitive play.",
-    "keywords": ["pvp gear", "honor", "arena points", "resilience", "hybrid builds", "competitive", "obtained through", "low level pvp gear", "battleground marks", "higher level gear", "honor purchases", "top tier gear", "pvp sets", "provide resilience", "pvp power", "mix pvp and pve", "good pvp gear", "essential for", "competitive play"],
+    "content": "PvP gear is obtained through honor and arena points. Low-level PvP gear from battleground marks, higher level gear from honor purchases, top-tier gear from arena points. PvP sets provide resilience, which cuts the damage and the critical strikes taken from other players. Players can mix PvP and PvE gear for hybrid builds. Good PvP gear is essential for competitive play.",
+    "keywords": ["pvp gear", "honor", "arena points", "resilience", "hybrid builds", "competitive", "obtained through", "low level pvp gear", "battleground marks", "higher level gear", "honor purchases", "top tier gear", "pvp sets", "provide resilience", "mix pvp and pve", "good pvp gear", "essential for", "competitive play"],
     "tags": ["pvp", "gear", "progression", "equipment"]
   },
   {
@@ -51,8 +51,8 @@
   {
     "id": "pvp_honor_system",
     "title": "Honor System",
-    "content": "The honor system rewards PvP participation. Honor points are earned from killing enemy players and winning objectives. Honor decays weekly and resets seasonally. Honor is used to purchase PvP gear and weapons. The honor grind requires consistent PvP activity. Honor rankings show the top PvP players each season.",
-    "keywords": ["honor system", "honor points", "decay", "rankings", "seasonal", "grind", "rewards pvp participation", "earned from", "killing enemy players", "winning objectives", "decays weekly", "resets seasonally", "used to purchase", "pvp gear", "weapons", "honor grind", "requires consistent", "pvp activity", "honor rankings", "show the top", "pvp players", "each season"],
+    "content": "The honor system rewards PvP participation. Honor points are earned from killing enemy players and winning objectives. Since the honor overhaul they behave as an ordinary currency: they do not decay, they carry from week to week, and they are capped rather than ranked. Honor is used to purchase PvP gear and weapons. The honor grind requires consistent PvP activity.",
+    "keywords": ["honor system", "honor points", "honor cap", "honor grind", "killing enemy players", "purchase pvp gear"],
     "tags": ["pvp", "honor", "system", "rewards"]
   },
   {
@@ -79,8 +79,8 @@
   {
     "id": "pvp_gear_specialization",
     "title": "PvP vs PvE Gear",
-    "content": "PvP gear focuses on resilience and PvP power, while PvE gear focuses on raw damage/healing. Players choose based on playstyle. Hybrid gear mixes both. PvP gear often has unique appearances. Some players prefer pure PvP or PvE progression. Gear choice affects performance in different content types.",
-    "keywords": ["pvp gear", "pve gear", "resilience", "hybrid", "playstyle", "performance", "focuses on", "pvp power", "raw damage", "healing", "players choose", "based on playstyle", "hybrid gear", "mixes both", "unique appearances", "prefer pure", "pvp or pve", "progression", "gear choice", "affects performance", "different content types"],
+    "content": "PvP gear focuses on resilience, the only PvP-specific stat this expansion, while PvE gear focuses on raw damage and healing. Players choose based on playstyle. Hybrid gear mixes both. PvP gear often has unique appearances. Some players prefer pure PvP or PvE progression. Gear choice affects performance in different content types.",
+    "keywords": ["pvp gear", "pve gear", "resilience", "hybrid", "playstyle", "performance", "focuses on", "raw damage", "healing", "players choose", "based on playstyle", "hybrid gear", "mixes both", "unique appearances", "prefer pure", "pvp or pve", "progression", "gear choice", "affects performance", "different content types"],
     "tags": ["pvp", "gear", "specialization", "choice"]
   },
   {

@@ -44,7 +44,7 @@
   {
     "id": "quest_profession_quests",
     "title": "Profession Quest Lines",
-    "content": "Professions have quests that advance their story. Blacksmithing has the Dark Iron quests, alchemy has the Elixir of Vigor, fishing has the Nat Pagle quests. Profession quests provide recipes, tools, and understanding of the profession's lore. They often require gathering rare materials or completing difficult tasks.",
+    "content": "Professions have quests that advance their story. Blacksmithing has the Dark Iron quests, alchemy has the Master of Potions, Elixirs, and Transmutation specialization quests, fishing has the Nat Pagle quests. Profession quests provide recipes, tools, and understanding of the profession's lore. They often require gathering rare materials or completing difficult tasks.",
     "keywords": ["profession quests", "blacksmithing", "alchemy", "fishing", "recipes", "tools", "professions have quests", "advance their story", "dark iron quests", "elixir of vigor", "nat pagle quests", "provide recipes", "understanding of", "profession lore", "require gathering", "rare materials", "completing difficult tasks"],
     "tags": ["quests", "professions", "lore", "recipes"]
   },
@@ -93,7 +93,7 @@
   {
     "id": "quest_repeatable_quests",
     "title": "Repeatable and Daily Quests",
-    "content": "Quests that can be completed multiple times. Daily quests for reputation, repeatable quests for gold or items. Examples include the Cenarion Circle dailies or the fishing daily quests. Repeatable quests provide ongoing activities and rewards. They help with gearing and reputation grinding.",
+    "content": "Quests that can be completed multiple times. Daily quests for reputation, repeatable quests for gold or items. Examples include the repeatable Cenarion Circle turn-ins in Silithus, which carry no daily timer, and the Dalaran fishing and cooking dailies, which do. Repeatable quests provide ongoing activities and rewards. They help with gearing and reputation grinding.",
     "keywords": ["repeatable quests", "daily quests", "cenarion circle", "fishing", "ongoing", "grinding", "completed multiple times", "daily quests for reputation", "repeatable quests for gold", "items", "cenarion circle dailies", "fishing daily quests", "provide ongoing activities", "rewards", "help with gearing", "reputation grinding"],
     "tags": ["quests", "repeatable", "daily", "grinding"]
   },

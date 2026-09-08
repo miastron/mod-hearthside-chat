@@ -16,8 +16,8 @@
   {
     "id": "item_profession_tools",
     "title": "Profession Tools",
-    "content": "Profession tools enhance crafting success rates and provide bonuses to created items. Blacksmiths use hammers and anvils, leatherworkers use knives and sewing kits, alchemists use mortars and pestles. Higher quality tools provide better bonuses. Some tools are bind-on-equip and can be upgraded. Having good tools is essential for professional crafters who want to create high-quality items.",
-    "keywords": ["profession tools", "crafting", "blacksmithing", "leatherworking", "alchemy", "hammers", "anvils", "knives", "sewing kits", "mortars", "pestles", "higher quality", "bonuses", "bind on equip", "upgraded", "essential", "high quality items"],
+    "content": "Some professions need a tool carried in the bags before their recipes work at all: blacksmiths and engineers need a Blacksmith Hammer, enchanters a runed rod matched to their skill, miners a Mining Pick, and skinners a Skinning Knife. Crafting never fails in this game, so a tool is a requirement rather than a bonus to success. Other crafts need no tool of their own but do need the character standing beside the right stationary object, such as an anvil or a forge. Having good tools is essential for professional crafters who want to create high-quality items.",
+    "keywords": ["profession tools", "crafting", "blacksmith hammer", "skinning knife", "mining pick", "runed rod", "anvil", "forge"],
     "tags": ["items", "professions", "tools", "crafting"]
   },
   {
@@ -30,14 +30,14 @@
   {
     "id": "item_enchants",
     "title": "Weapon and Armor Enchants",
-    "content": "Enchants add magical properties to weapons and armor. Enchanters can create enchant scrolls or apply enchants directly. Popular weapon enchants include Crusader (paladins), Fiery Weapon, or Soulfrost. Armor enchants provide stats like +strength, +agility, or +spell power. Enchanting requires materials and skill. Good enchants can significantly improve gear performance.",
-    "keywords": ["enchants", "enchanting", "weapons", "armor", "crusader", "fiery weapon", "soulfrost", "magical properties", "enchant scrolls", "apply enchants", "popular", "paladins", "stats", "strength", "agility", "spell power", "materials", "skill", "improve gear", "performance"],
+    "content": "Enchants add magical properties to weapons and armor. Enchanters can create enchant scrolls or apply enchants directly. Popular weapon enchants include Crusader, Fiery Weapon, and Soulfrost, and any class can carry any of them. Armor enchants provide stats like +strength, +agility, or +spell power. Enchanting requires materials and skill. Good enchants can significantly improve gear performance.",
+    "keywords": ["enchants", "enchanting", "weapons", "armor", "crusader", "fiery weapon", "soulfrost", "magical properties", "enchant scrolls", "apply enchants", "popular", "stats", "strength", "agility", "spell power", "materials", "skill", "improve gear", "performance"],
     "tags": ["items", "enchants", "enchanting", "improvement"]
   },
   {
     "id": "item_gems",
     "title": "Socketed Gems",
-    "content": "Many high-level items have sockets that can hold gems to provide stat bonuses. Gem colors match socket colors for bonuses: red for strength/crit, yellow for intellect/hit, blue for spirit/mp5, meta gems for special effects. Jewelcrafters create gems from minerals. Gemming properly is crucial for optimizing character stats. Different specs require different gem priorities.",
+    "content": "Many high-level items have sockets that can hold gems to provide stat bonuses. Gem colors match socket colors for bonuses: red gems carry strength, agility, and spell power, yellow gems carry intellect and ratings like crit, hit, and haste, blue gems carry stamina, spirit, and mana per five seconds, and meta gems provide special effects. Jewelcrafters create gems from minerals. Gemming properly is crucial for optimizing character stats. Different specs require different gem priorities.",
     "keywords": ["gems", "sockets", "jewelcrafting", "red gems", "yellow gems", "blue gems", "meta gems", "stat bonuses", "socket colors", "strength", "crit", "intellect", "hit", "spirit", "mp5", "special effects", "minerals", "optimizing", "character stats", "specs", "priorities"],
     "tags": ["items", "gems", "jewelcrafting", "optimization"]
   },
@@ -58,8 +58,8 @@
   {
     "id": "item_keys",
     "title": "Dungeon and Raid Keys",
-    "content": "Keys are special items that allow access to locked areas or higher difficulty content. Examples include The Master's Key (Karazhan), Reservoir Key (Serpentshrine Cavern), or Medallion of Karabor (Auchindoun). Some keys are obtained through quests, others from rare drops. Keys often require attunement processes. Having the right keys is necessary for accessing certain content.",
-    "keywords": ["keys", "attunement", "karazhan", "serpentshrine", "auchindoun", "access"],
+    "content": "Keys are special items that allow access to locked areas or higher difficulty content. Examples include The Master's Key (Karazhan), the Reservoir Key (heroic mode for the Coilfang Reservoir dungeons), the Auchenai Key (heroic mode for the Auchindoun dungeons), and the Medallion of Karabor (entry to the Black Temple). Some keys are obtained through quests, others from rare drops. Keys often require attunement processes. Having the right keys is necessary for accessing certain content.",
+    "keywords": ["keys", "attunement", "karazhan", "coilfang reservoir", "auchindoun", "black temple", "heroic mode"],
     "tags": ["items", "keys", "access", "attunement"]
   },
   {
@@ -86,21 +86,21 @@
   {
     "id": "item_quest_rewards",
     "title": "Quest Reward Items",
-    "content": "Many quests reward unique items that tell stories or provide character development. Examples include the Corrupted Ashbringer and the Tabard of the Scarlet Crusade. Quest rewards often have lore significance and unique appearances. Some quest items are essential for class stories. Collecting quest rewards helps players experience the game's narrative.",
+    "content": "Many quests reward unique items that tell stories or provide character development. Examples include Quel'Serrar, forged at the end of a Dire Maul quest chain, and Thunderfury, finished by the quest Rise, Thunderfury! once its bindings drop in Molten Core. Quest rewards often have lore significance and unique appearances. Some quest items are essential for class stories. Collecting quest rewards helps players experience the game's narrative.",
     "keywords": ["quest rewards", "ashbringer", "scarlet crusade", "lore", "narrative", "unique items", "character development", "stories", "lore significance", "unique appearances", "class stories", "collecting", "experience", "game narrative"],
     "tags": ["items", "quests", "lore", "story"]
   },
   {
     "id": "item_cosmetic",
     "title": "Cosmetic Items",
-    "content": "There is no wardrobe or appearance-change system yet -- an item's look is simply whatever is equipped, so cosmetic collecting mostly means non-combat companion pets, which follow a player around and do nothing else. Pets are earned from vendors, quest rewards, holiday events, and rare drops, and many players collect them purely for their own sake. Some weapon enchants add a visual glow or proc animation as a side effect of their stat bonus, which is the closest thing to a customizable weapon appearance available this expansion. Holiday events also hand out costume items, like Hallow's End's wand that temporarily transforms the user into a ghost, ninja, or wickerman.",
+    "content": "There is no wardrobe or appearance-change system yet -- an item's look is simply whatever is equipped, so cosmetic collecting mostly means non-combat companion pets, which follow a player around and do nothing else. Pets are earned from vendors, quest rewards, holiday events, and rare drops, and many players collect them purely for their own sake. Some weapon enchants add a visual glow or proc animation as a side effect of their stat bonus, which is the closest thing to a customizable weapon appearance available this expansion. Holiday events also hand out costume items, like Hallow's End's wand that temporarily transforms the user into a ghost, ninja, pirate, skeleton, or leper gnome.",
     "keywords": ["cosmetic", "companion pets", "vanity pets", "appearance", "collection"],
     "tags": ["items", "cosmetic", "appearance", "collection"]
   },
   {
     "id": "item_relics",
     "title": "Relics and Artifacts",
-    "content": "Relics are special items that provide bonuses to certain classes. Librams for paladins, idols for druids, totems for shamans. Relics are equipped in off-hand slots and provide unique bonuses. Some relics are very rare and powerful. Relics often have lore connections to class stories. Obtaining powerful relics is a goal for many players.",
+    "content": "Relics are special items that provide bonuses to certain classes. Librams for paladins, idols for druids, totems for shamans. Relics go in the ranged weapon slot, where these classes would otherwise carry nothing, and provide unique bonuses. Some relics are very rare and powerful. Relics often have lore connections to class stories. Obtaining powerful relics is a goal for many players.",
     "keywords": ["relics", "artifacts", "librams", "idols", "totems", "offhand", "bonuses", "paladins", "druids", "shamans", "equipped", "unique bonuses", "rare", "powerful", "lore connections", "class stories", "obtaining", "goal"],
     "tags": ["items", "relics", "class", "bonuses"]
   }

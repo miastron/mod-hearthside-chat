@@ -2,21 +2,21 @@
   {
     "id": "wow_classes_warrior",
     "title": "Warrior Class",
-    "content": "Warriors are versatile melee fighters who excel in both damage dealing and tanking. They have three specializations: Arms (melee DPS), Fury (two-handed weapon DPS), and Protection (tanking). Warriors use rage as their resource and can charge into battle, use defensive stances, and provide strong physical damage. They are essential for tanking dungeons and raids.",
+    "content": "Warriors are versatile melee fighters who excel in both damage dealing and tanking. They have three specializations: Arms (two-handed melee DPS), Fury (dual-wielding melee DPS), and Protection (tanking). Warriors use rage as their resource and can charge into battle, use defensive stances, and provide strong physical damage. They are essential for tanking dungeons and raids.",
     "keywords": ["warrior", "tank", "dps", "melee", "rage", "arms", "fury", "protection", "battle", "stances", "versatile", "fighter", "combat", "strength", "damage", "protection", "shield", "sword", "axe", "mace", "charge", "intercept", "taunt", "challenging shout"],
     "tags": ["class", "melee", "tank", "dps", "versatile"]
   },
   {
     "id": "wow_classes_paladin",
     "title": "Paladin Class",
-    "content": "Paladins are holy warriors who combine melee combat with divine magic. They can be healers (Holy), melee DPS (Retribution), or tanks (Protection). Paladins use mana for spells and holy power for special abilities. They have strong utility with blessings, auras, and can protect allies with divine shields. Paladins are highly valued for their healing and tanking in groups.",
+    "content": "Paladins are holy warriors who combine melee combat with divine magic. They can be healers (Holy), melee DPS (Retribution), or tanks (Protection). Paladins run entirely on mana; there is no secondary resource bar for them in this expansion. They have strong utility with blessings, auras, and can protect allies with divine shields. Paladins are highly valued for their healing and tanking in groups.",
     "keywords": ["paladin", "healer", "tank", "dps", "holy", "retribution", "protection", "divine"],
     "tags": ["class", "hybrid", "healer", "tank", "dps"]
   },
   {
     "id": "wow_classes_hunter",
     "title": "Hunter Class",
-    "content": "Hunters are ranged DPS specialists who use bows, guns, or crossbows to deal damage from afar. They have pets that fight alongside them and can track enemies, trap them, and provide utility. Hunters excel at solo play and can handle multiple targets effectively. They use focus as their resource and have strong survival abilities.",
+    "content": "Hunters are ranged DPS specialists who use bows, guns, or crossbows to deal damage from afar. They have pets that fight alongside them and can track enemies, trap them, and provide utility. Hunters excel at solo play and can handle multiple targets effectively. They use mana as their resource in this expansion -- focus belongs to their pets -- and have strong survival abilities.",
     "keywords": ["hunter", "ranged", "dps", "pets", "tracking", "traps", "focus"],
     "tags": ["class", "ranged", "dps", "pets", "utility"]
   },
@@ -30,7 +30,7 @@
   {
     "id": "wow_classes_priest",
     "title": "Priest Class",
-    "content": "Priests are versatile spellcasters who can be healers (Holy/Discpline) or ranged DPS (Shadow). They use holy magic for healing and shadow magic for damage. Priests have strong utility with mind control, fear, and resurrection. They can provide mana to others and have powerful area healing abilities. Priests are essential for keeping groups alive in tough encounters.",
+    "content": "Priests are versatile spellcasters who can be healers (Holy or Discipline) or ranged DPS (Shadow). They use holy magic for healing and shadow magic for damage. Priests have strong utility with mind control, fear, and resurrection. They can provide mana to others and have powerful area healing abilities. Priests are essential for keeping groups alive in tough encounters.",
     "keywords": ["priest", "healer", "dps", "holy", "shadow", "utility", "resurrection"],
     "tags": ["class", "caster", "healer", "dps", "utility"]
   },
@@ -58,7 +58,7 @@
   {
     "id": "wow_classes_druid",
     "title": "Druid Class",
-    "content": "Druids are shapeshifting spellcasters who can be healers (Restoration), melee DPS (Feral), ranged DPS (Balance), or tanks (Guardian). They can transform into various animal forms for different roles. Druids have strong utility with crowd control, healing, and mobility. They are highly versatile and can adapt to different group needs.",
+    "content": "Druids are shapeshifting spellcasters with three talent trees: Balance (ranged DPS), Feral Combat (melee DPS in cat form and tanking in bear form), and Restoration (healing). They can transform into various animal forms for different roles. Druids have strong utility with crowd control, healing, and mobility. They are highly versatile and can adapt to different group needs.",
     "keywords": ["druid", "shapeshift", "healer", "tank", "dps", "feral", "balance", "restoration"],
     "tags": ["class", "hybrid", "versatile", "shapeshift"]
   },
@@ -80,7 +80,7 @@
     "id": "wow_factions_horde",
     "title": "Horde Faction",
     "content": "The Horde is a powerful faction of warrior races who fight for survival and strength. Member races include Orcs, Trolls, Tauren, Undead (Forsaken), and Blood Elves. The Horde values strength, honor in battle, and protecting their way of life. Their capital cities include Orgrimmar, Thunder Bluff, Undercity, and Silvermoon City. Horde players are fierce warriors who respect strength and combat prowess.",
-    "keywords": ["horde", "faction", "strength", "warriors", "orcs", "trolls", "tauren", "undead", "blood_elves", "orgrimmar", "thunder bluff", "undercity", "silvermoon", "thrall", "sylvanas", "garrosh", "voljin", "baine bloodhoof", "lor the mar", "horde pride", "red", "black", "for the horde"],
+    "keywords": ["horde", "faction", "strength", "warriors", "orcs", "trolls", "tauren", "undead", "blood_elves", "orgrimmar", "thunder bluff", "undercity", "silvermoon", "thrall", "sylvanas", "garrosh", "voljin", "cairne bloodhoof", "lorthemar", "horde pride", "for the horde"],
     "tags": ["faction", "horde", "races", "cities"]
   },
   {
@@ -94,35 +94,35 @@
     "id": "wow_races_orcs",
     "title": "Orc Race",
     "content": "Orcs are fierce and honorable warriors from Draenor, brought to Azeroth through the Dark Portal. They form the backbone of the Horde and value strength and combat prowess above all. Orcs have Command (+5% pet damage), Axe Specialization, Hardiness (reduced stun duration), and the activated Blood Fury racial. They start in Durotar and have a rich history of shamanism and warfare. Notable orcs include Thrall, Garrosh Hellscream, and Grommash Hellscream.",
-    "keywords": ["orc", "horde", "draenor", "dark portal", "strength", "warriors", "shaman", "thrall", "garrosh", "grommash", "durotar", "orgrimmar", "expertise", "bloodlust", "hardiness", "axe thrower", "warrior", "hunter", "shaman", "rogue", "death knight"],
+    "keywords": ["orc", "horde", "draenor", "dark portal", "strength", "warriors", "shaman", "thrall", "garrosh", "grommash", "durotar", "orgrimmar", "expertise", "hardiness", "axe specialization", "blood fury", "command", "warrior", "hunter", "shaman", "rogue", "death knight"],
     "tags": ["race", "horde", "orc", "warrior"]
   },
   {
     "id": "wow_races_dwarves",
     "title": "Dwarf Race",
     "content": "Dwarves are stout, bearded mountain dwellers known for their craftsmanship and love of ale. They are master miners, blacksmiths, and engineers. Dwarves have Gun Specialization, Mace Specialization, passive Frost Resistance, and the activated Stoneform racial, which cures poison, disease, and bleed effects. They start in Dun Morogh and are fiercely loyal to the Alliance. Dwarves excel at warrior, priest, and hunter classes. Famous dwarves include King Magni Bronzebeard and Muradin Bronzebeard.",
-    "keywords": ["dwarf", "alliance", "ironforge", "craftsmanship", "mining", "blacksmithing", "engineering", "ale", "beards", "dun morogh", "king magni", "muradin", "expertise", "reputation", "stoneform", "gun specialization", "warrior", "priest", "hunter", "paladin", "rogue"],
+    "keywords": ["dwarf", "alliance", "ironforge", "craftsmanship", "mining", "blacksmithing", "engineering", "ale", "beards", "dun morogh", "king magni", "muradin", "expertise", "stoneform", "gun specialization", "find treasure", "warrior", "priest", "hunter", "paladin", "rogue"],
     "tags": ["race", "alliance", "dwarf", "craftsman"]
   },
   {
     "id": "wow_races_night_elves",
     "title": "Night Elf Race",
-    "content": "Night Elves are ancient, immortal beings who protect the natural world of Azeroth. They are master druids, hunters, and warriors with a deep connection to nature. Night Elves have Quickness (+1% dodge), passive Nature Resistance, and Shadowmeld, an activated near-invisibility used while standing still; on death they briefly become a fast-moving wisp. They start on the sacred tree of Teldrassil and are devoted to Elune. Night Elves excel at druid, hunter, and priest classes. Key figures include Tyrande Whisperwind and Malfurion Stormrage.",
+    "content": "Night Elves are ancient, immortal beings who protect the natural world of Azeroth. They are master druids, hunters, and warriors with a deep connection to nature. Night Elves have Quickness (melee and ranged attackers are 2% less likely to hit them), Nature Resistance (2% less likely to be hit by Nature spells), and Shadowmeld, an activated near-invisibility used while standing still; on death they briefly become a fast-moving wisp. They start on the sacred tree of Teldrassil and are devoted to Elune. Night Elves excel at druid, hunter, and priest classes. Key figures include Tyrande Whisperwind and Malfurion Stormrage.",
     "keywords": ["night elf", "alliance", "nature", "druid", "hunter", "immortal", "elune", "teldrassil", "darnassus", "tyrande", "malfurion", "nature resistance", "wisp spirit", "shadowmeld", "quickness", "druid", "hunter", "priest", "warrior", "rogue"],
     "tags": ["race", "alliance", "night elf", "nature"]
   },
   {
     "id": "wow_races_tauren",
     "title": "Tauren Race",
-    "content": "Tauren are massive, peaceful nomads from the plains of Mulgore, devoted to the spirits of nature. They are natural shamans and druids with a deep spiritual connection to the elements. Tauren have +5% health and +5% nature resistance. They start in Mulgore and have a rich culture of storytelling and herbalism. Tauren excel at druid, shaman, and warrior classes. Chief Baine Bloodhoof leads the tauren people.",
+    "content": "Tauren are massive, peaceful nomads from the plains of Mulgore, devoted to the spirits of nature. They are natural shamans and druids with a deep spiritual connection to the elements. Tauren have Endurance (+5% base health), War Stomp (an activated stun on nearby enemies), Cultivation (+15 Herbalism skill), and Nature Resistance (2% less likely to be hit by Nature spells). They start in Mulgore and have a rich culture of storytelling and herbalism. Tauren excel at druid, shaman, and warrior classes. Cairne Bloodhoof is the tauren high chieftain, ruling from Thunder Bluff.",
     "keywords": ["tauren", "horde", "mulgore", "plains", "shaman", "druid", "spirits", "nature", "thunder bluff", "baine bloodhoof", "health", "nature resistance", "cultivation", "endurance", "war stomp", "druid", "shaman", "warrior", "hunter", "priest"],
     "tags": ["race", "horde", "tauren", "spiritual"]
   },
   {
     "id": "wow_races_trolls",
     "title": "Troll Race",
-    "content": "Trolls are fierce jungle warriors from the islands of the South Seas, known for their regeneration and voodoo magic. They are agile hunters and warriors with a tribal culture. Trolls have Berserking (an activated haste burst that grows stronger as health drops), Regeneration (faster health regen that partly continues in combat), and Beast Slaying (+5% damage to Beasts). They start in Durotar alongside the orcs. Trolls excel at hunter, mage, priest, rogue, shaman, and warrior classes. Notable trolls include Vol'jin and Zul'jin.",
-    "keywords": ["troll", "horde", "jungle", "warriors", "regeneration", "voodoo", "hunter", "durotar", "voljin", "zuljin", "attack speed", "expertise", "beast slaying", "berserking", "da voodoo shuffle", "hunter", "mage", "priest", "rogue", "shaman", "warrior"],
+    "content": "Trolls are fierce jungle warriors from the islands of the South Seas, known for their regeneration and voodoo magic. They are agile hunters and warriors with a tribal culture. Trolls have Berserking (an activated 20% attack and casting speed burst, a flat amount since the Wrath revamp), Regeneration (faster health regen that partly continues in combat), and Beast Slaying (+5% damage to Beasts). They start in Durotar alongside the orcs. Trolls excel at hunter, mage, priest, rogue, shaman, and warrior classes. Notable trolls include Vol'jin and Zul'jin.",
+    "keywords": ["troll", "horde", "jungle", "warriors", "regeneration", "voodoo", "hunter", "durotar", "voljin", "zuljin", "attack speed", "beast slaying", "berserking", "hunter", "mage", "priest", "rogue", "shaman", "warrior"],
     "tags": ["race", "horde", "troll", "agile"]
   },
   {
@@ -136,21 +136,21 @@
     "id": "wow_races_forsaken",
     "title": "Forsaken (Undead) Race",
     "content": "The Forsaken are undead beings who broke free from the Scourge, fighting for their freedom. They are cunning rogues and warlocks with resistance to fear and sleep. Forsaken have Will of the Forsaken (removes fear, sleep, and charm effects), Cannibalize (health regen from nearby corpses), and passive Shadow Resistance. They start in Tirisfal Glades and rule the Undercity. Forsaken excel at rogue, warlock, priest, mage, and warrior classes. Queen Sylvanas Windrunner leads the Forsaken.",
-    "keywords": ["forsaken", "undead", "horde", "scourge", "freedom", "undercity", "tirisfal glades", "sylvanas", "expertise", "shadow resistance", "cannibalize", "will of the forsaken", "rogue", "warlock", "priest", "mage", "warrior"],
+    "keywords": ["forsaken", "undead", "horde", "scourge", "freedom", "undercity", "tirisfal glades", "sylvanas", "shadow resistance", "cannibalize", "will of the forsaken", "rogue", "warlock", "priest", "mage", "warrior"],
     "tags": ["race", "horde", "undead", "forsaken"]
   },
   {
     "id": "wow_races_blood_elves",
     "title": "Blood Elf Race",
-    "content": "Blood Elves are magically addicted survivors of the fallen kingdom of Quel'Thalas. They are powerful mages and paladins with a thirst for magic. Blood Elves have Arcane Torrent (a silence that also restores mana, energy, runic power, or rage), Arcane Affinity (+10 Enchanting skill), and passive Magic Resistance. They start in Eversong Woods and are devoted to Kael'thas Sunstrider. Blood Elves excel at mage, paladin, priest, rogue, hunter, and warlock classes.",
-    "keywords": ["blood elf", "horde", "quel thalas", "magic addiction", "silvermoon", "eversong woods", "kaelthas", "intellect", "reputation", "arcane torrent", "mage", "paladin", "priest", "rogue", "hunter", "warlock", "death knight"],
+    "content": "Blood Elves are magically addicted survivors of the fallen kingdom of Quel'Thalas. They are powerful mages and paladins with a thirst for magic. Blood Elves have Arcane Torrent (a silence that also restores mana, energy, runic power, or rage), Arcane Affinity (+10 Enchanting skill), and passive Magic Resistance. They start in Eversong Woods and are ruled from Silvermoon by Regent Lord Lor'themar Theron; Kael'thas Sunstrider betrayed them and is now an enemy. Blood Elves excel at mage, paladin, priest, rogue, hunter, and warlock classes.",
+    "keywords": ["blood elf", "horde", "quel thalas", "magic addiction", "silvermoon", "eversong woods", "kaelthas", "lorthemar", "arcane torrent", "arcane affinity", "mage", "paladin", "priest", "rogue", "hunter", "warlock", "death knight"],
     "tags": ["race", "horde", "blood elf", "magical"]
   },
   {
     "id": "wow_races_draenei",
     "title": "Draenei Race",
     "content": "Draenei are a tailed, hooved alien race who crashed on Azeroth fleeing demonic pursuers. They are holy paladins and priests with a devotion to the Light. Draenei have Heroic Presence (+1% hit chance for themselves and their party), Gift of the Naaru (an activated heal-over-time), and Gemcutting (+5 Jewelcrafting skill). They start on Azuremyst Isle and have advanced technology. Draenei excel at paladin, priest, shaman, mage, hunter, and warrior classes. Prophet Velen leads the draenei.",
-    "keywords": ["draenei", "alliance", "exodar", "azuremyst isle", "light", "paladin", "priest", "velen", "strength", "reputation", "heroic presence", "gift of the naaru", "paladin", "priest", "shaman", "mage", "hunter", "warrior"],
+    "keywords": ["draenei", "alliance", "exodar", "azuremyst isle", "light", "paladin", "priest", "velen", "heroic presence", "gift of the naaru", "gemcutting", "paladin", "priest", "shaman", "mage", "hunter", "warrior"],
     "tags": ["race", "alliance", "draenei", "holy"]
   }
 ]
