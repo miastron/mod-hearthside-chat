@@ -1,0 +1,58 @@
+[
+  {
+    "id": "event_hallows_end",
+    "title": "Hallow's End",
+    "content": "Hallow's End runs each year from October 18 to October 31, decorating capital cities with pumpkins and letting players trick-or-treat at candy buckets in every inn for random treats, including a small chance at the flying Magic Broom mount. Its centerpiece is a fight against the Headless Horseman, summoned in Scarlet Monastery's graveyard; since patch 3.3.3 he can be queued for directly through the Dungeon Finder instead of forming a group by hand. Players can also throw Weighted Jack-o'-Lanterns and pick up a costume wand that turns them into a ghost, ninja, or wickerman for the duration of the holiday.",
+    "keywords": ["hallow's end", "headless horseman", "magic broom", "trick or treat", "candy bucket", "scarlet monastery"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_winter_veil",
+    "title": "Feast of Winter Veil",
+    "content": "The Feast of Winter Veil is WoW's Christmas-themed holiday, running from December 15 through January 2. Players collect a daily gift from under the tree beside Greatfather Winter in Ironforge or Orgrimmar, buy toys and treats from the traveling Smokywood Pastures vendor, and can start snowball fights or use a Handful of Snowflakes to turn friends into reindeer. There is no dedicated Winter Veil mount, but achievements like Merrymaker (completing every holiday task) award a title, and the classic 'Metzen the Reindeer' summon is a well-known joke item tied to the season.",
+    "keywords": ["feast of winter veil", "winter veil", "greatfather winter", "smokywood pastures", "reindeer", "snowball"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_brewfest",
+    "title": "Brewfest",
+    "content": "Brewfest runs from September 20 to October 4 at fairgrounds outside Ironforge and Orgrimmar, where players ram-race, sample brews from the Brewfest quartermaster for tokens, and fight the drunken boss Coren Direbrew inside Blackrock Depths (also queueable through the Dungeon Finder). Defeating Direbrew drops a loot bag with a chance at the Great Brewfest Kodo or the Swift Brewfest Ram mount, making his fight the event's main draw for collectors. The Brewfest Trade Chief reputation, raised through daily quests, unlocks additional holiday-only gear and trinkets.",
+    "keywords": ["brewfest", "coren direbrew", "brewfest kodo", "brewfest ram", "ram racing", "blackrock depths"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_midsummer_fire_festival",
+    "title": "Midsummer Fire Festival",
+    "content": "The Midsummer Fire Festival burns from June 21 to July 4 around bonfires placed in most major cities and zones. Players tend their own faction's flame, try to douse the rival faction's fire and relight their own from it, and dance around the Ribbon Pole for a festive buff; visiting every bonfire and completing the fire-themed dailies works toward the Fire Festival meta-achievement and title. Rewards are mostly cosmetic -- torch-tossing toys and a Brazier of Dancing Flames trinket -- with no dedicated mount tied to the holiday.",
+    "keywords": ["midsummer fire festival", "bonfire", "ribbon pole", "torch", "brazier of dancing flames"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_lunar_festival",
+    "title": "Lunar Festival",
+    "content": "Lunar Festival runs from February 1 to February 14 and centers on visiting Elders scattered across nearly every zone on both continents, each granting the Elders' Blessing buff and a bit of Lunar Festival lore. Players also toss coins into the fountain at Moonglade for a random small reward, and can take on Omen, a spectral fire elemental that spawns as a group-killable target in Moonglade for the duration of the event. Collecting blessings from enough Elders unlocks the elder title and a fireworks-launching trinket.",
+    "keywords": ["lunar festival", "elders", "elders' blessing", "moonglade", "omen", "coin toss"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_love_is_in_the_air",
+    "title": "Love is in the Air",
+    "content": "Love is in the Air runs from February 10 to February 23; Wrath of the Lich King's patch 3.0.8 expanded it from a minor vanilla holiday into a full event centered on a farcical boss fight against Apothecary Hummel and his gang of thugs in each capital city. Defeating Hummel drops a loot bag with a small chance at the Big Love Rocket, one of the game's most sought-after rare mounts. Players also collect Lovely Charms from monsters everywhere to trade for perfume, cologne, and the companion pet Peddlefeet, and can propose to friends with a Silver Bell or invite them to disco-dance atop a caged Love Fool.",
+    "keywords": ["love is in the air", "apothecary hummel", "big love rocket", "lovely charms", "peddlefeet"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_childrens_week",
+    "title": "Children's Week",
+    "content": "Children's Week runs from April 30 to May 6. Players adopt a war orphan from the Orphan Matron in their faction's capital and escort it on a tour of iconic locations, including a Northrend leg added for Wrath of the Lich King that has players take their orphan through Icecrown or Borean Tundra. It is also when the School of Hard Knocks achievement is available, which specifically requires knocking Northrend school children into the water with snowballs -- a joke only possible once Wrath's zones exist. Completing the full questline awards a faction-specific orphan companion pet.",
+    "keywords": ["children's week", "orphan", "orphan matron", "school of hard knocks", "companion pet"],
+    "tags": ["event", "holiday", "seasonal"]
+  },
+  {
+    "id": "event_pilgrims_bounty",
+    "title": "Pilgrim's Bounty",
+    "content": "Pilgrim's Bounty is WoW's Thanksgiving-themed holiday, added with Wrath of the Lich King and running from November 21 to November 27 at a feast table set up outside every major city. Players cook and serve dishes like Cranberry Chutney, Pumpkin Pie, and Slow-Roasted Turkey to seated guests of both factions for reputation and Pilgrim's Bounty Buckets, and can earn the Pilgrim's Paunch food-coma buff for overeating. The Turkinator achievement, earned by killing wild turkeys that spawn worldwide during the event, rounds out the holiday's meta-achievement.",
+    "keywords": ["pilgrim's bounty", "turkinator", "pilgrim's paunch", "cranberry chutney", "thanksgiving"],
+    "tags": ["event", "holiday", "seasonal", "wotlk"]
+  }
+]

@@ -9,6 +9,7 @@
 #include "hs_json.h"
 #include "hs_llm.h"
 #include "hs_queue.h"
+#include "hs_rag.h"
 
 #include "DatabaseEnv.h"
 #include "QueryResult.h"
@@ -372,6 +373,46 @@ namespace
                           " level range would say.";
             else
                 prompt += " Write this one as something a " + bucket.tagValueLabel + " player specifically would say.";
+
+            // Ground the bucket in what is actually true of its subject
+            // (hs_rag.h). This is the reason the paragraph above about never
+            // describing scenery and never referencing a trend had to be so
+            // restrictive: with no ground truth the only safe zone line was a
+            // generic one, so a zone_tag bucket produced lines that could have
+            // been about anywhere. With the zone's own entry in the prompt the
+            // model can be concrete about the crystals in Un'Goro or the
+            // Sons of Hodir dailies in the Storm Peaks, which is the whole
+            // point of tagging a bucket by zone.
+            //
+            // Generation is the safest place in the module to inject
+            // retrieval, which is why it is on by default while the reactive
+            // path is the knob an operator turns second: a wrong paragraph
+            // here yields a candidate that still has to clear
+            // Hs_QualityGate/Hs_PlaceholderDiscipline/Hs_DedupCheck, lands in
+            // hside_corpus tagged with this run's prompt_version, and can be
+            // read back and evicted wholesale before any player sees it. The
+            // same mistake on the reactive path is already in the chat window.
+            //
+            // Keyed first, because the bucket label is a name the *server*
+            // supplied (a zone from kZoneIds, a class from Hs_ClassNameFor),
+            // not a guess from free text: an address, not a query, so it skips
+            // the threshold and its narrowing margin entirely. The scored pass
+            // is only a fallback for a corpus whose title is phrased
+            // differently from the label ("Warrior" vs "Warrior Class"), and a
+            // one-word query is about the easiest case the scorer has.
+            //
+            // level_band_tag is excluded on purpose: no entry describes "the
+            // 40s", so retrieval on that label can only produce a near-miss.
+            if (g_HsRagGeneratorEnable && bucket.tagColumn != "level_band_tag")
+            {
+                std::string rag = Hs_RagContextForKeys({ bucket.tagValueLabel },
+                    g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+                if (rag.empty())
+                    rag = Hs_RagContextFor(bucket.tagValueLabel, 1, g_HsRagMinScore,
+                        g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+                if (!rag.empty())
+                    prompt += " " + rag;
+            }
         }
 
         if (requiresPlaceholder)
@@ -491,6 +532,38 @@ namespace
         "(You've just noticed another player standing nearby. Say something casual to strike up "
         "a short conversation.)";
 
+    // World knowledge for a script turn (hs_rag.h). Retrieved from the turn
+    // being *replied to* rather than from a topic chosen up front, which is
+    // the only framing that works here: a script is written once and later
+    // replayed by an arbitrary pair of bots standing in an arbitrary zone
+    // (that is what the %my_zone/%other_class placeholders exist for), so
+    // seeding a subject the conversation never raised would produce two bots
+    // in Northrend discussing Un'Goro. Answering what the previous turn
+    // actually brought up is safe anywhere.
+    //
+    // It also only fires from turn 2 on, since turn 1 replies to a fixed
+    // opening trigger with no content to retrieve against.
+    //
+    // The place-independence reminder is repeated here rather than left to
+    // the system prompt because retrieval is what makes violating it
+    // tempting: hand a model the Storm Peaks paragraph and "the wind up here
+    // is brutal" is the natural next line, and it would be wrong for every
+    // replay outside that zone.
+    std::string ScriptTurnRagBlock(const std::string& prevText)
+    {
+        if (!g_HsRagGeneratorEnable)
+            return "";
+
+        std::string rag = Hs_RagContextFor(prevText, 1, g_HsRagMinScore,
+            g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+        if (rag.empty())
+            return "";
+
+        return rag + " Only bring this up if it answers what was just said, and keep it true "
+                     "anywhere -- this exchange is replayed by other players in other zones, so "
+                     "nothing may assume where either of you is standing.";
+    }
+
     // §4.17: the channel-script equivalent of kScriptOpeningTrigger above --
     // deliberately not proximity-framed. ChannelScriptSystemPromptFor already
     // tells the model which broadcast channel it's posting in; a "standing
@@ -526,7 +599,8 @@ namespace
 
         for (int i = 0; i < turnCount; ++i)
         {
-            HsLLMResult result = Hs_CallLLM(cfg, kScriptSystemPrompt, "", history, prevText);
+            HsLLMResult result = Hs_CallLLM(cfg, kScriptSystemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
+                history, prevText);
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
@@ -652,7 +726,8 @@ namespace
 
         for (int i = 0; i < kChannelScriptTurnCount; ++i)
         {
-            HsLLMResult result = Hs_CallLLM(cfg, systemPrompt, "", history, prevText);
+            HsLLMResult result = Hs_CallLLM(cfg, systemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
+                history, prevText);
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)

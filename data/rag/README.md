@@ -1,8 +1,9 @@
-# `data/rag` — static world knowledge for the reactive tier
+# `data/rag` — static world knowledge
 
-The paragraphs a bot is handed when a player asks a question about the game world. Retrieval
-lives in [`src/hs_rag.h`](../../src/hs_rag.h) / [`hs_rag.cpp`](../../src/hs_rag.cpp); the harness
-is [`Tests/test_hs_rag.cpp`](../../Tests/test_hs_rag.cpp).
+The paragraphs a bot is handed when it needs to know something about the game world. Retrieval
+lives in [`src/hs_rag.h`](../../src/hs_rag.h) / [`hs_rag.cpp`](../../src/hs_rag.cpp); the SQL load
+in [`src/hs_rag_store.cpp`](../../src/hs_rag_store.cpp); the harness is
+[`Tests/test_hs_rag.cpp`](../../Tests/test_hs_rag.cpp).
 
 This closes the one grounding gap the module had. `hs_grounded` answers from live `Player*`/DB
 state, `hs_topic_gate` states live facts about the bot, `hs_memory` recalls a specific player —
@@ -17,8 +18,110 @@ in this workspace) on 2026-09-07. **Only the data was taken, not the retrieval c
 
 The four files added here on 2026-09-07 (`wow_cities.json`,
 `wow_zones_eastern_kingdoms.json`, `wow_zones_kalimdor.json`, `wow_zones_outland_northrend.json`)
-were authored for this module and verified against the test realm. The inherited ten have **not**
-been fact-checked and are left byte-for-byte as received, by operator decision.
+were authored for this module and verified against the test realm.
+
+### Fact-check status (2026-09-07) — PARTIAL, and the gap matters
+
+A pass over the inherited ten was started and **did not finish**: the agent doing it was cut off
+by a rate limit partway, and produced no report. What that leaves:
+
+**Corrected, and these were not small.** The inherited files carried content from the wrong
+expansion — Shadowfang Keep listed its *Cataclysm* boss roster (Lord Godfrey, Baron Ashbury, Lord
+Walden) instead of Arugal and Baron Silverlaine; Naxxramas was still a level-60 raid over the
+Eastern Plaguelands; Onyxia was pre-3.2.2; pet battles (Mists of Pandaria) were described as a live
+system; the Dungeon Finder was attributed to Cataclysm rather than patch 3.3; PvP was described
+with the vanilla 1–14 rank grind; Archmage Antonidas (dead before Wrath) was named as Dalaran's
+quest hub; and most racial traits were simply invented ("+10% Spirit", "six-armed" draenei).
+Corrections landed in `wow_classes_factions.json`, `wow_dungeons_raids.json`, `wow_general_tips.json`,
+`wow_items_equipment.json`, `wow_mechanics.json`, `wow_npcs_creatures.json`, `wow_pvp.json`.
+
+**Added:** `wow_battlegrounds.json` (7), `wow_mechanics_wotlk.json` (6), `wow_world_events.json` (8).
+
+**NOT done, and still open:**
+
+- **No fact-check report exists**, so there is no record of which corrected claims were verified
+  against the realm (`creature_template`, the DBCs) versus corrected from knowledge. Treat the
+  above as improved but unaudited.
+- The remaining inherited entries were not reached at all. Assume they still carry retail- or
+  wrong-expansion content until someone checks.
+
+`wow_bosses.json` and `wow_instances.json` were written separately, on 2026-09-07, and are
+covered below rather than by the partial pass above.
+
+`Tests/verify_rag_against_realm.py` re-runs the city/zone checks; it does not cover any of the
+above.
+
+## Instances and bosses are generated, not hand-written
+
+`wow_instances.json` (73) and `wow_bosses.json` (92) are emitted by
+`build_instances_and_bosses.py`. **Edit that script, not the JSON** — regenerating overwrites both
+files, which has already caught one edit made to the wrong layer.
+
+Every proper noun in them came off the realm rather than from memory:
+
+| Fact | Source |
+|---|---|
+| Instance titles | `Map.dbc`, name column (field 5) |
+| Level ranges | `LFGDungeons.dbc`, `targetLevelMin`/`Max` (fields 21/22) |
+| Boss names | `acore_world.instance_encounters` ⋈ `creature_template` |
+
+Only the one-sentence flavour clause per entry is authored, and it is the part most worth
+re-checking.
+
+### Why the title has to be the `Map.dbc` string
+
+`hs_queue.cpp` hands `req.topicGate.instanceName` to `Hs_RagContextForKeys`, and that value comes
+from `Map::GetMapName()`. The name the game uses is frequently *not* what a player says:
+
+| `Map.dbc` (the address) | what players type |
+|---|---|
+| `Hellfire Citadel: Ramparts` | ramparts, hfr |
+| `Coilfang: The Slave Pens` | slave pens, sp |
+| `Auchindoun: Shadow Labyrinth` | shadow lab, slabs |
+| `Opening of the Dark Portal` | black morass, bm |
+| `Magister's Terrace` | magisters terrace, mgt |
+| `Violet Hold` | **not** "The Violet Hold" |
+
+So: **title = the `Map.dbc` address, keywords = what players call it.** Titling an entry to the
+player-facing name passes every scored test and still misses every keyed lookup at runtime — a
+failure with no visible symptom, which is why `test_hs_rag.cpp` now asserts ten of these by their
+`Map.dbc` spelling.
+
+### Two deliberate omissions
+
+- **Hodir has no boss entry.** A one-word title takes the full aboutness bonus from any query
+  containing the word, so it beat The Storm Peaks on "where do i find the sons of hodir". The title
+  can't be disambiguated — a boss entry has to carry the creature name or the death trigger can't
+  retrieve it — so it is one or the other, and the daily-quest faction is asked about far more often
+  than the raid encounter.
+- **`wow_dungeons_raids.json` was deleted**, not merged. All 21 of its topics are covered here with
+  realm-verified data, and two entries for one topic is worse than a duplicate id: they split the
+  IDF, compete for the same queries, and `maxEntries=2` can hand the model two overlapping
+  paragraphs about the same dungeon. Its Stratholme entry also had the level range wrong (55-60;
+  the DBC says 58-60).
+
+  **Covering the topics is not the same as covering the handles, and the first pass conflated
+  them.** An audit of the deletion found 133 keywords with no counterpart in the replacements. Most
+  deserved to go — filler sitting on a dozen entries at once (`loot`, `experience`, `complex`),
+  every `level NN` keyword (nearly all disagreeing with `LFGDungeons.dbc`; Naxxramas carried
+  `level 60`), and outright errors (Shadowfang Keep's Cataclysm roster, `thunderfury` on Onyxia).
+  But roughly forty were real, including `mine cart` — which rule 3 above cites as the model of a
+  good multi-word keyword — and `van cleef`, which players type as two words while the creature is
+  `Edwin VanCleef`, one token after normalisation. Those are restored through `EXTRA_KEYWORDS` in
+  the builder.
+
+  The lesson generalises past this one deletion: when replacing an entry, diff its **keywords**
+  against the replacement's content and keywords under `Normalize()` semantics, not just its title.
+  Apostrophes are where this bites — `Atal'ai` normalises to `{atal, ai}` and does not match a
+  keyword written `atalai`.
+
+### Coverage
+
+Complete for Wrath instances and their bosses. Classic and Burning Crusade have full **instance**
+entries with rosters in the content, but per-boss entries only for the ones players name
+(Ragnaros, Nefarian, Hakkar, C'Thun, Illidan, Kael'thas, Kil'jaeden, Archimonde, and similar).
+`instance_encounters` holds 578 encounters in total, so a bot killed by a mid-tier Classic dungeon
+boss still retrieves nothing — which degrades to a bare death trigger, the pre-2026-09-07 behaviour.
 
 ## Schema
 
@@ -46,6 +149,13 @@ These are not style preferences. Each one was learned from a measured retrieval 
 above a keyword match. Title an entry with the thing it is *about*, as a player would say it
 ("Blacksmithing", "Molten Core", "Stormwind City"), not with a category label.
 
+> **Exception — anything the code addresses by name.** Where a caller passes `Hs_RagContextForKeys`
+> a string the *game* supplied, the title must be that string exactly, even when players say
+> something else: instances are titled from `Map.dbc` and bosses from `creature_template`, because
+> those are what `Map::GetMapName()` and `Creature::GetName()` return. See "Instances and bosses
+> are generated" above, and rule 6 below. Player-facing names go in `keywords` instead, which
+> costs only the difference between title and keyword weight.
+
 **2. Keep `keywords` tight.** This is the big one. The inherited files list every topic an entry
 *mentions*: "blacksmithing" is a keyword of **11** different entries, so keyword weight alone
 cannot separate the Blacksmithing entry from Gold Making Methods. Add a keyword only if someone
@@ -70,14 +180,37 @@ every score without breaking an assertion, but that was luck as much as design.
 Ships at `minScore = 0.45`, `maxEntries = 2`. The harness prints, at the end:
 
 ```
-Separation: worst answerable question 0.500, best social-chat near-miss 0.437 (threshold 0.45)
+Separation: worst answerable question 0.524, best social-chat near-miss 0.412 (threshold 0.45)
 ```
 
-Answerable questions must stay above the threshold, social chat below it. That gap was 0.077 at
-173 entries and 0.063 at 236 — **it narrows as the corpus grows**. Read that line after every data
-change. If it inverts, the fix is tighter keywords on the offending entry, not a lower threshold:
-a wrong reference block is worse than none, because it derails a reply that would otherwise have
-been fine.
+Answerable questions must stay above the threshold, social chat below it. Measured:
+
+| Entries | Worst answerable | Best near-miss | Margin |
+|--------:|-----------------:|---------------:|-------:|
+| 173     | —                | —              | 0.077  |
+| 236     | 0.500            | 0.437          | 0.063  |
+| 257     | 0.529            | 0.407          | 0.122  |
+| 401     | 0.524            | 0.412          | 0.112  |
+
+This README used to state flatly that the margin **narrows as the corpus grows**. The 257-entry
+measurement falsifies that as a rule: the gap nearly doubled, and adding 166 instance and boss
+entries on top of that barely moved it. Growth cuts both ways — more entries
+raise IDF's power to discriminate (the best near-miss *fell*, 0.437 → 0.407), while also creating
+more chances for a new entry to collide with an existing query. Which effect wins is a property of
+the entries added, not of the count.
+
+So the instruction is unchanged but the reasoning is not: **read that line after every data change**
+because the margin is unpredictable, not because it is on a known downward slide.
+
+If it inverts, the fix is tighter keywords on the offending entry, not a lower threshold: a wrong
+reference block is worse than none, because it derails a reply that would otherwise have been fine.
+Rule 2 governs the common case, where an over-broad entry steals a query — but the 236→257 growth
+produced the *inverse* failure too, and it is worth knowing the shape of it. "anyone got a summon"
+reduces to the single term `summon`, which sat in the **prose** of four entries and the `keywords`
+of none; four-way ties at content weight break on `id`, so a Christmas event won a warlock
+question. The fix there is to *add* the keyword to the one entry that should own the term, which
+lifts it to keyword weight and earns it the specificity bonus. Tight keywords are not the same as
+few keywords.
 
 ## Why the scoring looks like this
 
@@ -116,15 +249,52 @@ Forest **0**, which is why both entries say the zone exists mostly as a transit 
 **Still unverified:** the inherited ten files entirely, and the per-city service lists (bank,
 auction house, barber shop) in `wow_cities.json`, which came from knowledge rather than a query.
 
-## Where this data is going
+## How this reaches a bot
 
-The shipping module will load this table from **SQL** (`hside_rag`), like every other authored
-table in this module (`hside_archetype`, `hside_grounded_question`, `hside_corpus`) — not from
-files. These JSON files are the authoring source the SQL seed is generated from, and what the
-harness reads so retrieval quality is testable at corpus scale without a database.
+**Edit the JSON, then regenerate the SQL:**
 
-Not built yet: the `hside_rag` table, `hs_rag_store.cpp`, the `HearthsideChat.Rag.*` config keys,
-and the prompt wiring in `hs_queue.cpp`. **Nothing in this folder reaches a bot yet.**
+```
+python data/rag/generate_rag_sql.py     # writes data/sql/db-characters/base/hside_rag.sql
+pwsh -File Tests
+un_cpp_tests.ps1 -Filter rag
+```
+
+Then re-apply the SQL on the realm and `.reload config` (`HsRagLifecycleWorldScript` re-reads the
+table on reload, so no restart).
+
+`hside_rag.sql` is a **generated file** and the one `base/*.sql` in this module that is safe to
+change and re-apply. It opens with `DELETE FROM hside_rag`, precisely because AzerothCore
+re-applies a `base/` file whose SHA1 changed (repo `CLAUDE.md`) — so a regeneration reloads the
+corpus instead of failing on a duplicate key the way every other, hand-authored `base/hside_*.sql`
+would. Do not hand-edit it; the JSON is the source of truth.
+
+`generate_rag_sql.py` refuses to emit on a duplicate `id` or malformed JSON, which is the only
+place that check happens — nothing enforces it at load time.
+
+## Who retrieves, and how
+
+Two different access patterns, and the difference matters more than it looks:
+
+| Caller | Accessor | Why |
+|---|---|---|
+| Direct replies, event reactions | `Hs_RagContextFor` (scored) | The key is the player's own words. Free text, so it has to be scored. |
+| Inside a named instance | `Hs_RagContextForKeys` | The map name came from the *game*. |
+| Generator: zone/class/faction buckets | `Hs_RagContextForKeys` | The bucket label came from the *server*. |
+| Generator: bot-to-bot script turns | `Hs_RagContextFor` (scored) | Retrieves against the turn being replied to. |
+
+**Prefer the keyed accessor whenever the caller already knows what it wants.** A zone name from
+`AreaTable` or a map name from `Map::GetMapName` is an *address*, not a query — matching it by id
+or normalized title skips the threshold entirely, and so skips the narrowing separation margin
+below. Scoring a name you already have can only introduce a near-miss.
+
+The **generator** is the safest consumer and is on by default (`Rag.Generator.Enable`) while the
+reactive path is the second knob to turn: a wrong paragraph there produces a candidate that still
+has to clear the quality gate, placeholder discipline and dedup, lands in `hside_corpus` tagged
+with the run's `prompt_version`, and can be reviewed and evicted wholesale before a player sees
+it. The same mistake on the reactive path is already in the chat window.
+
+Config: the six `HearthsideChat.Rag.*` keys, documented in
+[`conf/mod_hearthside_chat.conf.dist`](../../conf/mod_hearthside_chat.conf.dist).
 
 ## Known data defects
 

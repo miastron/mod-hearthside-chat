@@ -19,8 +19,9 @@
 //
 // Pure logic, no AzerothCore dependency, standalone-testable -- same split
 // as hs_topic_gate.h/hs_grounded.h. The SQL load that fills the table lives
-// in hs_rag_store.cpp (not written yet; Tests/test_hs_rag.cpp seeds the
-// table straight from data/rag/*.json instead).
+// in hs_rag_store.cpp; Tests/test_hs_rag.cpp bypasses it and seeds the table
+// straight from data/rag/*.json, which is what keeps retrieval quality
+// testable at corpus scale with no database.
 //
 // Retrieval note, because the obvious implementation does not work: this is
 // deliberately NOT cosine similarity over a corpus-wide term-frequency
@@ -30,6 +31,17 @@
 // realistic chat lines. Here the score is normalized by the *query's*
 // information mass instead, so it reads as "what fraction of what the player
 // asked about does this entry actually cover", independent of entry length.
+
+// How a retrieved block opens. Two, because the consumers are two different
+// kinds of thing: the reactive tier is prompting a character who is about to
+// speak, the idle-time generator is prompting a writer producing a line to
+// store. Telling the generator it "knows" something invites it to have the
+// character announce it; telling it the text is source material gets a line
+// that is merely *informed* by it, which is the whole point of grounding
+// generation rather than replies.
+constexpr char const* kHsRagReplyPrefix     = "Things you know about Azeroth: ";
+constexpr char const* kHsRagGeneratorPrefix = "Accurate reference material about this game, "
+                                              "for detail only -- do not quote or summarise it: ";
 
 struct HsRagEntry
 {
@@ -52,10 +64,8 @@ struct HsRagHit
 };
 
 // Replaces the whole in-memory table and rebuilds the inverted index.
-// Called once at startup (and again on `.reload config`), same shape as
-// Hs_SetGroundedQuestionTable. Every previously returned HsRagHit::entry
-// dangles after this call; callers consume hits within one request, so
-// there is no lifetime issue in practice.
+// Called once at startup (and again on `.reload config`) from the world
+// thread by hs_rag_store.cpp, same shape as Hs_SetGroundedQuestionTable.
 void Hs_SetRagTable(const std::vector<HsRagEntry>& rows);
 
 // Number of loaded entries; 0 means every retrieval will miss (DB not
@@ -71,6 +81,12 @@ size_t Hs_RagEntryCount();
 // Both bounds are caller-supplied rather than read from hs_config.h here,
 // for the same reason HsStyleContext's fields are: hs_config.h pulls in
 // AzerothCore's ScriptMgr.h and would end this file's standalone testability.
+//
+// SINGLE-THREADED CALLERS ONLY (the harness). Each HsRagHit::entry points
+// into the live table and dangles the moment Hs_SetRagTable replaces it, so
+// a worker- or generator-thread caller racing a `.reload config` would be
+// reading freed memory, not stale data. Production callers use the two
+// one-shot accessors below, which never let the pointer escape the lock.
 std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore);
 
 // Formats hits into the block appended to the persona line. Returns "" for
@@ -80,6 +96,43 @@ std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntri
 //
 // Phrased as a statement of what the bot knows, not as an instruction about
 // what to do with it -- same reasoning as hs_topic_gate.h's fact lines.
-std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars);
+//
+// `prefix` is what the block opens with, and it is a parameter because the
+// two kinds of consumer need different framing: a reply prompt is addressed
+// to a character ("things you know"), a generation prompt is addressed to a
+// writer ("source material"). It counts against `maxChars`, so a longer
+// prefix leaves less room for content rather than overrunning the budget.
+std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars,
+                              const std::string& prefix = kHsRagReplyPrefix);
+
+// Retrieve and format in one call, under one lock. The two-step
+// Hs_RetrieveRag + Hs_RagContextLine pair above hands out raw pointers into
+// the table; this does not, which is what makes it safe to call from the
+// queue worker (hs_queue.cpp) and the generator (hs_generator.cpp) while the
+// world thread may be replacing that table on `.reload config`.
+//
+// Returns "" when nothing clears `minScore`, which is the common case and
+// degrades to "no reference block in the prompt".
+std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
+                             const std::string& prefix = kHsRagReplyPrefix);
+
+// Direct lookup: no scoring, no threshold, no near-miss. Each key is matched
+// against entry ids first and then against normalized titles, and the first
+// key that resolves wins.
+//
+// This is the accessor for a caller that already knows which paragraph it
+// wants -- the generator filling a zone_tag bucket, an event fired inside a
+// named instance -- rather than one guessing from a player's free text. It
+// matters because the scored path's separation margin narrows as the corpus
+// grows (data/rag/README.md), and a caller holding a name the *game* gave it
+// should never be exposed to that: "Gundrak" is not a query, it is an
+// address.
+//
+// Titles are authored as the thing a player would say ("Un'Goro Crater",
+// "Gundrak", "Stormwind City"), so a zone name from AreaTable or a map name
+// from Map::GetMapName can be passed straight through without the caller
+// knowing the entry's id scheme.
+std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,
+                                 const std::string& prefix = kHsRagReplyPrefix);
 
 #endif // MOD_HS_RAG_H

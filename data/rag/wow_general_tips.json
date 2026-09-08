@@ -114,7 +114,7 @@
   {
     "id": "general_finding_groups",
     "title": "Finding Groups for Content",
-    "content": "Use the Looking for Group tool or LFG channel to find other players. Be clear about what you're looking for. Good communication helps get invites. Trade chat and guild recruitment can lead to groups. Dungeon finder became available in Cataclysm. Patience is key when looking for groups. Building a reputation as a good group member helps.",
+    "content": "Use the automatic Dungeon Finder tool to be grouped cross-realm for a random dungeon, or fall back to the LFG channel and trade chat for group content it doesn't cover, like raids. Be clear about what you're looking for and good communication helps get invites. Patience is key when looking for groups. Building a reputation as a good group member helps.",
     "keywords": ["finding groups", "looking for group", "lfg", "communication", "invites", "trade chat", "guild recruitment", "dungeon finder", "patience", "reputation", "good member"],
     "tags": ["general", "groups", "social", "content"]
   },

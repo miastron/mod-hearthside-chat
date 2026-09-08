@@ -2,14 +2,14 @@
   {
     "id": "item_tier_sets",
     "title": "Tier Sets",
-    "content": "Tier sets are high-level armor sets obtained from raid bosses. Each tier provides significant stat bonuses when multiple pieces are equipped. Tier 1 (Molten Core), Tier 2 (Blackwing Lair), Tier 3 (Ahn'Qiraj), Tier 4 (Naxxramas), Tier 5 (The Burning Crusade raids). Tier sets are highly sought after for their power and prestige. Many players collect complete sets for achievements and bragging rights.",
+    "content": "Tier sets are high-level armor sets obtained from raid bosses. Each tier provides significant stat bonuses when multiple pieces are equipped. Tier 1 (Molten Core), Tier 2 (Blackwing Lair), and Tier 3 (the original 40-player Naxxramas) are the Classic-era sets; the Burning Crusade and Wrath raids continued the numbering with Tier 4 through Tier 10. Tier sets are highly sought after for their power and prestige, and many players collect complete sets for achievements and bragging rights.",
     "keywords": ["tier sets", "raid armor", "set bonuses", "molten core", "blackwing lair", "ahn qiraj", "naxxramas", "burning crusade", "high level", "stat bonuses", "raid bosses", "power", "prestige", "achievements", "bragging rights", "collect", "complete sets"],
     "tags": ["items", "equipment", "raid", "tier"]
   },
   {
     "id": "item_legendary_weapons",
     "title": "Legendary Weapons",
-    "content": "Legendary weapons are the most powerful items in the game, requiring extensive quests and rare materials to obtain. Examples include Sulfuras (Ragnaros), Thunderfury (Thunderaan), and Atiesh (Medivh). These weapons have unique appearances, powerful stats, and often special abilities. Obtaining a legendary weapon is a major accomplishment that requires dedication and coordination with other players.",
+    "content": "Legendary weapons are the most powerful items in the game, requiring extensive quests and rare materials to obtain. Examples include Sulfuras, Hand of Ragnaros (assembled after defeating Ragnaros in Molten Core), Thunderfury, Blessed Blade of the Windseeker (pieced together through a Molten Core quest chain), and Atiesh, Greatstaff of the Guardian (a Naxxramas quest reward tied to the archmage Medivh's lore). These weapons have unique appearances, powerful stats, and often special abilities. Obtaining a legendary weapon is a major accomplishment that requires dedication and coordination with other players.",
     "keywords": ["legendary weapons", "sulfuras", "thunderfury", "atiesh", "ragnaros", "thunderaan", "medivh", "quests", "rare materials", "unique appearances", "powerful stats", "special abilities", "accomplishment", "dedication", "coordination"],
     "tags": ["items", "weapons", "legendary", "rare"]
   },
@@ -58,15 +58,15 @@
   {
     "id": "item_keys",
     "title": "Dungeon and Raid Keys",
-    "content": "Keys are special items that allow access to locked areas or higher difficulty content. Examples include the Key to the City (Karazhan), Reservoir Key (Serpentshrine Cavern), or Medallion of Karabor (Auchindoun). Some keys are obtained through quests, others from rare drops. Keys often require attunement processes. Having the right keys is necessary for accessing certain content.",
+    "content": "Keys are special items that allow access to locked areas or higher difficulty content. Examples include The Master's Key (Karazhan), Reservoir Key (Serpentshrine Cavern), or Medallion of Karabor (Auchindoun). Some keys are obtained through quests, others from rare drops. Keys often require attunement processes. Having the right keys is necessary for accessing certain content.",
     "keywords": ["keys", "attunement", "karazhan", "serpentshrine", "auchindoun", "access"],
     "tags": ["items", "keys", "access", "attunement"]
   },
   {
     "id": "item_containers",
     "title": "Special Containers",
-    "content": "Special containers hold unique items or provide access to rare rewards. Examples include the Cache of the Legion (Karazhan), the Bag of Fishing Treasures, or the Disgusting Oozeling Jar. Some containers are obtained from bosses, others from achievements or rare vendors. Opening containers provides excitement and potential valuable loot. Many players collect containers for their contents.",
-    "keywords": ["containers", "cache of the legion", "bag of fishing treasures", "oozeling jar", "loot", "unique items", "rare rewards", "karazhan", "bosses", "achievements", "rare vendors", "excitement", "valuable loot", "collect", "contents"],
+    "content": "Special containers hold unique items or provide access to rare rewards. Examples include the Cache of the Legion (a locked chest found in Tempest Keep: The Mechanar), the Bag of Fishing Treasures, or the Disgusting Oozeling (a companion pet found this way). Some containers are obtained from bosses, others from achievements or rare vendors. Opening containers provides excitement and potential valuable loot.",
+    "keywords": ["containers", "cache of the legion", "bag of fishing treasures", "disgusting oozeling", "loot", "unique items", "rare rewards", "mechanar", "tempest keep", "bosses", "achievements", "rare vendors", "excitement", "valuable loot", "collect", "contents"],
     "tags": ["items", "containers", "loot", "collection"]
   },
   {
@@ -86,15 +86,15 @@
   {
     "id": "item_quest_rewards",
     "title": "Quest Reward Items",
-    "content": "Many quests reward unique items that tell stories or provide character development. Examples include the Corrupted Ashbringer, the Silver Hand, or the Scarlet Crusade Tabard. Quest rewards often have lore significance and unique appearances. Some quest items are essential for class stories. Collecting quest rewards helps players experience the game's narrative.",
-    "keywords": ["quest rewards", "ashbringer", "silver hand", "scarlet crusade", "lore", "narrative", "unique items", "character development", "stories", "lore significance", "unique appearances", "class stories", "collecting", "experience", "game narrative"],
+    "content": "Many quests reward unique items that tell stories or provide character development. Examples include the Corrupted Ashbringer and the Tabard of the Scarlet Crusade. Quest rewards often have lore significance and unique appearances. Some quest items are essential for class stories. Collecting quest rewards helps players experience the game's narrative.",
+    "keywords": ["quest rewards", "ashbringer", "scarlet crusade", "lore", "narrative", "unique items", "character development", "stories", "lore significance", "unique appearances", "class stories", "collecting", "experience", "game narrative"],
     "tags": ["items", "quests", "lore", "story"]
   },
   {
     "id": "item_cosmetic",
     "title": "Cosmetic Items",
-    "content": "Cosmetic items provide visual customization without affecting stats. Transmog allows changing armor appearances, illusions change weapon visuals, toys provide fun effects. Many cosmetic items are obtained through achievements or rare drops. Players collect cosmetics for personalization. Some cosmetics are very rare and valuable on the auction house.",
-    "keywords": ["cosmetic", "transmog", "illusions", "toys", "appearance", "personalization"],
+    "content": "There is no wardrobe or appearance-change system yet -- an item's look is simply whatever is equipped, so cosmetic collecting mostly means non-combat companion pets, which follow a player around and do nothing else. Pets are earned from vendors, quest rewards, holiday events, and rare drops, and many players collect them purely for their own sake. Some weapon enchants add a visual glow or proc animation as a side effect of their stat bonus, which is the closest thing to a customizable weapon appearance available this expansion. Holiday events also hand out costume items, like Hallow's End's wand that temporarily transforms the user into a ghost, ninja, or wickerman.",
+    "keywords": ["cosmetic", "companion pets", "vanity pets", "appearance", "collection"],
     "tags": ["items", "cosmetic", "appearance", "collection"]
   },
   {

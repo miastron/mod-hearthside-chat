@@ -1,0 +1,51 @@
+[
+  {
+    "id": "bg_rules_general",
+    "title": "Battleground Basics",
+    "content": "Battlegrounds are instanced PvP matches queued for from any Battlemaster NPC or the Battleground UI; most use standard 10-level brackets, though Alterac Valley opens at level 51 and Eye of the Storm, Strand of the Ancients, and Isle of Conquest all require at least level 61-71. Winning awards a burst of Honor plus a Mark of Honor for that battleground, spent at PvP quartermasters on battleground-specific gear, while losing still pays a smaller Honor reward. Patch 3.3.3 added the Random Battleground queue, replacing the old daily battleground quests with a bonus of Honor and Arena Points for the day's first win; the featured 'Call to Arms' battleground of the day pays that same bonus for queuing it directly instead of random.",
+    "keywords": ["battlegrounds", "battlemaster", "marks of honor", "random battleground", "call to arms", "pvp brackets", "quartermaster"],
+    "tags": ["pvp", "battlegrounds", "mechanic"]
+  },
+  {
+    "id": "bg_warsong_gulch",
+    "title": "Warsong Gulch",
+    "content": "Warsong Gulch is a capture-the-flag battleground fought 10-a-side between Horde and Alliance camps in a fenced-off stretch of Ashenvale forest. The first team to carry the enemy's flag back to their own flag room three times wins the match; a dropped flag resets after a short time if nobody picks it up. It is the lowest-level battleground, open to characters starting at level 10, and is often a new player's first taste of organized PvP.",
+    "keywords": ["warsong gulch", "wsg", "capture the flag", "flag room", "ashenvale"],
+    "tags": ["pvp", "battlegrounds", "leveling"]
+  },
+  {
+    "id": "bg_arathi_basin",
+    "title": "Arathi Basin",
+    "content": "Arathi Basin is a resource-control battleground played 15-a-side over five capturable nodes -- the Blacksmith, Farm, Gold Mine, Lumber Mill, and Stables -- scattered across a stretch of the Arathi Highlands. Holding a node generates resources for your team every few seconds, so controlling more nodes at once matters more than any single capture. The first team to reach 2000 resources wins, or whichever team is ahead if the match runs its full length. It opens to characters at level 20.",
+    "keywords": ["arathi basin", "ab", "resource nodes", "blacksmith", "gold mine", "lumber mill", "stables"],
+    "tags": ["pvp", "battlegrounds", "leveling"]
+  },
+  {
+    "id": "bg_alterac_valley",
+    "title": "Alterac Valley",
+    "content": "Alterac Valley is the largest battleground, fought up to 40-a-side across the long mountain valley connecting the Horde's Frostwolf Keep to the Alliance's Dun Baldar. Each side wins by pushing all the way to the enemy base and killing its final boss -- Alliance players kill Drek'Thar, Horde players kill Vanndar Stormpike -- while capturing towers and graveyards along the way weakens the enemy's reinforcements. Its original Vanilla form could run for hours and required razing every enemy tower, bunker, and field commander first; a later redesign cut that down to a much faster rush on the boss, so a 3.3.5a match usually finishes in well under 20 minutes. It opens to characters at level 51, the highest minimum of any standard battleground.",
+    "keywords": ["alterac valley", "av", "drek'thar", "vanndar stormpike", "frostwolf keep", "dun baldar"],
+    "tags": ["pvp", "battlegrounds", "endgame"]
+  },
+  {
+    "id": "bg_eye_of_the_storm",
+    "title": "Eye of the Storm",
+    "content": "Eye of the Storm is a 15-a-side battleground on a floating island in Netherstorm that blends flag-carrying with resource-node control. Teams fight over four capturable towers -- the Blood Elf Tower, Draenei Ruins, Mage Tower, and Fel Reaver Ruins -- that each generate points over time, and picking up the flag at the center of the map and holding it while your team controls nodes adds a large points bonus. The first team to 1600 points wins, or whichever team is ahead when the match's timer expires. It was added in the Burning Crusade and opens to characters at level 61.",
+    "keywords": ["eye of the storm", "eots", "netherstorm", "blood elf tower", "draenei ruins", "mage tower", "fel reaver"],
+    "tags": ["pvp", "battlegrounds", "endgame"]
+  },
+  {
+    "id": "bg_strand_of_the_ancients",
+    "title": "Strand of the Ancients",
+    "content": "Strand of the Ancients is a 15-a-side attack-and-defend battleground off the southern coast of Northrend's Dragonblight. The attacking team pilots siege engines and demolishers to smash through three walls of gates -- planting seaforium charges or ramming them down -- while defenders man turrets and cannons to hold them off, all racing a countdown clock that resets when a gate falls. If the attackers breach the final gate and detonate the relic at the citadel's core, the two teams swap roles for a second round, and whichever side broke through faster wins; a team that never breaches loses outright. It shipped with Wrath of the Lich King at launch and opens to characters at level 71.",
+    "keywords": ["strand of the ancients", "sota", "siege engine", "demolisher", "seaforium", "relic", "dragonblight"],
+    "tags": ["pvp", "battlegrounds", "endgame", "vehicles"]
+  },
+  {
+    "id": "bg_isle_of_conquest",
+    "title": "Isle of Conquest",
+    "content": "Isle of Conquest is a 40-a-side siege battleground on a Northrend island, added in patch 3.2. Both teams start by fighting over the Docks, Hangar, and Workshop, which unlock siege vehicles and an airship drop onto the enemy keep, while the Refinery and Quarry generate resources that fund reinforcements and boost siege damage. A team wins by breaching the enemy keep and killing its general -- Overlord Agmar for the Horde, Justicar Mariel Trueheart for the Alliance -- or by grinding the other side's reinforcement count to zero first. Alongside Strand of the Ancients, it is one of the two Wrath-era battlegrounds built around vehicle combat, and it opens to characters at level 71.",
+    "keywords": ["isle of conquest", "ioc", "overlord agmar", "justicar mariel trueheart", "siege vehicles", "reinforcements", "workshop", "hangar"],
+    "tags": ["pvp", "battlegrounds", "endgame", "vehicles"]
+  }
+]

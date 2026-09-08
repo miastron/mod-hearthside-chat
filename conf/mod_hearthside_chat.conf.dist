@@ -925,6 +925,104 @@ HearthsideChat.GroundedAnswers = 1
 HearthsideChat.GroundedAnswers.FuzzyMaxDistance = 2
 
 # --------------------------------------------
+# WORLD-KNOWLEDGE RETRIEVAL (RAG)
+# --------------------------------------------
+# The one grounding layer this module used to be missing. GroundedAnswers
+# above answers from live Player*/DB state, the topic gate states live facts
+# about the bot, and memory recalls a specific player -- none of them know
+# anything about Azeroth, so "where do I train blacksmithing" reached the
+# backend with nothing but a persona line and a 1-3B local model invented an
+# answer.
+#
+# Retrieval matches what was said against hside_rag, a table of authored
+# WotLK paragraphs, and appends the best match to the prompt. hside_rag is
+# GENERATED from data/rag/*.json by data/rag/generate_rag_sql.py: to change
+# what bots know, edit the JSON, regenerate, re-apply the SQL, and
+# `.reload config`. See data/rag/README.md for the authoring rules -- they
+# are not style preferences, each was learned from a measured retrieval
+# failure.
+#
+# Not a tier, for the same reason GroundedAnswers is not: it does not decide
+# whether a bot speaks, only what is in the prompt when one already is.
+# Every surface that reaches the backend gets it, still bounded by that
+# surface's own MaxTier ceiling.
+
+# HearthsideChat.Rag.Enable
+#     Description: Retrieval on the reactive path -- direct replies, event
+#                  reactions, engagement follow-ups, bot-to-bot chain hops.
+#                  Off leaves those prompts exactly as they were before
+#                  retrieval existed.
+#     Default:     1
+HearthsideChat.Rag.Enable = 1
+
+# HearthsideChat.Rag.MaxEntries
+#     Description: Most paragraphs appended to one prompt. 2 is a deliberate
+#                  ceiling rather than a budget: a second entry is usually a
+#                  weaker match, and past two the block starts to read like
+#                  a briefing document rather than something a player knows.
+#     Default:     2
+HearthsideChat.Rag.MaxEntries = 2
+
+# HearthsideChat.Rag.MinScore
+#     Description: Score a match must reach to be used at all. This is the
+#                  load-bearing knob and the direction of error is not
+#                  symmetric.
+#
+#                  data/rag/README.md's "The threshold and its margin"
+#                  section documents the gap between the worst answerable
+#                  question and the best social-chat near-miss -- 0.077 at
+#                  173 entries, 0.063 at 236 -- and that gap NARROWS as the
+#                  corpus grows. Raising this is safe: fewer questions get a
+#                  reference block. Lowering it hands bots paragraphs about
+#                  things nobody asked about, which derails a reply that
+#                  would otherwise have been fine. A wrong reference block is
+#                  worse than none.
+#
+#                  Re-read the "Separation:" line the retrieval harness
+#                  prints after any change to data/rag/.
+#     Default:     0.45
+HearthsideChat.Rag.MinScore = 0.45
+
+# HearthsideChat.Rag.MaxChars
+#     Description: Character budget for the whole appended block. Truncated
+#                  on an entry boundary where possible; a single oversized
+#                  entry is word-truncated. Every token here is prompt the
+#                  backend has to process before it starts generating, so
+#                  this is a direct latency knob on the reactive path.
+#     Default:     700
+HearthsideChat.Rag.MaxChars = 700
+
+# HearthsideChat.Rag.Generator.Enable
+#     Description: Retrieval on the idle-time generator's path -- corpus
+#                  buckets, channel lines, and bot-to-bot scripts.
+#
+#                  Separate from Rag.Enable above because the two fail
+#                  differently, and this is the safer of the two. A wrong
+#                  paragraph in a live reply is already in the chat window
+#                  when you notice it. A wrong paragraph HERE produces a
+#                  candidate that still has to clear the quality gate,
+#                  placeholder discipline and dedup, lands in hside_corpus
+#                  tagged with the run's prompt_version, and can be read with
+#                  `.hearthside review` and dropped wholesale before any
+#                  player sees it. It is also where retrieval buys the most:
+#                  a zone-tagged bucket could only ever produce generic lines
+#                  while the model had no ground truth about the zone.
+#
+#                  If you want to trial retrieval, turn this on first and
+#                  Rag.Enable second.
+#     Default:     1
+HearthsideChat.Rag.Generator.Enable = 1
+
+# HearthsideChat.Rag.Generator.MaxChars
+#     Description: The same budget for generation prompts. Larger than
+#                  Rag.MaxChars on purpose: generation is offline, so a
+#                  longer prompt costs idle GPU time rather than a player's
+#                  wait, and its output is reviewable before use.
+#     Default:     900
+HearthsideChat.Rag.Generator.MaxChars = 900
+
+
+# --------------------------------------------
 # IDLE-TIME GENERATOR
 # --------------------------------------------
 # Fills hside_corpus during GPU idle time -- picks one under-quota

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -160,12 +162,32 @@ namespace
         // Distinct keyword/title terms per entry: the denominator of the
         // specificity bonus.
         std::vector<uint32_t> handleCount;
+
+        // Direct-address index for Hs_RagContextForKeys: entry id (verbatim)
+        // and normalized title, both mapping to the entry's slot. Built here
+        // rather than scanned per lookup because the keyed path is the one
+        // the generator hits once per bucket per cycle.
+        std::unordered_map<std::string, uint32_t> byKey;
     };
 
     RagIndex& Index()
     {
         static RagIndex idx;
         return idx;
+    }
+
+    // Guards RagIndex against a `.reload config` on the world thread landing
+    // while the queue worker or the generator is mid-retrieval. Shared: reads
+    // are frequent and concurrent, the swap is once at startup and once per
+    // reload.
+    //
+    // std::shared_mutex is not recursive even for shared ownership, so every
+    // helper below that runs under it is named *Locked and takes no lock of
+    // its own; only the public entry points acquire.
+    std::shared_mutex& TableMutex()
+    {
+        static std::shared_mutex m;
+        return m;
     }
 
     void AccumulateBest(std::unordered_map<std::string, float>& best,
@@ -195,10 +217,13 @@ namespace
 
 void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
 {
+    std::unique_lock<std::shared_mutex> guard(TableMutex());
+
     RagIndex& idx = Index();
     idx.entries = rows;
     idx.postings.clear();
     idx.idf.clear();
+    idx.byKey.clear();
     idx.phrases.assign(rows.size(), {});
     idx.titleTerms.assign(rows.size(), {});
     idx.handleCount.assign(rows.size(), 0);
@@ -223,6 +248,15 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
 
         idx.titleTerms[i] = Terms(Normalize(e.title));
         AccumulateBest(best, idx.titleTerms[i], kWeightTitle);
+
+        // emplace, not []: on a duplicate id or two entries sharing a title
+        // the first-loaded wins, deterministically, rather than the last row
+        // the query happened to return. data/rag/README.md already warns that
+        // nothing enforces id uniqueness at load time.
+        idx.byKey.emplace(e.id, i);
+        std::string normTitle = Normalize(e.title);
+        if (!normTitle.empty())
+            idx.byKey.emplace(normTitle, i);
 
         for (const auto& kv : best)
         {
@@ -250,10 +284,15 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
 
 size_t Hs_RagEntryCount()
 {
+    std::shared_lock<std::shared_mutex> guard(TableMutex());
     return Index().entries.size();
 }
 
-std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore)
+namespace
+{
+// The scoring pass, minus the lock. Public entry points below acquire once
+// and call this; see TableMutex's note on why nothing here re-acquires.
+std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore)
 {
     std::vector<HsRagHit> hits;
 
@@ -353,13 +392,64 @@ std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntri
 
     return hits;
 }
+} // namespace
 
-std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars)
+std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore)
+{
+    std::shared_lock<std::shared_mutex> guard(TableMutex());
+    return RetrieveLocked(query, maxEntries, minScore);
+}
+
+std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
+                             const std::string& prefix)
+{
+    std::shared_lock<std::shared_mutex> guard(TableMutex());
+    // Hs_RagContextLine only reads through the hit pointers, which stay valid
+    // for as long as this guard is held, so formatting inside the lock is
+    // what keeps them from escaping it.
+    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore), maxChars, prefix);
+}
+
+std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,
+                                 const std::string& prefix)
+{
+    if (keys.empty() || maxChars == 0)
+        return "";
+
+    std::shared_lock<std::shared_mutex> guard(TableMutex());
+    const RagIndex& idx = Index();
+
+    for (const std::string& key : keys)
+    {
+        if (key.empty())
+            continue;
+
+        auto it = idx.byKey.find(key); // verbatim id
+        if (it == idx.byKey.end())
+        {
+            std::string norm = Normalize(key); // title, punctuation-insensitive
+            if (norm.empty())
+                continue;
+            it = idx.byKey.find(norm);
+            if (it == idx.byKey.end())
+                continue;
+        }
+
+        // Score 1.0 is cosmetic: nothing downstream reads it on this path,
+        // and a keyed hit has no score to report -- it was addressed, not
+        // ranked.
+        std::vector<HsRagHit> hits{ { &idx.entries[it->second], 1.0f } };
+        return Hs_RagContextLine(hits, maxChars, prefix);
+    }
+
+    return "";
+}
+
+std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars, const std::string& prefix)
 {
     if (hits.empty() || maxChars == 0)
         return "";
 
-    const std::string prefix = "Things you know about Azeroth: ";
     std::string line = prefix;
 
     for (size_t i = 0; i < hits.size(); ++i)

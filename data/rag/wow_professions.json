@@ -115,7 +115,7 @@
   {
     "id": "profession_first_aid",
     "title": "First Aid Profession",
-    "content": "First Aid is a legacy secondary profession that allows players to create bandages and health-restoring items. It is useful for out-of-combat healing and can be vital for solo players. In some expansions First Aid was integrated into other systems, but in classic and TBC-era content it remains useful for quick healing between fights.",
+    "content": "First Aid is a secondary profession every character can learn, used to craft bandages for out-of-combat healing (and, at lower ranks, limited use in combat, subject to a shared cooldown between bandages). The current top-rank bandage, Dense Frostweave Bandage, needs 450 skill and Frostweave Cloth from Northrend cloth drops. It is especially valuable for classes without a reliable self-heal, and doesn't require reagents beyond the bandage itself.",
     "keywords": ["first aid","bandages","healing","consumables","out of combat","survival"],
     "tags": ["profession","secondary","consumables","healing","solo"]
   },

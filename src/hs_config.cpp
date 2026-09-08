@@ -251,6 +251,13 @@ std::string g_HsBotQuestionMode = "wink";
 bool     g_HsGroundedAnswersEnabled  = true;
 uint32_t g_HsGroundedFuzzyMaxDistance = 2;
 
+bool     g_HsRagEnable            = true;
+uint32_t g_HsRagMaxEntries        = 2;
+float    g_HsRagMinScore          = 0.45f;
+uint32_t g_HsRagMaxChars          = 700;
+bool     g_HsRagGeneratorEnable   = true;
+uint32_t g_HsRagGeneratorMaxChars = 900;
+
 bool        g_HsGeneratorEnabled              = false;
 std::string g_HsGeneratorLLMApiType           = "llamacpp";
 std::string g_HsGeneratorLLMUrl               = "http://127.0.0.1:8080";
@@ -476,6 +483,13 @@ void LoadHearthsideChatConfig()
 
     g_HsGroundedAnswersEnabled  = sConfigMgr->GetOption<bool>("HearthsideChat.GroundedAnswers", true);
     g_HsGroundedFuzzyMaxDistance = sConfigMgr->GetOption<uint32_t>("HearthsideChat.GroundedAnswers.FuzzyMaxDistance", 2);
+
+    g_HsRagEnable            = sConfigMgr->GetOption<bool>("HearthsideChat.Rag.Enable", true);
+    g_HsRagMaxEntries        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Rag.MaxEntries", 2);
+    g_HsRagMinScore          = sConfigMgr->GetOption<float>("HearthsideChat.Rag.MinScore", 0.45f);
+    g_HsRagMaxChars          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Rag.MaxChars", 700);
+    g_HsRagGeneratorEnable   = sConfigMgr->GetOption<bool>("HearthsideChat.Rag.Generator.Enable", true);
+    g_HsRagGeneratorMaxChars = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Rag.Generator.MaxChars", 900);
 
     g_HsGeneratorEnabled                    = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Enable", false);
     g_HsGeneratorLLMApiType                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiType", "llamacpp");

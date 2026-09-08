@@ -2,7 +2,7 @@
   {
     "id": "npc_world_bosses",
     "title": "World Bosses",
-    "content": "World bosses are powerful creatures that spawn in the open world and can be attacked by any player. They drop valuable loot and provide challenging combat. Examples include Lord Kazzak (Burning Legion), Azuregos (blue dragon), and Doom Lord Kazzak. World bosses require coordination and often drop epic items. They respawn on timers and are popular targets for guilds and groups.",
+    "content": "World bosses are powerful creatures that spawn in the open world and can be attacked by any player. They drop valuable loot and provide challenging combat. Examples include Doom Lord Kazzak (a Burning Legion commander at the Dark Portal in the Blasted Lands) and Azuregos (a blue dragon in Azshara). World bosses require coordination and often drop epic items. They respawn on timers and are popular targets for guilds and groups.",
     "keywords": ["world bosses", "lord kazzak", "azuregos", "doom lord kazzak", "loot", "coordination", "powerful creatures", "spawn in open world", "attacked by any player", "valuable loot", "challenging combat", "burning legion", "blue dragon", "require coordination", "epic items", "respawn on timers", "popular targets", "guilds", "groups"],
     "tags": ["npcs", "bosses", "world", "loot"]
   },
@@ -16,14 +16,14 @@
   {
     "id": "npc_quest_givers",
     "title": "Important Quest Givers",
-    "content": "Many NPCs provide crucial quests that advance storylines or provide rare rewards. Examples include Thrall (Orgrimmar), King Magni Bronzebeard (Ironforge), or Archmage Antonidas (Dalaran). Quest givers often have dialogue that provides lore and context. Some quest givers are part of larger quest chains that span multiple zones.",
-    "keywords": ["quest givers", "thrall", "king magni", "archmage antonidas", "lore", "storylines", "crucial quests", "advance storylines", "rare rewards", "orgrimmar", "ironforge", "dalaran", "dialogue", "provides lore", "context", "larger quest chains", "span multiple zones"],
+    "content": "Many NPCs provide crucial quests that advance storylines or provide rare rewards. Examples include Thrall (Orgrimmar), King Magni Bronzebeard (Ironforge), or Archmage Rhonin, leader of the Kirin Tor in Dalaran. Quest givers often have dialogue that provides lore and context. Some quest givers are part of larger quest chains that span multiple zones.",
+    "keywords": ["quest givers", "thrall", "king magni", "archmage rhonin", "lore", "storylines", "crucial quests", "advance storylines", "rare rewards", "orgrimmar", "ironforge", "dalaran", "dialogue", "provides lore", "context", "larger quest chains", "span multiple zones"],
     "tags": ["npcs", "quests", "lore", "story"]
   },
   {
     "id": "npc_class_trainers",
     "title": "Class and Profession Trainers",
-    "content": "Class trainers teach new abilities and talents as players level up. Profession trainers teach crafting skills and recipes. Examples include Uthel'nay (mage trainer in Orgrimmar) or Fenthwick (hunter trainer in Stormwind). Trainers are essential for character progression. Some trainers require reputation or special access.",
+    "content": "Class trainers teach new abilities and talents as players level up. Profession trainers teach crafting skills and recipes. Examples include Uthel'nay (mage trainer in Orgrimmar) or Fenthwick (rogue trainer in Stormwind). Trainers are essential for character progression. Some trainers require reputation or special access.",
     "keywords": ["class trainers", "profession trainers", "uthelnay", "fenthwick", "abilities", "talents", "teach new abilities", "level up", "crafting skills", "recipes", "mage trainer", "orgrimmar", "hunter trainer", "stormwind", "essential", "character progression", "require reputation", "special access"],
     "tags": ["npcs", "training", "progression", "skills"]
   },

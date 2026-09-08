@@ -1,0 +1,1032 @@
+[
+  {
+    "id": "instance_utgarde_keep",
+    "title": "Utgarde Keep",
+    "content": "Utgarde Keep is a level 69 to 72 five-player dungeon in Howling Fjord. It is the first dungeon most players see in Northrend, a vrykul hold built into the cliffs above Daggercap Bay. Its bosses are Prince Keleseth, Dalronn the Controller, and Ingvar the Plunderer.",
+    "keywords": [
+      "utgarde keep",
+      "uk",
+      "utgarde"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_nexus",
+    "title": "The Nexus",
+    "content": "The Nexus is a level 71 to 73 five-player dungeon in Coldarra, in the Borean Tundra. It is the middle ring of Malygos's spire, and the whole place is frozen blue crystal. Its bosses are Commander Stoutbeard, Grand Magus Telestra, Anomalus, Ormorok the Tree-Shaper, and Keristrasza.",
+    "keywords": [
+      "the nexus",
+      "nexus"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_azjol_nerub",
+    "title": "Azjol-Nerub",
+    "content": "Azjol-Nerub is a level 72 to 74 five-player dungeon in Dragonblight. It is a short three-boss run straight down through the old nerubian kingdom, and the second boss fight happens while you retreat up a web tunnel. Its bosses are Krik'thir the Gatewatcher, Hadronox, and Anub'arak.",
+    "keywords": [
+      "azjol nerub",
+      "azjol-nerub",
+      "an",
+      "nerub"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_ahn_kahet_the_old_kingdom",
+    "title": "Ahn'kahet: The Old Kingdom",
+    "content": "Ahn'kahet: The Old Kingdom is a level 73 to 75 five-player dungeon in Dragonblight. It shares an entrance area with Azjol-Nerub but runs deeper and darker, and Amanitar only appears on heroic difficulty. Its bosses are Elder Nadox, Prince Taldaram, Jedoga Shadowseeker, Amanitar, and Herald Volazj.",
+    "keywords": [
+      "ahnkahet",
+      "the old kingdom",
+      "old kingdom",
+      "ok"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_drak_tharon_keep",
+    "title": "Drak'Tharon Keep",
+    "content": "Drak'Tharon Keep is a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. It is a Drakkari troll fortress, and King Dred at the end is a devilsaur kept as a pet. Its bosses are Trollgore, Novos the Summoner, and King Dred.",
+    "keywords": [
+      "draktharon keep",
+      "draktharon",
+      "dtk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_violet_hold",
+    "title": "Violet Hold",
+    "content": "Violet Hold is a level 75 to 77 five-player dungeon in Dalaran. It is a prison break rather than a crawl: you hold a room against timed waves while sealed cells open, and which mini-bosses you get is randomised each run. Its bosses are Erekem, Moragg, Ichoron, Xevozz, Lavanthor, Zuramat the Obliterator, and Cyanigosa.",
+    "keywords": [
+      "violet hold",
+      "vh"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_gundrak",
+    "title": "Gundrak",
+    "content": "Gundrak is a level 76 to 78 five-player dungeon in Zul'Drak. It is where the Drakkari are butchering their own animal gods, and Eck the Ferocious is a bonus boss that only exists on heroic. Its bosses are Slad'ran, Moorabi, Drakkari Colossus, Gal'darah, and Eck the Ferocious.",
+    "keywords": [
+      "gundrak",
+      "gd"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_halls_of_stone",
+    "title": "Halls of Stone",
+    "content": "Halls of Stone is a level 77 to 79 five-player dungeon in The Storm Peaks. The middle of it is the Tribunal of Ages, an escort-and-defend event where Brann Bronzebeard reads titan records while you keep him alive. Its bosses are Krystallus, Maiden of Grief, and Sjonnir The Ironshaper.",
+    "keywords": [
+      "halls of stone",
+      "hos"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_halls_of_lightning",
+    "title": "Halls of Lightning",
+    "content": "Halls of Lightning is a level 79 to 80 five-player dungeon in The Storm Peaks. It sits above Halls of Stone in the same titan complex, and Loken at the end is a straight damage race against a stacking pulse. Its bosses are General Bjarngrim, Volkhan, Ionar, and Loken.",
+    "keywords": [
+      "halls of lightning",
+      "hol"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_utgarde_pinnacle",
+    "title": "Utgarde Pinnacle",
+    "content": "Utgarde Pinnacle is a level 79 to 80 five-player dungeon in Howling Fjord. It is the upper half of the same vrykul keep as Utgarde Keep but tuned for level 80, and Skadi is fought from the back of a drake. Its bosses are Svala Sorrowgrave, Gortok Palehoof, Skadi the Ruthless, and King Ymiron.",
+    "keywords": [
+      "utgarde pinnacle",
+      "up",
+      "pinnacle"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_oculus",
+    "title": "The Oculus",
+    "content": "The Oculus is a level 79 to 80 five-player dungeon in Coldarra, in the Borean Tundra. Most of it is fought from drake mounts in mid-air, which made it the least popular dungeon in the Dungeon Finder by a wide margin. Its bosses are Drakos the Interrogator, Varos Cloudstrider, Mage-Lord Urom, and Ley-Guardian Eregos.",
+    "keywords": [
+      "the oculus",
+      "oculus",
+      "occ"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_culling_of_stratholme",
+    "title": "The Culling of Stratholme",
+    "content": "The Culling of Stratholme is a level 79 to 80 five-player dungeon in the Caverns of Time in Tanaris. It replays Arthas purging Stratholme, and beating the optional timed run rewards the Bronze Drake mount. Its bosses are Meathook, Salramm the Fleshcrafter, Chrono-Lord Epoch, and Mal'Ganis.",
+    "keywords": [
+      "culling of stratholme",
+      "cos",
+      "strat cot"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_trial_of_the_champion",
+    "title": "Trial of the Champion",
+    "content": "Trial of the Champion is a level 79 to 80 five-player dungeon in the Argent Tournament grounds in Icecrown. It opens with a mounted jousting round using vehicle controls before turning into a normal fight. Its bosses are The Grand Champions, Eadric the Pure, Argent Confessor Paletress, and The Black Knight.",
+    "keywords": [
+      "trial of the champion",
+      "toc5",
+      "totc"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_forge_of_souls",
+    "title": "The Forge of Souls",
+    "content": "The Forge of Souls is a level 79 to 80 five-player dungeon in Icecrown Citadel. It is the first of the three patch 3.3 dungeons that lead into Icecrown Citadel itself. Its bosses are Bronjahm, and Devourer of Souls.",
+    "keywords": [
+      "forge of souls",
+      "fos"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_pit_of_saron",
+    "title": "Pit of Saron",
+    "content": "Pit of Saron is a level 79 to 80 five-player dungeon in Icecrown Citadel. The last stretch is a scripted escape with Jaina or Sylvanas clearing the way ahead of you. Its bosses are Forgemaster Garfrost, Ick, Krick, and Scourgelord Tyrannus.",
+    "keywords": [
+      "pit of saron",
+      "pos"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_halls_of_reflection",
+    "title": "Halls of Reflection",
+    "content": "Halls of Reflection is a level 79 to 80 five-player dungeon in Icecrown Citadel. It is two bosses and then a fighting retreat from the Lich King himself, who cannot be killed here. Its bosses are Falric, Marwyn, and The Lich King.",
+    "keywords": [
+      "halls of reflection",
+      "hor"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_naxxramas",
+    "title": "Naxxramas",
+    "content": "Naxxramas is a level 80 ten- and twenty-five-player raid in Dragonblight. It was moved from the Eastern Plaguelands and retuned for level 80 as Wrath's entry raid; it is split into the Arachnid, Plague, Military and Construct quarters, which can be cleared in any order before Sapphiron and Kel'Thuzad. Its bosses are Anub'Rekhan, Grand Widow Faerlina, Maexxna, Noth the Plaguebringer, Heigan the Unclean, Loatheb, Instructor Razuvious, Gothik the Harvester, The Four Horsemen, Patchwerk, Grobbulus, Gluth, Thaddius, Sapphiron, and Kel'Thuzad.",
+    "keywords": [
+      "naxxramas",
+      "naxx",
+      "scourge",
+      "necropolis"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_obsidian_sanctum",
+    "title": "The Obsidian Sanctum",
+    "content": "The Obsidian Sanctum is a level 80 ten- and twenty-five-player raid in the Chamber of Aspects beneath Wyrmrest Temple in Dragonblight. Leaving Sartharion's three drake lieutenants alive raises the difficulty and the loot, which is where the 'Sartharion plus three drakes' achievement runs come from. Its bosses are Tenebron, Shadron, Vesperon, and Sartharion.",
+    "keywords": [
+      "obsidian sanctum",
+      "os",
+      "sarth"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_eye_of_eternity",
+    "title": "The Eye of Eternity",
+    "content": "The Eye of Eternity is a level 80 ten- and twenty-five-player raid in Coldarra, in the Borean Tundra. It is a single fight against Malygos that ends with the whole raid on drakes in a vehicle phase. Its boss is Malygos.",
+    "keywords": [
+      "eye of eternity",
+      "eoe",
+      "malygos raid"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_ulduar",
+    "title": "Ulduar",
+    "content": "Ulduar is a level 80 ten- and twenty-five-player raid in The Storm Peaks. It opens with a vehicle assault on Flame Leviathan, and most bosses have an optional harder 'hard mode' triggered in-fight rather than by a difficulty setting; Algalon is a limited-attempt bonus encounter. Its bosses are Flame Leviathan, Ignis the Furnace Master, Razorscale, XT-002 Deconstructor, The Assembly of Iron, Kologarn, Auriaya, Hodir, Thorim, Freya, Mimiron, General Vezax, Yogg-Saron, and Algalon the Observer.",
+    "keywords": [
+      "ulduar",
+      "titan",
+      "siege of ulduar",
+      "inner sanctum"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_trial_of_the_crusader",
+    "title": "Trial of the Crusader",
+    "content": "Trial of the Crusader is a level 80 ten- and twenty-five-player raid in the Argent Tournament grounds in Icecrown. It is a single arena room with no trash at all, run as five staged encounters; the Heroic version is separately locked and limited by a shared attempt counter. Its bosses are Northrend Beasts, Lord Jaraxxus, Faction Champions, Twin Val'kyr, and Anub'arak.",
+    "keywords": [
+      "trial of the crusader",
+      "toc",
+      "totc25"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_icecrown_citadel",
+    "title": "Icecrown Citadel",
+    "content": "Icecrown Citadel is a level 80 ten- and twenty-five-player raid in Icecrown. It is the final raid of Wrath of the Lich King, released wing by wing over patch 3.3, and ends with the Lich King on the roof of the Frozen Throne. Its bosses are Lord Marrowgar, Lady Deathwhisper, Gunship Battle, Deathbringer Saurfang, Festergut, Rotface, Professor Putricide, Prince Valanar, Blood-Queen Lana'thel, Valithria Dreamwalker, Sindragosa, and The Lich King.",
+    "keywords": [
+      "icecrown citadel",
+      "icc"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_vault_of_archavon",
+    "title": "Vault of Archavon",
+    "content": "Vault of Archavon is a level 80 ten- and twenty-five-player raid in Wintergrasp. Access is a PvP prize rather than a raid lockout: only the faction currently holding Wintergrasp can enter, and each boss drops a mix of PvP and PvE gear. Its bosses are Archavon the Stone Watcher, Emalon the Storm Watcher, Koralon the Flame Watcher, and Toravon the Ice Watcher.",
+    "keywords": [
+      "vault of archavon",
+      "voa",
+      "archavon"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_ruby_sanctum",
+    "title": "The Ruby Sanctum",
+    "content": "The Ruby Sanctum is a level 80 ten- and twenty-five-player raid in the Chamber of Aspects beneath Wyrmrest Temple in Dragonblight. It arrived in patch 3.3.5 as the last raid of the expansion, and Halion is fought in both a physical and a shadow version of the room at once. Its bosses are Baltharus the Warborn, General Zarithrian, Saviana Ragefire, and Halion.",
+    "keywords": [
+      "ruby sanctum",
+      "rs",
+      "halion"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_onyxia_s_lair",
+    "title": "Onyxia's Lair",
+    "content": "Onyxia's Lair is a level 80 ten- and twenty-five-player raid in Dustwallow Marsh. Originally a level 60 raid, it was retuned to level 80 in patch 3.2.2 for the game's fifth anniversary and drops current Wrath-tier loot. Its boss is Onyxia.",
+    "keywords": [
+      "onyxias lair",
+      "onyxia",
+      "ony",
+      "black dragon",
+      "dragonmurk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_hellfire_citadel_ramparts",
+    "title": "Hellfire Citadel: Ramparts",
+    "content": "Hellfire Citadel: Ramparts is a level 59 to 62 five-player dungeon in Hellfire Peninsula. It is the first Outland dungeon most players run, and much of it is fought on open walkways rather than corridors. Its bosses are Watchkeeper Gargolmar, Omor the Unscarred, and Vazruden the Herald.",
+    "keywords": [
+      "hellfire ramparts",
+      "ramparts",
+      "hfr"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_hellfire_citadel_the_blood_furnace",
+    "title": "Hellfire Citadel: The Blood Furnace",
+    "content": "Hellfire Citadel: The Blood Furnace is a level 61 to 63 five-player dungeon in Hellfire Peninsula. It is where the Legion was mass-producing fel orcs, and the middle boss is fought through a sequence of gas-filled cells. Its bosses are The Maker, Broggok, and Keli'dan the Breaker.",
+    "keywords": [
+      "blood furnace",
+      "bf"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_coilfang_the_slave_pens",
+    "title": "Coilfang: The Slave Pens",
+    "content": "Coilfang: The Slave Pens is a level 62 to 64 five-player dungeon in Zangarmarsh. It is the shallowest of the three Coilfang wings and the usual first stop for a Cenarion Expedition reputation grind. Its bosses are Mennu the Betrayer, Rokmar the Crackler, and Quagmirran.",
+    "keywords": [
+      "slave pens",
+      "sp"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_coilfang_the_underbog",
+    "title": "Coilfang: The Underbog",
+    "content": "Coilfang: The Underbog is a level 63 to 65 five-player dungeon in Zangarmarsh. The Black Stalker at the bottom is a giant electrified spider that levitates the party. Its bosses are Hungarfen, Ghaz'an, Swamplord Musel'ek, and The Black Stalker.",
+    "keywords": [
+      "underbog",
+      "ub"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_auchindoun_mana_tombs",
+    "title": "Auchindoun: Mana-Tombs",
+    "content": "Auchindoun: Mana-Tombs is a level 64 to 66 five-player dungeon in Terokkar Forest. It is the Consortium's wing of Auchindoun, and the ethereal prince at the end is one of the easier Outland end bosses. Its bosses are Pandemonius, Tavarok, and Nexus-Prince Shaffar.",
+    "keywords": [
+      "mana tombs",
+      "mt"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_auchindoun_auchenai_crypts",
+    "title": "Auchindoun: Auchenai Crypts",
+    "content": "Auchindoun: Auchenai Crypts is a level 65 to 67 five-player dungeon in Terokkar Forest. It is full of undead draenei, and Shirrak the Dead Watcher slows casting for the whole room. Its bosses are Shirrak the Dead Watcher, and Exarch Maladaar.",
+    "keywords": [
+      "auchenai crypts",
+      "crypts",
+      "ac"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_opening_of_the_dark_portal",
+    "title": "Opening of the Dark Portal",
+    "content": "Opening of the Dark Portal is a level 66 to 68 five-player dungeon in the Caverns of Time in Tanaris. Players usually call it the Black Morass. It is a timed defence of Medivh through eighteen portal waves at the moment the Dark Portal was first opened, and it was the attunement step for Karazhan. The Dark Portal itself stands in the Blasted Lands, and this instance is only a vision of its past. Its bosses are Chrono Lord Deja, Temporus, and Aeonus.",
+    "keywords": [
+      "black morass",
+      "bm",
+      "opening of the dark portal",
+      "cot2"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_auchindoun_sethekk_halls",
+    "title": "Auchindoun: Sethekk Halls",
+    "content": "Auchindoun: Sethekk Halls is a level 67 to 68 five-player dungeon in Terokkar Forest. The arakkoa wing of Auchindoun, and on heroic it holds Anzu, the raven god summoned by druids for their flight-form quest. Its bosses are Darkweaver Syth, Talon King Ikiss, and Anzu.",
+    "keywords": [
+      "sethekk halls",
+      "sethekk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_auchindoun_shadow_labyrinth",
+    "title": "Auchindoun: Shadow Labyrinth",
+    "content": "Auchindoun: Shadow Labyrinth is a level 69 to 70 five-player dungeon in Terokkar Forest. It is the longest and hardest Auchindoun wing, and Murmur at the end is a sound elemental with a room-wide pull-and-detonate. Its bosses are Ambassador Hellmaw, Blackheart the Inciter, Grandmaster Vorpil, and Murmur.",
+    "keywords": [
+      "shadow labyrinth",
+      "shadow lab",
+      "slabs"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_hellfire_citadel_the_shattered_halls",
+    "title": "Hellfire Citadel: The Shattered Halls",
+    "content": "Hellfire Citadel: The Shattered Halls is a level 69 to 70 five-player dungeon in Hellfire Peninsula. It has a reputation as the hardest of the Hellfire wings, and its heroic version runs on a timer to rescue prisoners. Its bosses are Grand Warlock Nethekurse, Blood Guard Porung, Warbringer O'mrogg, and Warchief Kargath Bladefist.",
+    "keywords": [
+      "shattered halls",
+      "sh"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_coilfang_the_steamvault",
+    "title": "Coilfang: The Steamvault",
+    "content": "Coilfang: The Steamvault is a level 69 to 70 five-player dungeon in Zangarmarsh. It is the deepest Coilfang wing and the last step of the old Karazhan-era Cenarion Expedition grind. Its bosses are Hydromancer Thespia, Mekgineer Steamrigger, and Warlord Kalithresh.",
+    "keywords": [
+      "steamvault",
+      "sv"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_tempest_keep_the_mechanar",
+    "title": "Tempest Keep: The Mechanar",
+    "content": "Tempest Keep: The Mechanar is a level 69 to 70 five-player dungeon in Netherstorm. It is one of the three satellite wings of Tempest Keep, all mechanical, and the shortest of them. Its bosses are Mechano-Lord Capacitus, Nethermancer Sepethrea, and Pathaleon the Calculator.",
+    "keywords": [
+      "mechanar",
+      "mech"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_tempest_keep_the_botanica",
+    "title": "Tempest Keep: The Botanica",
+    "content": "Tempest Keep: The Botanica is a level 69 to 70 five-player dungeon in Netherstorm. It is a greenhouse wing of Tempest Keep, and Warp Splinter at the end summons saplings that must be killed fast. Its bosses are Commander Sarannis, High Botanist Freywinn, Thorngrin the Tender, Laj, and Warp Splinter.",
+    "keywords": [
+      "botanica",
+      "bot"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_tempest_keep_the_arcatraz",
+    "title": "Tempest Keep: The Arcatraz",
+    "content": "Tempest Keep: The Arcatraz is a level 69 to 70 five-player dungeon in Netherstorm. It is a prison wing holding things the naaru locked away, and it was the attunement step for the Black Temple. Its bosses are Zereketh the Unbound, Dalliah the Doomsayer, Wrath-Scryer Soccothrates, and Harbinger Skyriss.",
+    "keywords": [
+      "arcatraz",
+      "arc"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_magister_s_terrace",
+    "title": "Magister's Terrace",
+    "content": "Magister's Terrace is a level 69 to 70 five-player dungeon in the Isle of Quel'Danas. It was added in patch 2.4 as the last Burning Crusade dungeon, and its heroic mode drops the Swift White Hawkstrider mount. Its bosses are Selin Fireheart, Vexallus, Priestess Delrissa, and Kael'thas Sunstrider.",
+    "keywords": [
+      "magisters terrace",
+      "mgt",
+      "magister's terrace"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_karazhan",
+    "title": "Karazhan",
+    "content": "Karazhan is a level 70 to 73 ten-player raid in Deadwind Pass. It is Medivh's abandoned tower and the entry raid of the Burning Crusade, known for its chess event and an optional opera encounter that rotates between three scripts. Its bosses are Attumen the Huntsman, Moroes, Maiden of Virtue, Opera Event, The Curator, Terestian Illhoof, Shade of Aran, Netherspite, Chess Event, Prince Malchezaar, and Nightbane.",
+    "keywords": [
+      "karazhan",
+      "kara",
+      "kz"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_gruul_s_lair",
+    "title": "Gruul's Lair",
+    "content": "Gruul's Lair is a level 70 twenty-five-player raid in Blade's Edge Mountains. Two bosses only: a five-ogre council fight and then Gruul himself, who grows in size and damage on a timer. Its bosses are High King Maulgar, and Gruul the Dragonkiller.",
+    "keywords": [
+      "gruuls lair",
+      "gruul"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_magtheridon_s_lair",
+    "title": "Magtheridon's Lair",
+    "content": "Magtheridon's Lair is a level 70 twenty-five-player raid in Hellfire Peninsula. A single boss beneath Hellfire Citadel, fought while five channelers hold him in place. Its boss is Magtheridon.",
+    "keywords": [
+      "magtheridons lair",
+      "magtheridon",
+      "mag"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_coilfang_serpentshrine_cavern",
+    "title": "Coilfang: Serpentshrine Cavern",
+    "content": "Coilfang: Serpentshrine Cavern is a level 70 twenty-five-player raid in Zangarmarsh. It is the raid wing of Coilfang Reservoir and ends with Lady Vashj, whose fight requires relaying tainted cores between phases. Its bosses are Hydross the Unstable, The Lurker Below, Leotheras the Blind, Fathom-Lord Karathress, Morogrim Tidewalker, and Lady Vashj.",
+    "keywords": [
+      "serpentshrine cavern",
+      "ssc",
+      "vashj"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_tempest_keep",
+    "title": "Tempest Keep",
+    "content": "Tempest Keep is a level 70 twenty-five-player raid in Netherstorm. Usually called The Eye; it is the central spire of Tempest Keep and ends with Kael'thas Sunstrider in a long multi-phase fight. Its bosses are Al'ar, Void Reaver, High Astromancer Solarian, and Kael'thas Sunstrider.",
+    "keywords": [
+      "tempest keep",
+      "the eye",
+      "tk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_the_battle_for_mount_hyjal",
+    "title": "The Battle for Mount Hyjal",
+    "content": "The Battle for Mount Hyjal is a level 70 twenty-five-player raid in the Caverns of Time in Tanaris. It replays the battle at the World Tree as eight waves of trash between bosses, which makes it far more trash-heavy than any other raid of its tier. Its bosses are Rage Winterchill, Anetheron, Kaz'rogal, Azgalor, and Archimonde.",
+    "keywords": [
+      "mount hyjal",
+      "hyjal",
+      "mh",
+      "battle for mount hyjal"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_black_temple",
+    "title": "Black Temple",
+    "content": "Black Temple is a level 70 twenty-five-player raid in Shadowmoon Valley. Illidan Stormrage's fortress and the intended final raid of the Burning Crusade before the Sunwell was added. Its bosses are High Warlord Naj'entus, Supremus, Shade of Akama, Teron Gorefiend, Gurtogg Bloodboil, Reliquary of Souls, Mother Shahraz, The Illidari Council, and Illidan Stormrage.",
+    "keywords": [
+      "black temple",
+      "bt",
+      "illidan"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_zul_aman",
+    "title": "Zul'Aman",
+    "content": "Zul'Aman is a level 70 to 73 ten-player raid in the Ghostlands. Added in patch 2.3, it runs on a timer: clearing the four animal-god bosses fast enough rewards the Amani War Bear. Its bosses are Akil'zon, Nalorakk, Jan'alai, Halazzi, Hex Lord Malacrass, and Zul'jin.",
+    "keywords": [
+      "zulaman",
+      "za"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_the_sunwell",
+    "title": "The Sunwell",
+    "content": "The Sunwell is a level 70 twenty-five-player raid in the Isle of Quel'Danas. Added in patch 2.4 as the final raid of the Burning Crusade, and its gear was the last tier before Wrath launched. Its bosses are Kalecgos, Brutallus, Felmyst, The Eredar Twins, M'uru, and Kil'jaeden.",
+    "keywords": [
+      "sunwell plateau",
+      "sunwell",
+      "swp"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_ragefire_chasm",
+    "title": "Ragefire Chasm",
+    "content": "Ragefire Chasm is a level 15 to 16 five-player dungeon in Orgrimmar, through the Cleft of Shadow. It is the lowest-level dungeon in the game and the only one inside a capital city. Its bosses are Oggleflint, Taragaman the Hungerer, Jergosh the Invoker, and Bazzalan.",
+    "keywords": [
+      "ragefire chasm",
+      "rfc"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_deadmines",
+    "title": "Deadmines",
+    "content": "Deadmines is a level 17 to 20 five-player dungeon in Westfall. It runs through a mine and out onto a pirate ship moored in a cavern, and Edwin VanCleef leads the Defias Brotherhood at the end. Its bosses are Rhahk'Zor, Sneed, Gilnid, Mr. Smite, Cookie, Captain Greenskin, and Edwin VanCleef.",
+    "keywords": [
+      "deadmines",
+      "vc",
+      "the deadmines",
+      "mine cart",
+      "van cleef",
+      "defias"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_wailing_caverns",
+    "title": "Wailing Caverns",
+    "content": "Wailing Caverns is a level 17 to 20 five-player dungeon in the Barrens. It is a maze of twisting tunnels with no clear route, which is most of its reputation. Its bosses are Lady Anacondra, Lord Cobrahn, Kresh, Lord Pythas, Skum, Lord Serpentis, Verdan the Everliving, and Mutanus the Devourer.",
+    "keywords": [
+      "wailing caverns",
+      "wc",
+      "naralex",
+      "emerald dream"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_shadowfang_keep",
+    "title": "Shadowfang Keep",
+    "content": "Shadowfang Keep is a level 18 to 21 five-player dungeon in Silverpine Forest. It is a haunted worgen castle, and the renegade mage Archmage Arugal waits at the top. Its bosses are Rethilgore, Razorclaw the Butcher, Baron Silverlaine, Commander Springvale, Odo the Blindwatcher, Fenrus the Devourer, Wolf Master Nandos, and Archmage Arugal.",
+    "keywords": [
+      "shadowfang keep",
+      "sfk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_blackfathom_deeps",
+    "title": "Blackfathom Deeps",
+    "content": "Blackfathom Deeps is a level 21 to 24 five-player dungeon in Ashenvale. A flooded night elf temple to an old naga-worshipped god, with a long underwater stretch. Its bosses are Ghamoo-ra, Lady Sarevess, Gelihast, Lorgus Jett, Old Serra'kis, Twilight Lord Kelris, and Aku'mai.",
+    "keywords": [
+      "blackfathom deeps",
+      "bfd",
+      "twilight hammer"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_stormwind_stockade",
+    "title": "Stormwind Stockade",
+    "content": "Stormwind Stockade is a level 22 to 25 five-player dungeon in Stormwind City. A short prison-riot dungeon under the Trade District, and one of the fastest runs in the game. Its bosses are Targorr the Dread, Kam Deepfury, Hamhock, Bazil Thredd, and Dextren Ward.",
+    "keywords": [
+      "stockade",
+      "stocks",
+      "stormwind stockade"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_razorfen_kraul",
+    "title": "Razorfen Kraul",
+    "content": "Razorfen Kraul is a level 24 to 27 five-player dungeon in the Southern Barrens. An outdoor quilboar warren built from thorns rather than an indoor dungeon. Its bosses are Roogug, Aggem Thorncurse, Death Speaker Jargba, Overlord Ramtusk, Agathelos the Raging, and Charlga Razorflank.",
+    "keywords": [
+      "razorfen kraul",
+      "rfk"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_gnomeregan",
+    "title": "Gnomeregan",
+    "content": "Gnomeregan is a level 25 to 28 five-player dungeon in Dun Morogh. The irradiated gnome capital, and Mekgineer Thermaplugg at the end is fought around a room of bomb-dispensing panels. Its bosses are Grubbis, Viscous Fallout, Electrocutioner 6000, Crowd Pummeler 9-60, and Mekgineer Thermaplugg.",
+    "keywords": [
+      "gnomeregan",
+      "gnomer"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_scarlet_monastery",
+    "title": "Scarlet Monastery",
+    "content": "Scarlet Monastery is a level 29 to 40 five-player dungeon in Tirisfal Glades. It is four separate wings behind one entrance -- Graveyard, Library, Armory and Cathedral -- run at increasing levels rather than as one dungeon. Its bosses are Interrogator Vishas, Bloodmage Thalnos, Houndmaster Loksey, Arcanist Doan, Herod, High Inquisitor Fairbanks, and High Inquisitor Whitemane.",
+    "keywords": [
+      "scarlet monastery",
+      "sm",
+      "smc"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_razorfen_downs",
+    "title": "Razorfen Downs",
+    "content": "Razorfen Downs is a level 34 to 37 five-player dungeon in the Southern Barrens. The undead half of the quilboar warrens, ending with the lich Amnennar the Coldbringer. Its bosses are Tuten'kash, Mordresh Fire Eye, Glutton, and Amnennar the Coldbringer.",
+    "keywords": [
+      "razorfen downs",
+      "rfd"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_uldaman",
+    "title": "Uldaman",
+    "content": "Uldaman is a level 37 to 40 five-player dungeon in the Badlands. A titan vault, and the first place most players meet the dwarves' own origin story. Its bosses are Revelosh, Baelog, Ironaya, Ancient Stone Keeper, Galgann Firehammer, Grimlok, and Archaedas.",
+    "keywords": [
+      "uldaman",
+      "ulda"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_maraudon",
+    "title": "Maraudon",
+    "content": "Maraudon is a level 41 to 48 five-player dungeon in Desolace. Split into orange, purple and pristine sections with separate entrances, ending at Princess Theradras. Its bosses are Noxxion, Razorlash, Lord Vyletongue, Celebras the Cursed, Landslide, Tinkerer Gizlock, Rotgrip, and Princess Theradras.",
+    "keywords": [
+      "maraudon",
+      "mara",
+      "centaur",
+      "valley of spears"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_zul_farrak",
+    "title": "Zul'Farrak",
+    "content": "Zul'Farrak is a level 43 to 46 five-player dungeon in Tanaris. Best known for the pyramid steps, where a huge troll wave attacks at once, and for Gahz'rilla. Its bosses are Hydromancer Velratha, Antu'sul, Theka the Martyr, Witch Doctor Zum'rah, Nekrum Gutchewer, Chief Ukorz Sandscalp, and Gahz'rilla.",
+    "keywords": [
+      "zulfarrak",
+      "zf",
+      "sandfury",
+      "antusul"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_sunken_temple",
+    "title": "Sunken Temple",
+    "content": "Sunken Temple is a level 47 to 50 five-player dungeon in the Swamp of Sorrows. Properly the Temple of Atal'Hakkar; it is a confusing layered ruin and a long run for its level. Its bosses are Atal'alarion, Dreamscythe, Weaver, Jammal'an the Prophet, Morphaz, Hazzas, and Shade of Eranikus.",
+    "keywords": [
+      "sunken temple",
+      "st",
+      "temple of atalhakkar",
+      "atal'ai",
+      "avatar of hakkar"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_blackrock_depths",
+    "title": "Blackrock Depths",
+    "content": "Blackrock Depths is a level 49 to 56 five-player dungeon in Blackrock Mountain. By far the largest dungeon in the game, with a bar, an arena and a prison inside it, ending at Emperor Dagran Thaurissan. Its bosses are Lord Roccor, High Interrogator Gerstahn, Houndmaster Grebmar, Pyromancer Loregrain, Lord Incendius, Warder Stilgiss, Fineous Darkvire, Bael'Gar, General Angerforge, Golem Lord Argelmach, Ambassador Flamelash, Magmus, and Emperor Dagran Thaurissan.",
+    "keywords": [
+      "blackrock depths",
+      "brd",
+      "dark iron",
+      "dwarves"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_blackrock_spire",
+    "title": "Blackrock Spire",
+    "content": "Blackrock Spire is a level 57 to 63 five- and ten-player dungeon in Blackrock Mountain. Split into Lower and Upper halves sharing one entrance; Upper was originally a ten-player raid. Its bosses are Highlord Omokk, Shadow Hunter Vosh'gajin, War Master Voone, Mother Smolderweb, Quartermaster Zigris, Halycon, Overlord Wyrmthalak, Pyroguard Emberseer, Warchief Rend Blackhand, The Beast, and General Drakkisath.",
+    "keywords": [
+      "blackrock spire",
+      "lbrs",
+      "ubrs",
+      "burning steppes",
+      "dragonkin"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_dire_maul",
+    "title": "Dire Maul",
+    "content": "Dire Maul is a level 55 to 60 five-player dungeon in Feralas. Three separate wings -- East, West and North -- and the North wing has a well-known trick for looting the king's tribute without killing him. Its bosses are Zevrim Thornhoof, Hydrospawn, Lethtendris, Alzzin the Wildshaper, Illyanna Ravenoak, Magister Kalendris, Immol'thar, Tendris Warpwood, Prince Tortheldrin, Guard Mol'dar, Stomper Kreeg, Guard Fengus, Guard Slip'kik, Captain Kromcrush, Cho'Rush the Observer, and King Gordok.",
+    "keywords": [
+      "dire maul",
+      "dm east",
+      "dm west",
+      "dm north",
+      "warpwood quarter",
+      "capital gardens",
+      "gordok commons",
+      "ogres",
+      "pusillin"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_scholomance",
+    "title": "Scholomance",
+    "content": "Scholomance is a level 58 to 60 five-player dungeon in the Western Plaguelands. A necromancy school inside Caer Darrow, ending with Darkmaster Gandling. Its bosses are Jandice Barov, Rattlegore, Marduk Blackpool, Vectus, Ras Frostwhisper, Instructor Malicia, Doctor Theolen Krastinov, Lorekeeper Polkelt, The Ravenian, Lord Alexei Barov, Lady Illucia Barov, and Darkmaster Gandling.",
+    "keywords": [
+      "scholomance",
+      "scholo",
+      "kirtonos",
+      "scourge",
+      "caer darrow"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_stratholme",
+    "title": "Stratholme",
+    "content": "Stratholme is a level 58 to 60 five-player dungeon in the Eastern Plaguelands. Two separate entrances: the Scarlet side and the undead side, where Baron Rivendare drops the Deathcharger's Reins on a timed run. Its bosses are The Unforgiven, Hearthsinger Forresten, Timmy the Cruel, Cannon Master Willey, Archivist Galford, Balnazzar, Baroness Anastari, Nerub'enkan, Maleki the Pallid, Ramstein the Gorger, Magistrate Barthilas, and Baron Rivendare.",
+    "keywords": [
+      "stratholme",
+      "strat",
+      "live side",
+      "baron run",
+      "scarlet crusade",
+      "scourge",
+      "plague"
+    ],
+    "tags": [
+      "instance",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "instance_molten_core",
+    "title": "Molten Core",
+    "content": "Molten Core is a level 60 to 63 forty-player raid in Blackrock Mountain. The game's first full raid tier, ten bosses ending at Ragnaros, and the source of Tier 1 armour. Its bosses are Lucifron, Magmadar, Gehennas, Garr, Shazzrah, Baron Geddon, Sulfuron Harbinger, Golemagg the Incinerator, Majordomo Executus, and Ragnaros.",
+    "keywords": [
+      "molten core",
+      "mc",
+      "fire elementals"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_blackwing_lair",
+    "title": "Blackwing Lair",
+    "content": "Blackwing Lair is a level 60 to 63 forty-player raid in Blackrock Mountain. Nefarian's lair above Blackrock Spire, and the source of Tier 2 armour. Its bosses are Razorgore the Untamed, Vaelastrasz the Corrupt, Broodlord Lashlayer, Firemaw, Ebonroc, Flamegor, Chromaggus, and Nefarian.",
+    "keywords": [
+      "blackwing lair",
+      "bwl",
+      "black dragonflight",
+      "drakes"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_zul_gurub",
+    "title": "Zul'Gurub",
+    "content": "Zul'Gurub is a level 57 to 63 twenty-player raid in Stranglethorn Vale. A troll city raid on a three-day lockout, ending at the blood god Hakkar. Its bosses are High Priest Venoxis, High Priestess Jeklik, High Priestess Mar'li, Bloodlord Mandokir, Gahz'ranka, High Priest Thekal, High Priestess Arlokk, Jin'do the Hexxer, and Hakkar.",
+    "keywords": [
+      "zulgurub",
+      "zg",
+      "gurubashi"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_ruins_of_ahn_qiraj",
+    "title": "Ruins of Ahn'Qiraj",
+    "content": "Ruins of Ahn'Qiraj is a level 60 to 63 twenty-player raid in Silithus. The smaller of the two Ahn'Qiraj raids, opened by the same war effort as the Temple. Its bosses are Kurinnaxx, General Rajaxx, Moam, Buru the Gorger, Ayamiss the Hunter, and Ossirian the Unscarred.",
+    "keywords": [
+      "ruins of ahnqiraj",
+      "aq20",
+      "qiraji",
+      "silithid"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  },
+  {
+    "id": "instance_ahn_qiraj_temple",
+    "title": "Ahn'Qiraj Temple",
+    "content": "Ahn'Qiraj Temple is a level 60 to 63 forty-player raid in Silithus. The larger Ahn'Qiraj raid, ending at C'Thun, and the source of Tier 2.5 armour. Its bosses are The Prophet Skeram, Battleguard Sartura, Fankriss the Unyielding, Viscidus, Princess Huhuran, Twin Emperors, Ouro, and C'Thun.",
+    "keywords": [
+      "temple of ahnqiraj",
+      "aq40",
+      "aq",
+      "qiraji",
+      "silithid"
+    ],
+    "tags": [
+      "instance",
+      "raid"
+    ]
+  }
+]

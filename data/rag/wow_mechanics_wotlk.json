@@ -1,0 +1,44 @@
+[
+  {
+    "id": "mechanic_dungeon_finder",
+    "title": "Dungeon Finder",
+    "content": "The Dungeon Finder (patch 3.3, December 2009) automatically groups players across realms for a chosen dungeon or a random one, through a queue where each player selects the Tank, Healer, and/or Damage role they'll fill. Once a group forms, everyone is teleported directly to the dungeon entrance, and abandoning the run before the group agrees to disband applies the Dungeon Deserter debuff. Queuing for a random Northrend heroic is the most common use: the first one completed each day awards 2 Emblems of Frost, and every additional one that day awards 2 Emblems of Triumph instead, making it the fastest way to gear up at level 80.",
+    "keywords": ["dungeon finder", "lfg tool", "random heroic", "cross realm", "role selection", "dungeon deserter"],
+    "tags": ["mechanic", "wotlk", "dungeons", "grouping"]
+  },
+  {
+    "id": "mechanic_heroic_emblems",
+    "title": "Heroic Dungeons and Emblems",
+    "content": "Heroic difficulty unlocks at level 80 for every Northrend five-man dungeon, with no attunement or key required as there was in the Burning Crusade -- just queue for it. Heroics and raids pay Emblems rather than gold-bought tokens; by patch 3.3.5 the two currencies actually being earned are Emblem of Triumph (heroics, Trial of the Crusader, and repeat random-dungeon wins) and Emblem of Frost (Icecrown Citadel and the day's first random heroic). The earlier Emblem of Heroism, Valor, and Conquest from Naxxramas, Ulduar, and Trial of the Crusader's launch are no longer dropped, having been superseded as raid content advanced. Emblems are spent with quartermasters in Dalaran and Icecrown for current-tier epic gear.",
+    "keywords": ["heroic dungeons", "emblem of triumph", "emblem of frost", "emblem of valor", "emblem of conquest", "emblem of heroism", "quartermaster"],
+    "tags": ["mechanic", "wotlk", "dungeons", "currency", "gearing"]
+  },
+  {
+    "id": "mechanic_dual_spec",
+    "title": "Dual Talent Specialization",
+    "content": "Dual talent specialization (patch 3.1) lets a character save two separate talent builds -- each with its own glyphs and action bars -- and swap between them outside combat. It costs 1000 gold, requires level 40, and is bought once from your class trainer; after that, switching between the two saved specs is free and unlimited. Players commonly keep one PvE spec and one PvP spec, or a tank/healer spec alongside a damage spec, and swap depending on what the group needs.",
+    "keywords": ["dual talent specialization", "dual spec", "1000 gold", "level 40", "class trainer"],
+    "tags": ["mechanic", "wotlk", "talents", "character"]
+  },
+  {
+    "id": "mechanic_cold_weather_flying",
+    "title": "Cold Weather Flying",
+    "content": "Cold Weather Flying is the separate skill required to use a flying mount inside Northrend; already owning Expert (280%) riding elsewhere in Azeroth doesn't carry over automatically. Trained directly from a flying trainer in Dalaran, the Storm Peaks, or Sholazar Basin, it costs 1000 gold and still requires level 77 as of patch 3.3.5, even though Northrend's own zones open up as early as level 68. The one shortcut is the Tome of Cold Weather Flight, a bind-to-account item a level 80 character can buy for 1000 gold and mail to their own alt, letting that alt fly in Northrend from level 68 onward instead of waiting for 77.",
+    "keywords": ["cold weather flying", "flying mount", "northrend", "level 77", "tome of cold weather flight", "dalaran"],
+    "tags": ["mechanic", "wotlk", "flying", "mounts"]
+  },
+  {
+    "id": "mechanic_death_knight_runes",
+    "title": "Death Knight Runes and Runic Power",
+    "content": "Death Knights don't use mana, rage, or energy; they run on six runes -- two Blood, two Frost, and two Unholy -- socketed into their weapon, plus a Runic Power bar. Spending a rune casts its associated ability and sends that rune on a short recharge, while Runic Power builds up as runes are spent and fuels the class's finishing moves. Death Knights are Wrath of the Lich King's hero class, and every one of them starts at level 55 rather than level 1, already partway through the leveling curve.",
+    "keywords": ["death knight", "runes", "runic power", "blood rune", "frost rune", "unholy rune", "hero class", "level 55"],
+    "tags": ["mechanic", "wotlk", "class", "death knight", "resource"]
+  },
+  {
+    "id": "mechanic_vehicle_combat",
+    "title": "Vehicle Combat",
+    "content": "Vehicles are a Wrath of the Lich King addition: mountable siege engines, cannons, and creatures that swap a player's normal action bars for the vehicle's own abilities for as long as they're in the seat. They show up throughout the expansion -- Ulduar's Flame Leviathan fight, the cannons defending Wintergrasp and Isle of Conquest, the siege engines and demolishers of Strand of the Ancients, and mine-cart or turret sections tucked into several dungeons. Leaving a vehicle returns a player to their normal spellbook immediately, and most vehicles can be destroyed out from under their rider by enemy fire.",
+    "keywords": ["vehicles", "vehicle combat", "siege engine", "flame leviathan", "demolisher"],
+    "tags": ["mechanic", "wotlk", "vehicles", "pvp", "raiding"]
+  }
+]

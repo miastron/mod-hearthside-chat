@@ -15,6 +15,7 @@
 #include "hs_metrics.h"
 #include "hs_opener.h"
 #include "hs_queue.h"
+#include "hs_rag_store.h"
 #include "hs_script.h"
 
 #include "ScriptMgr.h"
@@ -122,6 +123,27 @@ namespace
                 Hs_LoadGroundedQuestionsFromDb();
                 Hs_LoadGroundedTemplatesFromDb();
             }
+        }
+    };
+
+    // Loads hside_rag into the retriever's in-memory index (hs_rag_store.h).
+    // Same "SQL is the source of truth" shape as the two above, with one
+    // difference worth knowing: hside_rag is itself generated from
+    // data/rag/*.json by data/rag/generate_rag_sql.py, so an operator editing
+    // world knowledge edits the JSON, regenerates, re-applies, and reloads --
+    // the table is the shipping format, not the authoring one.
+    //
+    // Registered before the queue and generator lifecycles below, both of
+    // which retrieve from this table on their own threads.
+    class HsRagLifecycleWorldScript : public WorldScript
+    {
+    public:
+        HsRagLifecycleWorldScript() : WorldScript("HsRagLifecycleWorldScript") {}
+        void OnStartup() override { Hs_LoadRagFromDb(); }
+        void OnAfterConfigLoad(bool reload) override
+        {
+            if (reload)
+                Hs_LoadRagFromDb();
         }
     };
 
@@ -298,6 +320,7 @@ void Addmod_hearthside_chatScripts()
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();
     new HsEventAffinityLifecycleWorldScript();
+    new HsRagLifecycleWorldScript();
     new HsChatHandler();
     new HsBridgePlayerScript();
     new HsDeliveryWorldScript();
@@ -312,6 +335,11 @@ void Addmod_hearthside_chatScripts()
     // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above; both
     // run, and neither depends on the other's ordering.
     new HsEventDeathHandler();
+    // The other two thirds of the deferred death dispatch: the killer's name
+    // arrives on its own hook, and the drain turns the pair into an event
+    // (hs_event.h).
+    new HsEventKillerHandler();
+    new HsEventDeathDrainWorldScript();
     new HsEventLevelHandler();
     new HsEventPvpKillHandler();
     new HsEventRollHandler();

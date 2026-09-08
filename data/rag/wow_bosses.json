@@ -1,0 +1,1198 @@
+[
+  {
+    "id": "boss_ingvar_the_plunderer",
+    "title": "Ingvar the Plunderer",
+    "content": "Ingvar the Plunderer is the final boss of Utgarde Keep, a level 69 to 72 five-player dungeon in Howling Fjord. He is resurrected once by a val'kyr after the first kill, so the fight is effectively two rounds.",
+    "keywords": [
+      "ingvar the plunderer",
+      "utgarde keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_prince_keleseth",
+    "title": "Prince Keleseth",
+    "content": "Prince Keleseth is the first boss of Utgarde Keep, a level 69 to 72 five-player dungeon in Howling Fjord. He freezes a player in an ice tomb that the rest of the group has to break.",
+    "keywords": [
+      "prince keleseth",
+      "utgarde keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_keristrasza",
+    "title": "Keristrasza",
+    "content": "Keristrasza is the final boss of The Nexus, a level 71 to 73 five-player dungeon in Coldarra, in the Borean Tundra. She applies a stacking chill that forces the group to keep moving for the whole fight.",
+    "keywords": [
+      "keristrasza",
+      "the nexus"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_grand_magus_telestra",
+    "title": "Grand Magus Telestra",
+    "content": "Grand Magus Telestra is a boss of The Nexus, a level 71 to 73 five-player dungeon in Coldarra, in the Borean Tundra. She splits into three copies partway through, each with a different school of magic.",
+    "keywords": [
+      "grand magus telestra",
+      "the nexus"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_anub_arak",
+    "title": "Anub'arak",
+    "content": "Anub'arak is the final boss of Azjol-Nerub, a level 72 to 74 five-player dungeon in Dragonblight. He is the last nerubian king, raised by the Scourge; he also appears as the final encounter of Trial of the Crusader.",
+    "keywords": [
+      "anub'arak",
+      "azjol-nerub"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_hadronox",
+    "title": "Hadronox",
+    "content": "Hadronox is the second boss of Azjol-Nerub, a level 72 to 74 five-player dungeon in Dragonblight. The fight is a fighting retreat up a web tunnel while she drags the party's own pursuers into it.",
+    "keywords": [
+      "hadronox",
+      "azjol-nerub"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_krik_thir_the_gatewatcher",
+    "title": "Krik'thir the Gatewatcher",
+    "content": "Krik'thir the Gatewatcher is the first boss of Azjol-Nerub, a level 72 to 74 five-player dungeon in Dragonblight. He is guarded by three named watchers that can be pulled with him.",
+    "keywords": [
+      "krik'thir the gatewatcher",
+      "azjol-nerub"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_herald_volazj",
+    "title": "Herald Volazj",
+    "content": "Herald Volazj is the final boss of Ahn'kahet: The Old Kingdom, a level 73 to 75 five-player dungeon in Dragonblight. He casts an insanity effect that puts each player in a private phase fighting shadow copies of the group.",
+    "keywords": [
+      "herald volazj",
+      "ahn'kahet: the old kingdom"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_prince_taldaram",
+    "title": "Prince Taldaram",
+    "content": "Prince Taldaram is a boss of Ahn'kahet: The Old Kingdom, a level 73 to 75 five-player dungeon in Dragonblight. He is a san'layn vampire who vanishes and embraces a player for heavy damage until two nearby orbs are clicked.",
+    "keywords": [
+      "prince taldaram",
+      "ahn'kahet: the old kingdom"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_elder_nadox",
+    "title": "Elder Nadox",
+    "content": "Elder Nadox is the first boss of Ahn'kahet: The Old Kingdom, a level 73 to 75 five-player dungeon in Dragonblight. He summons swarms of adds, and one guardian must be killed fast or he becomes immune.",
+    "keywords": [
+      "elder nadox",
+      "ahn'kahet: the old kingdom"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_king_dred",
+    "title": "King Dred",
+    "content": "King Dred is the final boss of Drak'Tharon Keep, a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. He is a devilsaur kept by the Drakkari, and the raptors around him can be pulled in with the fight.",
+    "keywords": [
+      "king dred",
+      "drak'tharon keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_novos_the_summoner",
+    "title": "Novos the Summoner",
+    "content": "Novos the Summoner is the second boss of Drak'Tharon Keep, a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. He is untouchable until four channelling crystals around the platform are destroyed.",
+    "keywords": [
+      "novos the summoner",
+      "drak'tharon keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_cyanigosa",
+    "title": "Cyanigosa",
+    "content": "Cyanigosa is the final boss of Violet Hold, a level 75 to 77 five-player dungeon in Dalaran. She arrives after the timed prison waves are survived, and is always the last encounter regardless of which mini-bosses spawned.",
+    "keywords": [
+      "cyanigosa",
+      "violet hold"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_gal_darah",
+    "title": "Gal'darah",
+    "content": "Gal'darah is the final boss of Gundrak, a level 76 to 78 five-player dungeon in Zul'Drak. He shifts between troll and rhino form, impaling players in one and goring in the other.",
+    "keywords": [
+      "gal'darah",
+      "gundrak"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_moorabi",
+    "title": "Moorabi",
+    "content": "Moorabi is a boss of Gundrak, a level 76 to 78 five-player dungeon in Zul'Drak. He tries to transform into a mammoth, which has to be interrupted or the fight gets much harder.",
+    "keywords": [
+      "moorabi",
+      "gundrak"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_sjonnir_the_ironshaper",
+    "title": "Sjonnir The Ironshaper",
+    "content": "Sjonnir The Ironshaper is the final boss of Halls of Stone, a level 77 to 79 five-player dungeon in The Storm Peaks. He is reached after the Tribunal of Ages escort, and floods the room with iron and earthen adds.",
+    "keywords": [
+      "sjonnir the ironshaper",
+      "halls of stone"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_maiden_of_grief",
+    "title": "Maiden of Grief",
+    "content": "Maiden of Grief is a boss of Halls of Stone, a level 77 to 79 five-player dungeon in The Storm Peaks. She drops shadow pools that have to be moved out of quickly.",
+    "keywords": [
+      "maiden of grief",
+      "halls of stone"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_loken",
+    "title": "Loken",
+    "content": "Loken is the final boss of Halls of Lightning, a level 79 to 80 five-player dungeon in The Storm Peaks. The fight is a damage race against Lightning Nova and a pulse that hits harder the further away you stand.",
+    "keywords": [
+      "loken",
+      "halls of lightning"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_general_bjarngrim",
+    "title": "General Bjarngrim",
+    "content": "General Bjarngrim is the first boss of Halls of Lightning, a level 79 to 80 five-player dungeon in The Storm Peaks. He patrols with an escort and cycles through three combat stances.",
+    "keywords": [
+      "general bjarngrim",
+      "halls of lightning"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_king_ymiron",
+    "title": "King Ymiron",
+    "content": "King Ymiron is the final boss of Utgarde Pinnacle, a level 79 to 80 five-player dungeon in Howling Fjord. He is the vrykul king, and he channels power from the burial barrows around the room.",
+    "keywords": [
+      "king ymiron",
+      "utgarde pinnacle"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_skadi_the_ruthless",
+    "title": "Skadi the Ruthless",
+    "content": "Skadi the Ruthless is a boss of Utgarde Pinnacle, a level 79 to 80 five-player dungeon in Howling Fjord. The first half is fought from a drake, throwing harpoons at his mount before he lands.",
+    "keywords": [
+      "skadi the ruthless",
+      "utgarde pinnacle"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_svala_sorrowgrave",
+    "title": "Svala Sorrowgrave",
+    "content": "Svala Sorrowgrave is the first boss of Utgarde Pinnacle, a level 79 to 80 five-player dungeon in Howling Fjord. She sacrifices a player on an altar partway through and must be interrupted or healed past it.",
+    "keywords": [
+      "svala sorrowgrave",
+      "utgarde pinnacle"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_ley_guardian_eregos",
+    "title": "Ley-Guardian Eregos",
+    "content": "Ley-Guardian Eregos is the final boss of The Oculus, a level 79 to 80 five-player dungeon in Coldarra, in the Borean Tundra. He is fought entirely from drake mounts, which is why the dungeon has the reputation it does.",
+    "keywords": [
+      "ley-guardian eregos",
+      "the oculus"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_mal_ganis",
+    "title": "Mal'Ganis",
+    "content": "Mal'Ganis is the final boss of The Culling of Stratholme, a level 79 to 80 five-player dungeon in the Caverns of Time in Tanaris. He is the dreadlord who baits Arthas into the purge, and he escapes rather than dying.",
+    "keywords": [
+      "mal'ganis",
+      "the culling of stratholme"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_chrono_lord_epoch",
+    "title": "Chrono-Lord Epoch",
+    "content": "Chrono-Lord Epoch is a boss of The Culling of Stratholme, a level 79 to 80 five-player dungeon in the Caverns of Time in Tanaris. He is an infinite dragonflight agent trying to stop the purge from happening as it should.",
+    "keywords": [
+      "chrono-lord epoch",
+      "the culling of stratholme"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_the_black_knight",
+    "title": "The Black Knight",
+    "content": "The Black Knight is the final boss of Trial of the Champion, a level 79 to 80 five-player dungeon in the Argent Tournament grounds in Icecrown. He rises twice after being killed, first as a skeleton and then as a ghost.",
+    "keywords": [
+      "the black knight",
+      "trial of the champion"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_devourer_of_souls",
+    "title": "Devourer of Souls",
+    "content": "Devourer of Souls is the final boss of The Forge of Souls, a level 79 to 80 five-player dungeon in Icecrown Citadel. It is a three-faced construct that alternates a mirrored fear with a wailing beam.",
+    "keywords": [
+      "devourer of souls",
+      "the forge of souls"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_bronjahm",
+    "title": "Bronjahm",
+    "content": "Bronjahm is the first boss of The Forge of Souls, a level 79 to 80 five-player dungeon in Icecrown Citadel. He is the Godfather of Souls, and at thirty percent health he stops and channels while soul fragments close on him.",
+    "keywords": [
+      "bronjahm",
+      "the forge of souls"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_scourgelord_tyrannus",
+    "title": "Scourgelord Tyrannus",
+    "content": "Scourgelord Tyrannus is the final boss of Pit of Saron, a level 79 to 80 five-player dungeon in Icecrown Citadel. He is fought at the end of the scripted escape, after his frost wyrm Rimefang harries the group up the ramp.",
+    "keywords": [
+      "scourgelord tyrannus",
+      "pit of saron"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_forgemaster_garfrost",
+    "title": "Forgemaster Garfrost",
+    "content": "Forgemaster Garfrost is the first boss of Pit of Saron, a level 79 to 80 five-player dungeon in Icecrown Citadel. He forges a weapon mid-fight, changing his abilities each time he picks a new one up.",
+    "keywords": [
+      "forgemaster garfrost",
+      "pit of saron"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_falric",
+    "title": "Falric",
+    "content": "Falric is the first boss of Halls of Reflection, a level 79 to 80 five-player dungeon in Icecrown Citadel. He appears after a set of scripted waves, and applies a stacking fear that grows through the fight.",
+    "keywords": [
+      "falric",
+      "halls of reflection"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_marwyn",
+    "title": "Marwyn",
+    "content": "Marwyn is the second boss of Halls of Reflection, a level 79 to 80 five-player dungeon in Icecrown Citadel. He is the second of the two captains fought before the Lich King chase begins.",
+    "keywords": [
+      "marwyn",
+      "halls of reflection"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_kel_thuzad",
+    "title": "Kel'Thuzad",
+    "content": "Kel'Thuzad is the final boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. He is the lich who founded the Scourge's Cult of the Damned, fought at the top of the necropolis after Sapphiron.",
+    "keywords": [
+      "kel'thuzad",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_sapphiron",
+    "title": "Sapphiron",
+    "content": "Sapphiron is the boss before Kel'Thuzad of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. A frost wyrm fought in an ice-covered room where players hide behind ice blocks to survive its breath.",
+    "keywords": [
+      "sapphiron",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_patchwerk",
+    "title": "Patchwerk",
+    "content": "Patchwerk is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. A pure damage-and-healing check with no mechanics to speak of, long used as a benchmark fight.",
+    "keywords": [
+      "patchwerk",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_thaddius",
+    "title": "Thaddius",
+    "content": "Thaddius is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. Players are given positive or negative charges and have to split by sign or take heavy raid damage.",
+    "keywords": [
+      "thaddius",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_heigan_the_unclean",
+    "title": "Heigan the Unclean",
+    "content": "Heigan the Unclean is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. Known for its dance: the floor erupts in a repeating pattern the whole raid has to keep ahead of.",
+    "keywords": [
+      "heigan the unclean",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_loatheb",
+    "title": "Loatheb",
+    "content": "Loatheb is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. Healing is blocked except in brief windows, so healers rotate through a fixed order.",
+    "keywords": [
+      "loatheb",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_instructor_razuvious",
+    "title": "Instructor Razuvious",
+    "content": "Instructor Razuvious is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. He is tanked by mind-controlled understudies rather than by a player.",
+    "keywords": [
+      "instructor razuvious",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_maexxna",
+    "title": "Maexxna",
+    "content": "Maexxna is a boss of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. She webs players to the wall, and the rest of the raid has to free them.",
+    "keywords": [
+      "maexxna",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_anub_rekhan",
+    "title": "Anub'Rekhan",
+    "content": "Anub'Rekhan is the first boss of the Arachnid Quarter of Naxxramas, a level 80 ten- and twenty-five-player raid in Dragonblight. He is a nerubian crypt lord who summons corpse scarabs while chasing a random player.",
+    "keywords": [
+      "anub'rekhan",
+      "naxxramas"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_sartharion",
+    "title": "Sartharion",
+    "content": "Sartharion is the final boss of The Obsidian Sanctum, a level 80 ten- and twenty-five-player raid in the Chamber of Aspects beneath Wyrmrest Temple in Dragonblight. Leaving his three drakes alive when he is pulled raises the difficulty and the reward.",
+    "keywords": [
+      "sartharion",
+      "the obsidian sanctum"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_malygos",
+    "title": "Malygos",
+    "content": "Malygos is the final boss of The Eye of Eternity, a level 80 ten- and twenty-five-player raid in Coldarra, in the Borean Tundra. The Aspect of Magic, and the fight ends with the whole raid on drakes in a vehicle phase.",
+    "keywords": [
+      "malygos",
+      "the eye of eternity"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_yogg_saron",
+    "title": "Yogg-Saron",
+    "content": "Yogg-Saron is the final boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. An Old God fought in three phases, including a stretch inside visions of the past; leaving fewer of Sara's keepers active makes it much harder.",
+    "keywords": [
+      "yogg-saron",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_flame_leviathan",
+    "title": "Flame Leviathan",
+    "content": "Flame Leviathan is the first boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. The entire fight is fought from siege vehicles rather than on foot.",
+    "keywords": [
+      "flame leviathan",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_mimiron",
+    "title": "Mimiron",
+    "content": "Mimiron is a boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. A four-phase mechanical fight, and its hard mode sets the room on fire for the duration.",
+    "keywords": [
+      "mimiron",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_thorim",
+    "title": "Thorim",
+    "content": "Thorim is a boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. The raid splits in two, one group through an arena gauntlet and one up a corridor, meeting at the top.",
+    "keywords": [
+      "thorim",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_freya",
+    "title": "Freya",
+    "content": "Freya is a boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. Her hard mode is set by leaving up to three elders alive when she is pulled.",
+    "keywords": [
+      "freya",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_kologarn",
+    "title": "Kologarn",
+    "content": "Kologarn is a boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. A giant built into the wall, whose two arms are killed separately and regrow.",
+    "keywords": [
+      "kologarn",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_xt_002_deconstructor",
+    "title": "XT-002 Deconstructor",
+    "content": "XT-002 Deconstructor is a boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. Its heart is exposed periodically, and attacking it there is what triggers the hard mode.",
+    "keywords": [
+      "xt-002 deconstructor",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_algalon_the_observer",
+    "title": "Algalon the Observer",
+    "content": "Algalon the Observer is a bonus boss of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. A limited-attempt encounter behind a hard-mode gate, added as the expansion's most exclusive kill at the time.",
+    "keywords": [
+      "algalon the observer",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_general_vezax",
+    "title": "General Vezax",
+    "content": "General Vezax is the boss before Yogg-Saron of Ulduar, a level 80 ten- and twenty-five-player raid in The Storm Peaks. Mana regeneration is shut off for the fight, so casters draw from saronite vapours instead.",
+    "keywords": [
+      "general vezax",
+      "ulduar"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_lord_jaraxxus",
+    "title": "Lord Jaraxxus",
+    "content": "Lord Jaraxxus is a boss of Trial of the Crusader, a level 80 ten- and twenty-five-player raid in the Argent Tournament grounds in Icecrown. An eredar lord accidentally summoned into the arena partway through the event.",
+    "keywords": [
+      "lord jaraxxus",
+      "trial of the crusader"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_the_lich_king",
+    "title": "The Lich King",
+    "content": "The Lich King is the final boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. Arthas Menethil, fought on the roof of the Frozen Throne; it is the last encounter of Wrath of the Lich King. He also appears unkillable at the end of Halls of Reflection.",
+    "keywords": [
+      "the lich king",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_sindragosa",
+    "title": "Sindragosa",
+    "content": "Sindragosa is the boss before the Lich King of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. Sapphiron's risen mate, who stacks a frost debuff that forces players to hide behind ice tombs.",
+    "keywords": [
+      "sindragosa",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_professor_putricide",
+    "title": "Professor Putricide",
+    "content": "Professor Putricide is a boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. The end of the plague wing, fought around slime pools he brews mid-fight.",
+    "keywords": [
+      "professor putricide",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_lord_marrowgar",
+    "title": "Lord Marrowgar",
+    "content": "Lord Marrowgar is the first boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. He impales players on bone spikes and whirlwinds across the room.",
+    "keywords": [
+      "lord marrowgar",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_deathbringer_saurfang",
+    "title": "Deathbringer Saurfang",
+    "content": "Deathbringer Saurfang is a boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. He gains power from blood drawn off the raid, so damage taken is what fuels him.",
+    "keywords": [
+      "deathbringer saurfang",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_lady_deathwhisper",
+    "title": "Lady Deathwhisper",
+    "content": "Lady Deathwhisper is the second boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. She is shielded by mana until it is burned through, and raises adds from the cultists around her.",
+    "keywords": [
+      "lady deathwhisper",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_blood_queen_lana_thel",
+    "title": "Blood-Queen Lana'thel",
+    "content": "Blood-Queen Lana'thel is a boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. She bites a player who must pass the bite on before a timer, spreading it through the raid.",
+    "keywords": [
+      "blood-queen lana'thel",
+      "icecrown citadel"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_halion",
+    "title": "Halion",
+    "content": "Halion is the final boss of The Ruby Sanctum, a level 80 ten- and twenty-five-player raid in the Chamber of Aspects beneath Wyrmrest Temple in Dragonblight. He is fought in a physical and a shadow version of the same room at once, with the raid split between them.",
+    "keywords": [
+      "halion",
+      "the ruby sanctum"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_archavon_the_stone_watcher",
+    "title": "Archavon the Stone Watcher",
+    "content": "Archavon the Stone Watcher is the first boss of Vault of Archavon, a level 80 ten- and twenty-five-player raid in Wintergrasp. He is only reachable by the faction that currently holds Wintergrasp.",
+    "keywords": [
+      "archavon the stone watcher",
+      "vault of archavon"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_onyxia",
+    "title": "Onyxia",
+    "content": "Onyxia is the only boss of Onyxia's Lair, a level 80 ten- and twenty-five-player raid in Dustwallow Marsh. A black dragon fought in ground and air phases; retuned from level 60 to level 80 in patch 3.2.2.",
+    "keywords": [
+      "onyxia",
+      "onyxia's lair"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_ragnaros",
+    "title": "Ragnaros",
+    "content": "Ragnaros is the final boss of Molten Core, a level 60 to 63 forty-player raid in Blackrock Mountain. A firelord summoned by the Dark Iron dwarves, and the game's first raid-ending boss.",
+    "keywords": [
+      "ragnaros",
+      "molten core"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_nefarian",
+    "title": "Nefarian",
+    "content": "Nefarian is the final boss of Blackwing Lair, a level 60 to 63 forty-player raid in Blackrock Mountain. Deathwing's son, who calls out class-wide effects by name during the fight.",
+    "keywords": [
+      "nefarian",
+      "blackwing lair"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_hakkar",
+    "title": "Hakkar",
+    "content": "Hakkar is the final boss of Zul'Gurub, a level 57 to 63 twenty-player raid in Stranglethorn Vale. The blood god of the Gurubashi trolls, weakened by killing his high priests first.",
+    "keywords": [
+      "hakkar",
+      "zul'gurub"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_c_thun",
+    "title": "C'Thun",
+    "content": "C'Thun is the final boss of Ahn'Qiraj Temple, a level 60 to 63 forty-player raid in Silithus. An Old God fought partly from inside its own stomach.",
+    "keywords": [
+      "c'thun",
+      "ahn'qiraj temple"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_edwin_vancleef",
+    "title": "Edwin VanCleef",
+    "content": "Edwin VanCleef is the final boss of Deadmines, a level 17 to 20 five-player dungeon in Westfall. The leader of the Defias Brotherhood, fought on the deck of a ship inside the mine.",
+    "keywords": [
+      "edwin vancleef",
+      "deadmines"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_archmage_arugal",
+    "title": "Archmage Arugal",
+    "content": "Archmage Arugal is the final boss of Shadowfang Keep, a level 18 to 21 five-player dungeon in Silverpine Forest. The renegade mage who created the worgen infesting the keep.",
+    "keywords": [
+      "archmage arugal",
+      "shadowfang keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_baron_rivendare",
+    "title": "Baron Rivendare",
+    "content": "Baron Rivendare is the final boss of the undead side of Stratholme, a level 58 to 60 five-player dungeon in the Eastern Plaguelands. He drops the Deathcharger's Reins, and a timed run of his wing rewards extra loot.",
+    "keywords": [
+      "baron rivendare",
+      "stratholme"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_darkmaster_gandling",
+    "title": "Darkmaster Gandling",
+    "content": "Darkmaster Gandling is the final boss of Scholomance, a level 58 to 60 five-player dungeon in the Western Plaguelands. The headmaster of the necromancy school, who teleports players into side rooms during the fight.",
+    "keywords": [
+      "darkmaster gandling",
+      "scholomance"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_emperor_dagran_thaurissan",
+    "title": "Emperor Dagran Thaurissan",
+    "content": "Emperor Dagran Thaurissan is the final boss of Blackrock Depths, a level 49 to 56 five-player dungeon in Blackrock Mountain. The Dark Iron emperor, fought beside his wife Moira, who must be left alive.",
+    "keywords": [
+      "emperor dagran thaurissan",
+      "blackrock depths"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_illidan_stormrage",
+    "title": "Illidan Stormrage",
+    "content": "Illidan Stormrage is the final boss of Black Temple, a level 70 twenty-five-player raid in Shadowmoon Valley. The Betrayer, and the intended final boss of the Burning Crusade before the Sunwell was added.",
+    "keywords": [
+      "illidan stormrage",
+      "black temple"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_kael_thas_sunstrider",
+    "title": "Kael'thas Sunstrider",
+    "content": "Kael'thas Sunstrider is the final boss of Tempest Keep, a level 70 twenty-five-player raid in Netherstorm. The blood elf prince, fought in a long multi-phase encounter; a weakened version of him is also the final boss of Magister's Terrace.",
+    "keywords": [
+      "kael'thas sunstrider",
+      "tempest keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_lady_vashj",
+    "title": "Lady Vashj",
+    "content": "Lady Vashj is the final boss of Coilfang: Serpentshrine Cavern, a level 70 twenty-five-player raid in Zangarmarsh. A naga sea witch whose middle phase requires relaying tainted cores to break her shield.",
+    "keywords": [
+      "lady vashj",
+      "coilfang: serpentshrine cavern"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_kil_jaeden",
+    "title": "Kil'jaeden",
+    "content": "Kil'jaeden is the final boss of The Sunwell, a level 70 twenty-five-player raid in the Isle of Quel'Danas. The Burning Legion's second-in-command, and the last boss of the Burning Crusade.",
+    "keywords": [
+      "kil'jaeden",
+      "the sunwell"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_archimonde",
+    "title": "Archimonde",
+    "content": "Archimonde is the final boss of The Battle for Mount Hyjal, a level 70 twenty-five-player raid in the Caverns of Time in Tanaris. Fought at the World Tree, where players use tears of the goddess to survive his air burst.",
+    "keywords": [
+      "archimonde",
+      "the battle for mount hyjal"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_prince_malchezaar",
+    "title": "Prince Malchezaar",
+    "content": "Prince Malchezaar is the final boss of Karazhan, a level 70 to 73 ten-player raid in Deadwind Pass. A eredar prince at the top of the tower, who rains infernals into the room.",
+    "keywords": [
+      "prince malchezaar",
+      "karazhan"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_gruul_the_dragonkiller",
+    "title": "Gruul the Dragonkiller",
+    "content": "Gruul the Dragonkiller is the final boss of Gruul's Lair, a level 70 twenty-five-player raid in Blade's Edge Mountains. He grows larger and hits harder on a timer, so the raid spreads out to avoid shatter damage.",
+    "keywords": [
+      "gruul the dragonkiller",
+      "gruul's lair"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_magtheridon",
+    "title": "Magtheridon",
+    "content": "Magtheridon is the only boss of Magtheridon's Lair, a level 70 twenty-five-player raid in Hellfire Peninsula. A pit lord held in place by five channelers who must be killed together.",
+    "keywords": [
+      "magtheridon",
+      "magtheridon's lair"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_zul_jin",
+    "title": "Zul'jin",
+    "content": "Zul'jin is the final boss of Zul'Aman, a level 70 to 73 ten-player raid in the Ghostlands. The Amani warlord, who cycles through animal-god forms as his health drops.",
+    "keywords": [
+      "zul'jin",
+      "zul'aman"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_mekgineer_thermaplugg",
+    "title": "Mekgineer Thermaplugg",
+    "content": "Mekgineer Thermaplugg is the final boss of Gnomeregan, a level 25 to 28 five-player dungeon in Dun Morogh. He is fought around a room of bomb-dispensing panels that have to be closed.",
+    "keywords": [
+      "mekgineer thermaplugg",
+      "gnomeregan"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_archaedas",
+    "title": "Archaedas",
+    "content": "Archaedas is the final boss of Uldaman, a level 37 to 40 five-player dungeon in the Badlands. A titan construct who animates the statues lining the room as adds.",
+    "keywords": [
+      "archaedas",
+      "uldaman"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_murmur",
+    "title": "Murmur",
+    "content": "Murmur is the final boss of Auchindoun: Shadow Labyrinth, a level 69 to 70 five-player dungeon in Terokkar Forest. A sound elemental with a room-wide pull followed by a detonation players must run out of.",
+    "keywords": [
+      "murmur",
+      "auchindoun: shadow labyrinth"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_chief_ukorz_sandscalp",
+    "title": "Chief Ukorz Sandscalp",
+    "content": "Chief Ukorz Sandscalp is the final boss of Zul'Farrak, a level 43 to 46 five-player dungeon in Tanaris. The Sandfury chief, reached after the pyramid steps event.",
+    "keywords": [
+      "chief ukorz sandscalp",
+      "zul'farrak"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_princess_theradras",
+    "title": "Princess Theradras",
+    "content": "Princess Theradras is the final boss of Maraudon, a level 41 to 48 five-player dungeon in Desolace. An earth elemental princess at the bottom of the pristine waters wing.",
+    "keywords": [
+      "princess theradras",
+      "maraudon"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_king_gordok",
+    "title": "King Gordok",
+    "content": "King Gordok is the final boss of the north wing of Dire Maul, a level 55 to 60 five-player dungeon in Feralas. Killing him grants the ogre suit tribute run, which is why players clear the wing carefully.",
+    "keywords": [
+      "king gordok",
+      "dire maul"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_general_drakkisath",
+    "title": "General Drakkisath",
+    "content": "General Drakkisath is the final boss of the upper wing of Blackrock Spire, a level 57 to 63 five- and ten-player dungeon in Blackrock Mountain. He guards the orb used for the old Onyxia attunement chain.",
+    "keywords": [
+      "general drakkisath",
+      "blackrock spire"
+    ],
+    "tags": [
+      "boss",
+      "raid"
+    ]
+  },
+  {
+    "id": "boss_mutanus_the_devourer",
+    "title": "Mutanus the Devourer",
+    "content": "Mutanus the Devourer is the final boss of Wailing Caverns, a level 17 to 20 five-player dungeon in the Barrens. He appears at the end of the escort event that the whole dungeon leads up to.",
+    "keywords": [
+      "mutanus the devourer",
+      "wailing caverns"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_amnennar_the_coldbringer",
+    "title": "Amnennar the Coldbringer",
+    "content": "Amnennar the Coldbringer is the final boss of Razorfen Downs, a level 34 to 37 five-player dungeon in the Southern Barrens. A lich raising the quilboar dead, and the highest-level threat in the warrens.",
+    "keywords": [
+      "amnennar the coldbringer",
+      "razorfen downs"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_herod",
+    "title": "Herod",
+    "content": "Herod is the final boss of the Armory wing of Scarlet Monastery, a level 29 to 40 five-player dungeon in Tirisfal Glades. The Scarlet champion, who whirlwinds across the room and then flees to pull the training hall.",
+    "keywords": [
+      "herod",
+      "scarlet monastery"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
+    "id": "boss_high_inquisitor_whitemane",
+    "title": "High Inquisitor Whitemane",
+    "content": "High Inquisitor Whitemane is the final boss of the Cathedral wing of Scarlet Monastery, a level 29 to 40 five-player dungeon in Tirisfal Glades. She resurrects Scarlet Commander Mograine once, so both have to be brought down together.",
+    "keywords": [
+      "high inquisitor whitemane",
+      "scarlet monastery"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  }
+]

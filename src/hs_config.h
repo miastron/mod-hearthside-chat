@@ -394,6 +394,40 @@ extern bool     g_HsGroundedAnswersEnabled;
 extern uint32_t g_HsGroundedFuzzyMaxDistance; // max Levenshtein distance for the typo-tolerance fallback pass; 0 disables it (exact match only)
 
 // --------------------------------------------
+// World-knowledge retrieval (hs_rag.h, data/rag/README.md). Not a tier
+// either, and for the same reason grounded answers are not: it does not
+// decide *whether* a bot speaks, it changes what is in the prompt when one
+// already is. Every surface that reaches the backend gets it, bounded by
+// that surface's own existing ceiling.
+//
+// The two consumers are split because they fail differently, not because
+// they are separately useful. A wrong paragraph in a *reply* is already in
+// the chat window; a wrong paragraph in the *generator* produces a candidate
+// that still has to clear Hs_QualityGate, Hs_PlaceholderDiscipline and
+// Hs_DedupCheck, lands in hside_corpus tagged with the run's prompt_version,
+// and can be read with `.hearthside review` and dropped wholesale with
+// Hs_EvictGenerationRun before a player ever sees it. So an operator who
+// wants to trial retrieval should turn Generator on first and Enable second.
+//
+// MinScore and MaxEntries are the retriever's own tuning, and the threshold
+// is load-bearing: data/rag/README.md's "The threshold and its margin"
+// documents that the gap between the worst answerable question and the best
+// social-chat near-miss narrows as the corpus grows. Raising MinScore is the
+// safe direction; lowering it hands bots reference blocks for questions
+// nobody asked, which derails a reply that would otherwise have been fine.
+//
+// The generator path uses a larger character budget than the reactive one:
+// generation is offline, so the prompt has no latency cost, and its output
+// is reviewed before use.
+// --------------------------------------------
+extern bool     g_HsRagEnable;             // the reactive/event path: replies and event reactions
+extern uint32_t g_HsRagMaxEntries;
+extern float    g_HsRagMinScore;
+extern uint32_t g_HsRagMaxChars;
+extern bool     g_HsRagGeneratorEnable;    // the offline path: corpus buckets, cards, bot-to-bot scripts
+extern uint32_t g_HsRagGeneratorMaxChars;
+
+// --------------------------------------------
 // Idle-time generator. Its own LLM endpoint, kept separate from the
 // reactive path's, regardless of whether they point at the same container.
 // Defaults to disabled: autonomous, GPU-spending, DB-writing background

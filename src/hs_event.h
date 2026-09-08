@@ -48,15 +48,44 @@
 // for its own "died together" memory beat; two PlayerScripts may both take
 // it, and neither depends on the other's ordering.
 //
-// OnPlayerKilledByCreature is deliberately *not* hooked even though it
-// carries the killer: the death prompt states no killer, no zone, and no
-// combat-state clause (Claude/archive/PLAN-ARBITER.md §7 rule 1), so there is nothing the
-// killer's identity would feed.
+// This hook no longer dispatches: it records the death, and the three
+// classes below finish the job. See the "Deferred death dispatch" block in
+// hs_event.cpp for why the killer's name forced that split.
 class HsEventDeathHandler : public PlayerScript
 {
 public:
     HsEventDeathHandler() : PlayerScript("HsEventDeathHandler", { PLAYERHOOK_ON_PLAYER_JUST_DIED }) {}
     void OnPlayerJustDied(Player* player) override;
+};
+
+// The killer's name, which OnPlayerJustDied above cannot supply because
+// Unit::Kill has not worked it out yet when that hook fires. Hooked as of
+// 2026-09-07; hs_event.h used to document it as deliberately *not* hooked,
+// on the grounds that the death prompt named no killer and so had nothing to
+// feed. That was true while a stated proper noun was something a 1-3B model
+// could only invent around. hs_rag.h changed it: "killed by Prince Taldaram"
+// now retrieves Prince Taldaram's own authored paragraph on the way through
+// hs_queue.cpp, so the name arrives grounded rather than bare.
+//
+// Fills in the pending record and nothing else -- it does not dispatch, and
+// a death it never sees (a fall, a drowning, a PvP kill) still dispatches
+// with no killer clause at all.
+class HsEventKillerHandler : public PlayerScript
+{
+public:
+    HsEventKillerHandler() : PlayerScript("HsEventKillerHandler", { PLAYERHOOK_ON_PLAYER_KILLED_BY_CREATURE }) {}
+    void OnPlayerKilledByCreature(Creature* killer, Player* killed) override;
+};
+
+// Dispatches the deaths the two hooks above recorded, once per world update.
+// Registered after both in hs_main.cpp -- not for correctness (World::Update
+// runs the map, and so every hook, before OnWorldUpdate) but so the three
+// halves of one mechanism read in order.
+class HsEventDeathDrainWorldScript : public WorldScript
+{
+public:
+    HsEventDeathDrainWorldScript() : WorldScript("HsEventDeathDrainWorldScript") {}
+    void OnUpdate(uint32 diff) override;
 };
 
 // Dings. OnPlayerLevelChanged is the only after-the-fact level hook (there

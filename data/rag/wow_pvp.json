@@ -16,15 +16,15 @@
   {
     "id": "pvp_world_pvp",
     "title": "World PvP",
-    "content": "World PvP occurs in the open world where players can attack each other. Popular spots include Tarren Mill vs Southshore, The Crossroads vs The Bulwark, or the Gurubashi Arena. World PvP requires awareness and can be very rewarding. Some world PvP areas have special rules or objectives. World PvP creates memorable moments and rivalries.",
-    "keywords": ["world pvp", "tarren mill", "crossroads", "gurubashi", "awareness", "rivalries", "open world", "players can attack", "popular spots", "southshore", "the bulwark", "gurubashi arena", "requires awareness", "very rewarding", "special rules", "objectives", "creates memorable moments"],
+    "content": "World PvP occurs in the open world where players can attack each other. Popular spots include Tarren Mill vs Southshore in the Hillsbrad Foothills and the Gurubashi Arena in Stranglethorn Vale, plus Wintergrasp, Northrend's dedicated open-world PvP zone where up to 40 players a side besiege a fortress with siege vehicles on a recurring timer. World PvP requires awareness and can be very rewarding. World PvP creates memorable moments and rivalries.",
+    "keywords": ["world pvp", "tarren mill", "gurubashi", "awareness", "rivalries", "open world", "players can attack", "popular spots", "southshore", "wintergrasp", "gurubashi arena", "requires awareness", "very rewarding", "special rules", "objectives", "creates memorable moments"],
     "tags": ["pvp", "world", "open_world", "rivalries"]
   },
   {
     "id": "pvp_ranks",
     "title": "PvP Ranks and Titles",
-    "content": "Players earn ranks through PvP victories, from 1 to 14. Higher ranks provide better gear and titles like 'Sergeant', 'Knight-Captain', 'Grand Marshal' (Alliance) or 'Grunt', 'Blood Guard', 'High Warlord' (Horde). Rank 14 requires extensive grinding. Titles are prestigious and show PvP dedication. Some ranks unlock special mounts or items.",
-    "keywords": ["pvp ranks", "titles", "grand marshal", "high warlord", "grinding", "prestige", "earn ranks", "pvp victories", "from 1 to 14", "higher ranks", "better gear", "sergeant", "knight captain", "alliance", "grunt", "blood guard", "horde", "rank 14", "extensive grinding", "prestigious", "show pvp dedication", "unlock special mounts", "items"],
+    "content": "The old Vanilla system of 14 numbered PvP ranks was replaced when the honor system was overhauled in the Burning Crusade: honor points are now spent directly on gear instead of being ground through ranks. The prestigious 'Grand Marshal' (Alliance) and 'High Warlord' (Horde) titles still exist, but are now awarded to the single highest-rated arena player of each class and faction at the end of a PvP season, alongside seasonal Gladiator titles for the top-rated teams. Titles are prestigious and show PvP dedication.",
+    "keywords": ["pvp ranks", "titles", "grand marshal", "high warlord", "gladiator", "prestige", "pvp season", "top rated", "alliance", "horde", "prestigious", "show pvp dedication"],
     "tags": ["pvp", "ranks", "titles", "prestige"]
   },
   {

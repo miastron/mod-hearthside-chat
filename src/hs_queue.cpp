@@ -8,6 +8,7 @@
 #include "hs_llm.h"
 #include "hs_memory_store.h"
 #include "hs_prune.h"
+#include "hs_rag.h"
 #include "hs_style.h"
 
 #include "Channel.h"          // §4.17 channel delivery: Channel::Say
@@ -635,6 +636,43 @@ namespace
             if (!rpgHint.empty())
                 personaLine += "\n" + rpgHint;
             personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
+
+            // World knowledge (hs_rag.h). The last grounding layer to arrive
+            // and the only one that knows anything about Azeroth: the three
+            // above state facts about *this bot*, so before this a question
+            // like "where do I train blacksmithing" reached the backend with
+            // nothing but a persona line and a 1-3B local model invented the
+            // answer.
+            //
+            // Runs on the worker thread rather than being snapshotted into
+            // HsQueuedRequest by Hs_TryEnqueue the way topicGate is: the
+            // scoring pass is a handful of hash lookups but the world thread
+            // is the game loop, and unlike topicGate this needs no Player*,
+            // so there is no reason to spend world-thread time on it.
+            // Hs_RagContextFor is the locked one-shot form for exactly this
+            // (see hs_rag.h on why the two-step form is not safe here).
+            //
+            // req.prompt is the player's message on a direct reply and the
+            // event trigger text on an event ("...killed by Prince
+            // Taldaram."), so both surfaces are served by the one call --
+            // event triggers name a boss or an item precisely so this can
+            // find it.
+            if (g_HsRagEnable)
+            {
+                std::string ragLine = Hs_RagContextFor(req.prompt, g_HsRagMaxEntries, g_HsRagMinScore, g_HsRagMaxChars);
+
+                // Fallback, not an addition: inside a dungeon the instance is
+                // a fact the *game* supplied, so it is addressed by name
+                // rather than scored, with no threshold and no near-miss
+                // risk. Only when scored retrieval found nothing, so a
+                // question about something specific is never displaced by the
+                // room the bot happens to be standing in.
+                if (ragLine.empty() && !req.topicGate.instanceName.empty())
+                    ragLine = Hs_RagContextForKeys({ req.topicGate.instanceName }, g_HsRagMaxChars);
+
+                if (!ragLine.empty())
+                    personaLine += "\n" + ragLine;
+            }
 
             // Grounds a reply in what this bot itself said publicly (a
             // corpus/ambient WTS line, a reflex/grounded answer, an opener)
