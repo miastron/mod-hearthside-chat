@@ -191,11 +191,13 @@ double Hs_JaccardSimilarity(const std::string& a, const std::string& b)
     return unionSize == 0 ? 0.0 : static_cast<double>(intersection) / static_cast<double>(unionSize);
 }
 
-HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions)
+HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions, bool allowShort)
 {
     std::string trimmed = Trim(candidate);
 
-    if (trimmed.size() < 10)
+    if (trimmed.empty())
+        return { false, "too_short" };
+    if (!allowShort && trimmed.size() < 10)
         return { false, "too_short" };
     if (trimmed.size() > 180)
         return { false, "too_long" };

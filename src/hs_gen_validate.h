@@ -24,8 +24,13 @@ struct HsGenVerdict
 // categories are openers). `allowQuestions` lets a caller opt out of just
 // the question check: scripted bot-to-bot turns are natural
 // back-and-forth dialogue and legitimately include questions, unlike every
-// corpus category this gate was built for.
-HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions = false);
+// corpus category this gate was built for. `allowShort` opts out of just
+// the 10-char floor: that floor exists because a corpus line has to stand
+// alone with no surrounding context, but a scripted dialogue turn (opener
+// or reply alike -- "sup"/"hey"/"yeah" are all fine at any position) sits
+// in a back-and-forth and doesn't need to carry a whole thought by itself.
+// Still rejects an all-whitespace candidate regardless.
+HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions = false, bool allowShort = false);
 
 // Placeholder discipline: if any of `existingRows` (the bucket's
 // hand-authored exemplars) uses a placeholder, `candidate` must use one too,

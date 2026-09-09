@@ -711,7 +711,7 @@ namespace
                 return false;
             }
 
-            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true);
+            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
             if (verdict.accepted)
                 verdict = Hs_ScriptPlaceholderDiscipline(result.text);
             if (!verdict.accepted)
@@ -838,7 +838,7 @@ namespace
                 return false;
             }
 
-            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true);
+            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
             if (verdict.accepted)
                 verdict = Hs_ScriptPlaceholderDiscipline(result.text);
             if (!verdict.accepted)
