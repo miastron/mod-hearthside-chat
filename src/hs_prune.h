@@ -24,7 +24,7 @@
 //     a small realm never pays for it; the cost only appears once the map is
 //     big enough for the cost to be worth paying.
 //
-// Both callers' constants are deliberately generous relative to the window
+// Every caller's constants are deliberately generous relative to the window
 // the map is actually read through. Pruning early would change behavior;
 // pruning late only delays reclamation, so the constants err late.
 //
@@ -32,6 +32,14 @@
 // GUID or player GUID is already bounded by the realm's population; the ones
 // worth pruning are those keyed by a *pair* (whose count is the product, not
 // the sum) or those holding more than a timestamp. See each call site.
+//
+// Three call sites today, and the second criterion is why two of them are
+// bot-keyed rather than pair-keyed: hs_queue.cpp's g_History (pair-keyed),
+// hs_queue.cpp's g_RecentUtterances and hs_experience.cpp's ring (both
+// bot-keyed, but each holds accumulated *content* rather than a timestamp,
+// so population bounds alone do not bound them). hs_experience_store.cpp's
+// g_LastZoneByBot is the counter-example left unpruned on purpose: bot-keyed
+// and holding a single id.
 
 namespace HsPrune
 {

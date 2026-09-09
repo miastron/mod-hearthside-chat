@@ -258,6 +258,14 @@ uint32_t g_HsRagMaxChars          = 700;
 bool     g_HsRagGeneratorEnable   = true;
 uint32_t g_HsRagGeneratorMaxChars = 900;
 
+bool     g_HsExperienceEnable         = true;
+uint32_t g_HsExperienceMaxEntries     = 4;
+uint32_t g_HsExperienceMaxChars       = 300;
+uint32_t g_HsExperienceWindowSeconds  = 1800;
+uint32_t g_HsExperienceLootMinQuality = 3;       // ITEM_QUALITY_RARE
+uint32_t g_HsExperienceMoneyMinCopper = 100000;  // 10 gold
+uint32_t g_HsExperienceSkillStep      = 25;
+
 bool        g_HsGeneratorEnabled              = false;
 std::string g_HsGeneratorLLMApiType           = "llamacpp";
 std::string g_HsGeneratorLLMUrl               = "http://127.0.0.1:8080";
@@ -490,6 +498,14 @@ void LoadHearthsideChatConfig()
     g_HsRagMaxChars          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Rag.MaxChars", 700);
     g_HsRagGeneratorEnable   = sConfigMgr->GetOption<bool>("HearthsideChat.Rag.Generator.Enable", true);
     g_HsRagGeneratorMaxChars = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Rag.Generator.MaxChars", 900);
+
+    g_HsExperienceEnable         = sConfigMgr->GetOption<bool>("HearthsideChat.Experience.Enable", true);
+    g_HsExperienceMaxEntries     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MaxEntries", 4);
+    g_HsExperienceMaxChars       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MaxChars", 300);
+    g_HsExperienceWindowSeconds  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.WindowSeconds", 1800);
+    g_HsExperienceLootMinQuality = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.LootMinQuality", 3);
+    g_HsExperienceMoneyMinCopper = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MoneyMinCopper", 100000);
+    g_HsExperienceSkillStep      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.SkillStep", 25);
 
     g_HsGeneratorEnabled                    = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Enable", false);
     g_HsGeneratorLLMApiType                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiType", "llamacpp");

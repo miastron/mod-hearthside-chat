@@ -9,6 +9,7 @@
 #include "hs_corpus.h"
 #include "hs_engagement.h"
 #include "hs_event.h"
+#include "hs_experience.h"
 #include "hs_gen_validate.h"
 #include "hs_generator.h"
 #include "hs_identity_store.h"
@@ -95,6 +96,13 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Demotions this session: {}  Retirements this session: {}",
             Hs_DemotionsThisSession(), Hs_RetirementsThisSession());
         handler->PSendSysMessage("[HearthsideChat] Memory rows: {}", Hs_MemoryRowCount());
+        // Ambient experience has no table and fires nothing, so these two
+        // counters are the only way to see it working at all -- the same
+        // visibility problem hs_opener.h's counter solves. Bots tracked
+        // should track the active population; records climbing while bots
+        // tracked stays at zero would mean the rings are being dropped.
+        handler->PSendSysMessage("[HearthsideChat] Experience: {} bot(s) tracked, {} recorded this session",
+            Hs_ExperienceTrackedBotCount(), Hs_ExperienceRecordedThisSession());
         return true;
     }
 

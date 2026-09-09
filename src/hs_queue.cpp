@@ -3,6 +3,7 @@
 #include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
+#include "hs_experience.h"
 #include "hs_identity.h"
 #include "hs_identity_store.h"
 #include "hs_llm.h"
@@ -637,12 +638,12 @@ namespace
                 personaLine += "\n" + rpgHint;
             personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
 
-            // World knowledge (hs_rag.h). The last grounding layer to arrive
-            // and the only one that knows anything about Azeroth: the three
-            // above state facts about *this bot*, so before this a question
-            // like "where do I train blacksmithing" reached the backend with
-            // nothing but a persona line and a 1-3B local model invented the
-            // answer.
+            // World knowledge (hs_rag.h). The only layer here that knows
+            // anything about Azeroth: everything above states facts about
+            // *this bot*, so before this a question like "where do I train
+            // blacksmithing" reached the backend with nothing but a persona
+            // line and a 1-3B local model invented the answer. (It was the
+            // last layer to arrive until ambient experience landed below it.)
             //
             // Runs on the worker thread rather than being snapshotted into
             // HsQueuedRequest by Hs_TryEnqueue the way topicGate is: the
@@ -681,6 +682,30 @@ namespace
             std::string recentPublic = Hs_RecentUtteranceContext(req.botGuid);
             if (!recentPublic.empty())
                 personaLine += "\n" + recentPublic;
+
+            // Ambient experience (hs_experience.h): what this bot has been
+            // *doing*, as background rather than as a subject. Deliberately
+            // last in personaLine, and that position is load-bearing rather
+            // than cosmetic: everything above it is either fixed for the bot
+            // or changes only with the conversation, while this block
+            // changes as the bot plays. Appending it keeps the whole prefix
+            // above it reusable by the backend's prompt cache, so the cost
+            // of the feature is its own characters and nothing else --
+            // which matters on the same T1000 the fine-tune is trying to
+            // buy prefill back on (Claude/finetune/README.md).
+            //
+            // Read on the worker thread, same as the RAG block above and for
+            // the same reason: it needs no Player*, so there is no reason to
+            // spend world-thread time snapshotting it into HsQueuedRequest.
+            // Hs_ExperienceContext is the locked one-shot form; the world
+            // thread's hooks are writing this map while this runs.
+            if (g_HsExperienceEnable)
+            {
+                std::string experienceLine = Hs_ExperienceContext(
+                    req.botGuid, g_HsExperienceMaxEntries, g_HsExperienceMaxChars, g_HsExperienceWindowSeconds);
+                if (!experienceLine.empty())
+                    personaLine += "\n" + experienceLine;
+            }
 
             // One snapshot per request instead of six reads of the live
             // globals. This is the worker thread; `.reload config` reassigns
@@ -1649,6 +1674,12 @@ void Hs_ForgetBotHistory(uint64_t botGuid)
     // pair history above: the character that said it no longer exists.
     std::lock_guard<std::mutex> lockUtterance(g_UtteranceMutex);
     g_RecentUtterances.erase(botGuid);
+
+    // And what it had been doing (hs_experience.h). A recycler reset
+    // rewrites the bot's level, gear, zone and goals in place, so the quests
+    // it finished and the zones it walked belong to a character that is no
+    // longer standing there -- the same staleness argument as the two above.
+    Hs_ForgetExperience(botGuid);
 }
 
 uint32_t Hs_SecondsSinceLastReply(uint64_t botGuid)

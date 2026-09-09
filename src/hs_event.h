@@ -40,6 +40,16 @@
 //   follow-ups, an event reaction is bot-initiated, so it appends no
 //   history, bumps no interaction_score, and records no first meeting.
 //   Hs_TryEnqueue's isEvent flag (hs_queue.h) is what enforces that.
+//
+// **This is not the only consumer of these hooks, and the distinction is the
+// point.** hs_experience_store.h takes several of the same ones (deaths,
+// dings) and hs_memory_store.h takes deaths too, but neither makes a bot
+// speak: they record. Before adding an event type here, check that speech is
+// actually what the event wants. Hs_EventCountBiasFor exists mostly to
+// *suppress* reactions ("most deaths pass without comment"), so a new
+// trigger whose right answer is usually silence belongs in hs_experience.h
+// as background instead -- an event is often a backdrop rather than a topic,
+// and an announcement per event is the tell that gives a bot away.
 
 // Deaths, all four of Claude/archive/PLAN-ARBITER.md §5's death triggers off one hook.
 // OnPlayerJustDied carries whichever Player* died, bot or real player, so

@@ -1,11 +1,13 @@
 #ifndef MOD_HS_LOCALE_H
 #define MOD_HS_LOCALE_H
 
+#include <cstdint>
 #include <string>
 
 struct AreaTableEntry;
 struct ItemTemplate;
 class SpellInfo;
+class Quest;
 
 // Review H1 (2026-09-03): one place that knows how to read a localized name.
 //
@@ -38,5 +40,19 @@ std::string Hs_LocalizedItemName(ItemTemplate const* tmpl);
 
 // Spell display name, for the mount lookup. Null-safe.
 std::string Hs_LocalizedSpellName(SpellInfo const* info);
+
+// Quest title, for hs_experience_store.cpp's completed/abandoned hooks.
+// Null-safe. Falls back to Quest::GetTitle() (the enUS string from
+// quest_template) when locale_quest has no row, same two-step as the item
+// helper above.
+std::string Hs_LocalizedQuestTitle(Quest const* quest);
+
+// Skill display name from SkillLine.dbc, for the skill-up hook. Takes the
+// id rather than the entry because the two skill hooks reach it differently
+// (gathering carries skill_id directly, crafting carries a
+// SkillLineAbilityEntry whose SkillLine field is that id), and neither
+// caller should be the one indexing a DBC name array. Returns "" for an
+// unknown id.
+std::string Hs_LocalizedSkillName(uint32_t skillId);
 
 #endif // MOD_HS_LOCALE_H

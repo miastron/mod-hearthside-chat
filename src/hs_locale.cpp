@@ -1,8 +1,10 @@
 #include "hs_locale.h"
 
+#include "DBCStores.h"
 #include "DBCStructure.h"
 #include "ItemTemplate.h"
 #include "ObjectMgr.h"
+#include "QuestDef.h"
 #include "SpellInfo.h"
 #include "World.h"
 
@@ -55,5 +57,30 @@ std::string Hs_LocalizedSpellName(SpellInfo const* info)
     char const* name = info->SpellName[DbcLocale()];
     if (!name || !*name)
         name = info->SpellName[LOCALE_enUS];
+    return (name && *name) ? std::string(name) : std::string();
+}
+
+std::string Hs_LocalizedQuestTitle(Quest const* quest)
+{
+    if (!quest)
+        return "";
+
+    // Same two-step as Hs_LocalizedItemName: the template carries the enUS
+    // string and locale_quest carries the override, keyed by quest id.
+    std::string title = quest->GetTitle();
+    if (QuestLocale const* locale = sObjectMgr->GetQuestLocale(quest->GetQuestId()))
+        ObjectMgr::GetLocaleString(locale->Title, static_cast<int>(DbcLocale()), title);
+    return title;
+}
+
+std::string Hs_LocalizedSkillName(uint32_t skillId)
+{
+    SkillLineEntry const* entry = sSkillLineStore.LookupEntry(skillId);
+    if (!entry)
+        return "";
+
+    char const* name = entry->name[DbcLocale()];
+    if (!name || !*name)
+        name = entry->name[LOCALE_enUS];
     return (name && *name) ? std::string(name) : std::string();
 }

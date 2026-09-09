@@ -9,13 +9,19 @@
 // grounding layer this module was missing.
 //
 // hs_grounded.h answers from live Player*/DB state, hs_topic_gate.h states
-// live facts about the bot itself, hs_memory.h recalls a specific player.
-// None of them know anything about Azeroth. So "where do I train
-// blacksmithing" reaches the backend with nothing but the persona line, and
-// a 1-3B local model invents an answer. This file closes that: it matches a
-// player's message against a table of authored WotLK facts and hands the
-// caller a short reference block to append to the prompt, the same way
-// Hs_TopicGateLine's output is appended.
+// live facts about the bot itself, hs_memory.h recalls a specific player,
+// hs_experience.h recalls what the bot has been doing. None of them know
+// anything about Azeroth. So "where do I train blacksmithing" reaches the
+// backend with nothing but the persona line, and a 1-3B local model invents
+// an answer. This file closes that: it matches a player's message against a
+// table of authored WotLK facts and hands the caller a short reference block
+// to append to the prompt, the same way Hs_TopicGateLine's output is
+// appended.
+//
+// Those five split cleanly along two axes, which is worth holding onto when
+// deciding where a new fact belongs: *about the bot* (topic gate now,
+// experience lately, memory with this one player) versus *about the world*
+// (grounded for this realm's live state, this file for Azeroth at large).
 //
 // Pure logic, no AzerothCore dependency, standalone-testable -- same split
 // as hs_topic_gate.h/hs_grounded.h. The SQL load that fills the table lives

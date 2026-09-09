@@ -12,6 +12,22 @@
 // DB-touching half (hside_memory reads/writes, dedup, eviction, and the
 // game hooks) lives in hs_memory_store.h, which calls into this file
 // rather than duplicating its text.
+//
+// **Not to be confused with hs_experience.h**, which also records things
+// that happened to a bot and also feeds prompts. Two differences decide
+// which one a new fact belongs in:
+//
+//   * **Scope.** This is per (bot, player) -- a shared history with one
+//     specific person. Experience is per bot alone, about what it has been
+//     doing regardless of who was there.
+//   * **Durability.** This is a real table, because a relationship should
+//     outlive a worldserver restart. Experience is in memory only, because
+//     "recently" should not.
+//
+// Consequently this is *answered with* (hs_grounded.h's Recall kinds look it
+// up when a player asks) while experience is only ever *background* the
+// model is told not to announce. A beat that a bot should be able to state
+// out loud when asked belongs here.
 
 // event_type vocabulary: first meeting plus four shared-experience beats.
 // "Traded" is deliberately not built: this AzerothCore revision has no

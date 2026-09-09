@@ -6,9 +6,10 @@ in [`src/hs_rag_store.cpp`](../../src/hs_rag_store.cpp); the harness is
 [`Tests/test_hs_rag.cpp`](../../Tests/test_hs_rag.cpp).
 
 This closes the one grounding gap the module had. `hs_grounded` answers from live `Player*`/DB
-state, `hs_topic_gate` states live facts about the bot, `hs_memory` recalls a specific player —
-none of them know anything about Azeroth, so "where do I train blacksmithing" used to reach the
-backend with nothing but a persona line, and a 1–3B local model invented an answer.
+state, `hs_topic_gate` states live facts about the bot, `hs_memory` recalls a specific player,
+`hs_experience` recalls what the bot has been doing lately — none of them know anything about
+Azeroth, so "where do I train blacksmithing" used to reach the backend with nothing but a persona
+line, and a 1–3B local model invented an answer.
 
 ## Provenance
 

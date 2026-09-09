@@ -197,12 +197,20 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 // any of them is no longer true of it. Prior-turn context from before that
 // point is worse than no context, so it goes.
 //
-// Also drops this bot's recent-public-utterance context (Hs_RecentUtteranceContext):
-// same staleness argument as the history above, a pre-reset ad is no longer
-// true of the character. Deliberately narrow beyond those two: every other
-// in-memory map in this file holds only a timestamp, not content about a
-// prior relationship or the bot's own words, so a stale 8-second reply
-// cooldown surviving a reset is not worth a hook.
+// Also drops two other pieces of per-bot content, on the same staleness
+// argument: this bot's recent-public-utterance context
+// (Hs_RecentUtteranceContext), since a pre-reset ad is no longer true of the
+// character, and its ambient-experience ring (Hs_ForgetExperience,
+// hs_experience.h), since the quests it finished and the zones it walked
+// belong to a character that has just had its level, gear, zone and goals
+// rewritten.
+//
+// Deliberately narrow beyond those three. Every other in-memory map in this
+// file holds only a timestamp, not content about a prior relationship, the
+// bot's own words, or what it has been doing, so a stale 8-second reply
+// cooldown surviving a reset is not worth a hook. The rule is "drop what
+// makes a claim about who this character is", not "drop everything keyed by
+// the GUID".
 void Hs_ForgetBotHistory(uint64_t botGuid);
 
 // Delivers a tier-0 reflex reply, and also a grounded-answer reply: both are

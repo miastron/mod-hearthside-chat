@@ -18,6 +18,14 @@
 // read-only snapshot re-read fresh every request, since group/instance/
 // gold/zone are as volatile as combat.
 //
+// **Scoped to right now, deliberately.** Every field here is a fact about
+// the present instant, which is what makes re-reading it per request the
+// correct implementation. Facts about the bot's recent *past* are
+// hs_experience.h's job and are stored rather than snapshotted, since
+// nothing on a live Player* remembers that it wiped twice an hour ago. If a
+// fact you want to add cannot be read off Player*/Group*/Map* in one call,
+// it belongs there and not here.
+//
 // Pure logic, no AzerothCore dependency, split like hs_archetype.h/
 // hs_identity.h so it's standalone-testable. The caller (hs_handler.cpp's
 // TryDispatch, hs_engagement.cpp's TryFireFollowUp) reads live Player*/

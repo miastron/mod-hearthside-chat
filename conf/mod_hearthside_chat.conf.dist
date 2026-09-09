@@ -1030,6 +1030,112 @@ HearthsideChat.Rag.Generator.MaxChars = 900
 
 
 # --------------------------------------------
+# AMBIENT EXPERIENCE
+# --------------------------------------------
+# What a bot has been *doing* lately, folded into its next prompt as
+# background. Seven hooks (quests, loot, money, zone changes, professions,
+# dings, deaths) record into a small in-memory ring per bot; the ring is read
+# back as one short block appended after the persona line, the topic-gate
+# facts and the RAG block.
+#
+# This is not a tier and it never makes a bot speak. Event *reactions* are a
+# separate feature (the MaxTier.Events ceiling and the EventBucket keys
+# below); this only changes what a bot sounds like when it speaks for some
+# other reason. An event is a backdrop, not a topic.
+#
+# Nothing here is persisted. A worldserver restart empties every ring, which
+# is correct rather than a limitation: "recently" is not a fact that should
+# outlive the process, unlike the relationship rows in hside_memory.
+#
+# Repeats collapse instead of stacking, so four deaths in one zone become a
+# single "died in Sholazar Basin (4 times)" rather than four ring slots. That
+# collapsing is what makes the noisy hooks survivable, and it is also the only
+# wipe-shaped signal the module has.
+
+# HearthsideChat.Experience.Enable
+#     Description: Master on/off switch. Off makes every hook return
+#                  immediately, so the feature costs a branch per hook rather
+#                  than memory per bot, and no experience block is appended
+#                  to any prompt.
+#
+#                  Worth turning off deliberately if you are measuring
+#                  prefill: this block is the one part of the prompt that
+#                  changes as a bot plays, so it is the part a prefix cache
+#                  cannot reuse.
+#     Default:     1
+HearthsideChat.Experience.Enable = 1
+
+# HearthsideChat.Experience.MaxEntries
+#     Description: Most distinct entries rendered into one prompt, newest
+#                  first. The ring holds more than this; the surplus is
+#                  there so the renderer has something to fall back on when
+#                  the newest entries have aged out of the window.
+#     Default:     4
+HearthsideChat.Experience.MaxEntries = 4
+
+# HearthsideChat.Experience.MaxChars
+#     Description: Hard cap on the rendered block. Entries are dropped
+#                  whole rather than truncated mid-phrase -- each one is a
+#                  single short clause, so a severed one reads as a mistake
+#                  rather than as an abbreviation.
+#
+#                  This is prompt budget, and it is paid on every reactive
+#                  call for the bot in question. Raise it only if you have
+#                  latency headroom on the backend.
+#     Default:     300
+HearthsideChat.Experience.MaxChars = 300
+
+# HearthsideChat.Experience.WindowSeconds
+#     Description: How recent an entry has to be to render. Older entries
+#                  stay in the ring (a longer window would still see them)
+#                  but stop reaching prompts, so a bot that has been idle
+#                  for an hour stops sounding like it just finished a
+#                  dungeon.
+#
+#                  0 disables decay entirely and renders whatever is in the
+#                  ring regardless of age.
+#     Default:     1800 (30 minutes)
+HearthsideChat.Experience.WindowSeconds = 1800
+
+# HearthsideChat.Experience.LootMinQuality
+#     Description: ItemTemplate::Quality floor for the loot hook, which
+#                  otherwise fires on every grey. 0 Poor, 1 Common,
+#                  2 Uncommon, 3 Rare, 4 Epic, 5 Legendary.
+#
+#                  The right value moves with the realm's level spread: a
+#                  green is an event at level 20 and vendor trash at 80. On a
+#                  levelling-heavy realm 2 is reasonable; at endgame 4 keeps
+#                  the ring for things worth mentioning.
+#     Default:     3 (Rare)
+HearthsideChat.Experience.LootMinQuality = 3
+
+# HearthsideChat.Experience.MoneyMinCopper
+#     Description: Smallest single gain the money hook will record, in
+#                  copper. That hook fires on every vendor sale and quest
+#                  turn-in, so without a floor it would fill a ring by
+#                  itself. Losses are never recorded: a purchase has no
+#                  context a bot could sensibly carry into chat.
+#
+#                  A gain that rounds down to zero gold is dropped even if it
+#                  clears this floor, so values below 10000 behave as 10000.
+#     Default:     100000 (10 gold)
+HearthsideChat.Experience.MoneyMinCopper = 100000
+
+# HearthsideChat.Experience.SkillStep
+#     Description: Professions are recorded only when a gain carries the
+#                  skill across a multiple of this value, and the milestone
+#                  itself is what gets named -- so a bot landing on 301
+#                  records "reached 300 Skinning". Both profession hooks fire
+#                  on every single point, so this is what makes them usable.
+#
+#                  25 tracks how players actually talk about a profession:
+#                  nobody announces 287 and everyone announces 300. 0
+#                  disables profession recording entirely.
+#     Default:     25
+HearthsideChat.Experience.SkillStep = 25
+
+
+# --------------------------------------------
 # IDLE-TIME GENERATOR
 # --------------------------------------------
 # Fills hside_corpus during GPU idle time -- picks one under-quota

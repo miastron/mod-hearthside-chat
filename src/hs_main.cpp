@@ -5,6 +5,7 @@
 #include "hs_engagement.h"
 #include "hs_event.h"
 #include "hs_event_affinity_store.h"
+#include "hs_experience_store.h"
 #include "hs_generator.h"
 #include "hs_grounded_store.h"
 #include "hs_handler.h"
@@ -331,6 +332,22 @@ void Addmod_hearthside_chatScripts()
     new HsOpenerEncounterHandler();
     new HsMemoryDeathHandler();
     new HsMemoryGuildHandler();
+    // Ambient experience (hs_experience.h): seven hooks that record what a
+    // bot has been doing into an in-memory ring, read back as prompt
+    // background. None of these dispatch, enqueue, or make a bot speak --
+    // that is the whole distinction from the event handlers below, which
+    // take some of the same hooks. HsExperienceLevelHandler shares
+    // PLAYERHOOK_ON_LEVEL_CHANGED with HsEventLevelHandler and
+    // HsExperienceDeathHandler shares PLAYERHOOK_ON_PLAYER_JUST_DIED with
+    // both HsMemoryDeathHandler above and HsEventDeathHandler below; several
+    // PlayerScripts may take one hook and none depends on another's order.
+    new HsExperienceQuestHandler();
+    new HsExperienceLootHandler();
+    new HsExperienceMoneyHandler();
+    new HsExperienceZoneHandler();
+    new HsExperienceSkillHandler();
+    new HsExperienceLevelHandler();
+    new HsExperienceDeathHandler();
     // Event triggers (hs_event.h). HsEventDeathHandler takes the same
     // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above; both
     // run, and neither depends on the other's ordering.

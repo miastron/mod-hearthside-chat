@@ -428,6 +428,43 @@ extern bool     g_HsRagGeneratorEnable;    // the offline path: corpus buckets, 
 extern uint32_t g_HsRagGeneratorMaxChars;
 
 // --------------------------------------------
+// Ambient experience (hs_experience.h): what a bot has been doing lately,
+// appended to personaLine as background rather than fired as a reaction.
+//
+// Two groups of keys, and they answer different questions.
+//
+// **The render keys** (MaxEntries, MaxChars, WindowSeconds) decide what
+// reaches a prompt. These are prompt budget, and the trade is real: this
+// block is a per-request, per-bot segment that a prefix cache cannot reuse,
+// on the same T1000 whose prefill the fine-tune is trying to shrink
+// (Claude/finetune/README.md). It is appended last, after the archetype
+// line, topic gate and RAG block, so everything above it stays cacheable and
+// only these characters are paid for per call. The defaults are deliberately
+// tight.
+//
+// **The filter keys** (LootMinQuality, MoneyMinCopper, SkillStep) decide
+// what is recorded in the first place, at the hook site, before anything
+// enters the ring. They exist because four of the seven hooks feeding this
+// fire constantly -- loot on every grey, money on every vendor sale, skill
+// on every swing, zone on every border. The ring's collapsing deduplicates
+// repeats but cannot make an uninteresting event interesting, so these
+// floors are what make those hooks affordable. They are config rather than
+// constants because the right value moves with the realm: a green is an
+// event at level 20 and vendor trash at 80.
+//
+// Enable is a true kill switch: with it off, every hook returns immediately
+// and nothing is recorded, so the feature costs a branch per hook rather
+// than memory per bot.
+// --------------------------------------------
+extern bool     g_HsExperienceEnable;
+extern uint32_t g_HsExperienceMaxEntries;      // distinct entries rendered into one prompt
+extern uint32_t g_HsExperienceMaxChars;        // hard cap on the rendered block
+extern uint32_t g_HsExperienceWindowSeconds;   // older entries stay in the ring but stop rendering
+extern uint32_t g_HsExperienceLootMinQuality;  // ItemTemplate::Quality floor; 3 = Rare
+extern uint32_t g_HsExperienceMoneyMinCopper;  // single-gain floor, in copper
+extern uint32_t g_HsExperienceSkillStep;       // record only on multiples of this skill value
+
+// --------------------------------------------
 // Idle-time generator. Its own LLM endpoint, kept separate from the
 // reactive path's, regardless of whether they point at the same container.
 // Defaults to disabled: autonomous, GPU-spending, DB-writing background
