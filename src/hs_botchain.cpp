@@ -177,6 +177,12 @@ namespace
                 continue; // opposing faction can't read this channel
             if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
                 continue;
+            // Same reasoning as hs_ambient.cpp's/hs_script.cpp's General
+            // scans: a grouped bot chiming into a General hop instead of its
+            // own party is the same misdelivery, just reached via a chain hop
+            // rather than the initiating line.
+            if (kind == HsChannelKind::General && candidate->GetGroup())
+                continue;
 
             eligible.push_back(candidate);
         }

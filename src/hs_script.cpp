@@ -563,6 +563,12 @@ namespace
             // match, by far the most expensive test in this loop.
             if (!Hs_IsEligibleBot(candidate) || !candidate->IsAlive())
                 continue;
+            // Same reasoning as hs_ambient.cpp's General channel scan: a
+            // grouped bot's zone-wide General instance is exactly the zone
+            // its dungeon/party shares, so without this a channel scene could
+            // cast a bot who should be speaking to its own party instead.
+            if (kind == HsChannelKind::General && candidate->GetGroup())
+                continue;
             uint64_t guid = candidate->GetGUID().GetRawValue();
             if (IsBotInActiveRun(guid) || IsBotInActiveChannelRun(guid))
                 continue;

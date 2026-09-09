@@ -506,6 +506,16 @@ namespace
             if (!BotBaseEligible(candidate))
                 continue;
 
+            // A grouped bot's zone-wide General instance is exactly the zone
+            // its dungeon/party shares, so without this it can get pulled
+            // into musing at the zone's General channel instead of at its own
+            // party -- TryAmbientGroup above is the surface meant to speak
+            // for it. Trade is unaffected: it's city-scoped, and grouping
+            // there isn't the same "which chat window is this really for"
+            // conflict a dungeon party is.
+            if (kind == HsChannelKind::General && candidate->GetGroup())
+                continue;
+
             // Self-resolved and self-tested (see hs_queue.h's
             // Hs_ResolveChannelForDelivery comment): channel is resolved
             // from candidate's own zone, so Player::IsInChannel(Channel*)'s
