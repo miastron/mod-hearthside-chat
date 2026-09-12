@@ -278,7 +278,7 @@ uint32_t     g_HsGeneratorRowsPerBucket        = 20;
 uint32_t     g_HsGeneratorPollIntervalSeconds  = 5;
 uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds = 300;
 std::string g_HsGeneratorPromptVersion        = "v1";
-uint32_t     g_HsGeneratorScriptReserveTarget = 15;
+uint32_t     g_HsGeneratorScriptsPerPool       = 15;
 
 uint32_t     g_HsHttpServerPort           = 0;
 std::string g_HsHttpServerBind            = "127.0.0.1";
@@ -520,7 +520,7 @@ void LoadHearthsideChatConfig()
     g_HsGeneratorPollIntervalSeconds         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.PollIntervalSeconds", 5);
     g_HsGeneratorQuotaSatisfiedBackoffSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds", 300);
     g_HsGeneratorPromptVersion               = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.PromptVersion", "v1");
-    g_HsGeneratorScriptReserveTarget          = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.ScriptReserveTarget", 15);
+    g_HsGeneratorScriptsPerPool              = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.ScriptsPerPool", 15);
 
     g_HsHttpServerPort           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.HttpServerPort", 0);
     g_HsHttpServerBind            = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpServerBind", "127.0.0.1");

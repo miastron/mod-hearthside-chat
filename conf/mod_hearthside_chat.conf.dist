@@ -1202,15 +1202,35 @@ HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds = 300
 #     Default:     v1
 HearthsideChat.Generator.PromptVersion = v3
 
-# HearthsideChat.Generator.ScriptReserveTarget
-#     Description: Target number of unconsumed scripted bot-to-bot
-#                  conversations (hside_script) to keep in reserve. Takes
-#                  priority over bucket-filling while under target, but
-#                  behind the character-card work queue. If consumption
-#                  outpaces production the bots simply stop chatting to
-#                  each other -- running dry is the correct failure mode.
+# HearthsideChat.Generator.ScriptsPerPool
+#     Description: How many unconsumed scripted bot-to-bot conversations to
+#                  keep stocked in each pool. A low-water mark, not a
+#                  production total: the generator refills a pool that is
+#                  under this number and then stops, and resumes only as
+#                  scenes are consumed. Raising it banks a deeper buffer
+#                  against a slow backend, it does not make bots talk more
+#                  -- Script.Proximity.FireChancePercent above is the knob
+#                  for how often a scene actually fires.
+#
+#                  There are three pools -- /say, Trade and General -- each
+#                  stocked to this number independently, so the steady
+#                  state is three times this many conversations. (Note
+#                  these are not the six HearthsideChat.Channel.* channels:
+#                  /say is not a channel, and the other four global
+#                  channels never run scripted scenes.)
+#
+#                  Counted in whole conversations. hside_script_turn holds
+#                  individual lines, so its row count runs several times
+#                  higher, and consumed scripts are never deleted -- only
+#                  `consumed_at IS NULL` rows count toward this number.
+#
+#                  Stocking the pools takes priority over corpus
+#                  bucket-filling, but comes behind the character-card work
+#                  queue. If consumption outpaces production the bots
+#                  simply stop chatting to each other -- running dry is the
+#                  correct failure mode.
 #     Default:     15
-HearthsideChat.Generator.ScriptReserveTarget = 15
+HearthsideChat.Generator.ScriptsPerPool = 50
 
 # --------------------------------------------
 # OBSERVABILITY AND THE CONTROL API

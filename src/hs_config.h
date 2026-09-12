@@ -484,12 +484,14 @@ extern uint32_t     g_HsGeneratorPollIntervalSeconds;     // recheck cadence whi
 extern uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds; // backoff once nothing is under quota
 extern std::string g_HsGeneratorPromptVersion;            // tags generated rows for bulk-evict
 
-// The reserve target for scripted bot-to-bot conversations (hs_script.h). A
-// producer-feeding-a-consumer target, not a per-bucket quota: it takes
-// priority over bucket-filling on every generator cycle while under target,
-// following the same "cards, then script reserve, then buckets" order the
-// generator uses.
-extern uint32_t     g_HsGeneratorScriptReserveTarget;
+// How many unconsumed scripted bot-to-bot conversations (hs_script.h) to keep
+// stocked in each pool. Same per-container shape as g_HsGeneratorRowsPerBucket
+// above, but the containers are the three script pools (/say, Trade, General),
+// so the steady-state total is three times this. A low-water mark: the
+// generator refills a pool that is under it, taking priority over
+// bucket-filling on every cycle, following the same "cards, then scripts, then
+// buckets" order the generator uses.
+extern uint32_t     g_HsGeneratorScriptsPerPool;
 
 // --------------------------------------------
 // Observability and the control API. An authenticated HTTP server lifted

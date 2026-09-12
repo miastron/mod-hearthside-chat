@@ -1149,19 +1149,19 @@ namespace
             // Priority order: cards first, then the /say script reserve,
             // then the two channel-script reserves (§4.17: Trade then
             // General), then corpus buckets. Channel
-            // reserves reuse the same g_HsGeneratorScriptReserveTarget as
-            // the /say reserve rather than a separate per-channel config
+            // pools reuse the same g_HsGeneratorScriptsPerPool as
+            // the /say pool rather than a separate per-channel config
             // key (Claude/archive/ISSUES.md's "separate generator reserve or a
             // truncation rule" question, answered as "shared target" for
             // now: easy to split later against live-realm evidence).
             bool added;
             if (PendingCardCount() > 0)
                 added = RunOneCardGenerationCycle();
-            else if (ScriptReserveDepthQuery() < g_HsGeneratorScriptReserveTarget)
+            else if (ScriptReserveDepthQuery() < g_HsGeneratorScriptsPerPool)
                 added = RunOneScriptGenerationCycle();
-            else if (ChannelScriptReserveDepthQuery(HsChannelKind::Trade) < g_HsGeneratorScriptReserveTarget)
+            else if (ChannelScriptReserveDepthQuery(HsChannelKind::Trade) < g_HsGeneratorScriptsPerPool)
                 added = RunOneChannelScriptGenerationCycle(HsChannelKind::Trade);
-            else if (ChannelScriptReserveDepthQuery(HsChannelKind::General) < g_HsGeneratorScriptReserveTarget)
+            else if (ChannelScriptReserveDepthQuery(HsChannelKind::General) < g_HsGeneratorScriptsPerPool)
                 added = RunOneChannelScriptGenerationCycle(HsChannelKind::General);
             else
                 added = RunOneGenerationCycle();
