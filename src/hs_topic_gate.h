@@ -5,10 +5,10 @@
 #include <string>
 
 // §4.13's topic gating for the reactive (LLM) tier: gear, group membership/
-// leadership, in-instance, gold, and zone. These are the remaining items from
-// PLAN.md §4.13 with no runtime consumer yet (level is already gated by
-// archetype eligibility, hs_archetype.h; combat by the style pass's `care`
-// offset, hs_style.h).
+// leadership, in-instance, gold, and zone. This file is what actually states
+// those facts at runtime; the other items PLAN.md §4.13 covers are handled
+// elsewhere (level by archetype eligibility, hs_archetype.h; combat by the
+// style pass's `care` offset, hs_style.h).
 //
 // Same technique used elsewhere in the module (hs_queue.cpp's
 // RpgStatusHint, hs_corpus.h's placeholders): state true facts, never an

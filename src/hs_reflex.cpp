@@ -44,10 +44,6 @@ namespace
         return collapsed.substr(0, end);
     }
 
-    // Strips at most one trailing '?', '!' or '.': BotQuestion/
-    // PersonalProbe's tolerance for "how old are you?" vs "how old are
-    // you", without the Plain family's aggressive repeat-collapsing, which
-    // would turn "bot??" into "bot?" and blur the bare-"bot?" special case.
     struct PlainEntry
     {
         const char*              trigger;
@@ -163,6 +159,10 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
                               HsBotQuestionMode botQuestionMode)
 {
     std::string withPunct  = HsText::Hs_NormalizeWhitespace(HsText::Hs_ToLowerAscii(trigger));
+    // One trailing '?'/'!'/'.' only, not a run: BotQuestion/PersonalProbe's
+    // tolerance for "how old are you?" vs "how old are you", without the
+    // Plain family's aggressive repeat-collapsing below, which would turn
+    // "bot??" into "bot?" and blur the bare-"bot?" special case.
     std::string corePhrase = HsText::Hs_StripOneTrailingMark(withPunct);
 
     // ---- "are you a bot?" (checked first: the module's most-scrutinised

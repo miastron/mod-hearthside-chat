@@ -10,7 +10,7 @@
 // owns the hside_archetype query and pushes the result into hs_archetype.h's
 // in-memory table via Hs_SetArchetypeTable.
 //
-// Loads all thirteen rows from hside_archetype (matched to the fixed enum by
+// Loads all twelve rows from hside_archetype (matched to the fixed enum by
 // enum_name, not by row order) into memory once, at startup, so every
 // per-request archetype lookup (hs_queue.cpp's WorkerLoop, run once per
 // reply) stays a plain array index with no query in the hot path. Sourced

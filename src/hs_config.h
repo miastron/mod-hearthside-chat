@@ -43,8 +43,9 @@ extern bool g_HsDebugChatLogEnabled;
 // the old allocation, so an unguarded read is a use-after-free, not a stale
 // value. (The default system prompt is ~220 bytes, far past SSO, so any
 // operator edit to it is a heap reallocation.) This is the same hazard, and
-// the same fix, that hs_archetype.cpp:196-203 documents for g_Archetypes,
-// whose HsArchetypeInfo likewise owns a std::string.
+// the same fix, that hs_archetype.cpp's g_ArchetypeTableMutex comment
+// documents for g_Archetypes, whose HsArchetypeInfo likewise owns a
+// std::string.
 //
 // The scalars are deliberately left bare: a torn uint32_t/float/bool is
 // formally UB but benign on x86-64, and costs one request a wrong number

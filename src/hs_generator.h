@@ -17,8 +17,9 @@
 //
 // Scoped to the tag axes the seeded content actually uses (none, class,
 // level_band), same none/faction/zone scoping as hs_corpus.h's selection
-// path. Priority order across work types: cards first, then the script
-// reserve, then corpus buckets.
+// path. Priority order across work types: cards first, then the /say script
+// reserve, then the two §4.17 channel-script reserves (Trade, General), then
+// corpus buckets.
 
 void Hs_GeneratorStartup();
 void Hs_GeneratorShutdown();

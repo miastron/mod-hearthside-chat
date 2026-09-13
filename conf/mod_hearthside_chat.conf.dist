@@ -19,61 +19,55 @@
 # database instead of this file.
 
 # --------------------------------------------
-# LOGGING (worldserver.conf, not this file)
+# LOGGING (set in worldserver.conf, not this file)
 # --------------------------------------------
 #
-# Review H2 (2026-09-03): this module used to log everything -- backend
-# outages, per-reply delivery traces, generator output, circuit-breaker
-# transitions -- to the core's `server.loading` channel, alongside genuine
-# startup diagnostics. An operator who filtered that channel down to boot
-# messages could not see a backend outage; one who left it on got per-reply
-# noise mixed into boot logs.
+# This module logs to its own logger categories instead of the core's
+# `server.loading` channel, so you can watch it closely without either
+# drowning in, or hiding, normal server boot messages. Add any of these
+# lines to worldserver.conf and give each its own level/appender:
 #
-# It now uses its own logger tree. AzerothCore resolves a logger name by
-# walking up dot-separated parents, so configuring `module` (or `root`)
-# alone still catches everything, and any of these can be given its own
-# level and appenders in worldserver.conf:
+#   module.hearthside            startup, config, table loads, bot identity
+#                                changes, the HTTP control server
+#   module.hearthside.llm        AI backend failures and recovery
+#   module.hearthside.generator  the idle-time content generator
+#   module.hearthside.chat       every chat request/reply (noisy -- mostly
+#                                only shows up if HearthsideChat.DebugEnabled
+#                                below is on)
 #
-#   module.hearthside            startup, config, table loads, identity
-#                                lifecycle (promote/demote/retire), the
-#                                HTTP control server
-#   module.hearthside.llm        backend request failures, response-shape
-#                                errors, circuit-breaker open/close
-#   module.hearthside.generator  idle-time generation, quality-gate
-#                                rejections, eviction sweeps, parked cards
-#   module.hearthside.chat       per-request and per-reply traces, ambient
-#                                bail reasons (mostly gated behind
-#                                HearthsideChat.DebugEnabled below)
-#
-# Example -- backend problems to the console, per-reply traces off entirely:
+# Logger names nest, so turning on `module` (or `root`) covers all four at
+# once. Example -- show backend problems on the console, keep per-reply
+# noise off:
 #
 #   Logger.module.hearthside.llm = 4,Console Server
 #   Logger.module.hearthside.chat = 1,Server
 #
-# The level is the first field (1 = fatal only ... 5 = trace); the rest are
-# appender names already defined in worldserver.conf.
+# The first number is the level (1 = fatal errors only ... 5 = very
+# detailed "trace" logging); the rest are appender names already defined
+# in worldserver.conf.
 
 # --------------------------------------------
 # CORE MODULE TOGGLES & DEBUGGING
 # --------------------------------------------
 
 # HearthsideChat.Enable
-#     Description: Enable or disable the module.
+#     Description: Turns the whole module on or off.
 #     Default:     1 (true)
 HearthsideChat.Enable = 1
 
 # HearthsideChat.DebugEnabled
-#     Description: Enables extra logging for debugging purposes.
+#     Description: Turns on extra, detailed logging for troubleshooting.
+#                  Leave this off during normal play -- it's noisy.
 #     Default:     0 (false)
 HearthsideChat.DebugEnabled = 0
 
 # HearthsideChat.Bridge.Enable
-#     Description: Lets the optional "HearthsideInspect" player addon ask the
-#                  server for a bot's personality info (archetype, memory
-#                  flavor, etc.) to show players in-game. Read-only -- it
-#                  can't change anything. Works independently of
-#                  HearthsideChat.Enable above; turn off if you don't want
-#                  players able to see this info.
+#     Description: Lets the optional "HearthsideInspect" player addon show
+#                  players a bot's personality info (its archetype, memory
+#                  flavor, etc.) in-game. Read-only -- the addon can't
+#                  change anything through this. Works independently of
+#                  HearthsideChat.Enable above, so turn this off separately
+#                  if you don't want players able to see that info.
 #     Default:     1 (true)
 HearthsideChat.Bridge.Enable = 1
 
@@ -82,40 +76,36 @@ HearthsideChat.Bridge.Enable = 1
 # --------------------------------------------
 
 # HearthsideChat.LLM.ApiType
-#     Description: Which API style your AI server speaks. "llamacpp" talks to
-#                  llama.cpp's own API directly -- recommended, it's the
-#                  fastest and lets replies reuse work from earlier requests.
-#                  "openai" works with llama-server started using --jinja, or
-#                  any other OpenAI-compatible AI server. "ollama" talks to
-#                  Ollama.
+#     Description: Which API style your AI server speaks. "llamacpp" talks
+#                  to llama.cpp directly -- recommended, it's the fastest
+#                  and lets replies reuse work from earlier requests.
+#                  "openai" works with llama-server started using --jinja,
+#                  or any other OpenAI-compatible AI server. "ollama" talks
+#                  to Ollama.
 #     Values:      llamacpp | openai | ollama
 #     Default:     llamacpp
 HearthsideChat.LLM.ApiType = llamacpp
 
 # HearthsideChat.LLM.Template
-#     Description: Only matters for ApiType=llamacpp. In that mode the
-#                  module has to format the conversation itself in exactly
-#                  the style the model was trained on -- pick the wrong one
-#                  and replies come out garbled, or the model never stops
-#                  talking. Check your model's page/README for which format
-#                  it expects. Ignored for ApiType=openai/ollama, since those
-#                  servers format the conversation themselves.
+#     Description: Only matters when ApiType=llamacpp. In that mode this
+#                  module has to format the conversation itself, in exactly
+#                  the style the model was trained on ("chat template") --
+#                  pick the wrong one and replies come out garbled, or the
+#                  model never stops talking. Check your model's page for
+#                  which format it expects. Ignored for ApiType=openai/
+#                  ollama, since those servers format the conversation
+#                  themselves.
 #
 #                  These are the same four names llama.cpp uses for its own
-#                  --chat-template flag, so whatever that flag needs for your
-#                  model is what belongs here:
-#                    llama3   Llama 3.x Instruct   <|start_header_id|> ... <|eot_id|>
-#                    chatml   Qwen, and many more  <|im_start|> ... <|im_end|>
-#                    mistral  Mistral, Ministral   [INST] ... [/INST]
-#                    gemma    Gemma 2/3            <start_of_turn> ... <end_of_turn>
-#
-#                  mistral and gemma have no system role of their own, so the
-#                  module folds the system text into the following message --
-#                  the same thing those models' own templates do.
+#                  --chat-template flag:
+#                    llama3   Llama 3.x Instruct
+#                    chatml   Qwen, and many others
+#                    mistral  Mistral, Ministral
+#                    gemma    Gemma 2/3
 #
 #                  An unrecognised value is refused with an error in the
-#                  worldserver log and falls back to llama3, rather than being
-#                  quietly rendered as llama3 and blamed on the model.
+#                  worldserver log and falls back to llama3, rather than
+#                  being quietly misapplied and blamed on the model.
 #     Values:      llama3 | chatml | mistral | gemma
 #     Default:     llama3
 HearthsideChat.LLM.Template = llama3
@@ -135,8 +125,8 @@ HearthsideChat.LLM.Url = http://127.0.0.1:8080
 
 # HearthsideChat.LLM.Model
 #     Description: Which model to use. Ignored for ApiType=llamacpp (that
-#                  server only ever has one model loaded at a time); required
-#                  for ApiType=openai/ollama.
+#                  server only ever has one model loaded at a time);
+#                  required for ApiType=openai/ollama.
 #     Default:     (empty)
 HearthsideChat.LLM.Model =
 
@@ -148,57 +138,61 @@ HearthsideChat.LLM.Model =
 HearthsideChat.LLM.ApiKey =
 
 # HearthsideChat.LLM.TimeoutSeconds
-#     Description: HTTP timeout for one LLM call.
+#     Description: How long to wait for the AI server to answer one request
+#                  before giving up.
 #     Default:     20
 HearthsideChat.LLM.TimeoutSeconds = 20
 
 # HearthsideChat.LLM.MaxTokens
-#     Description: Upper limit on reply length (roughly, word-pieces). This
-#                  is a safety ceiling, not a target -- the model normally
-#                  stops well before it on its own. A reply that does hit the
-#                  cap gets cut off mid-sentence, so raising this trades GPU
-#                  time for rarely-needed extra length.
+#     Description: Upper limit on reply length (roughly, chunks of a word).
+#                  This is a safety ceiling, not a target -- the model
+#                  normally stops well before it on its own. A reply that
+#                  does hit the cap gets cut off mid-sentence, so raising
+#                  this trades AI-server time for rarely-needed extra length.
 #     Default:     60
 HearthsideChat.LLM.MaxTokens = 60
 
 # HearthsideChat.LLM.SystemPrompt
-#     Description: System-prompt half of the shared prompt prefix -- frames
-#                  bots as ordinary players, not characters. A fixed
-#                  few-shot example block completes the prefix and is
-#                  hardcoded in hs_llm.cpp, not configurable here.
+#     Description: The instructions given to the AI before every reply,
+#                  telling it to sound like an ordinary player rather than
+#                  a character. A second, fixed example block is added
+#                  automatically and isn't editable here (it lives in
+#                  hs_llm.cpp).
 HearthsideChat.LLM.SystemPrompt = You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. No roleplay, no asterisks, no mention of being an AI or a game. If you don't know something specific, deflect vaguely instead of making it up.
 
 # HearthsideChat.LLM.HistoryTurns
-#     Description: Trigger/reply pairs kept per bot-player pair and replayed
-#                  as prior turns. 2 = four lines of history. Set to 0 to
-#                  disable history entirely without a rebuild.
+#     Description: How many previous back-and-forths with the same player a
+#                  bot remembers and includes in its next reply. 2 means the
+#                  last two exchanges (four lines). Set to 0 to turn this
+#                  off entirely.
 #     Default:     2
 HearthsideChat.LLM.HistoryTurns = 2
 
 # HearthsideChat.LLM.DryMultiplier
-#     Description: Strength of a setting that discourages the model from
-#                  repeating itself (llamacpp ApiType only; the setting is
-#                  called "DRY" in llama.cpp). 0.0 turns it off. Testing on
-#                  this module made replies *less* varied with it on, not
-#                  more, so it ships off; enabling it also costs roughly
-#                  85ms per reply.
+#     Description: Strength of a setting (called "DRY" in llama.cpp) that
+#                  discourages the AI from repeating itself. 0.0 turns it
+#                  off. Testing on this module found it made replies less
+#                  varied, not more, and it costs roughly 85ms extra per
+#                  reply -- so it ships off. Only applies when ApiType is
+#                  llamacpp.
 #     Default:     0.0
 HearthsideChat.LLM.DryMultiplier = 0.0
 
 # --------------------------------------------
 # REPLY GATING
 # --------------------------------------------
-# Player-initiated only. Candidate gating (real player, faction, range,
-# combat) happens first; the arbiter then picks 0-2 of the eligible bots to
-# answer -- /say, party/raid, guild, and the §4.17 channel surface all route
-# through it (a named address always wins outright). Whisper is inherently
-# 1:1, so it uses a simple chance roll instead of the arbiter. Live bot-to-bot
-# chains (hs_botchain.h) also go through the same arbiter when they fire;
-# scripted bot-to-bot replay is handled separately, via the corpus reserve
-# below.
+# Only covers replies to something a player said. The module first filters
+# out bots that clearly shouldn't answer (not a real player, wrong faction,
+# too far away, in combat), then picks 0-2 of what's left to actually
+# answer. This applies to /say, party/raid, guild chat, and the global
+# channels further down (a bot addressed by name always answers). Whispers
+# are one-on-one, so they use a simple chance roll instead of this
+# candidate-and-pick process. Live bot-to-bot conversations (further down)
+# go through the same picking process when they fire; pre-written bot-to-bot
+# scenes are handled separately, in the corpus section.
 
 # HearthsideChat.Say.Distance
-#     Description: Yards within which a bot is an eligible /say candidate.
+#     Description: Yards within which a bot is close enough to answer a /say.
 #     Default:     20.0
 HearthsideChat.Say.Distance = 20.0
 
@@ -208,13 +202,13 @@ HearthsideChat.Say.Distance = 20.0
 HearthsideChat.ReplyChance.Whisper = 100
 
 # HearthsideChat.ReplyCount.ZeroPercent / OnePercent / TwoPercent
-#     Description: Once the arbiter has an eligible candidate pool (/say,
-#                  party/raid, guild, channel, or a live bot-to-bot chain),
-#                  these three weights decide how many bots answer: zero,
-#                  one, or two (a named address always wins outright and
-#                  ignores this roll). Relative weights, not cumulative
-#                  percentages -- they need not add to 100, and there is no
-#                  ordering requirement between them.
+#     Description: Once there's a pool of eligible bots (for /say, party/
+#                  raid, guild, channel chat, or an ongoing bot-to-bot
+#                  conversation), these three numbers set the relative odds
+#                  of zero, one, or two bots answering (a bot addressed by
+#                  name always answers, ignoring this roll). They're
+#                  relative weights, not percentages that have to add up to
+#                  100.
 #     Default:     30 / 60 / 10
 HearthsideChat.ReplyCount.ZeroPercent = 30
 HearthsideChat.ReplyCount.OnePercent = 60
@@ -226,58 +220,56 @@ HearthsideChat.ReplyCount.TwoPercent = 10
 HearthsideChat.DisableRepliesInCombat = 1
 
 # HearthsideChat.ExcludeNames
-#     Description: Comma-separated bot character names this module never
-#                  speaks through -- no reflex, grounded answer, corpus line,
-#                  or LLM reply, and the bot is never archetype-assigned.
-#                  Separate from mod-playerbots' own LevelBrackets.ExcludeNames/
-#                  ResetBotLevel.ExcludeNames, which this module already
-#                  manages automatically for carded bots -- those protect a
-#                  bot FROM recycling; this one keeps a named bot out of
-#                  Hearthside entirely, e.g. a bot reserved for another
-#                  system or a GM's own test character.
+#     Description: Comma-separated bot character names this module should
+#                  never speak through at all -- no canned reactions, fact
+#                  answers, pre-written lines, or AI replies, and the bot
+#                  never gets a personality assigned. Use this for a bot
+#                  reserved for something else, like a GM's own test
+#                  character. Separate from mod-playerbots' own level-
+#                  related exclude lists, which this module already manages
+#                  automatically for its "known" bots -- those protect a bot
+#                  FROM being recycled; this one keeps a named bot out of
+#                  Hearthside entirely.
 #     Default:     (empty)
 HearthsideChat.ExcludeNames =
 
 # HearthsideChat.DebugChatLog.Enable
-#     Description: Logs every reactive-tier (LLM) exchange -- trigger text,
-#                  the model's pre-style output, and the styled text actually
-#                  delivered -- to hside_chat_log, for an operator to review
-#                  and hand-pick examples worth promoting. Does not write to
-#                  hside_corpus by itself; promote entries manually via
-#                  `.hearthside capture`. Not covered by any eviction sweep --
-#                  prune it yourself on a busy realm.
+#     Description: Logs every AI-generated exchange -- the trigger message,
+#                  the AI's raw output, and the final styled reply -- to the
+#                  hside_chat_log database table, so you can review them and
+#                  hand-pick good ones to reuse later (via the
+#                  `.hearthside capture` GM command). This log isn't cleaned
+#                  up automatically -- prune it yourself on a busy realm.
 #     Default:     0 (false)
 HearthsideChat.DebugChatLog.Enable = 0
 
 # --------------------------------------------
 # RUNTIME QUEUE
 # --------------------------------------------
-# AI requests are sent to the server one at a time, never several at once --
-# llama-server's parallel "slots" exist to keep recent conversations cached
-# for speed, not to handle multiple requests simultaneously. The settings
-# below are the real limits on how much load reaches your AI server: a
-# per-minute request budget, a per-bot cooldown on top of it, and an
-# automatic pause if the server stops responding.
+# Requests to your AI server are sent one at a time, never several at once.
+# The settings below are the real limits on how much load reaches your AI
+# server: a per-minute request budget, a per-bot cooldown on top of it, and
+# an automatic pause if the server stops responding.
 
 # HearthsideChat.Queue.TTLSeconds
-#     Description: A queued request older than this when the worker reaches
-#                  it is dropped rather than answered -- silence beats a
-#                  late reply.
+#     Description: A queued request that's been waiting longer than this
+#                  gets dropped instead of answered late -- silence beats a
+#                  stale reply.
 #     Default:     15
 HearthsideChat.Queue.TTLSeconds = 15
 
 # HearthsideChat.Queue.MaxDepth
-#     Description: Bounded queue depth. A request beyond this is dropped
-#                  rather than queued.
+#     Description: Most requests allowed to be waiting at once. Anything
+#                  beyond this is dropped instead of queued.
 #     Default:     20
 HearthsideChat.Queue.MaxDepth = 20
 
 # HearthsideChat.Bucket.RepliesPerMinute
 #     Description: The main limit on AI usage -- how many AI replies are
-#                  allowed per minute, total across every bot combined. The
-#                  server can sustain about 104/min flat out; the default
-#                  sits a little under that so this limit kicks in before
-#                  the AI server itself starts queuing requests.
+#                  allowed per minute, total across every bot combined.
+#                  Lower this if your AI server can't keep up; the default
+#                  already sits a bit under what a typical local server can
+#                  sustain flat-out.
 #     Default:     90
 HearthsideChat.Bucket.RepliesPerMinute = 90
 
@@ -288,124 +280,119 @@ HearthsideChat.Bucket.RepliesPerMinute = 90
 HearthsideChat.Bucket.BurstCapacity = 8
 
 # HearthsideChat.Bot.CooldownSeconds
-#     Description: Minimum seconds between two admitted requests for the
-#                  same bot, regardless of bucket state.
+#     Description: Minimum seconds between two AI replies from the same
+#                  bot, no matter what.
 #     Default:     8
 HearthsideChat.Bot.CooldownSeconds = 8
 
 # HearthsideChat.CircuitBreaker.FailureThreshold
-#     Description: Consecutive LLM call failures before the breaker opens
-#                  and further requests are silently rejected.
+#     Description: Consecutive AI call failures before the module pauses
+#                  and starts silently rejecting further requests, instead
+#                  of letting bots keep failing to reply.
 #     Default:     3
 HearthsideChat.CircuitBreaker.FailureThreshold = 3
 
 # HearthsideChat.CircuitBreaker.ProbeIntervalSeconds
-#     Description: While the breaker is open, at most one request per this
-#                  many seconds is let through as a probe. A successful
-#                  probe closes the breaker.
+#     Description: While paused, the module tries again at most once every
+#                  this many seconds. A successful try turns replies back on.
 #     Default:     15
 HearthsideChat.CircuitBreaker.ProbeIntervalSeconds = 15
 
 # --------------------------------------------
 # TYPING DELAY
 # --------------------------------------------
-# Reflex/grounded/corpus-fallback replies already carry their own fixed
-# 400-1500ms delay and are unaffected by this section. This is specifically
-# the tier-2 (LLM) reply's delay: a same-tick reply is as unhuman as a
-# four-minute one, so a base+per-character delay is applied on top of
-# however long the LLM call itself already took -- never shortening what
-# generation already cost, only topping it up toward a human-plausible total.
+# This only affects AI-generated replies -- canned/fact-based/pre-written
+# replies already have their own short fixed delay (400-1500ms) and aren't
+# affected by this section. A reply that lands instantly looks as unnatural
+# as one that takes four minutes, so the module adds a delay on top of
+# however long the AI call itself already took, never shortening it.
 
 # HearthsideChat.TypingDelay.Enable
-#     Description: Master toggle for the tier-2 typing delay.
+#     Description: Master toggle for the extra typing delay on AI replies.
 #     Default:     1 (true)
 HearthsideChat.TypingDelay.Enable = 1
 
 # HearthsideChat.TypingDelay.MaxMs
-#     Description: Cap on the total target delay (archetype's typing_base_ms
-#                  + typing_per_char_ms*length, hside_archetype SQL), so a
-#                  long reply can't stall delivery indefinitely. The formula
-#                  itself is per-archetype, not an operator key -- this is
-#                  only the ceiling, same relationship LLM.MaxTokens has
-#                  with each archetype's verbosity cap.
+#     Description: Upper limit on the typing delay for an AI reply. The
+#                  actual delay is based on the bot's personality (set in
+#                  the database) and the reply's length; this setting is
+#                  just the ceiling, so an unusually long reply can't stall
+#                  delivery indefinitely.
 #     Default:     6000
 HearthsideChat.TypingDelay.MaxMs = 6000
 
 # HearthsideChat.MinDeliveryDelayMs
-#     Description: Unconditional floor on the tier-2 reply's total delay,
-#                  applied even when TypingDelay.Enable is off -- without it,
-#                  a fast backend could deliver a reply same-tick, which is
-#                  as unhuman as a four-minute one. Reflex/grounded/corpus-
-#                  fallback (400-1500ms) and scripted turns (800-2000ms+)
-#                  already have their own floors and are unaffected.
+#     Description: Minimum delay before any AI reply is delivered, even
+#                  with TypingDelay.Enable off -- otherwise a fast AI server
+#                  could deliver a reply the instant it's ready, which is
+#                  just as unnatural as a long delay. Canned/fact-based/
+#                  pre-written replies (400-1500ms) and scripted scenes
+#                  (800-2000ms+) already have their own minimums and aren't
+#                  affected by this.
 #     Default:     400
 HearthsideChat.MinDeliveryDelayMs = 400
 
 # --------------------------------------------
 # DISTRACTED REPLY -- the "sorry, was afk" flavor
 # --------------------------------------------
-# Occasionally a bot answers late and says so: it sends a short canned line
+# Occasionally a bot answers late and says so: a short canned line
 # ("sorry, was afk", "back", ...) after a delay, then the real reply a full
-# typing delay after that. The odds are per-archetype
-# (hside_archetype.distracted_chance), which replaced the old reply_chance
-# column -- a personality that simply doesn't answer reads as being ignored,
-# or as a broken module, on a realm that is almost entirely bots, so the same
-# half-present trait is expressed as a late reply instead of a missing one.
+# typing delay after that. How often this happens is set per bot
+# personality in the database (hside_archetype.distracted_chance), not
+# here -- it's meant to read as a personality quirk, not as the AI server
+# being slow. It is deliberately NOT tied to actual backend slowness or to
+# Queue.TTLSeconds: a request that times out was dropped before the AI ever
+# saw it, and on a server that's never under real load, tying this to
+# latency would mean it almost never fired.
 #
-# Note this is characterization, not backpressure: it is deliberately NOT
-# driven by real backend latency or Queue.TTLSeconds. A TTL expiry means the
-# request was dropped before inference ever ran, and on a GPU that is never
-# stressed a latency-triggered version would simply never fire.
-#
-# The filler lines themselves are compiled in (hs_queue.cpp), like the tier-0
-# reflex vocabulary -- editing them costs a rebuild.
+# The filler lines themselves are hardcoded (in hs_queue.cpp), like the
+# canned reflex vocabulary -- editing them needs a rebuild.
 
 # HearthsideChat.Distracted.Enable
 #     Description: Master toggle. Off means no bot ever sends the filler
-#                  line, whatever distracted_chance says.
+#                  line, regardless of its personality's odds.
 #     Default:     1 (true)
 HearthsideChat.Distracted.Enable = 1
 
 # HearthsideChat.Distracted.MinDelaySeconds
-#     Description: Floor on how long the bot appears to have been away before
-#                  the "sorry, was afk" line lands. This is the setting that
-#                  makes or breaks the illusion: apologizing for stepping
-#                  away only five seconds ago is a transparent lie, so the
-#                  floor has to be long enough to justify the apology.
+#     Description: Shortest gap before a "sorry, was afk" line can appear.
+#                  Keep this reasonably long -- apologizing for stepping
+#                  away five seconds ago doesn't ring true.
 #     Default:     25
 HearthsideChat.Distracted.MinDelaySeconds = 25
 
 # HearthsideChat.Distracted.MaxDelaySeconds
-#     Description: Ceiling on that same gap -- long enough to be believable,
-#                  short enough that the player doesn't conclude the bot is
-#                  broken and walk away. Clamped up to MinDelaySeconds if set
-#                  below it.
+#     Description: Longest such gap -- long enough to be believable, short
+#                  enough that the player doesn't decide the bot is broken
+#                  and move on. Clamped up to MinDelaySeconds if set below it.
 #     Default:     60
 HearthsideChat.Distracted.MaxDelaySeconds = 60
 
 # HearthsideChat.Distracted.CooldownSeconds
-#     Description: Minimum seconds before the same bot can be "distracted"
-#                  again, regardless of its archetype's chance. Without this,
-#                  a player unlucky enough to be talking to a high-chance bot
-#                  would experience it as one that constantly replies late.
-#                  Keyed per bot, not per conversation.
+#     Description: Minimum time before the same bot can be "distracted"
+#                  again, regardless of its personality's odds -- otherwise
+#                  a player talking to a high-odds bot would experience it
+#                  as one that constantly replies late. Tracked per bot, not
+#                  per conversation.
 #     Default:     600
 HearthsideChat.Distracted.CooldownSeconds = 600
 
 # --------------------------------------------
 # TIER CEILINGS -- one AI-usage dial per kind of chat
 # --------------------------------------------
-# Every "MaxTier" key below caps how far that kind of chat is allowed to go:
+# Each "MaxTier" setting below caps how far that kind of chat is allowed to
+# go:
 #   off       - never speaks
 #   reflex    - only quick canned reactions (gz, ty, lol, etc.)
-#   corpus    - reflex, plus pre-written lines a background process authors
-#               ahead of time -- no live AI call, no extra GPU cost
-#   inference - all of the above, plus live AI-generated replies
-# A bot falls back to the highest tier its ceiling allows rather than going
-# silent -- "off" is the only value that silences a surface outright.
-# All seven keys are live. DirectReply, EngagementFollowUp and Events request
-# "inference" by default; BotToBot only does if you raise it from the
-# "corpus" default (see the live-chains section further down).
+#   corpus    - reflex, plus pre-written lines a background process writes
+#               ahead of time -- no live AI call, no extra cost
+#   inference - all of the above, plus live, AI-generated replies
+# A bot falls back to the highest tier its setting allows rather than
+# staying silent -- "off" is the only value that fully silences a surface.
+# All seven settings below take effect immediately on `.reload config`, no
+# restart needed. DirectReply, EngagementFollowUp and Events default to
+# "inference"; BotToBot only reaches it if you raise it from its "corpus"
+# default (see the live-chains section further down).
 
 # HearthsideChat.MaxTier.DirectReply
 #     Description: Ceiling for replies directly addressed to a bot (/say,
@@ -414,153 +401,141 @@ HearthsideChat.Distracted.CooldownSeconds = 600
 HearthsideChat.MaxTier.DirectReply = inference
 
 # HearthsideChat.MaxTier.Ambient
-#     Description: Ceiling for unprompted ambient chatter -- a bot speaking
-#                  because there is dead air, not because anything happened.
-#                  This is the only surface with no trigger at all; every
-#                  other one needs an utterance, a game event, a shared
-#                  context, or a prior reply.
+#     Description: Ceiling for unprompted chatter -- a bot talking because
+#                  there's a lull, not because anything happened. "corpus"
+#                  and "inference" behave the same here, since there's no
+#                  live-AI ambient chatter, only pre-written lines;
+#                  "reflex" or "off" turn it off entirely.
 #
-#                  Corpus-only by design: "corpus" and "inference" behave
-#                  identically, and "reflex" or "off" silence the surface.
-#                  There is no generated ambient path and no plan for one --
-#                  unprompted GPU spend against no question is the worst
-#                  cost-per-value in the module, and the idle generator
-#                  already writes this content offline for free.
-#
-#                  Speaks on /say, party, raid, and the Trade/General
-#                  channels. See the Ambient.* keys below for volume, which
-#                  is where the real tuning is -- and note this key is a
-#                  ceiling, not the volume control: setting it to "off"
-#                  silences ambient chatter but does NOT quiet openers or
-#                  scripted scenes. Ambient.Bucket.RepliesPerMinute = 0 is
-#                  the lever that quiets all three at once.
+#                  This only controls whether ambient chatter can happen at
+#                  all, not how much -- see the Ambient.* settings further
+#                  down for volume. To quiet the realm, use
+#                  HearthsideChat.Ambient.Bucket.RepliesPerMinute = 0, not
+#                  this setting: that one also covers openers and scripted
+#                  scenes, which this key doesn't touch.
 #     Default:     corpus
 HearthsideChat.MaxTier.Ambient = corpus
 
 # HearthsideChat.MaxTier.Openers
-#     Description: Ceiling for shared-context-triggered openers (group
-#                  formed, joint kill, rez, dungeon completed, prolonged
-#                  proximity). "corpus" or "inference" both permit it (no
-#                  higher tier is wired for this surface yet); "reflex" or
-#                  "off" silence it.
+#     Description: Ceiling for greetings triggered by a shared moment (a
+#                  group forming, a joint kill, a rez, finishing a dungeon,
+#                  or two bots lingering near each other). "corpus" or
+#                  "inference" both allow it; "reflex" or "off" silence it.
 #     Default:     corpus
 HearthsideChat.MaxTier.Openers = corpus
 
 # HearthsideChat.MaxTier.BotToBot
-#     Description: Ceiling for bot-to-bot conversation. Two mechanisms sit
-#                  under this one key, and because a ceiling is permissive
-#                  rather than a mode switch, the higher value adds to the
-#                  lower rather than replacing it:
-#                    corpus    -- scripted replay only. Multi-turn scenes the
-#                                 idle generator wrote earlier, replayed near
-#                                 a player (/say) or cast into Trade or
-#                                 General. No GPU cost at runtime.
-#                    inference -- live chains as well: on party, raid and the
-#                                 General channel, one bot's line becomes the
-#                                 trigger another bot answers with a real
-#                                 tier-2 call. Scripted replay still runs.
-#                                 See the BotChain.* keys below, which are
-#                                 inert at any other value.
-#                  "reflex" or "off" silence both.
+#     Description: Ceiling for bot-to-bot conversation. Two separate things
+#                  live under this one setting, and raising it to
+#                  "inference" adds the second on top of the first rather
+#                  than replacing it:
+#                    corpus    -- replays multi-turn scenes the background
+#                                 generator wrote ahead of time, near a
+#                                 player (/say) or in Trade/General. No AI
+#                                 cost at the time it plays.
+#                    inference -- also lets bots have live conversations: in
+#                                 party, raid, and General chat, one bot's
+#                                 line can trigger a real AI reply from
+#                                 another bot (see the BotChain.* settings
+#                                 further down, which do nothing at any
+#                                 other value here). Scripted scenes still
+#                                 run too.
+#                  "reflex" or "off" turn off both.
 #
-#                  Script pre-generation is NOT gated by this key -- the
-#                  reserve is filled on Generator.Enable alone, so the GPU
-#                  keeps writing scripts during idle at any setting here.
+#                  The background generator keeps writing scripted scenes
+#                  regardless of this setting, as long as
+#                  HearthsideChat.Generator.Enable is on -- this setting
+#                  only controls whether they get used.
 #     Default:     inference
 HearthsideChat.MaxTier.BotToBot = inference
 
 # HearthsideChat.MaxTier.Reflex
-#     Description: Ceiling for tier-0 canned pattern replies: the plain
+#     Description: Ceiling for the built-in canned reactions: the plain
 #                  gz/ty/inv/sum/lol/wb vocabulary, the "are you a bot?"
-#                  question, and the personal-probe deflection set.
+#                  question, and deflecting personal questions.
 #                  Independent of MaxTier.DirectReply -- set to "off" to
-#                  disable canned replies without touching the LLM ceiling.
+#                  disable canned replies without touching AI replies.
 #     Default:     reflex
 HearthsideChat.MaxTier.Reflex = reflex
 
 # HearthsideChat.MaxTier.EngagementFollowUp
-#     Description: Ceiling for engagement follow-ups -- a bot continuing a
-#                  conversation on its own initiative after it has already
-#                  answered a player once. Generated via a second LLM call,
-#                  not corpus -- only "inference" enables it; "corpus"
-#                  behaves the same as "off" here (no canned-content path
-#                  for this surface). Doubles GPU spend on every fired
-#                  follow-up, so unlike Openers/BotToBot this defaults off
-#                  rather than corpus -- opt in deliberately.
+#     Description: Ceiling for a bot following up on its own, after it's
+#                  already answered a player once. This always costs a
+#                  second AI call, so unlike the other optional surfaces it
+#                  defaults to off -- turn it on deliberately if you want
+#                  it. Only "inference" enables it; "corpus" behaves the
+#                  same as "off" here, since there's no pre-written version
+#                  of a follow-up.
 #     Default:     off
 HearthsideChat.MaxTier.EngagementFollowUp = off
 
 # HearthsideChat.MaxTier.Events
-#     Description: Ceiling for event reactions -- a bot reacting to
-#                  something that happened rather than to something someone
-#                  said: its own or a groupmate's death, a wipe, a ding, a
-#                  killing blow, winning or losing a group roll, and duels.
-#                  Generated, not corpus: only "inference" enables it, and
-#                  "corpus" behaves the same as "off" here, since a canned
-#                  line about a specific death or drop would be wrong most
-#                  of the time. Unlike EngagementFollowUp this defaults on --
-#                  it only fires on something that actually happened, and
-#                  Events.Bucket.* below is the real volume control.
+#     Description: Ceiling for bots reacting to something that happened
+#                  rather than to something someone said: a death, a wipe,
+#                  a ding, a killing blow, winning or losing a roll, a duel.
+#                  Only "inference" enables it -- "corpus" behaves the same
+#                  as "off" here, since a pre-written line about a specific
+#                  death or drop would usually be wrong. On by default,
+#                  since it only fires on something that actually happened;
+#                  HearthsideChat.Events.Bucket.RepliesPerMinute below is
+#                  the real volume control.
 #     Default:     inference
 HearthsideChat.MaxTier.Events = inference
 
 # HearthsideChat.Events.Bucket.RepliesPerMinute
-#     Description: Token bucket for the event surface, entirely separate
-#                  from Bucket.RepliesPerMinute above. One token is spent
-#                  per *event*, before any candidate work and regardless of
-#                  how many bots the event could have drawn -- and the
-#                  arbiter that runs afterwards then stays silent for most
-#                  events anyway (heavily so for deaths and duels), so
-#                  actual spoken lines land well under this number.
-#                  Separate because a busy dungeon generates deaths, loot
-#                  and dings constantly, and sharing one budget would let
-#                  ambient reactions starve replies to players who actually
-#                  spoke. Set to 0 to turn the event surface off.
+#     Description: Rate limit for event reactions, entirely separate from
+#                  Bucket.RepliesPerMinute above. Kept separate because a
+#                  busy dungeon generates deaths, loot and dings constantly,
+#                  and sharing one budget would let those crowd out replies
+#                  to players who actually spoke. One "token" is spent per
+#                  event, not per bot reply, and most events don't end up
+#                  producing a spoken line anyway -- so actual chatter stays
+#                  well under this number. Set to 0 to turn off event
+#                  reactions.
 #     Default:     15
 HearthsideChat.Events.Bucket.RepliesPerMinute = 15
 
 # HearthsideChat.Events.Bucket.BurstCapacity
-#     Description: Max event tokens bankable for a burst -- a wipe is the
-#                  shape this exists for. Also a kill switch at 0.
+#     Description: How many event tokens can bank up for a burst -- a wipe
+#                  is the classic case this covers. Also a kill switch at 0.
 #     Default:     4
 HearthsideChat.Events.Bucket.BurstCapacity = 4
 
 # --------------------------------------------
 # UNPROMPTED SPEECH (AMBIENT, OPENERS, SCRIPTED SCENES)
 # --------------------------------------------
-# Read this section before tuning any of it, because the first key is not
-# what it looks like.
+# Read this before tuning any of it -- the first setting below is not what
+# it looks like.
 #
-# Three producers in this module speak without anyone having said anything:
+# Three kinds of chat happen with no trigger from a player at all:
 #
-#   - ambient chatter  -- a bot muses because there is dead air (MaxTier.Ambient)
-#   - openers          -- a bot greets off a shared context (MaxTier.Openers)
-#   - scripted scenes  -- two bots replay a written exchange (MaxTier.BotToBot)
+#   - ambient chatter  -- a bot musing because it's quiet (MaxTier.Ambient)
+#   - openers          -- a greeting off a shared moment (MaxTier.Openers)
+#   - scripted scenes  -- two bots replaying a written exchange
+#                         (MaxTier.BotToBot)
 #
-# They share ONE budget: Ambient.Bucket.* below. It is named for ambient
-# because ambient is the surface that forced the issue, but it governs all
-# three.
+# All three draw from ONE shared budget: Ambient.Bucket.* below. It's named
+# for ambient chatter because that's the one that made a shared limit
+# necessary, but it governs all three.
 #
-# The reason they share it rather than each having their own: every other
-# surface in this module is bounded by how often its trigger fires. Players
-# only talk so much, mobs only die so often, so a per-surface cap there is a
-# ceiling on something already self-limiting. These three are bounded only by
-# the clock and the bot population -- and three producers each individually
-# tuned to something reasonable still stack into constant noise, because
-# nothing was ever measuring their sum. A realm's tolerance for bots talking
-# among themselves is one quantity, so it gets one knob.
+# They share a budget because none of them is naturally self-limiting the
+# way a reply to a player is (players only talk so much, mobs only die so
+# often). These three are bounded only by the clock and how many bots you
+# run -- so even if each one looks reasonable on its own, their combined
+# noise adds up unless something caps the total. A realm's tolerance for
+# bots talking amongst themselves is one thing, so it gets one dial.
 #
-# Tune this UPWARD from live evidence, never downward. A too-quiet realm is
-# recoverable; a too-noisy one has already spent the player's patience.
-# Volume also scales with bot count, not player count, so a rate that felt
-# right on a 200-bot test realm is not the same rate at 5000.
+# Raise this from what you actually observe, rather than lowering it
+# preemptively -- a too-quiet realm is easy to fix, a too-noisy one has
+# already cost you the player's patience. This should also scale with how
+# many bots you run, not how many players: a rate that felt right with 200
+# bots is not the same rate at 5000.
 
 # HearthsideChat.Ambient.Bucket.RepliesPerMinute
-#     Description: Shared token bucket for all three unprompted producers
-#                  above. One token per line about to be spoken -- except a
-#                  scripted scene, which spends one token for the whole
-#                  multi-turn run rather than one per turn, since a scene is
-#                  one thing a listener perceives.
+#     Description: Shared limit for all three unprompted producers above --
+#                  one "token" per line about to be spoken, except a whole
+#                  scripted scene only spends one token total (a listener
+#                  perceives it as one thing, not several separate lines).
 #
 #                  Deliberately below Events.Bucket.RepliesPerMinute (15):
 #                  an event reaction at least fires on something that
@@ -568,292 +543,266 @@ HearthsideChat.Events.Bucket.BurstCapacity = 4
 #                  roughly one unprompted line every ten seconds somewhere
 #                  on the realm.
 #
-#                  Set to 0 to silence ambient chatter, openers and scripted
-#                  scenes together -- this is the "quiet the realm" lever,
-#                  not MaxTier.Ambient (which only covers the first of the
-#                  three).
+#                  Set to 0 to silence ambient chatter, openers, and
+#                  scripted scenes together -- this is the "quiet the
+#                  realm" setting, not MaxTier.Ambient (which only covers
+#                  the first of the three).
 #     Default:     6
 HearthsideChat.Ambient.Bucket.RepliesPerMinute = 6
 
 # HearthsideChat.Ambient.Bucket.BurstCapacity
-#     Description: Max unprompted tokens bankable, so a quiet stretch can be
-#                  followed by a couple of lines close together rather than
-#                  a metronome. Kept small on purpose: a burst of bots
-#                  talking to themselves is exactly the thing that reads as
-#                  a bot farm. Also a kill switch at 0.
+#     Description: How many unprompted tokens can bank up, so a quiet
+#                  stretch can be followed by a couple of lines close
+#                  together instead of a strict metronome. Kept small on
+#                  purpose -- a burst of bots talking amongst themselves is
+#                  exactly what reads as a bot farm. Also a kill switch at 0.
 #     Default:     2
 HearthsideChat.Ambient.Bucket.BurstCapacity = 2
 
 # HearthsideChat.Ambient.BotCooldownSeconds
-#     Description: How long one bot waits after speaking ambiently before it
-#                  may again. Independent of the shared bucket, which bounds
-#                  the realm's total output rather than any one bot's -- both
-#                  apply. At the default a given bot muses at most twice an
-#                  hour, so the same character is never the one you keep
-#                  hearing from.
+#     Description: How long one bot waits after speaking ambiently before
+#                  it may again. Separate from (and on top of) the shared
+#                  budget above -- that one limits the realm's total
+#                  output, this one limits any single bot. At the default,
+#                  one bot won't muse more than twice an hour, so the same
+#                  character never becomes the one you keep hearing from.
 #
-#                  Applies to ambient chatter only. Openers keep their own
-#                  per-(bot, player) cooldown, which asks a different
-#                  question: an opener is addressed to someone, so what
-#                  matters there is how recently this bot greeted THAT
-#                  player.
+#                  Only applies to ambient chatter. Openers have their own
+#                  separate cooldown, tracked per bot-and-player pair
+#                  instead: an opener is addressed to someone, so what
+#                  matters there is how recently this bot greeted that
+#                  specific player.
 #     Default:     1800
 HearthsideChat.Ambient.BotCooldownSeconds = 1800
 
 # HearthsideChat.Ambient.RequireRealPlayer
-#     Description: Only speak where a real player can actually hear it -- in
-#                  /say range, or a member of the same channel instance.
-#                  Turning this off only makes sense when load-testing an
-#                  empty realm.
+#     Description: Only speak where an actual player could hear it -- in
+#                  /say range, or in the same channel. Turn this off only
+#                  to load-test an empty realm.
 #
-#                  Party and raid ignore this key and always require a human
-#                  in the group, because they get the guarantee for free:
-#                  mod-playerbots' SayToParty/SayToRaid only send to real
-#                  group members, so a bot-only group generates no packets at
-#                  all. A line nobody receives would still spend a token from
-#                  a realm-wide budget and still burn the speaker's cooldown,
-#                  so it is never worth letting through.
+#                  Party and raid chat always require a real player anyway,
+#                  for a different reason: mod-playerbots' own delivery for
+#                  those only reaches real group members, so an all-bot
+#                  group produces no chat traffic at all, and there'd be no
+#                  point spending a token and a cooldown on a line nobody
+#                  receives.
 #     Default:     1
 HearthsideChat.Ambient.RequireRealPlayer = 1
 
 # HearthsideChat.Ambient.Say.Enable
 #     Description: Ambient chatter in /say, to whoever is standing nearby.
-#                  Draws from the five chat_* corpus categories, the same
-#                  pool the direct-reply corpus fallback uses.
+#                  Draws from the same pool of pre-written lines used for
+#                  the direct-reply fallback.
 #     Default:     1
 HearthsideChat.Ambient.Say.Enable = 1
 
 # HearthsideChat.Ambient.Party.Enable
-#     Description: Ambient chatter in party chat -- between-pulls small talk
-#                  and travel remarks addressed to the group, from the
-#                  ambient_party_* corpus categories.
+#     Description: Ambient chatter in party chat -- between-pulls small
+#                  talk and travel remarks addressed to the group.
 #     Default:     1
 HearthsideChat.Ambient.Party.Enable = 1
 
 # HearthsideChat.Ambient.Raid.Enable
-#     Description: Ambient chatter in raid chat. Its own category
-#                  (ambient_raid_downtime) rather than reusing the party
-#                  one: a line that assumes it will be noticed reads wrong
-#                  at twenty-five people.
+#     Description: Ambient chatter in raid chat. Uses its own set of lines
+#                  rather than the party ones -- a remark that assumes it
+#                  will be noticed reads oddly to a 25-person raid.
 #     Default:     1
 HearthsideChat.Ambient.Raid.Enable = 1
 
-# Trade and General ambient have no Enable key of their own -- they are
-# gated by each channel's existing Channel.<name>.MaxTier and paced by that
-# channel's own RatePerMin, on top of the shared bucket above. Set
-# Channel.Trade.MaxTier = off to silence ambient there along with everything
-# else this module says in Trade.
+# Trade and General ambient chatter have no Enable switch of their own here
+# -- they're controlled by that channel's own Channel.<name>.MaxTier and
+# RatePerMin settings further down, on top of the shared budget above. Set
+# Channel.Trade.MaxTier = off to silence ambient chatter there along with
+# everything else this module says in Trade.
 #
-# Battleground ambient is deliberately not implemented. It would need a new
-# delivery path (mod-playerbots has no SayToBG, and SayToRaid hardcodes
-# CHAT_MSG_RAID, so a BG line would land in the wrong client tab), and a
-# battleground is the one place where chat is overwhelmingly tactical --
-# corpus-authored musing landing mid-fight would likely read worse than
-# silence.
+# Battleground ambient chatter isn't implemented. There's no reliable way
+# to deliver it to the right chat tab with the tools mod-playerbots
+# exposes, and battlegrounds are the one place where chat is overwhelmingly
+# tactical -- musing about the scenery mid-fight would likely read worse
+# than staying quiet.
 
 # --------------------------------------------
 # UNPROMPTED /SAY -- SETTLED-STATE GATE AND FIRE CHANCES
 # --------------------------------------------
-# Three producers speak in /say without anyone having said anything first:
-# ambient musing (above), openers, and two-bot proximity scenes. All three now
-# require the speaker to be *settled*, which is two facts AND-ed together:
+# Three kinds of unprompted /say chat -- ambient musing, openers, and
+# two-bot proximity scenes -- only fire when the bot is "settled": standing
+# still AND either resting or milling about (not travelling, questing,
+# fighting, or otherwise busy). This check itself isn't configurable --
+# there's no realm where a bot chattering while sprinting to a quest
+# objective is desirable. What IS configurable is the chance that follows
+# it, because how much this filters out depends on what fraction of your
+# bots happen to be resting or idle at any given moment, which varies by
+# realm and can't be predicted by a default.
 #
-#   - it is standing still (mod-playerbots' own isMoving() check), and
-#   - its mod-playerbots activity state is RPG_REST (sat down for a break) or
-#     RPG_WANDER_NPC (arrived somewhere and milling about among the NPCs).
+# This only applies to /say. Direct replies, party/raid/guild, and the
+# global channels are unaffected -- a bot ignoring a player who spoke to it
+# just because it's walking somewhere would be worse than the problem this
+# prevents, and Trade/General are typed into from anywhere regardless of
+# what the typist is doing. The one exception is the group-formed opener,
+# delivered to party chat, which still fires from a bot on the move --
+# not acknowledging a group invite reads as broken.
 #
-# Neither fact alone is the question. The state is stable but coarse -- most
-# states cover the travel to a place as well as the time spent there, so
-# RPG_GO_CAMP, which sounds like it belongs, is actually the *run* to a camp
-# and flips to RPG_WANDER_NPC on arrival. Stillness is precise but flighty on
-# its own -- a questing bot stops constantly to loot, cast, or use a mailbox,
-# and any of those pauses would let it chat mid-task. Together they mean the
-# bot is in a settled phase AND has actually stopped, which is the scene worth
-# having: two bots standing or sitting near each other with nothing to do.
-#
-# Every other state -- grinding, questing, flying, outdoor PvP, wandering a
-# grind spot -- describes a bot on its way somewhere or mid-task, and a bot
-# that stops mid-run to muse about the scenery is the clearest possible tell
-# that it is not a player.
-#
-# This gate is not configurable. It is a correctness fix, not a taste setting:
-# there is no realm on which chatter from a bot sprinting to a quest objective
-# is the desired behaviour. What is configurable is the roll that follows it,
-# because how much the gate cuts depends entirely on what fraction of a given
-# realm's bots happen to be resting or loitering at any moment -- which no
-# default can predict.
-#
-# The gate applies to /say only. Direct replies, party/raid/guild, and the
-# global channels are untouched: a bot ignoring a player who spoke to it
-# because it happens to be walking somewhere is a worse failure than the one
-# this prevents, and Trade/General are typed into deliberately from anywhere,
-# so what the typist is doing is beside the point. The one other exception is
-# the group-formed opener, which is delivered to party chat and still fires
-# from a travelling bot -- an unacknowledged group invite is silence where a
-# response is expected.
-#
-# All three defaults below are raised from the compiled constants they
-# replaced, on the arithmetic that a narrower gate needs a higher roll to
-# produce the same density. They are starting guesses to be corrected against
-# a live realm, not measurements. Setting any of them to 0 silences that one
-# producer's /say path without touching the others or the shared bucket.
+# The three chances below are starting points, not measurements -- tune
+# them against what you actually see on a live realm. Setting any of them
+# to 0 turns off that one producer's /say chatter without touching the
+# others or the shared bucket above.
 
 # HearthsideChat.Ambient.Say.FireChancePercent
 #     Description: Chance an eligible ambient /say speaker actually speaks,
-#                  rolled last. Ambient /say had no roll at all before the
-#                  settled-state gate -- it was paced only by the shared
-#                  bucket and the 30-minute per-bot cooldown.
-#
-#                  Four things must line up before this roll is reached: the
-#                  bot is settled (stationary + resting or loitering), a real
-#                  player is within Say.Distance,
-#                  another bot is within Say.Distance too, and the bot is off
-#                  its ambient cooldown. The companion-bot requirement is
-#                  what makes the line read as overheard rather than as the
-#                  bot talking at the player and expecting an answer.
+#                  once it's already settled, near a real player, AND near
+#                  another bot -- that last part is what makes the line
+#                  read as overheard rather than as the bot talking
+#                  directly at the player and expecting an answer.
 #     Default:     60
 HearthsideChat.Ambient.Say.FireChancePercent = 60
 
 # HearthsideChat.Openers.FireChancePercent
 #     Description: Chance a bot delivers an opener once a shared moment has
-#                  occurred and its 10-minute per-pair cooldown has expired.
-#                  Was a compiled 40 before the settled-state gate.
-#
-#                  Applies to every opener trigger, including the party-chat
+#                  happened and its 10-minute per-pair cooldown has passed.
+#                  Applies to every opener, including the party-chat
 #                  group-formed one -- only the settled-state gate above is
 #                  restricted to the /say triggers.
 #     Default:     60
 HearthsideChat.Openers.FireChancePercent = 60
 
 # HearthsideChat.Script.Proximity.FireChancePercent
-#     Description: Chance a scripted /say scene starts, rolled per eligible
-#                  bot pair per 30-second scan. Was a compiled 5.
-#
-#                  Both participants must be settled here, not just one:
-#                  a scene runs several turns over minutes, and a bot that
-#                  walks off to a quest objective partway through leaves the
+#     Description: Chance a scripted /say scene starts between two eligible
+#                  bots standing near each other, checked every 30 seconds.
+#                  Both bots need to be settled, not just one -- a scene
+#                  runs several turns over minutes, and a bot that wanders
+#                  off to a quest objective partway through leaves the
 #                  other one talking to nobody.
 #
-#                  Does not affect the Trade/General channel scenes, which
-#                  have no proximity or state requirement and keep their own
-#                  compiled rate.
+#                  Doesn't affect the Trade/General channel scenes, which
+#                  have no proximity or settled-state requirement and keep
+#                  their own separate rate.
 #     Default:     20
 HearthsideChat.Script.Proximity.FireChancePercent = 20
 
 # --------------------------------------------
 # LIVE BOT-TO-BOT CHAINS
 # --------------------------------------------
-# Inert unless MaxTier.BotToBot = inference (above). A chain runs on party,
-# raid, or the General channel: a bot's delivered line is offered to the other
-# bots sharing that group or channel, and one of them may answer it with a
-# full tier-2 call. Whisper, guild and /say never chain -- /say already has
-# the scripted proximity mechanism, and the other two have no bounded
-# audience to pace a chain against.
+# Only matters if MaxTier.BotToBot above is set to "inference". A chain
+# runs in party, raid, or the General channel: one bot's delivered line is
+# offered to the other bots sharing that group or channel, and one of them
+# may answer it with a real AI reply -- which can then be answered in turn,
+# and so on. Whisper, guild and /say never chain this way -- /say already
+# has the scripted-scene mechanism instead, and the other two have no
+# bounded audience to pace a chain against.
 #
-# Every hop is a full LLM call, so these are the volume control on top of
-# Bucket.RepliesPerMinute (which still caps everything) and, in General, that
-# channel's own RatePerMin. A chain also ends the moment a real player speaks
-# into the group or channel: the hop still generating is thrown away, and the
-# bots' replies to that player start a new chain from what they actually
-# said, so interrupting a conversation joins it rather than killing it.
+# Every hop is a full AI call, so these settings are an extra layer of
+# volume control on top of Bucket.RepliesPerMinute (which still caps
+# everything) and, in General chat, that channel's own rate limit. A chain
+# also ends the instant a real player speaks into the group or channel:
+# whatever hop was still generating is thrown away, and the bots' next
+# replies address that player instead -- so a player interrupting joins
+# the conversation rather than cutting it off.
 
 # HearthsideChat.BotChain.MaxDepth
-#     Description: Hard stop on how many hops one chain may run. A backstop,
-#                  not the normal stop condition -- the decayed chance below
-#                  ends most chains first. 0 disables chaining outright.
+#     Description: Hard stop on how many hops one chain may run. A
+#                  backstop, not the normal way a chain ends -- the
+#                  decaying chance below (DecayPercent) ends most chains
+#                  first. 0 disables chaining outright.
 #     Default:     3
 HearthsideChat.BotChain.MaxDepth = 3
 
 # HearthsideChat.BotChain.BaseChancePercent
-#     Description: Chance the first hop of a chain fires, per eligible line.
+#     Description: Chance the first reply in a chain happens at all, per
+#                  eligible line.
 #     Default:     55
 HearthsideChat.BotChain.BaseChancePercent = 55
 
 # HearthsideChat.BotChain.DecayPercent
-#     Description: Multiplier applied to the chance per additional hop, so
-#                  hop N fires at Base * (Decay/100)^N. At the defaults that
-#                  is 55% / 33% / 19%, averaging a bit over one extra hop per
-#                  chain. Clamped to 99 -- at 100 the taper disappears and
-#                  MaxDepth becomes the only thing ending a chain.
+#     Description: How much the chance drops with each additional hop in
+#                  the chain -- at the defaults that's roughly 55%, then
+#                  33%, then 19%, averaging a bit over one extra hop per
+#                  chain. Clamped to 99: at 100 the chance would never
+#                  drop, leaving MaxDepth as the only thing that ends a
+#                  chain.
 #     Default:     60
 HearthsideChat.BotChain.DecayPercent = 60
 
 # HearthsideChat.BotChain.ScopeCooldownSeconds
-#     Description: How long a group or channel rests between chains. Checked
-#                  only when starting a new chain, never between the hops of
-#                  one already under way -- a conversation keeps its turns
-#                  prompt, but the same party won't start a second
-#                  conversation for this long.
+#     Description: How long a group or channel rests between chains.
+#                  Checked only when starting a new chain, never between
+#                  the hops of one already under way -- a conversation
+#                  keeps its own pace, but the same party won't start a
+#                  second one for this long.
 #     Default:     180
 HearthsideChat.BotChain.ScopeCooldownSeconds = 180
 
 # HearthsideChat.BotChain.RequireRealPlayer
 #     Description: Only chain where a real player can actually see it -- a
-#                  human member in the group, or a human in the General
-#                  channel. Bots talking to each other in an empty room is
-#                  GPU spend against nobody's experience. Turn off only to
-#                  load-test an empty realm.
+#                  human in the group, or a human in the General channel.
+#                  Bots talking to each other in an empty room spends AI
+#                  time on nobody's experience. Turn off only to load-test
+#                  an empty realm.
 #     Default:     1
 HearthsideChat.BotChain.RequireRealPlayer = 1
 
 # --------------------------------------------
 # GLOBAL-CHANNEL CHAT SURFACE
 # --------------------------------------------
-# mod-playerbots joins every bot to every one of these six channels
-# unconditionally, with no config gate of its own. MaxTier reuses the same
-# off/reflex/corpus/inference enum as above but is capped at "corpus" in
-# practice -- speaking in a channel is corpus/script content only, never
-# tier-2 inference. RatePerMin is a per-channel token bucket (not per-bot --
-# a channel with most of the realm in it has no proximity bound to cap load
-# otherwise). A token is spent per *triggering player message*, not per bot
-# reply: the take happens before the candidate scan, so a throttled channel
-# costs nothing, but the arbiter that runs afterwards decides no one answers
-# roughly half the time. Actual chatter therefore lands near half this
-# number -- RatePerMin = 6 is about 3 bot lines a minute, not 6.
-# MaxCandidates caps how many eligible bots are even considered
-# per triggering message (zone-local first, then a capped random sample) --
-# without this cap, a busy channel would roll reply-chance against every
-# member every message. LookingForGroup/GuildRecruitment/LocalDefense/
-# WorldDefense default off (soliciting a group/guild the bot can't honour,
-# or a system-shaped PvP alert, isn't something a bot conversationally
-# chimes into) but are operator-adjustable like every other MaxTier key.
+# mod-playerbots puts every bot into all six of these channels
+# automatically, with no gate of its own -- there's no way to opt a bot out
+# of a channel here, only to control whether and how much this module
+# makes bots speak in it. In practice, these channels only ever get
+# canned/pre-written content: MaxTier reuses the same off/reflex/corpus/
+# inference scale as the tier ceilings above, but a live AI reply never
+# happens here even at "inference".
+#
+# RatePerMin limits the whole channel, not each bot individually (a channel
+# with most of the realm in it has no natural size limit otherwise). Around
+# one "token" is spent per player message that could trigger a reply, and
+# roughly half of those end up with no bot answering anyway -- so actual
+# chatter lands near half this number (RatePerMin = 6 is about 3 bot lines
+# a minute, not 6). MaxCandidates limits how many bots are even considered
+# per triggering message, so a busy channel doesn't have to check every
+# member on every message.
+#
+# LookingForGroup, GuildRecruitment, LocalDefense and WorldDefense default
+# to off -- soliciting a group/guild a bot can't actually honour, or
+# chiming into a system-generated PvP alert, isn't something a bot should
+# do conversationally -- but you can turn any of them on like any other
+# setting here.
 
 # HearthsideChat.Channel.Trade.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: Trade channel -- WTS/WTB flavor lines and live price
-#                  commentary (bag stock only, never AH listings).
+#     Description: Trade channel -- WTS/WTB-style flavor lines and comments
+#                  on the bot's own bag stock (never actual auction house
+#                  listings).
 #     Default:     corpus / 3 / 8
 HearthsideChat.Channel.Trade.MaxTier = corpus
 HearthsideChat.Channel.Trade.RatePerMin = 3
 HearthsideChat.Channel.Trade.MaxCandidates = 8
 
 # HearthsideChat.Channel.General.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: General channel -- zone-flavor chatter. Resolved per zone,
-#                  so the audience is the other players standing in the same
-#                  zone as the speaker.
+#     Description: General channel -- casual zone chatter. Resolved per
+#                  zone, so a bot's audience is only the other players
+#                  standing in the same zone.
 #     Default:     corpus / 3 / 8
 HearthsideChat.Channel.General.MaxTier = corpus
 HearthsideChat.Channel.General.RatePerMin = 3
 HearthsideChat.Channel.General.MaxCandidates = 8
 
 # HearthsideChat.Channel.LookingForGroup.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: LookingForGroup channel. Off by default -- soliciting a
-#                  group the bot can't honour is trap 14 in its purest form.
+#     Description: LookingForGroup channel. Off by default -- see the note
+#                  above.
 #     Default:     off / 0 / 0
 HearthsideChat.Channel.LookingForGroup.MaxTier = off
 HearthsideChat.Channel.LookingForGroup.RatePerMin = 0
 HearthsideChat.Channel.LookingForGroup.MaxCandidates = 0
 
 # HearthsideChat.Channel.GuildRecruitment.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: GuildRecruitment channel. Off by default, same reasoning
-#                  as LookingForGroup.
+#     Description: GuildRecruitment channel. Off by default, same
+#                  reasoning as LookingForGroup.
 #     Default:     off / 0 / 0
 HearthsideChat.Channel.GuildRecruitment.MaxTier = off
 HearthsideChat.Channel.GuildRecruitment.RatePerMin = 0
 HearthsideChat.Channel.GuildRecruitment.MaxCandidates = 0
 
 # HearthsideChat.Channel.LocalDefense.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: LocalDefense channel. Off by default -- system-shaped
-#                  PvP alerts, nothing conversational belongs here.
+#     Description: LocalDefense channel. Off by default -- this channel
+#                  carries system PvP alerts, not conversation.
 #     Default:     off / 0 / 0
 HearthsideChat.Channel.LocalDefense.MaxTier = off
 HearthsideChat.Channel.LocalDefense.RatePerMin = 0
@@ -870,20 +819,22 @@ HearthsideChat.Channel.WorldDefense.MaxCandidates = 0
 # --------------------------------------------
 # TIER-0 REFLEX
 # --------------------------------------------
-# The plain gz/ty/inv/sum/lol/wb vocabulary and the personal-probe
-# deflection set are hardcoded content, not configurable here -- the
-# pattern table is small, changes rarely, and editing it costs a rebuild
-# deliberately, since it shouldn't be tuned casually.
+# The plain gz/ty/inv/sum/lol/wb vocabulary and the personal-question
+# deflection set are hardcoded content, not configurable here -- the list
+# is small, changes rarely, and editing it needs a rebuild deliberately,
+# since it shouldn't be tuned casually.
 
 # HearthsideChat.BotQuestion
-#     Description: How a bot answers "are you a bot?" The illusion may
-#                  break, but it must never be defended with a lie -- a
-#                  flat "no, I'm a real player" is the one forbidden answer.
-#                  "wink" is a non-answer ("maybe!", "huh?") that neither
-#                  confirms nor denies. "deflect" is the more evasive subset
-#                  ("huh?"/"what?" only). "silent" drops the question rather
-#                  than answering it. "admit" is for operators who would
-#                  rather their realm be straightforward about it.
+#     Description: How a bot answers "are you a bot?" It's fine for the
+#                  illusion to break, but it must never be defended with a
+#                  lie -- a flat "no, I'm a real player" isn't one of the
+#                  choices.
+#                    wink    - a non-answer ("maybe!", "huh?") that neither
+#                              confirms nor denies
+#                    deflect - a more evasive version ("huh?"/"what?" only)
+#                    silent  - drops the question instead of answering it
+#                    admit   - says yes, honestly -- for operators who'd
+#                              rather their realm be upfront about it
 #     Values:      wink | deflect | silent | admit
 #     Default:     wink
 HearthsideChat.BotQuestion = wink
@@ -891,140 +842,121 @@ HearthsideChat.BotQuestion = wink
 # --------------------------------------------
 # GROUNDED ANSWERS -- the fourth answer source
 # --------------------------------------------
-# Six questions the realm can already answer truthfully from live game
-# state -- a bot's mount, level, zone, guild, profession skill, and what it
-# is wearing -- answered by direct lookup and a short template rather than
-# by asking the LLM to guess. No GPU work, no chance of invention. Not a
-# tier ceiling; the question list and template wording are hardcoded
-# content, same reasoning as the reflex table above.
+# Six questions the realm can already answer truthfully from a bot's actual
+# character data -- its mount, level, zone, guild, profession skill, and
+# what it's wearing -- answered by a direct lookup and a short template
+# rather than by asking the AI to guess. No AI cost, and no chance of it
+# making something up. Not a tier ceiling; the question list and reply
+# wording are hardcoded, same reasoning as the reflex section above.
 
 # HearthsideChat.GroundedAnswers
-#     Description: Master on/off switch for the grounded-answer branch.
+#     Description: Master on/off switch for this lookup feature.
 #                  Independent of MaxTier.Reflex and MaxTier.DirectReply --
-#                  an operator can disable this lookup path without
-#                  touching either.
+#                  you can turn this off without touching either of those.
 #     Values:      0 | 1
 #     Default:     1
 HearthsideChat.GroundedAnswers = 1
 
 # HearthsideChat.GroundedAnswers.FuzzyMaxDistance
-#     Description: After an exact-phrase match fails, how many single-
-#                  character edits (Levenshtein distance) a player's message
-#                  may differ from a listed phrase and still match -- typo
-#                  tolerance only ("waht level are you" still hits Level),
-#                  not a looser reword/substring match. A phrase whose
-#                  length differs from the message by more than this many
-#                  characters is skipped outright. If two different
-#                  questions end up tied at the same distance, the match is
-#                  treated as ambiguous and dropped (falls through) rather
-#                  than guessed. 0 disables the fallback pass entirely
-#                  (exact match only).
+#     Description: How many typos a player's message can have and still
+#                  match one of the recognized questions. This counts
+#                  single-character edits (a "Levenshtein distance"), so
+#                  "waht level are you" still matches "what level are you"
+#                  as a typo -- it is typo tolerance only, not a general
+#                  reword or substring match. A phrase whose length differs
+#                  too much from the message is skipped outright, and if
+#                  two different questions end up equally close, the match
+#                  is treated as too ambiguous and dropped rather than
+#                  guessed. 0 turns this off entirely (exact match only).
 #     Values:      0+ (2-3 recommended; higher risks matching a genuinely
-#                  different, oddly-worded sentence rather than a typo)
+#                  different, oddly-worded sentence instead of a typo)
 #     Default:     2
 HearthsideChat.GroundedAnswers.FuzzyMaxDistance = 2
 
 # --------------------------------------------
 # WORLD-KNOWLEDGE RETRIEVAL (RAG)
 # --------------------------------------------
-# The one grounding layer this module used to be missing. GroundedAnswers
-# above answers from live Player*/DB state, the topic gate states live facts
-# about the bot, and memory recalls a specific player -- none of them know
-# anything about Azeroth, so "where do I train blacksmithing" reached the
-# backend with nothing but a persona line and a 1-3B local model invented an
-# answer.
+# Gives bots real, authored World of Warcraft knowledge to draw on, instead
+# of letting the AI invent an answer when a player asks something like
+# "where do I train blacksmithing." (In AI terminology this technique is
+# called "RAG" -- retrieval-augmented generation -- which is where the
+# setting names below come from.) None of this module's other answer
+# sources know general game lore: GroundedAnswers above only knows a bot's
+# own live stats, and memory only knows a specific player.
 #
-# Retrieval matches what was said against hside_rag, a table of authored
-# WotLK paragraphs, and appends the best match to the prompt. hside_rag is
-# GENERATED from data/rag/*.json by data/rag/generate_rag_sql.py: to change
-# what bots know, edit the JSON, regenerate, re-apply the SQL, and
-# `.reload config`. See data/rag/README.md for the authoring rules -- they
-# are not style preferences, each was learned from a measured retrieval
-# failure.
+# When what a player said is close enough to one of the authored reference
+# paragraphs, that paragraph gets appended to the AI's prompt before it
+# writes a reply. The paragraphs live in the hside_rag database table,
+# which is GENERATED from data/rag/*.json by data/rag/generate_rag_sql.py --
+# to change what bots know, edit the JSON, regenerate, re-apply the SQL,
+# and run `.reload config`. See data/rag/README.md for the authoring rules.
 #
-# Not a tier, for the same reason GroundedAnswers is not: it does not decide
-# whether a bot speaks, only what is in the prompt when one already is.
-# Every surface that reaches the backend gets it, still bounded by that
-# surface's own MaxTier ceiling.
+# This is not a tier ceiling: it never decides whether a bot speaks, only
+# what's in the prompt when one already is. Every surface that reaches the
+# AI gets this, still bounded by that surface's own MaxTier ceiling.
 
 # HearthsideChat.Rag.Enable
-#     Description: Retrieval on the reactive path -- direct replies, event
-#                  reactions, engagement follow-ups, bot-to-bot chain hops.
-#                  Off leaves those prompts exactly as they were before
-#                  retrieval existed.
+#     Description: Turns retrieval on for live AI replies -- direct
+#                  replies, event reactions, engagement follow-ups, and
+#                  bot-to-bot chain hops. Off restores the old behavior:
+#                  those prompts get no reference material at all.
 #     Default:     1
 HearthsideChat.Rag.Enable = 1
 
 # HearthsideChat.Rag.MaxEntries
-#     Description: Most paragraphs appended to one prompt. 2 is a deliberate
-#                  ceiling rather than a budget: a second entry is usually a
-#                  weaker match, and past two the block starts to read like
-#                  a briefing document rather than something a player knows.
+#     Description: Most reference paragraphs added to one prompt. Kept low
+#                  on purpose -- a second match is usually a weaker one,
+#                  and beyond two the block starts reading like a briefing
+#                  document rather than something a player just happens to
+#                  know.
 #     Default:     2
 HearthsideChat.Rag.MaxEntries = 2
 
 # HearthsideChat.Rag.MinScore
-#     Description: Score a match must reach to be used at all. This is the
-#                  load-bearing knob and the direction of error is not
-#                  symmetric.
-#
-#                  data/rag/README.md's "The threshold and its margin"
-#                  section documents the gap between the worst answerable
-#                  question and the best social-chat near-miss -- 0.077 at
-#                  173 entries, 0.063 at 236 -- and that gap NARROWS as the
-#                  corpus grows. Raising this is safe: fewer questions get a
-#                  reference block. Lowering it hands bots paragraphs about
-#                  things nobody asked about, which derails a reply that
-#                  would otherwise have been fine. A wrong reference block is
-#                  worse than none.
-#
-#                  Re-read the "Separation:" line the retrieval harness
-#                  prints after any change to data/rag/.
+#     Description: How confident a match has to be before it's used at
+#                  all. This is the setting that matters most here, and the
+#                  risk isn't symmetric: raising it only means fewer
+#                  questions get reference material, which is safe.
+#                  Lowering it risks handing a bot a paragraph about
+#                  something nobody actually asked about, which derails a
+#                  reply that would otherwise have been fine -- a wrong
+#                  reference is worse than none. See data/rag/README.md
+#                  before changing this if you're also adding new
+#                  reference material, since the two interact.
 #     Default:     0.45
 HearthsideChat.Rag.MinScore = 0.45
 
 # HearthsideChat.Rag.MaxChars
-#     Description: Character budget for the whole appended block. Truncated
-#                  on an entry boundary where possible; a single oversized
-#                  entry is word-truncated. Every token here is prompt the
-#                  backend has to process before it starts generating, so
-#                  this is a direct latency knob on the reactive path.
+#     Description: Character limit for the whole block of reference text
+#                  added to one prompt. This is extra reading the AI has to
+#                  do before it starts writing a reply, so it's a direct
+#                  latency cost on live replies.
 #     Default:     700
 HearthsideChat.Rag.MaxChars = 700
 
 # HearthsideChat.Rag.Generator.Enable
-#     Description: Retrieval on the idle-time generator's path -- corpus
-#                  buckets, channel lines, and bot-to-bot scripts.
-#
-#                  Separate from Rag.Enable above because the two fail
-#                  differently, and this is the safer of the two. A wrong
-#                  paragraph in a live reply is already in the chat window
-#                  when you notice it. A wrong paragraph HERE produces a
-#                  candidate that still has to clear the quality gate,
-#                  placeholder discipline and dedup, lands in hside_corpus
-#                  tagged with the run's prompt_version, and can be read with
-#                  `.hearthside review` and dropped wholesale before any
-#                  player sees it. It is also where retrieval buys the most,
-#                  and it now reaches every generation prompt rather than only
-#                  the tagged ones: a zone or class bucket addresses its own
-#                  entry by name, while an untagged bucket, a level-band bucket
-#                  and a script's opening turn -- none of which have a label to
-#                  address or a query to score -- are each handed one real
-#                  entry drawn per cycle. Turning this off does not fall back
-#                  to slightly vaguer lines; it returns those prompts to having
-#                  no ground truth at all, which is what produced invented game
-#                  vocabulary ("augs", "reenchant") in the first place.
-#
-#                  If you want to trial retrieval, turn this on first and
-#                  Rag.Enable second.
+#     Description: Turns retrieval on for the idle-time background
+#                  generator (see IDLE-TIME GENERATOR below) instead of
+#                  live replies. Kept as a separate switch from Rag.Enable
+#                  because a bad match here is much lower-risk: generated
+#                  lines pass through a quality check and can be reviewed
+#                  (`.hearthside review`) and discarded before any player
+#                  ever sees them, while a bad match on a live reply is
+#                  already in the chat window the moment it happens.
+#                  Turning this off doesn't make generated lines vaguer --
+#                  it removes their only source of real game facts, which
+#                  is what caused made-up game vocabulary in generated
+#                  lines before this existed. If you want to try retrieval,
+#                  turn this on before Rag.Enable.
 #     Default:     1
 HearthsideChat.Rag.Generator.Enable = 1
 
 # HearthsideChat.Rag.Generator.MaxChars
-#     Description: The same budget for generation prompts. Larger than
-#                  Rag.MaxChars on purpose: generation is offline, so a
-#                  longer prompt costs idle GPU time rather than a player's
-#                  wait, and its output is reviewable before use.
+#     Description: The same character budget as Rag.MaxChars, but for
+#                  generation prompts. Set higher on purpose: generation
+#                  runs offline, so a longer prompt costs idle AI-server
+#                  time rather than a player's wait, and its output is
+#                  reviewable before use.
 #     Default:     900
 HearthsideChat.Rag.Generator.MaxChars = 900
 
@@ -1032,105 +964,94 @@ HearthsideChat.Rag.Generator.MaxChars = 900
 # --------------------------------------------
 # AMBIENT EXPERIENCE
 # --------------------------------------------
-# What a bot has been *doing* lately, folded into its next prompt as
-# background. Seven hooks (quests, loot, money, zone changes, professions,
-# dings, deaths) record into a small in-memory ring per bot; the ring is read
-# back as one short block appended after the persona line, the topic-gate
-# facts and the RAG block.
+# Gives bots a memory of what they've been doing lately -- quests, loot,
+# money, zone changes, professions, level-ups, deaths -- added as
+# background to their next reply so they can sound like they've actually
+# been playing, not just standing around waiting to chat.
 #
-# This is not a tier and it never makes a bot speak. Event *reactions* are a
-# separate feature (the MaxTier.Events ceiling and the EventBucket keys
-# below); this only changes what a bot sounds like when it speaks for some
-# other reason. An event is a backdrop, not a topic.
+# This is not a tier and it never makes a bot speak by itself. A bot
+# reacting to something that just happened is the separate MaxTier.Events
+# feature above; this only changes what a bot mentions when it's already
+# talking for some other reason.
 #
-# Nothing here is persisted. A worldserver restart empties every ring, which
-# is correct rather than a limitation: "recently" is not a fact that should
-# outlive the process, unlike the relationship rows in hside_memory.
+# Nothing here is saved to the database. A worldserver restart clears it
+# all, which is intentional -- "what I've been up to lately" shouldn't
+# outlive a restart the way a bot's relationship memory (hside_memory)
+# does.
 #
-# Repeats collapse instead of stacking, so four deaths in one zone become a
-# single "died in Sholazar Basin (4 times)" rather than four ring slots. That
-# collapsing is what makes the noisy hooks survivable, and it is also the only
-# wipe-shaped signal the module has.
+# Repeated events collapse into a count instead of piling up, so four
+# deaths in one zone become a single "died in Sholazar Basin (4 times)"
+# rather than four separate entries. That's what keeps the noisier hooks
+# (loot, money, skill gains) from flooding a bot's memory.
 
 # HearthsideChat.Experience.Enable
-#     Description: Master on/off switch. Off makes every hook return
-#                  immediately, so the feature costs a branch per hook rather
-#                  than memory per bot, and no experience block is appended
-#                  to any prompt.
-#
-#                  Worth turning off deliberately if you are measuring
-#                  prefill: this block is the one part of the prompt that
-#                  changes as a bot plays, so it is the part a prefix cache
-#                  cannot reuse.
+#     Description: Master on/off switch. Off means nothing is recorded and
+#                  no such background gets added to any prompt.
 #     Default:     1
 HearthsideChat.Experience.Enable = 1
 
 # HearthsideChat.Experience.MaxEntries
-#     Description: Most distinct entries rendered into one prompt, newest
-#                  first. The ring holds more than this; the surplus is
-#                  there so the renderer has something to fall back on when
-#                  the newest entries have aged out of the window.
+#     Description: Most recent entries included in one prompt, newest
+#                  first. A bot may remember more than this internally; the
+#                  extra is just kept in reserve for when newer entries
+#                  have aged out (see WindowSeconds below).
 #     Default:     4
 HearthsideChat.Experience.MaxEntries = 4
 
 # HearthsideChat.Experience.MaxChars
-#     Description: Hard cap on the rendered block. Entries are dropped
-#                  whole rather than truncated mid-phrase -- each one is a
-#                  single short clause, so a severed one reads as a mistake
-#                  rather than as an abbreviation.
-#
-#                  This is prompt budget, and it is paid on every reactive
-#                  call for the bot in question. Raise it only if you have
-#                  latency headroom on the backend.
+#     Description: Character limit for this block. Whole entries are
+#                  dropped if they don't fit, rather than cut off
+#                  mid-sentence. This gets added to every AI reply for that
+#                  bot, so raise it only if your AI server has latency
+#                  headroom to spare.
 #     Default:     300
 HearthsideChat.Experience.MaxChars = 300
 
 # HearthsideChat.Experience.WindowSeconds
-#     Description: How recent an entry has to be to render. Older entries
-#                  stay in the ring (a longer window would still see them)
-#                  but stop reaching prompts, so a bot that has been idle
-#                  for an hour stops sounding like it just finished a
-#                  dungeon.
-#
-#                  0 disables decay entirely and renders whatever is in the
-#                  ring regardless of age.
+#     Description: How recent something has to be to actually get
+#                  mentioned. Older entries are still remembered internally
+#                  but stop showing up in prompts, so a bot that's been
+#                  idle for an hour stops sounding like it just finished a
+#                  dungeon. 0 turns off this aging -- everything remembered
+#                  gets mentioned regardless of age.
 #     Default:     1800 (30 minutes)
 HearthsideChat.Experience.WindowSeconds = 1800
 
 # HearthsideChat.Experience.LootMinQuality
-#     Description: ItemTemplate::Quality floor for the loot hook, which
-#                  otherwise fires on every grey. 0 Poor, 1 Common,
-#                  2 Uncommon, 3 Rare, 4 Epic, 5 Legendary.
-#
-#                  The right value moves with the realm's level spread: a
-#                  green is an event at level 20 and vendor trash at 80. On a
-#                  levelling-heavy realm 2 is reasonable; at endgame 4 keeps
-#                  the ring for things worth mentioning.
+#     Description: Minimum item quality worth mentioning as loot (without a
+#                  floor, this would fire on every grey item): 0 Poor,
+#                  1 Common, 2 Uncommon, 3 Rare, 4 Epic, 5 Legendary.
+#                  Adjust for your realm's level range -- a green item is
+#                  exciting at level 20 and vendor trash at 80. On a
+#                  levelling-heavy realm, 2 is reasonable; at endgame, 4
+#                  keeps this to things actually worth mentioning.
 #     Default:     3 (Rare)
 HearthsideChat.Experience.LootMinQuality = 3
 
 # HearthsideChat.Experience.MoneyMinCopper
-#     Description: Smallest single gain the money hook will record, in
-#                  copper. That hook fires on every vendor sale and quest
-#                  turn-in, so without a floor it would fill a ring by
-#                  itself. Losses are never recorded: a purchase has no
-#                  context a bot could sensibly carry into chat.
+#     Description: Smallest single money gain worth mentioning, in copper
+#                  (10000 copper = 1 gold). Without a floor, this would
+#                  fire on every vendor sale and quest turn-in. Losses are
+#                  never mentioned -- a purchase isn't something a bot
+#                  would naturally bring up in chat.
 #
-#                  A gain that rounds down to zero gold is dropped even if it
-#                  clears this floor, so values below 10000 behave as 10000.
+#                  A gain that doesn't round up to at least 1 gold is
+#                  skipped even if it clears this floor, so setting this
+#                  below 10000 has no additional effect.
 #     Default:     100000 (10 gold)
 HearthsideChat.Experience.MoneyMinCopper = 100000
 
 # HearthsideChat.Experience.SkillStep
-#     Description: Professions are recorded only when a gain carries the
-#                  skill across a multiple of this value, and the milestone
-#                  itself is what gets named -- so a bot landing on 301
-#                  records "reached 300 Skinning". Both profession hooks fire
-#                  on every single point, so this is what makes them usable.
+#     Description: How big a jump in a profession skill has to be before
+#                  it's worth mentioning -- and the round number itself is
+#                  what gets said, so a bot landing on 301 skill is
+#                  recorded as "reached 300 Skinning". Both profession
+#                  hooks otherwise fire on every single point gained, so
+#                  this is what makes them usable.
 #
-#                  25 tracks how players actually talk about a profession:
-#                  nobody announces 287 and everyone announces 300. 0
-#                  disables profession recording entirely.
+#                  25 matches how players actually talk about a
+#                  profession: nobody announces 287, everyone announces
+#                  300. 0 turns off profession mentions entirely.
 #     Default:     25
 HearthsideChat.Experience.SkillStep = 25
 
@@ -1138,30 +1059,29 @@ HearthsideChat.Experience.SkillStep = 25
 # --------------------------------------------
 # IDLE-TIME GENERATOR
 # --------------------------------------------
-# Fills hside_corpus during GPU idle time -- picks one under-quota
-# (category, tag-bucket) at a time, with quotas tracked per bucket rather
-# than globally, generates one candidate line, and runs it through the same
-# validation gate `.hearthside capture` uses (placeholder discipline, dedup,
-# quality gate) before inserting. Only fires when the reactive tier has
-# nothing queued and isn't mid-request -- generation is always the
-# lowest-priority work.
+# Writes pre-made chat lines and bot-to-bot scripted scenes ahead of time,
+# only during moments when the AI server isn't busy handling a live
+# request -- so this never competes with, or slows down, real replies.
+# Each run picks one under-stocked topic at a time, generates one
+# candidate line, and runs it through the same quality/duplicate checks
+# `.hearthside capture` uses before saving it.
 
 # HearthsideChat.Generator.Enable
-#     Description: Master on/off switch. Off by default: this is new,
-#                  autonomous, GPU-spending, DB-writing background work, so
-#                  an operator opts in rather than it starting the moment
-#                  the module is enabled.
+#     Description: Master on/off switch. Off by default: this is
+#                  background work that uses your AI server's idle time
+#                  and writes to the database on its own, so it's an
+#                  opt-in rather than something that starts automatically.
 #     Default:     0 (false)
 HearthsideChat.Generator.Enable = 0
 
 # HearthsideChat.Generator.LLM.ApiType / Template / Url / Model / ApiKey / TimeoutSeconds / MaxTokens
-#     Description: The generator's own LLM endpoint, kept separate from the
-#                  reactive path's HearthsideChat.LLM.* -- whether or not
-#                  they currently point at the same container. Same shape
-#                  as the reactive keys above, including Template (see
-#                  HearthsideChat.LLM.Template) -- meaningful independently
-#                  since the generator can point at a differently-tuned
-#                  model than the reactive endpoint.
+#     Description: The background generator's own AI connection settings,
+#                  kept separate from the live-reply HearthsideChat.LLM.*
+#                  settings above -- even if they currently point at the
+#                  same server. Same options as those settings, including
+#                  Template (see HearthsideChat.LLM.Template above) --
+#                  useful if you want the generator to use a different
+#                  model than the one handling live replies.
 #     Values:      Template: llama3 | chatml | mistral | gemma
 #     Defaults:    llamacpp / llama3 / http://127.0.0.1:8080 / (empty) / (empty) / 30 / 60
 HearthsideChat.Generator.LLM.ApiType = llamacpp
@@ -1173,127 +1093,109 @@ HearthsideChat.Generator.LLM.TimeoutSeconds = 30
 HearthsideChat.Generator.LLM.MaxTokens = 60
 
 # HearthsideChat.Generator.RowsPerBucket
-#     Description: Target row count for each (category, tag-bucket) pair,
-#                  tracked independently. The generator stops filling a
-#                  bucket once it reaches this and moves on to whatever
-#                  else is under quota.
+#     Description: How many pre-written lines to keep on hand for each
+#                  category/topic combination, tracked separately. The
+#                  generator stops filling one once it reaches this number
+#                  and moves on to whatever else still needs more.
 #     Default:     20
 HearthsideChat.Generator.RowsPerBucket = 20
 
 # HearthsideChat.Generator.PollIntervalSeconds
-#     Description: How often the generator rechecks whether the reactive
-#                  tier has gone idle, while it's busy or the module/
-#                  generator is disabled.
+#     Description: How often the generator checks whether the AI server
+#                  has gone idle, while it's waiting for its turn.
 #     Default:     5
 HearthsideChat.Generator.PollIntervalSeconds = 5
 
 # HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds
 #     Description: How long the generator waits before checking again once
-#                  every bucket it understands is at quota -- no sense
-#                  polling every few seconds when there's nothing to do.
+#                  everything it tracks is fully stocked -- no reason to
+#                  poll every few seconds when there's nothing to do.
 #     Default:     300
 HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds = 300
 
 # HearthsideChat.Generator.PromptVersion
-#     Description: Tags every row this generator run inserts (the
-#                  hside_corpus.prompt_version column) so a bad run can be
-#                  bulk-evicted later by this value alone. Bump it when the
-#                  generation prompt changes meaningfully.
+#     Description: A label stamped on every line this generator run
+#                  writes, so a bad batch can be found and deleted later
+#                  just by this label. Change it when you meaningfully
+#                  change how the generator is prompted.
 #     Default:     v1
 HearthsideChat.Generator.PromptVersion = v3
 
 # HearthsideChat.Generator.ScriptsPerPool
-#     Description: How many unconsumed scripted bot-to-bot conversations to
-#                  keep stocked in each pool. A low-water mark, not a
-#                  production total: the generator refills a pool that is
-#                  under this number and then stops, and resumes only as
-#                  scenes are consumed. Raising it banks a deeper buffer
-#                  against a slow backend, it does not make bots talk more
-#                  -- Script.Proximity.FireChancePercent above is the knob
-#                  for how often a scene actually fires.
+#     Description: How many not-yet-used scripted bot-to-bot conversations
+#                  to keep in reserve, for each of three separate pools
+#                  (regular /say, Trade, and General) -- so the steady
+#                  state is three times this number in total.
 #
-#                  There are three pools -- /say, Trade and General -- each
-#                  stocked to this number independently, so the steady
-#                  state is three times this many conversations. (Note
-#                  these are not the six HearthsideChat.Channel.* channels:
-#                  /say is not a channel, and the other four global
-#                  channels never run scripted scenes.)
-#
-#                  Counted in whole conversations. hside_script_turn holds
-#                  individual lines, so its row count runs several times
-#                  higher, and consumed scripts are never deleted -- only
-#                  `consumed_at IS NULL` rows count toward this number.
-#
-#                  Stocking the pools takes priority over corpus
-#                  bucket-filling, but comes behind the character-card work
-#                  queue. If consumption outpaces production the bots
-#                  simply stop chatting to each other -- running dry is the
-#                  correct failure mode.
+#                  This is a reserve, not a "how often bots talk" setting:
+#                  raising it only banks a bigger buffer against a slow AI
+#                  server. Script.Proximity.FireChancePercent above is what
+#                  actually controls how often a scene plays. If bots use
+#                  up scenes faster than the generator restocks them, they
+#                  simply stop having scripted conversations until it
+#                  catches up -- that's the intended, safe way for this to
+#                  run dry.
 #     Default:     50
 HearthsideChat.Generator.ScriptsPerPool = 50
 
 # --------------------------------------------
 # OBSERVABILITY AND THE CONTROL API
 # --------------------------------------------
-# An optional web API for checking module status and (if you choose) making
-# admin changes remotely, instead of typing GM commands in-game. Off by
-# default. It uses one shared password for the whole server, not per-account
-# logins -- this is a single-operator admin tool, not a multi-user site.
-# Read-only requests (status/metrics/inspect) only need that password;
-# requests that change anything (promote/demote/retire/pin/unpin/evict-run)
-# additionally require HttpControlEnable below. The `.hearthside` in-game GM
-# commands do everything this API can and work whether or not the API is
-# turned on.
+# An optional web interface for checking module status and, if you choose,
+# making changes remotely instead of typing GM commands in-game. Off by
+# default. It uses one shared password for the whole server rather than
+# individual logins -- this is a single-operator admin tool, not a
+# multi-user site.
 #
-# RESTART REQUIRED for three of the five keys in this section. Every other
-# HearthsideChat.* key in this file takes effect on `.reload config`, but
-# HttpServerPort, HttpServerBind and HttpServerTimeoutSeconds are read once,
-# at worldserver startup, when the listener is created and bound -- changing
-# them and reloading appears to succeed and does nothing. HttpServerPrivateKey
-# and HttpControlEnable DO reload, because they are read per request rather
-# than at bind time.
+# Read-only requests (status/metrics/inspect) only need that password;
+# requests that change anything (promote/demote/retire/pin/unpin/
+# evict-run) additionally require HttpControlEnable below. The in-game
+# `.hearthside` GM commands do everything this API can, whether or not the
+# API is turned on.
+#
+# RESTART REQUIRED for three of the five settings below. Every other
+# HearthsideChat.* setting in this file takes effect on `.reload config`,
+# but HttpServerPort, HttpServerBind and HttpServerTimeoutSeconds are only
+# read once, at worldserver startup -- changing them and reloading appears
+# to succeed but does nothing. HttpServerPrivateKey and HttpControlEnable
+# DO take effect on `.reload config`.
 
 # HearthsideChat.HttpServerPort
-#     Description: Port to run the web API on. 0 turns it off entirely
-#                  (default) -- the in-game GM commands cover the same
-#                  actions without it.
-#                  Read at worldserver startup only -- see the RESTART
-#                  REQUIRED note above.
+#     Description: Port to run the web interface on. 0 turns it off
+#                  entirely (default) -- the in-game GM commands cover the
+#                  same actions without it. Needs a restart to change.
 #     Default:     0
 HearthsideChat.HttpServerPort = 0
 
 # HearthsideChat.HttpServerBind
-#     Description: Which network address to listen on. Loopback
-#                  (127.0.0.1) means only this machine can reach it directly
-#                  -- put a reverse proxy (nginx, etc.) in front if you want
-#                  it reachable from elsewhere, rather than exposing it
-#                  directly.
-#                  Read at worldserver startup only -- see the RESTART
-#                  REQUIRED note above.
+#     Description: Which network address to listen on. 127.0.0.1 (the
+#                  default) means only this machine can reach it directly
+#                  -- put a reverse proxy (nginx, etc.) in front if you
+#                  want it reachable from elsewhere, rather than exposing
+#                  it directly. Needs a restart to change.
 #     Default:     127.0.0.1
 HearthsideChat.HttpServerBind = 127.0.0.1
 
 # HearthsideChat.HttpServerPrivateKey
-#     Description: Shared password for the web API. Required whenever
-#                  HttpServerPort above is non-zero -- if this is left
-#                  blank, the server refuses to start rather than run
+#     Description: Shared password for the web interface. Required
+#                  whenever HttpServerPort above is non-zero -- if this is
+#                  left blank, the server refuses to start rather than run
 #                  unprotected.
 #     Default:     (empty)
 HearthsideChat.HttpServerPrivateKey =
 
 # HearthsideChat.HttpServerTimeoutSeconds
-#     Description: Read/write timeout for the HTTP server's connections.
-#                  Read at worldserver startup only -- see the RESTART
-#                  REQUIRED note above.
+#     Description: Read/write timeout for the web interface's connections.
+#                  Needs a restart to change.
 #     Default:     10
 HearthsideChat.HttpServerTimeoutSeconds = 10
 
 # HearthsideChat.HttpControlEnable
-#     Description: A second switch that must also be on before the web API
-#                  will accept change-making requests (promote/demote/
-#                  retire/pin/unpin/evict-run) -- the password alone isn't
-#                  enough. Read-only requests (status/metrics/inspect/
-#                  review) don't need this, only the password. Off by
-#                  default.
+#     Description: A second switch that must also be on before the web
+#                  interface will accept requests that change anything
+#                  (promote/demote/retire/pin/unpin/evict-run) -- the
+#                  password alone isn't enough for those. Read-only
+#                  requests (status/metrics/inspect/review) don't need
+#                  this, only the password. Off by default.
 #     Default:     0 (false)
 HearthsideChat.HttpControlEnable = 0

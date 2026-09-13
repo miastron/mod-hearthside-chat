@@ -106,11 +106,15 @@ namespace
         return working;
     }
 
+    // ---- verbal-tic protection ----
+
     // Masks every case-insensitive occurrence of `phrase` as one atomic
     // span, same placeholder-marker scheme as ExtractProtectedSpans, so a
     // multi-word verbal tic ("no worries") is protected as a unit rather
     // than needing per-word matching the way ProtectedWords() does for
     // single tokens. No-op if `phrase` is empty (the uncarded/no-tic case).
+    // The only caller passes ctx.verbalTic, so this function *is* verbal-tic
+    // protection even though it stays written as a generic phrase-masker.
     std::string MaskLiteralPhrase(const std::string& text, const std::string& phrase, std::vector<std::string>& spans)
     {
         if (phrase.empty())
@@ -413,6 +417,8 @@ namespace
         }
         return text;
     }
+
+    // ---- role-label stripping (one LLM tell among several below) ----
 
     // Strips a turn label the model prefixed onto its own reply: "A: yeah",
     // "Assistant: sure", "Bregan: nah working". Measured 2026-08-26 on the
@@ -865,14 +871,9 @@ namespace
         return JoinWords(words);
     }
 
-    // SplitMix64's finalizer. AzerothCore GUIDs are allocated from a small
-    // sequential counter, so `std::hash<uint64_t>` (identity on libstdc++)
-    // barely perturbs neighbouring GUIDs. This gives every input a
-    // full-avalanche 64-bit spread regardless of how the platform's
-    // std::hash<uint64_t> happens to behave.
-
 }
 
+// ---- §4.17 Trade care offset: recently-witnessed WTS/WTB nudges `care` up ----
 namespace
 {
     using TradeClock = std::chrono::steady_clock;
