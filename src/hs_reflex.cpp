@@ -1,4 +1,6 @@
 #include "hs_reflex.h"
+#include "hs_hash.h"
+#include "hs_text.h"
 
 #include <cctype>
 #include <functional>
@@ -12,15 +14,6 @@ namespace
     // so std::hash<uint64_t> alone barely perturbs neighbouring GUIDs.
     // Duplicated locally rather than shared, matching this module's existing
     // per-file precedent (hs_archetype.cpp carries its own copy too).
-    uint64_t MixBits64(uint64_t x)
-    {
-        x ^= x >> 30;
-        x *= 0xBF58476D1CE4E5B9ULL;
-        x ^= x >> 27;
-        x *= 0x94D049BB133111EBULL;
-        x ^= x >> 31;
-        return x;
-    }
 
     constexpr uint64_t kBotQuestionSalt   = 0x9E6B4A1D7F0C3358ULL;
     constexpr uint64_t kPersonalProbeSalt = 0x51F0A8D3C6E29B47ULL;
@@ -30,55 +23,9 @@ namespace
     // the same bot/player pair.
     uint64_t SeedForPlayer(uint64_t botGuid, uint64_t senderGuid, uint64_t salt)
     {
-        uint64_t h = MixBits64(botGuid ^ salt);
-        h ^= MixBits64(senderGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
+        uint64_t h = HsHash::Hs_MixBits64(botGuid ^ salt);
+        h ^= HsHash::Hs_MixBits64(senderGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
         return h;
-    }
-
-    // hash(botGuid, message text). Seeds per message rather than per bot,
-    // same idiom hs_style.cpp's SeedFor uses.
-    uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
-    {
-        uint64_t h = std::hash<std::string>{}(text);
-        h ^= MixBits64(botGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
-        return h;
-    }
-
-    std::string ToLowerAscii(const std::string& s)
-    {
-        std::string out = s;
-        for (char& c : out)
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return out;
-    }
-
-    // Trims outer whitespace and collapses internal whitespace runs to a
-    // single space. Punctuation is left alone; callers decide how much of
-    // it to strip, since the BotQuestion family needs to keep a literal
-    // trailing '?' for the bare "bot?" case, while the Plain family strips
-    // it freely.
-    std::string NormalizeWhitespace(const std::string& s)
-    {
-        std::string out;
-        out.reserve(s.size());
-        bool lastWasSpace = true; // skips leading whitespace too
-        for (char c : s)
-        {
-            if (std::isspace(static_cast<unsigned char>(c)))
-            {
-                if (!lastWasSpace)
-                    out.push_back(' ');
-                lastWasSpace = true;
-            }
-            else
-            {
-                out.push_back(c);
-                lastWasSpace = false;
-            }
-        }
-        while (!out.empty() && out.back() == ' ')
-            out.pop_back();
-        return out;
     }
 
     // Collapses any run of 3+ identical characters down to one ("loooool"
@@ -101,17 +48,6 @@ namespace
     // PersonalProbe's tolerance for "how old are you?" vs "how old are
     // you", without the Plain family's aggressive repeat-collapsing, which
     // would turn "bot??" into "bot?" and blur the bare-"bot?" special case.
-    std::string StripOneTrailingMark(const std::string& s)
-    {
-        if (!s.empty())
-        {
-            char last = s.back();
-            if (last == '?' || last == '!' || last == '.')
-                return s.substr(0, s.size() - 1);
-        }
-        return s;
-    }
-
     struct PlainEntry
     {
         const char*              trigger;
@@ -226,8 +162,8 @@ HsBotQuestionMode Hs_ParseBotQuestionMode(const std::string& value)
 HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint64_t senderGuid,
                               HsBotQuestionMode botQuestionMode)
 {
-    std::string withPunct  = NormalizeWhitespace(ToLowerAscii(trigger));
-    std::string corePhrase = StripOneTrailingMark(withPunct);
+    std::string withPunct  = HsText::Hs_NormalizeWhitespace(HsText::Hs_ToLowerAscii(trigger));
+    std::string corePhrase = HsText::Hs_StripOneTrailingMark(withPunct);
 
     // ---- "are you a bot?" (checked first: the module's most-scrutinised
     // line and the narrowest, most specific match) ----
@@ -278,7 +214,7 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
         {
             HsReflexMatch match;
             match.kind = HsReflexKind::Plain;
-            uint64_t seed = SeedForMessage(botGuid, trigger);
+            uint64_t seed = HsHash::Hs_SeedForMessage(botGuid, trigger);
             match.text = entry.responses[seed % entry.responses.size()];
             return match;
         }

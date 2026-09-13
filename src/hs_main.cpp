@@ -12,6 +12,7 @@
 #include "hs_command.h"
 #include "hs_http_server.h"
 #include "hs_identity_store.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_metrics.h"
 #include "hs_opener.h"
@@ -316,7 +317,7 @@ namespace
 
 void Addmod_hearthside_chatScripts()
 {
-    LOG_INFO("module.hearthside", "[HearthsideChat] Registering mod-hearthside-chat scripts.");
+    LOG_INFO(kHsLog, "[HearthsideChat] Registering mod-hearthside-chat scripts.");
     new HsConfigWorldScript();
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();

@@ -3,6 +3,7 @@
 #include "hs_bot.h"
 #include "hs_config.h"
 #include "hs_event_arbiter.h"
+#include "hs_log.h"
 #include "hs_queue.h"
 #include "hs_tier.h"
 #include "hs_topic_gate.h"
@@ -272,7 +273,7 @@ namespace
             if (admitted)
                 g_EventsFiredThisSession.fetch_add(1);
             else if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.chat", "[HearthsideChat] Event {} enqueue rejected for bot {}.",
+                LOG_INFO(kHsLogChat, "[HearthsideChat] Event {} enqueue rejected for bot {}.",
                     Hs_EventTypeName(primaryType), bot->GetName());
         }
     }
@@ -459,7 +460,7 @@ void HsEventDeathHandler::OnPlayerJustDied(Player* player)
         if (g_PendingDeaths.size() >= kMaxPendingDeaths)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.chat",
+                LOG_INFO(kHsLogChat,
                     "[HearthsideChat] Pending-death buffer full ({}); dropping this death.", kMaxPendingDeaths);
             return;
         }
@@ -548,6 +549,19 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     }
     else
     {
+        // Review item 14: the budget gate lives inside FireEvent, which is
+        // called at the bottom of this function -- so this scan (a realm walk
+        // with a distance check per candidate, NearbyBots above) ran in full
+        // and had its result discarded every time the bucket was already
+        // empty. That is exactly the cost FireEvent's own comment claims to
+        // avoid ("a busy dungeon's stream of deaths and rolls costs almost
+        // nothing when the budget is already gone"), and a wipe followed by a
+        // ding is when the bucket is emptiest. Returning rather than skipping
+        // just the scan: with no budget FireEvent would drop the event
+        // regardless of which actors were collected.
+        if (Hs_EventBucketExhausted())
+            return;
+
         // World-scoped: a ding in the open is worth a "gz" from whoever is
         // standing there, real player present or not.
         for (Player* nearby : NearbyBots(player, nullptr))
@@ -598,6 +612,14 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
         return;
 
     std::string itemName = Hs_LocalizedItemName(proto); // review H1
+    // Review item 8: Hs_LocalizedItemName returns "" for a template whose
+    // name resolves empty, not only for a null one. Both trigger strings
+    // below interpolate it into a sentence ("...won the roll for ."), and
+    // that sentence is fed verbatim into a bot-to-bot reaction prompt. An
+    // item nobody can name is not worth an event.
+    if (itemName.empty())
+        return;
+
     std::vector<HsEventActor> actors;
 
     if (EligibleBot(player))

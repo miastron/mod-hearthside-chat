@@ -28,18 +28,23 @@
 // the map is actually read through. Pruning early would change behavior;
 // pruning late only delays reclamation, so the constants err late.
 //
-// Deliberately not applied to every map in the module. A map keyed by bot
-// GUID or player GUID is already bounded by the realm's population; the ones
-// worth pruning are those keyed by a *pair* (whose count is the product, not
-// the sum) or those holding more than a timestamp. See each call site.
+// Two shapes make a map *worth* pruning: a key that is a *pair* (whose count
+// is the product of two populations, not the sum), or a value holding more
+// than a timestamp. hs_queue.cpp's g_History is the first; g_RecentUtterances
+// and hs_experience.cpp's ring are the second (bot-keyed, but each
+// accumulates content). hs_experience_store.cpp's g_LastZoneByBot is the
+// counter-example left unpruned on purpose: bot-keyed, one id per entry.
 //
-// Three call sites today, and the second criterion is why two of them are
-// bot-keyed rather than pair-keyed: hs_queue.cpp's g_History (pair-keyed),
-// hs_queue.cpp's g_RecentUtterances and hs_experience.cpp's ring (both
-// bot-keyed, but each holds accumulated *content* rather than a timestamp,
-// so population bounds alone do not bound them). hs_experience_store.cpp's
-// g_LastZoneByBot is the counter-example left unpruned on purpose: bot-keyed
-// and holding a single id.
+// It is applied more widely than those three, though (this comment claimed
+// "three call sites today" until review item 12; there are ten). The rest are
+// plain bot- or player-keyed cooldown maps -- hs_ambient's g_LastAmbientAt,
+// hs_opener's g_LastOpenerAt, hs_script's g_LastWitnessAt, hs_style's
+// g_LastTradeSighting, hs_queue's three g_Last*At maps -- which the criteria
+// above would call exempt. Pruning them anyway is deliberate and free: the
+// call sits in a write path that already holds the mutex, the size gate means
+// a small realm never walks the map at all, and an entry past its cooldown
+// window answers identically whether it is stale or absent. The criteria say
+// which maps *must* be pruned to stay bounded, not which ones may be.
 
 namespace HsPrune
 {

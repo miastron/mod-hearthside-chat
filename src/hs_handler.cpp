@@ -9,6 +9,7 @@
 #include "hs_engagement.h"
 #include "hs_grounded.h"
 #include "hs_identity_store.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_queue.h"
 #include "hs_reflex.h"
@@ -135,14 +136,7 @@ namespace
         // this bot's voice rather than a flat string. No history append and
         // no cooldown/last-reply bump: tier 0 writes no identity state at
         // all.
-        HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = inCombat;
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), match.text, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
     }
@@ -272,16 +266,25 @@ namespace
                 hasFact = false;
                 for (uint8_t slot : kGearSlots)
                 {
-                    if (Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot))
-                    {
-                        if (ItemTemplate const* tmpl = item->GetTemplate())
-                        {
-                            fact    = Hs_LocalizedItemName(tmpl); // review H1
-                            hasFact = !fact.empty();
-                            if (hasFact)
-                                break;
-                        }
-                    }
+                    Item* item = bot->GetItemByPos(INVENTORY_SLOT_BAG_0, slot);
+                    if (!item)
+                        continue;
+
+                    ItemTemplate const* tmpl = item->GetTemplate();
+                    if (!tmpl)
+                        continue;
+
+                    // Empty is a real outcome, not just a null-template one:
+                    // Hs_LocalizedItemName returns "" for a template whose
+                    // name does not resolve, and an empty `fact` would be
+                    // templated into a sentence with a hole in it. Keep
+                    // looking down the slot list instead (review item 8).
+                    fact = Hs_LocalizedItemName(tmpl); // review H1
+                    if (fact.empty())
+                        continue;
+
+                    hasFact = true;
+                    break;
                 }
                 break;
             }
@@ -431,14 +434,7 @@ namespace
 
         // Same style pass and delivery path as TryReflex; both answer
         // without touching the GPU.
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = inCombat;
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), reply, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
@@ -487,14 +483,7 @@ namespace
                 return false;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = inCombat;
-        styleCtx.verbalTic            = snapshot.verbalTic;
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
@@ -547,14 +536,7 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = bot->IsInCombat();
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, bot->IsInCombat());
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, HsReplyChannel::Channel, style.text, kind);
     }
@@ -609,7 +591,7 @@ namespace
         HsTopicGateContext topicGate = BuildTopicGateContext(bot);
 
         if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false) && g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
+            LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
 

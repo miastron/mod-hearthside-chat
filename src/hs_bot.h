@@ -1,6 +1,8 @@
 #ifndef MOD_HS_BOT_H
 #define MOD_HS_BOT_H
 
+#include <cstdint>
+
 class Player;
 
 // One place that knows how to tell a playerbot from a human, and which bots
@@ -35,5 +37,23 @@ bool Hs_IsBot(Player* p);
 // (hs_opener.cpp) or as the audience a scene is worth performing for
 // (hs_script.cpp), firing a line at a bot the operator excluded.
 bool Hs_IsEligibleBot(Player* p);
+
+// True if the character with this raw GUID is a playerbot, whether or not it
+// is currently online. Same question as Hs_IsBot, asked where no Player* is
+// available -- the `.hearthside` control commands and the HTTP control routes
+// act on a name the operator typed, which resolves through the character
+// cache to *any* character, bot or human (review item 1). Returns false for 0.
+//
+// Two mechanisms, because mod-playerbots recognizes its own two kinds of bot
+// differently and only one of them survives a logout:
+//   - online: the authoritative PlayerbotAI test, via Hs_IsBot.
+//   - offline: the character's *account*. A random bot's account is in
+//     PlayerbotAIConfig::randomBotAccounts (loaded at startup, so this is a
+//     vector lookup), and an addclass bot's account carries account_type 2 in
+//     playerbots_account_type. RandomPlayerbotMgr::IsRandomBot(LowType) is
+//     deliberately not used for the random half: it additionally requires
+//     currentBots.contains(), which holds only the bots the manager is
+//     currently cycling, so it answers false for a real but logged-out bot.
+bool Hs_IsBotGuid(uint64_t rawGuid);
 
 #endif // MOD_HS_BOT_H

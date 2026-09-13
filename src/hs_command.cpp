@@ -43,10 +43,22 @@ namespace
     // act on a named bot whether or not it's currently loaded, unlike
     // `.hearthside capture` which needs a live Player* for the bot's
     // current class/level. Returns 0 if the name doesn't exist.
+    //
+    // Review item 1: the bot check is here, not at each call site. The cache
+    // lookup alone resolves *any* character -- a typo that lands on a real
+    // player's alt, or a player who deliberately took a bot-shaped name --
+    // and the six mutating subcommands below (promote/demote/retire/pin/
+    // unpin/archetype) went straight from that GUID to a write against
+    // hside_identity and the playerbots exclude vectors, after which the
+    // identity sweep would keep processing a human's character as a bot.
+    // `.hearthside capture` already checked (it has a live Player*); this
+    // gives the offline half the same guarantee in one place.
     uint64_t ResolveBotGuidByName(const std::string& name)
     {
         ObjectGuid guid = sCharacterCache->GetCharacterGuidByName(name);
-        return guid.IsEmpty() ? 0 : guid.GetRawValue();
+        if (guid.IsEmpty())
+            return 0;
+        return Hs_IsBotGuid(guid.GetRawValue()) ? guid.GetRawValue() : 0;
     }
 
     uint8_t LookupCharacterLevel(uint64_t guid)
@@ -181,7 +193,7 @@ namespace
         uint64_t botGuid = ResolveBotGuidByName(botName);
         if (botGuid == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -234,7 +246,7 @@ namespace
         uint8_t  level   = botGuid ? LookupCharacterLevel(botGuid) : 0;
         if (botGuid == 0 || level == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -253,7 +265,7 @@ namespace
         uint64_t botGuid = ResolveBotGuidByName(botName);
         if (botGuid == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -274,7 +286,7 @@ namespace
         uint8_t  level   = botGuid ? LookupCharacterLevel(botGuid) : 0;
         if (botGuid == 0 || level == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -292,7 +304,7 @@ namespace
         uint64_t botGuid = ResolveBotGuidByName(botName);
         if (botGuid == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -307,7 +319,7 @@ namespace
         uint64_t botGuid = ResolveBotGuidByName(botName);
         if (botGuid == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -341,7 +353,7 @@ namespace
         uint64_t botGuid = ResolveBotGuidByName(botName);
         if (botGuid == 0)
         {
-            handler->PSendSysMessage("[HearthsideChat] '{}' not found.", botName);
+            handler->PSendSysMessage("[HearthsideChat] '{}' not found, or is not a bot.", botName);
             return true;
         }
 
@@ -475,7 +487,13 @@ namespace
             // The "you are in it" flag stays reported rather than assumed for
             // the same reason: ChannelMgr::GetChannel is a name lookup and
             // does not test membership.
-            Channel* mine = Hs_ResolveChannelForDelivery(player, kind);
+            //
+            // sendPacketOnMiss=false (review item 11): `player` here is the
+            // real, connected GM, not a bot. On the default the core answers
+            // a miss with a "not on channel" system message into that GM's
+            // chat frame -- one per unresolvable kind, interleaved with the
+            // very diagnostic lines this command prints to explain the miss.
+            Channel* mine = Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false);
 
             std::map<std::string, uint32_t> byInstance;
             uint32_t sharedWithYou = 0;

@@ -40,11 +40,26 @@ struct HsChannelPolicy
     HsTier   maxTier       = HsTier::Off;
     uint32_t ratePerMin    = 0;
     uint32_t maxCandidates = 0;
+
+    // True where a bot that is in a group must not be picked as a speaker.
+    // General only, and derived rather than configured (see
+    // Hs_SetChannelPolicyTable): a General channel is one instance per zone,
+    // which for a grouped bot is exactly the zone its dungeon or party is
+    // in, so speaking there instead of to its own party is the module
+    // talking out of the wrong window. Trade is city-scoped and carries no
+    // such conflict.
+    //
+    // Review item 23: this was three identical `kind == General &&
+    // candidate->GetGroup()` tests in hs_ambient.cpp, hs_botchain.cpp and
+    // hs_script.cpp, each citing the other two in comments, while this
+    // struct -- the module's stated single place a channel's rules live --
+    // had no field for it. Data beats three call sites to remember.
+    bool     excludeGroupedBots = false;
 };
 
 // Replaces the whole in-memory per-channel policy table. Called once at
 // startup (and again on `.reload config`) by hs_config.cpp's
-// LoadHearthsideChatConfig, after parsing the 21 HearthsideChat.Channel.*
+// Hs_LoadHearthsideChatConfig, after parsing the 21 HearthsideChat.Channel.*
 // keys, same split as Hs_SetArchetypeTable (hs_archetype.h).
 void Hs_SetChannelPolicyTable(const HsChannelPolicy (&table)[kHsChannelKindCount]);
 

@@ -8,6 +8,7 @@
 #include "hs_identity_store.h"
 #include "hs_memory.h"
 #include "hs_memory_store.h"
+#include "hs_proximity.h"
 #include "hs_prune.h"
 #include "hs_queue.h"
 #include "hs_rpgstate.h"
@@ -190,18 +191,7 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = bot->IsInCombat();
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
-        // §4.17: set here for the same reason inCombat is. The sighting is
-        // per-bot and time-decayed, not per-surface, since a bot that just
-        // watched a WTS flurry in Trade is keyed up whatever it says next,
-        // and an opener is the one HsStyleContext site that used to miss it.
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, bot->IsInCombat());
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), player->GetName(), line, styleCtx);
         if (style.text.empty())
             return;
@@ -408,13 +398,18 @@ void Hs_ScanProximityOpeners()
             realPlayers.push_back(candidate);
     }
 
+    // Review item 13: bucket by {map, zone, team} before the distance walk,
+    // the same fix hs_ambient.cpp got under review G3 and this scan never
+    // did. The pair loop below ran the full realm-wide product every 30s
+    // with an IsWithinDistInMap call per pair; the bucket contains every
+    // possible match and folds the team filter in (hs_proximity.h).
+    HsProximity::Index botsByCell = HsProximity::BucketByCell(bots);
+
     std::set<std::pair<uint64_t, uint64_t>> currentlyObserved;
     for (Player* player : realPlayers)
     {
-        for (Player* bot : bots)
+        for (Player* bot : HsProximity::InSameCell(botsByCell, player))
         {
-            if (bot->GetTeamId() != player->GetTeamId())
-                continue;
             if (!bot->IsAlive() || bot->IsInCombat())
                 continue;
             // A grouped bot is already at this player's side by the

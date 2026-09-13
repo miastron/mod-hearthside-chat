@@ -3,6 +3,7 @@
 #include "hs_config.h"
 #include "hs_identity.h"
 #include "hs_json.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 
 #include "DatabaseEnv.h"
@@ -17,11 +18,18 @@
 #include <chrono>
 #include <mutex>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace
 {
+    // Serializes the read-then-write in Hs_ForcePromote/Hs_ForceDemote, which
+    // the GM commands and the HTTP control routes call from different threads
+    // (review item 3). Uncontended in practice: two force calls for the same
+    // bot within a few milliseconds is the case it exists for.
+    std::mutex g_ForceStateMutex;
+
     std::atomic<uint32_t> g_PromotionsThisSession{0};
     std::atomic<uint32_t> g_DemotionsThisSession{0};
     std::atomic<uint32_t> g_RetirementsThisSession{0};
@@ -44,6 +52,48 @@ namespace
     {
         QueryResult result = CharacterDatabase.Query("SELECT name FROM characters WHERE guid = {}", botGuid);
         return result ? (*result)[0].Get<std::string>() : "";
+    }
+
+    // Comma-joined guid list for an IN (...) clause. Values are uint64_t read
+    // back out of our own tables, so no escaping applies. File-scope rather
+    // than a lambda inside the sweep's step 1 (where review G8 introduced it):
+    // step 3 batches the same way now (review item 15), and a third caller
+    // would otherwise copy it again.
+    // Not named GuidList: AzerothCore's ObjectGuid.h already has a global
+    // `typedef std::list<ObjectGuid> GuidList`, and an anonymous-namespace
+    // function of that name is ambiguous against it at every call site.
+    std::string JoinGuids(const std::vector<uint64_t>& guids)
+    {
+        std::string out;
+        for (uint64_t guid : guids)
+        {
+            if (!out.empty())
+                out += ",";
+            out += std::to_string(guid);
+        }
+        return out;
+    }
+
+    // The set form of LookupBotName: one query for a whole batch instead of
+    // one per guid. Order is not preserved and missing guids are simply
+    // absent, which is all either caller needs -- the exclude vectors are
+    // keyed by name and a character with no row has no name to remove.
+    std::vector<std::string> LookupBotNames(const std::vector<uint64_t>& botGuids)
+    {
+        std::vector<std::string> names;
+        if (botGuids.empty())
+            return names;
+
+        QueryResult result = CharacterDatabase.Query(
+            "SELECT name FROM characters WHERE guid IN ({})", JoinGuids(botGuids));
+        if (!result)
+            return names;
+
+        do
+        {
+            names.push_back((*result)[0].Get<std::string>());
+        } while (result->NextRow());
+        return names;
     }
 
     // ---- Exclude-vector writes are world-thread-only ----
@@ -187,7 +237,7 @@ void Hs_BumpInteractionScore(uint64_t botGuid, uint8_t botLevel, uint32_t weight
             "UPDATE hside_identity SET promoted_at = NOW() WHERE bot_guid = {} AND promoted_at IS NULL", botGuid);
         g_PromotionsThisSession.fetch_add(1);
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} promoted (score {}).", botGuid, score);
+            LOG_INFO(kHsLog, "[HearthsideChat] Bot {} promoted (score {}).", botGuid, score);
     }
 }
 
@@ -342,7 +392,7 @@ void Hs_ApplyExcludeVectorsFromIdentityTable()
     } while (result->NextRow());
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside", "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
+        LOG_INFO(kHsLog, "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
 }
 
 void Hs_DrainExcludeVectorQueue()
@@ -382,7 +432,16 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel)
     HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
-    CharacterDatabase.Execute(
+    // Review item 2: DirectExecute, not Execute, for the same reason as the
+    // A2 fix on Hs_BumpInteractionScore above -- and here the read-after-write
+    // is one step removed, which is what hid it. The invalidate below clears
+    // the cache entry, so the very next Hs_LookupCardSnapshot for this bot
+    // refills it through FetchCardEntry's synchronous Query(). An async
+    // Execute() is still sitting in the worker queue at that point, so the
+    // refill reads the *pre-retirement* row and re-caches the retired card
+    // for another kCardCacheTtlSeconds -- a bot answering in a voice it was
+    // just stripped of. DirectExecute commits on the pool Query() reads.
+    CharacterDatabase.DirectExecute(
         "UPDATE hside_identity SET card_voice = NULL, card_facts = NULL, card_model = NULL, "
         "card_prompt_version = NULL, card_active = 0, pinned_by_friend = 0, promoted_at = NULL, "
         "interaction_score = 0, archetype = '{}', last_known_level = {}, level_checked_at = NOW() "
@@ -395,7 +454,7 @@ void Hs_RetireCard(uint64_t botGuid, uint8_t newLevel)
 
     g_RetirementsThisSession.fetch_add(1);
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} retired (level dropped to {}).", botGuid, newLevel);
+        LOG_INFO(kHsLog, "[HearthsideChat] Bot {} retired (level dropped to {}).", botGuid, newLevel);
 }
 
 void Hs_RunIdentityDailySweep()
@@ -439,26 +498,12 @@ void Hs_RunIdentityDailySweep()
             }
         } while (rows->NextRow());
 
-        // Comma-joined guid list for an IN (...) clause. Values are
-        // uint64_t read back out of our own table, so no escaping applies.
-        auto guidList = [](const std::vector<uint64_t>& guids)
-        {
-            std::string out;
-            for (uint64_t guid : guids)
-            {
-                if (!out.empty())
-                    out += ",";
-                out += std::to_string(guid);
-            }
-            return out;
-        };
-
         if (!toPin.empty())
             CharacterDatabase.Execute(
-                "UPDATE hside_identity SET pinned_by_friend = 1 WHERE bot_guid IN ({})", guidList(toPin));
+                "UPDATE hside_identity SET pinned_by_friend = 1 WHERE bot_guid IN ({})", JoinGuids(toPin));
         if (!toUnpin.empty())
             CharacterDatabase.Execute(
-                "UPDATE hside_identity SET pinned_by_friend = 0 WHERE bot_guid IN ({})", guidList(toUnpin));
+                "UPDATE hside_identity SET pinned_by_friend = 0 WHERE bot_guid IN ({})", JoinGuids(toUnpin));
         if (!toPromote.empty())
         {
             // promoted_at IS NULL is kept in the predicate, exactly as the
@@ -468,10 +513,10 @@ void Hs_RunIdentityDailySweep()
             // rather than a second promotion.
             CharacterDatabase.Execute(
                 "UPDATE hside_identity SET promoted_at = NOW() WHERE promoted_at IS NULL AND bot_guid IN ({})",
-                guidList(toPromote));
+                JoinGuids(toPromote));
             g_PromotionsThisSession.fetch_add(static_cast<uint32_t>(toPromote.size()));
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside", "[HearthsideChat] {} bot(s) promoted (friended).", toPromote.size());
+                LOG_INFO(kHsLog, "[HearthsideChat] {} bot(s) promoted (friended).", toPromote.size());
         }
     }
 
@@ -503,16 +548,35 @@ void Hs_RunIdentityDailySweep()
         kHsCardDormancyDays);
     if (toDemote)
     {
+        // Review item 15: batched, like step 1 above (review G8). The per-row
+        // shape cost two round trips per demoted bot -- one UPDATE plus one
+        // LookupBotName Query -- in a loop whose length is the number of
+        // dormant cards on the realm. One IN (...) update and one name query
+        // for the whole set do the same work.
+        //
+        // Review item 2: DirectExecute, not Execute. Each demotion is followed
+        // by Hs_InvalidateCardCache, and the next lookup for that bot refills
+        // the cache through FetchCardEntry's synchronous Query(); an async
+        // write still in the worker queue would be read straight past and the
+        // demoted card re-cached as active.
+        std::vector<uint64_t> demotedGuids;
         do
         {
-            uint64_t botGuid = (*toDemote)[0].Get<uint64_t>();
-            CharacterDatabase.Execute("UPDATE hside_identity SET card_active = 0 WHERE bot_guid = {}", botGuid);
-            Hs_InvalidateCardCache(botGuid); // review G1
-            RemoveNameFromExcludeVectors(LookupBotName(botGuid));
-            g_DemotionsThisSession.fetch_add(1);
-            if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside", "[HearthsideChat] Bot {} demoted (dormant).", botGuid);
+            demotedGuids.push_back((*toDemote)[0].Get<uint64_t>());
         } while (toDemote->NextRow());
+
+        CharacterDatabase.DirectExecute(
+            "UPDATE hside_identity SET card_active = 0 WHERE bot_guid IN ({})", JoinGuids(demotedGuids));
+
+        for (uint64_t botGuid : demotedGuids)
+            Hs_InvalidateCardCache(botGuid); // review G1
+
+        for (std::string const& name : LookupBotNames(demotedGuids))
+            RemoveNameFromExcludeVectors(name);
+
+        g_DemotionsThisSession.fetch_add(static_cast<uint32_t>(demotedGuids.size()));
+        if (g_HsDebugEnabled)
+            LOG_INFO(kHsLog, "[HearthsideChat] {} bot(s) demoted (dormant).", demotedGuids.size());
     }
 
     // 4. Retirement for carded bots whose level dropped while nobody was
@@ -564,7 +628,7 @@ void Hs_RunIdentityDailySweep()
         } while (orphans->NextRow());
 
         if (orphanCount > 0)
-            LOG_INFO("module.hearthside",
+            LOG_INFO(kHsLog,
                 "[HearthsideChat] Cleaned up {} orphaned identity row(s) (bot no longer exists -- "
                 "likely a DeleteRandomBotAccounts wipe).", orphanCount);
     }
@@ -592,6 +656,16 @@ uint32_t Hs_RetirementsThisSession()
 
 bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
 {
+    // Review item 3: both force paths are check-then-act and both are
+    // reachable from two threads at once -- the world thread (`.hearthside
+    // promote`/`demote`) and cpp-httplib's pool (the /api/bot/:guid/promote
+    // and /demote routes). Without this lock two callers can each read
+    // "not promoted yet", each write, and each increment the session
+    // counter, while the idempotent SQL below changes the row only once.
+    // One mutex for both functions, not one each: they read and write the
+    // same two columns of the same row.
+    std::lock_guard<std::mutex> forceLock(g_ForceStateMutex);
+
     HsArchetype archetype = Hs_ArchetypeForBot(botGuid);
     std::string archetypeName = Hs_ArchetypeInfoFor(archetype).enumName;
 
@@ -606,7 +680,11 @@ bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
 
     // The ON DUPLICATE KEY clause still matters: the row may exist and be
     // unpromoted, which is exactly the case that reaches here.
-    CharacterDatabase.Execute(
+    //
+    // DirectExecute so the write lands on the pool the Query() above reads
+    // from: the generator's ClaimOnePendingCard polls promoted_at to find
+    // work, and the lock only orders callers of *this* function.
+    CharacterDatabase.DirectExecute(
         "INSERT INTO hside_identity (bot_guid, archetype, last_known_level, level_checked_at, promoted_at) "
         "VALUES ({}, '{}', {}, NOW(), NOW()) "
         "ON DUPLICATE KEY UPDATE promoted_at = IFNULL(promoted_at, NOW())",
@@ -618,12 +696,17 @@ bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
 
 bool Hs_ForceDemote(uint64_t botGuid)
 {
+    std::lock_guard<std::mutex> forceLock(g_ForceStateMutex); // review item 3, see Hs_ForcePromote
+
     QueryResult result = CharacterDatabase.Query(
         "SELECT card_active FROM hside_identity WHERE bot_guid = {}", botGuid);
     if (!result || !(*result)[0].Get<bool>())
         return false;
 
-    CharacterDatabase.Execute("UPDATE hside_identity SET card_active = 0 WHERE bot_guid = {}", botGuid);
+    // DirectExecute: the invalidate below is immediately followed, on the
+    // next lookup for this bot, by FetchCardEntry's synchronous Query()
+    // refill (review item 2).
+    CharacterDatabase.DirectExecute("UPDATE hside_identity SET card_active = 0 WHERE bot_guid = {}", botGuid);
     Hs_InvalidateCardCache(botGuid); // review G1
     RemoveNameFromExcludeVectors(LookupBotName(botGuid));
     g_DemotionsThisSession.fetch_add(1);

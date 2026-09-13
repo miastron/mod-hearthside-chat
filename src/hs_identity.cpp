@@ -1,4 +1,6 @@
 #include "hs_identity.h"
+#include "hs_class.h"
+#include "hs_levelband.h"
 
 #include <algorithm>
 #include <cctype>
@@ -19,25 +21,22 @@ namespace HsCardFacts
     const char* const kGuildStanceValues[] = { "guilded", "unguilded" };
     const size_t kGuildStanceCount = sizeof(kGuildStanceValues) / sizeof(kGuildStanceValues[0]);
 
-    const char* const kClassNames[] = {
-        "warrior", "paladin", "hunter", "rogue", "priest",
-        "death knight", "shaman", "mage", "warlock", "druid",
-    };
-    const size_t kClassNameCount = sizeof(kClassNames) / sizeof(kClassNames[0]);
 }
 
 namespace
 {
-    // Same four bands as hs_corpus.h's Hs_LevelBandFor, duplicated rather
-    // than depending on that header, keeping this file's dependency surface
-    // at zero (hs_json.h and hs_gen_validate.h only).
+    // The same four bands Hs_LevelBandFor labels, off the same three
+    // boundary constants (hs_levelband.h). This used to re-spell 20/60/80
+    // with a comment saying the two had to stay in step; review item 25
+    // made them share the numbers. The enum rather than the label strings
+    // because the plausibility tables below switch on it.
     enum class Band { Low, Mid, High, Endgame };
 
     Band BandFor(uint8_t level)
     {
-        if (level >= 80) return Band::Endgame;
-        if (level >= 60) return Band::High;
-        if (level >= 20) return Band::Mid;
+        if (level >= kHsLevelBandEndgameMin) return Band::Endgame;
+        if (level >= kHsLevelBandHighMin)    return Band::High;
+        if (level >= kHsLevelBandMidMin)     return Band::Mid;
         return Band::Low;
     }
 
@@ -153,12 +152,12 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
         return { false, "guild_stance_disagrees_with_actual_guild_row" };
 
     std::string alt = facts.at("alt").get<std::string>();
-    if (!Contains(HsCardFacts::kClassNames, HsCardFacts::kClassNameCount, alt))
+    if (!Contains(HsClass::kNames, HsClass::Count, alt))
         return { false, "alt_not_a_real_class_name" };
     // Review C10: Hs_BuildCardFactsPrompt asks for "a different WoW class
     // than this character's own", and nothing enforced it -- a card could
     // claim a warrior alt on a warrior. ownClassName is lowercase and drawn
-    // from the same vocabulary as kClassNames (hs_corpus.h's
+    // from the same vocabulary as HsClass::kNames (hs_corpus.h's
     // Hs_ClassNameFor); empty means the caller could not determine it, in
     // which case the check is skipped rather than guessed.
     if (!ownClassName.empty() && alt == ownClassName)
@@ -189,8 +188,8 @@ HsGenVerdict Hs_ValidateVoiceBlock(const std::string& text)
 std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout)
 {
     return
-        "You are helping write a short persona note for a World of Warcraft: Wrath of the Lich "
-        "King player character, to sit alongside their existing personality summary: \"You mostly "
+        "You are helping write a short persona note for a World of Warcraft player character, to "
+        "sit alongside their existing personality summary: \"You mostly "
         "talk about: " + archetypeTalksAbout + ".\" Write one or two short sentences, second "
         "person (\"You...\"), describing how this specific character comes across in chat -- their "
         "manner, not new facts about their life. No markdown, no emoji, no quotation marks, "
@@ -201,8 +200,8 @@ std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint
                                      const std::string& guildName, const std::string& ownClassName)
 {
     std::string prompt =
-        "You are helping fill out a structured fact sheet for a World of Warcraft: Wrath of the "
-        "Lich King player character (level " + std::to_string(static_cast<int>(level)) +
+        "You are helping fill out a structured fact sheet for a World of Warcraft player "
+        "character (level " + std::to_string(static_cast<int>(level)) +
         ") whose personality summary is: \"You mostly talk about: " + archetypeTalksAbout + ".\" ";
 
     prompt += hasGuild

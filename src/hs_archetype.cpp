@@ -1,4 +1,5 @@
 #include "hs_archetype.h"
+#include "hs_hash.h"
 
 #include <array>
 #include <cstdint>
@@ -7,21 +8,6 @@
 
 namespace
 {
-    // SplitMix64's finalizer, same mixer hs_style.cpp uses for the same
-    // reason: AzerothCore GUIDs come from a small sequential counter, so
-    // std::hash<uint64_t> alone (identity on libstdc++) would draw
-    // neighbouring GUIDs into neighbouring archetypes instead of scattering
-    // them across the weighted pool.
-    uint64_t MixBits64(uint64_t x)
-    {
-        x ^= x >> 30;
-        x *= 0xBF58476D1CE4E5B9ULL;
-        x ^= x >> 27;
-        x *= 0x94D049BB133111EBULL;
-        x ^= x >> 31;
-        return x;
-    }
-
     // Independent salt from hs_style.cpp's care-jitter mix so archetype
     // assignment doesn't correlate with which direction a bot's jitter
     // happens to land.
@@ -124,7 +110,7 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid)
             return it->second;
     }
 
-    uint64_t h = MixBits64(botGuid ^ kArchetypeSalt);
+    uint64_t h = HsHash::Hs_MixBits64(botGuid ^ kArchetypeSalt);
 
     std::lock_guard<std::mutex> lock(g_ArchetypeTableMutex);
 

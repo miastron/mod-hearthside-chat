@@ -1,4 +1,5 @@
 #include "hs_config.h"
+#include "hs_log.h"
 #include "Config.h"
 #include "Log.h"
 #include "hs_channel.h"
@@ -52,7 +53,7 @@ namespace
     // config` rewrite. See hs_config.h's "Reading the std::string globals
     // from a thread that is not the world thread" for why a stale read is
     // not the failure mode and a freed buffer is. Held for the whole of
-    // LoadHearthsideChatConfig (which only touches sConfigMgr and these
+    // Hs_LoadHearthsideChatConfig (which only touches sConfigMgr and these
     // globals, so it is microseconds and cannot re-enter this lock), and
     // released per-copy by the three accessors below.
     std::mutex g_ConfigStringMutex;
@@ -83,7 +84,7 @@ namespace
         if (lowered == "llama3" || lowered == "chatml" || lowered == "mistral" || lowered == "gemma")
             return lowered;
 
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] {} = '{}' is not a chat template this module can render "
             "(llama3 | chatml | mistral | gemma). Falling back to llama3, which will "
             "produce garbled or non-terminating replies if the model expects another.",
@@ -111,7 +112,7 @@ namespace
         if (lowered == "llamacpp" || lowered == "ollama" || lowered == "openai")
             return lowered;
 
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] {} = '{}' is not a backend this module knows "
             "(llamacpp | ollama | openai). Falling back to openai, which will post an "
             "OpenAI-shaped request to <Url>/chat/completions -- every reply will fail to "
@@ -137,7 +138,7 @@ namespace
 bool Hs_IsExcludedBotName(const std::string& botName)
 {
     // Review B5: under g_ConfigStringMutex, like every other read of state
-    // LoadHearthsideChatConfig replaces. RebuildExcludeNameSet() clears and
+    // Hs_LoadHearthsideChatConfig replaces. RebuildExcludeNameSet() clears and
     // refills this set in place on `.reload config`; every caller today is
     // on the world thread, so this was latent rather than live -- but it is
     // a node-based container being rebuilt under a reader, which is a
@@ -278,7 +279,7 @@ uint32_t     g_HsGeneratorRowsPerBucket        = 20;
 uint32_t     g_HsGeneratorPollIntervalSeconds  = 5;
 uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds = 300;
 std::string g_HsGeneratorPromptVersion        = "v1";
-uint32_t     g_HsGeneratorScriptsPerPool       = 15;
+uint32_t     g_HsGeneratorScriptsPerPool       = 50;
 
 uint32_t     g_HsHttpServerPort           = 0;
 std::string g_HsHttpServerBind            = "127.0.0.1";
@@ -310,7 +311,7 @@ std::string Hs_ConfigString(const std::string& configGlobal)
     return configGlobal;
 }
 
-void LoadHearthsideChatConfig()
+void Hs_LoadHearthsideChatConfig()
 {
     // One lock for the whole load rather than a block per string group: the
     // body is a straight run of sConfigMgr reads and global assignments with
@@ -372,7 +373,7 @@ void LoadHearthsideChatConfig()
     // would be a crash, not a misbehavior.
     if (g_HsDistractedMinDelaySeconds > g_HsDistractedMaxDelaySeconds)
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] Distracted.MinDelaySeconds ({}) exceeds MaxDelaySeconds ({}) -- clamping max up to min.",
             g_HsDistractedMinDelaySeconds, g_HsDistractedMaxDelaySeconds);
         g_HsDistractedMaxDelaySeconds = g_HsDistractedMinDelaySeconds;
@@ -474,7 +475,7 @@ void LoadHearthsideChatConfig()
                 continue;
 
             constexpr uint32_t kDefaultMaxCandidates = 8;
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] Channel.{}.MaxTier is '{}' but Channel.{}.MaxCandidates is 0, "
                 "which would select no bot and silently spend a rate-limit token per message. "
                 "Using {} instead -- set Channel.{}.MaxCandidates explicitly to silence this.",
@@ -520,7 +521,7 @@ void LoadHearthsideChatConfig()
     g_HsGeneratorPollIntervalSeconds         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.PollIntervalSeconds", 5);
     g_HsGeneratorQuotaSatisfiedBackoffSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds", 300);
     g_HsGeneratorPromptVersion               = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.PromptVersion", "v1");
-    g_HsGeneratorScriptsPerPool              = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.ScriptsPerPool", 15);
+    g_HsGeneratorScriptsPerPool              = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.ScriptsPerPool", 50);
 
     g_HsHttpServerPort           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.HttpServerPort", 0);
     g_HsHttpServerBind            = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpServerBind", "127.0.0.1");
@@ -533,11 +534,11 @@ HsConfigWorldScript::HsConfigWorldScript() : WorldScript("HsConfigWorldScript") 
 
 void HsConfigWorldScript::OnStartup()
 {
-    LoadHearthsideChatConfig();
+    Hs_LoadHearthsideChatConfig();
 }
 
 void HsConfigWorldScript::OnAfterConfigLoad(bool reload)
 {
     if (reload)
-        LoadHearthsideChatConfig();
+        Hs_LoadHearthsideChatConfig();
 }

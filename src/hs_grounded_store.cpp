@@ -1,6 +1,7 @@
 #include "hs_grounded_store.h"
 #include "hs_grounded.h"
 #include "hs_config.h"
+#include "hs_log.h"
 
 #include "DatabaseEnv.h"
 #include "Log.h"
@@ -57,7 +58,7 @@ void Hs_LoadGroundedQuestionsFromDb()
     QueryResult result = CharacterDatabase.Query("SELECT kind, phrase FROM hside_grounded_question");
     if (!result)
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] hside_grounded_question returned no rows -- Hs_MatchGroundedQuestion "
             "will never match anything until it's populated. Check that the module's base SQL "
             "installed correctly.");
@@ -75,7 +76,7 @@ void Hs_LoadGroundedQuestionsFromDb()
         HsGroundedKind kind;
         if (!KindForName(kindName, kind))
         {
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] hside_grounded_question has an unrecognized kind '{}' -- row skipped.",
                 kindName);
             ++skipped;
@@ -87,7 +88,7 @@ void Hs_LoadGroundedQuestionsFromDb()
     Hs_SetGroundedQuestionTable(rows);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside",
+        LOG_INFO(kHsLog,
             "[HearthsideChat] Loaded {} hside_grounded_question row(s) ({} skipped).", rows.size(), skipped);
 }
 
@@ -97,7 +98,7 @@ void Hs_LoadGroundedTemplatesFromDb()
         "SELECT kind, has_fact, uses_fact, prefix, suffix FROM hside_grounded_template");
     if (!result)
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] hside_grounded_template returned no rows -- every matched grounded "
             "question will build an empty reply and fall through. Check that the module's base SQL "
             "installed correctly.");
@@ -118,7 +119,7 @@ void Hs_LoadGroundedTemplatesFromDb()
         HsGroundedKind kind;
         if (!KindForName(kindName, kind))
         {
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] hside_grounded_template has an unrecognized kind '{}' -- row skipped.",
                 kindName);
             ++skipped;
@@ -130,6 +131,6 @@ void Hs_LoadGroundedTemplatesFromDb()
     Hs_SetGroundedTemplateTable(rows);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside",
+        LOG_INFO(kHsLog,
             "[HearthsideChat] Loaded {} hside_grounded_template row(s) ({} skipped).", rows.size(), skipped);
 }

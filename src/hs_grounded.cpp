@@ -1,4 +1,6 @@
 #include "hs_grounded.h"
+#include "hs_hash.h"
+#include "hs_text.h"
 
 #include <algorithm>
 #include <cctype>
@@ -8,73 +10,6 @@
 
 namespace
 {
-    // Same SplitMix64 finalizer hs_style.cpp/hs_archetype.cpp/hs_reflex.cpp
-    // use, for the same reason: AzerothCore GUIDs are sequential, so
-    // std::hash<uint64_t> alone barely perturbs neighbouring GUIDs.
-    // Duplicated locally rather than shared, matching this module's
-    // existing per-file precedent.
-    uint64_t MixBits64(uint64_t x)
-    {
-        x ^= x >> 30;
-        x *= 0xBF58476D1CE4E5B9ULL;
-        x ^= x >> 27;
-        x *= 0x94D049BB133111EBULL;
-        x ^= x >> 31;
-        return x;
-    }
-
-    // hash(botGuid, message text). Seeded per message rather than per
-    // bot, same idiom as hs_reflex.cpp's SeedForMessage (Plain family).
-    uint64_t SeedForMessage(uint64_t botGuid, const std::string& text)
-    {
-        uint64_t h = std::hash<std::string>{}(text);
-        h ^= MixBits64(botGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
-        return h;
-    }
-
-    std::string ToLowerAscii(const std::string& s)
-    {
-        std::string out = s;
-        for (char& c : out)
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return out;
-    }
-
-    std::string NormalizeWhitespace(const std::string& s)
-    {
-        std::string out;
-        out.reserve(s.size());
-        bool lastWasSpace = true;
-        for (char c : s)
-        {
-            if (std::isspace(static_cast<unsigned char>(c)))
-            {
-                if (!lastWasSpace)
-                    out.push_back(' ');
-                lastWasSpace = true;
-            }
-            else
-            {
-                out.push_back(c);
-                lastWasSpace = false;
-            }
-        }
-        while (!out.empty() && out.back() == ' ')
-            out.pop_back();
-        return out;
-    }
-
-    std::string StripOneTrailingMark(const std::string& s)
-    {
-        if (!s.empty())
-        {
-            char last = s.back();
-            if (last == '?' || last == '!' || last == '.')
-                return s.substr(0, s.size() - 1);
-        }
-        return s;
-    }
-
     // Iterative two-row Levenshtein distance, no recursion, no library.
     // Only ever called on short chat phrases (a handful of words), so the
     // O(len(a) * len(b)) cost is negligible; Hs_MatchGroundedQuestion also
@@ -131,7 +66,7 @@ void Hs_SetGroundedTemplateTable(const std::vector<HsGroundedTemplateRow>& rows)
 
 HsGroundedKind Hs_MatchGroundedQuestion(const std::string& trigger, uint32_t fuzzyMaxDistance)
 {
-    std::string corePhrase = StripOneTrailingMark(NormalizeWhitespace(ToLowerAscii(trigger)));
+    std::string corePhrase = HsText::Hs_StripOneTrailingMark(HsText::Hs_NormalizeWhitespace(HsText::Hs_ToLowerAscii(trigger)));
 
     // Held for the whole scan (review B6): the loops read q.phrase by
     // reference. Returns an enum, so nothing outlives the lock.
@@ -195,7 +130,7 @@ std::string Hs_BuildGroundedReply(HsGroundedKind kind, bool hasFact, const std::
     if (matches.empty())
         return "";
 
-    uint64_t seed = SeedForMessage(botGuid, trigger);
+    uint64_t seed = HsHash::Hs_SeedForMessage(botGuid, trigger);
     const HsGroundedTemplateRow& t = *matches[seed % matches.size()];
     return t.usesFact ? (t.prefix + fact + t.suffix) : t.prefix;
 }

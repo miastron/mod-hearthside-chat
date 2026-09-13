@@ -6,6 +6,7 @@
 #include "hs_corpus.h"
 #include "hs_identity_store.h" // review C13: Hs_LookupCardSnapshot for the carded verbal tic
 #include "hs_prune.h"
+#include "hs_proximity.h"
 #include "hs_queue.h" // §4.17: Hs_ResolveChannelForDelivery, HsReplyChannel::Channel's delivery pattern
 #include "hs_rpgstate.h"
 #include "hs_style.h"
@@ -24,6 +25,7 @@
 #include <cctype>
 #include <chrono>
 #include <deque>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -250,7 +252,14 @@ namespace
     // 80% of scans did the whole enumeration and threw it away. Same change
     // TryFireChannelScript gets below, and the same reasoning the channel
     // scan already applies to ordering its cheap gates first.
-    void TryFireNearPlayer(Player* player)
+    // botsByCell: every eligible bot in the world, bucketed by {map, zone,
+    // team} once per scan tick by the caller (review item 13). This function
+    // runs once per *real player*, and used to walk the entire realm
+    // population for each of them -- the O(players x bots) shape hs_ambient
+    // fixed under review G3 and this sibling never got. Only this player's
+    // own bucket can hold a match, and the bucket already guarantees the team
+    // filter the old loop did by hand.
+    void TryFireNearPlayer(Player* player, HsProximity::Index const& botsByCell)
     {
         uint64_t playerGuid = player->GetGUID().GetRawValue();
         if (!WitnessCooldownOk(playerGuid))
@@ -260,15 +269,8 @@ namespace
             return;
 
         std::vector<Player*> nearbyBots;
-        for (auto const& itr : ObjectAccessor::GetPlayers())
+        for (Player* candidate : HsProximity::InSameCell(botsByCell, player))
         {
-            Player* candidate = itr.second;
-            if (!candidate || candidate == player || !candidate->IsInWorld())
-                continue;
-            if (!Hs_IsEligibleBot(candidate)) // incl. HearthsideChat.ExcludeNames
-                continue;
-            if (candidate->GetTeamId() != player->GetTeamId())
-                continue;
             if (candidate->IsInCombat() || !candidate->IsAlive())
                 continue;
             // Both participants must be settled (stationary and resting
@@ -388,18 +390,10 @@ namespace
         // No archetype/persona goes into script generation, but the style
         // pass still runs per speaker at delivery: the same script
         // spoken by two different bots reads as two different people.
-        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = false; // already confirmed not in combat above
-        // Review C13: the script paths were the only two delivery sites not
-        // populating verbalTic, so a carded bot's tic was styled like any
-        // other word here (typo'd, abbreviated, recased) while every other
-        // surface protected it -- the same bot sounded different inside a
-        // scripted scene than outside one.
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(scheduled.speakerGuid).verbalTic;
+        // inCombat=false: already confirmed not in combat above. Review C13
+        // (the tic) and review item 24 (the Trade care offset, which this
+        // site alone used to miss) are both handled by the shared builder.
+        HsStyleContext styleCtx = Hs_BuildStyleContext(scheduled.speakerGuid, /*inCombat=*/false);
         HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), witness->GetName(), text, styleCtx);
         if (style.text.empty())
             return;
@@ -532,102 +526,36 @@ namespace
         if (urand(0, 99) >= kChannelScanFireChancePercent)
             return;
 
-        std::unordered_map<Channel*, std::vector<Player*>> byInstance;
-        std::vector<Player*>                                realPlayers;
-        for (auto const& itr : ObjectAccessor::GetPlayers())
-        {
-            Player* candidate = itr.second;
-            if (!candidate || !candidate->IsInWorld())
-                continue;
-
-            // Real players are collected unresolved, for the reason
-            // hs_ambient.cpp's own channel scan spells out: resolving a human
-            // through Hs_ResolveChannelForDelivery would make this scan depend
-            // on that function agreeing with the core about every channel's
-            // name, and a disagreement silences the surface instead of failing
-            // visibly. Membership is tested below against the bot-resolved
-            // Channel*, which is exact because it is the same object.
-            //
-            // Note this is a bare IsBot, not IsEligibleBot: an excluded bot
-            // is not a valid speaker, but it is also not the human whose
-            // presence makes a scene worth performing.
-            if (!Hs_IsBot(candidate))
+        // The scan is shared with hs_ambient.cpp's channel musings (review
+        // item 22, Hs_PickChannelInstance in hs_queue.h). Two bots minimum,
+        // not one: a scene needs both halves of a conversation standing in
+        // the same instance. A real player is always required here -- a
+        // multi-turn scene performed to an empty channel is the ~98%
+        // inaudible case that gate was added for -- and there is no
+        // per-instance cap, since a bigger pool only means more variety in
+        // the cast.
+        HsChannelScanPick pick = Hs_PickChannelInstance(
+            kind, /*minBots=*/2, /*requireRealPlayer=*/true,
+            /*maxBotsPerInstance=*/std::numeric_limits<size_t>::max(),
+            [](Player* candidate)
             {
-                realPlayers.push_back(candidate);
-                continue;
-            }
+                // IsEligibleBot covers HearthsideChat.ExcludeNames. A bot
+                // already in a scene cannot be cast in a second one.
+                if (!Hs_IsEligibleBot(candidate) || !candidate->IsAlive())
+                    return false;
+                uint64_t guid = candidate->GetGUID().GetRawValue();
+                return !IsBotInActiveRun(guid) && !IsBotInActiveChannelRun(guid);
+            });
 
-            // IsEligibleBot covers HearthsideChat.ExcludeNames, and is
-            // deliberately ahead of the Hs_ResolveChannelForDelivery call
-            // below: that one is a DBC lookup plus a ChannelMgr string
-            // match, by far the most expensive test in this loop.
-            if (!Hs_IsEligibleBot(candidate) || !candidate->IsAlive())
-                continue;
-            // Same reasoning as hs_ambient.cpp's General channel scan: a
-            // grouped bot's zone-wide General instance is exactly the zone
-            // its dungeon/party shares, so without this a channel scene could
-            // cast a bot who should be speaking to its own party instead.
-            if (kind == HsChannelKind::General && candidate->GetGroup())
-                continue;
-            uint64_t guid = candidate->GetGUID().GetRawValue();
-            if (IsBotInActiveRun(guid) || IsBotInActiveChannelRun(guid))
-                continue;
-
-            Channel* channel = Hs_ResolveChannelForDelivery(candidate, kind);
-            if (!channel || !candidate->IsInChannel(channel))
-                continue;
-            byInstance[channel].push_back(candidate);
-        }
-
-        // Collect every instance that can carry a scene, then pick among
-        // them, rather than taking the first one enumerated. Two changes in
-        // one, both copied from hs_ambient.cpp's channel scan:
-        //
-        //   - A real player has to be in the instance. Global channels are
-        //     one Channel object per zone, so a realm with bots spread over
-        //     forty zones has forty General instances and a player standing
-        //     in one of them. Without this test a scene fires into whichever
-        //     instance enumerated first, is logged as delivered, is written
-        //     to hside_chat_log, and is heard by nobody: measured at ~98%
-        //     inaudible on the test realm (334 bots, 8 of them sharing the
-        //     player's instance).
-        //   - Picking uniformly rather than taking the first, so that on a
-        //     realm with several populated cities one instance cannot
-        //     monopolize the surface.
-        std::vector<std::vector<Player*>*> eligibleInstances;
-        for (auto& entry : byInstance)
-        {
-            if (entry.second.size() < 2)
-                continue;
-
-            // Per-instance, not per-type -- same audience gate as
-            // hs_ambient.cpp's channel scan. See Hs_IsInChannelInstance
-            // (hs_queue.h).
-            bool heard = false;
-            for (Player* player : realPlayers)
-            {
-                if (Hs_IsInChannelInstance(player, kind, entry.first))
-                {
-                    heard = true;
-                    break; // presence test, not a count
-                }
-            }
-            if (!heard)
-                continue;
-
-            eligibleInstances.push_back(&entry.second);
-        }
-        if (eligibleInstances.empty())
+        if (pick.miss != HsChannelScanMiss::None)
             return;
 
-        std::vector<Player*>* pool =
-            eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
-
         // Two distinct random members of the same pool.
-        Player* bot0 = (*pool)[urand(0, static_cast<uint32_t>(pool->size() - 1))];
+        std::vector<Player*>& pool = pick.bots;
+        Player* bot0 = pool[urand(0, static_cast<uint32_t>(pool.size() - 1))];
         Player* bot1 = bot0;
         for (int attempt = 0; attempt < 5 && bot1 == bot0; ++attempt)
-            bot1 = (*pool)[urand(0, static_cast<uint32_t>(pool->size() - 1))];
+            bot1 = pool[urand(0, static_cast<uint32_t>(pool.size() - 1))];
         if (bot1 == bot0)
             return; // defensive, shouldn't happen with size() >= 2
 
@@ -668,14 +596,7 @@ namespace
                 return;
         }
 
-        HsArchetype             archetype     = Hs_ArchetypeForBot(scheduled.speakerGuid);
-        HsArchetypeInfo const   archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = speaker->IsInCombat();
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(scheduled.speakerGuid);
-        styleCtx.verbalTic            = Hs_LookupCardSnapshot(scheduled.speakerGuid).verbalTic; // review C13
+        HsStyleContext styleCtx = Hs_BuildStyleContext(scheduled.speakerGuid, speaker->IsInCombat());
         HsStyleResult style = Hs_ApplyStyle(scheduled.speakerGuid, speaker->GetName(), "", text, styleCtx);
         if (style.text.empty())
             return;
@@ -724,12 +645,32 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
         if (g_ScanAccumulatorMs >= kScanIntervalMs)
         {
             g_ScanAccumulatorMs = 0;
+            // One pass over the population, split into the two sides the
+            // scan pairs up, then one bucketing (review item 13). Eligibility
+            // is decided here rather than inside TryFireNearPlayer so the
+            // filter runs once per bot per tick instead of once per
+            // (bot, real player) pair.
+            std::vector<Player*> realPlayers;
+            std::vector<Player*> eligibleBots;
             for (auto const& itr : ObjectAccessor::GetPlayers())
             {
-                Player* player = itr.second;
-                if (!player || !player->IsInWorld() || Hs_IsBot(player))
+                Player* candidate = itr.second;
+                if (!candidate || !candidate->IsInWorld())
                     continue;
-                TryFireNearPlayer(player);
+                if (Hs_IsBot(candidate))
+                {
+                    if (Hs_IsEligibleBot(candidate)) // incl. HearthsideChat.ExcludeNames
+                        eligibleBots.push_back(candidate);
+                }
+                else
+                    realPlayers.push_back(candidate);
+            }
+
+            if (!realPlayers.empty() && !eligibleBots.empty())
+            {
+                HsProximity::Index botsByCell = HsProximity::BucketByCell(eligibleBots);
+                for (Player* player : realPlayers)
+                    TryFireNearPlayer(player, botsByCell);
             }
         }
     }

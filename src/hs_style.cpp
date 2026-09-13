@@ -1,5 +1,7 @@
 #include "hs_style.h"
+#include "hs_hash.h"
 #include "hs_prune.h"
+#include "hs_text.h"
 
 #include <algorithm>
 #include <cctype>
@@ -33,14 +35,6 @@ namespace
         if (care < 0.6f) return StyleBand::Loose;
         if (care < 0.8f) return StyleBand::Careful;
         return StyleBand::Precise;
-    }
-
-    std::string ToLowerAscii(const std::string& s)
-    {
-        std::string out = s;
-        for (char& c : out)
-            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return out;
     }
 
     // Shared helper, used by both the casing section below and
@@ -122,8 +116,8 @@ namespace
         if (phrase.empty())
             return text;
 
-        std::string lowerText   = ToLowerAscii(text);
-        std::string lowerPhrase = ToLowerAscii(phrase);
+        std::string lowerText   = HsText::Hs_ToLowerAscii(text);
+        std::string lowerPhrase = HsText::Hs_ToLowerAscii(phrase);
 
         std::string out;
         out.reserve(text.size());
@@ -390,7 +384,7 @@ namespace
             "you're wondering", "you are wondering", "so you were asking",
         };
 
-        std::string lower = ToLowerAscii(text);
+        std::string lower = HsText::Hs_ToLowerAscii(text);
         for (const std::string& leadIn : kLeadIns)
         {
             if (lower.rfind(leadIn, 0) != 0)
@@ -446,9 +440,9 @@ namespace
                 return true;
         // The bot labelling its line with its own name, or with the name of
         // the person it is answering, is the same tell wearing a costume.
-        if (!botName.empty() && lowerLabel == ToLowerAscii(botName))
+        if (!botName.empty() && lowerLabel == HsText::Hs_ToLowerAscii(botName))
             return true;
-        if (!senderName.empty() && lowerLabel == ToLowerAscii(senderName))
+        if (!senderName.empty() && lowerLabel == HsText::Hs_ToLowerAscii(senderName))
             return true;
         return false;
     }
@@ -471,7 +465,7 @@ namespace
         if (label.find(' ') != std::string::npos)
             return text;
 
-        if (!IsRoleLabel(ToLowerAscii(label), botName, senderName))
+        if (!IsRoleLabel(HsText::Hs_ToLowerAscii(label), botName, senderName))
             return text;
 
         std::string rest = text.substr(colon + 1);
@@ -494,7 +488,7 @@ namespace
         s = StripDashes(s, "\xE2\x80\x94"); // em dash, U+2014
         s = StripDashes(s, "--");
 
-        std::string lower = ToLowerAscii(s);
+        std::string lower = HsText::Hs_ToLowerAscii(s);
         if (lower.rfind("ah, ", 0) == 0)
             s.erase(0, 4);
         else if (lower.rfind("ah,", 0) == 0)
@@ -559,13 +553,13 @@ namespace
             return true;
 
         std::string trailingPunct;
-        std::string lower = ToLowerAscii(SplitTrailingPunct(word, trailingPunct));
+        std::string lower = HsText::Hs_ToLowerAscii(SplitTrailingPunct(word, trailingPunct));
 
         if (ProtectedWords().count(lower))
             return true;
-        if (!botName.empty() && lower == ToLowerAscii(botName))
+        if (!botName.empty() && lower == HsText::Hs_ToLowerAscii(botName))
             return true;
-        if (!senderName.empty() && lower == ToLowerAscii(senderName))
+        if (!senderName.empty() && lower == HsText::Hs_ToLowerAscii(senderName))
             return true;
 
         return false;
@@ -580,7 +574,7 @@ namespace
         if (band == StyleBand::Careful || band == StyleBand::Precise)
             return text;
 
-        std::string lowered = ToLowerAscii(text);
+        std::string lowered = HsText::Hs_ToLowerAscii(text);
         if (band == StyleBand::Sloppy)
             return lowered;
 
@@ -664,7 +658,7 @@ namespace
 
             std::string trailingPunct;
             std::string core = SplitTrailingPunct(word, trailingPunct);
-            auto it = kAbbrev.find(ToLowerAscii(core));
+            auto it = kAbbrev.find(HsText::Hs_ToLowerAscii(core));
             if (it == kAbbrev.end())
                 continue;
             if (coin(rng) >= chance)
@@ -733,7 +727,7 @@ namespace
             if (c >= 0x80)
                 return word;
 
-        std::string lower = ToLowerAscii(word);
+        std::string lower = HsText::Hs_ToLowerAscii(word);
         bool hasApostrophe = word.find('\'') != std::string::npos;
         bool hasHomophone  = HomophoneTable().count(lower) > 0;
 
@@ -876,24 +870,7 @@ namespace
     // barely perturbs neighbouring GUIDs. This gives every input a
     // full-avalanche 64-bit spread regardless of how the platform's
     // std::hash<uint64_t> happens to behave.
-    uint64_t MixBits64(uint64_t x)
-    {
-        x ^= x >> 30;
-        x *= 0xBF58476D1CE4E5B9ULL;
-        x ^= x >> 27;
-        x *= 0x94D049BB133111EBULL;
-        x ^= x >> 31;
-        return x;
-    }
 
-    uint64_t SeedFor(uint64_t botGuid, const std::string& text)
-    {
-        // Not cryptographic; reproducibility for a given (bot, message)
-        // pair is all this needs.
-        uint64_t h = std::hash<std::string>{}(text);
-        h ^= MixBits64(botGuid) + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
-        return h;
-    }
 }
 
 namespace
@@ -964,7 +941,7 @@ float Hs_StyleCareForBot(uint64_t botGuid, float baselineCare, bool inCombat, fl
     // care table.
     constexpr float kCombatCareOffset = -0.15f;
 
-    uint64_t h = MixBits64(botGuid ^ 0x9E3779B97F4A7C15ULL);
+    uint64_t h = HsHash::Hs_MixBits64(botGuid ^ 0x9E3779B97F4A7C15ULL);
     float unit   = static_cast<float>(h % 100000ULL) / 100000.0f; // [0,1)
     float jitter = (unit * 2.0f - 1.0f) * kJitterWidth;            // [-0.20, 0.20)
 
@@ -990,7 +967,7 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
     float care = Hs_StyleCareForBot(botGuid, ctx.baselineCare, ctx.inCombat, ctx.tradeCareOffset);
     StyleBand band = BandForCare(care);
 
-    std::mt19937 rng(static_cast<std::mt19937::result_type>(SeedFor(botGuid, text)));
+    std::mt19937 rng(static_cast<std::mt19937::result_type>(HsHash::Hs_SeedForMessage(botGuid, text)));
 
     // Emphatic caps are masked here rather than at the top of the pass so
     // StripLLMTells still sees real text; everything after this point is

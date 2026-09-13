@@ -79,4 +79,23 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
                              const std::string& senderName, const std::string& text,
                              const HsStyleContext& ctx);
 
+// Fills an HsStyleContext for a bot from the module's own state: its
+// archetype's care baseline and abbreviation override, its card's verbal tic,
+// and its current Trade `care` offset. inCombat is the caller's, since only
+// the caller knows whether a Player* was checked or the surface excludes
+// in-combat bots by construction.
+//
+// Review item 24: the four-line mapping this replaces was written out by hand
+// at nine delivery sites, and every field added to HsStyleContext had to be
+// added to all nine. That is not hypothetical -- hs_script.cpp's /say turn was
+// missing tradeCareOffset, so a bot that had just watched a Trade WTS flurry
+// styled its scripted lines without the `care` bump every other surface gave
+// it, and nothing failed to compile.
+//
+// Defined in hs_queue.cpp rather than hs_style.cpp on purpose: it needs the
+// archetype table and the card cache, both of which pull in AzerothCore,
+// while hs_style.cpp must stay compilable on its own for the five Tests/
+// style harnesses.
+HsStyleContext Hs_BuildStyleContext(uint64_t botGuid, bool inCombat);
+
 #endif // MOD_HS_STYLE_H

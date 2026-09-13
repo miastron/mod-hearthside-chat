@@ -65,8 +65,9 @@ namespace HsCardFacts
     extern const char* const kGuildStanceValues[]; // guilded | unguilded
     extern const size_t      kGuildStanceCount;
 
-    extern const char* const kClassNames[]; // the 10 playable WotLK classes, lowercase
-    extern const size_t      kClassNameCount;
+    // The class vocabulary moved to hs_class.h (HsClass::kNames), shared
+    // with hs_corpus.cpp's Hs_ClassNameFor rather than re-spelled here
+    // (review item 19).
 }
 
 // True if `value` is main_focus-plausible for `level`: raiding/dailies/

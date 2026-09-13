@@ -30,7 +30,11 @@ public:
 
 // Drains the delivery queue once per world tick. All the actual work now
 // lives in hs_queue.cpp; this just calls Hs_DeliverPending() from the world
-// thread, which is the only place a Player*/PlayerbotAI* may be touched.
+// thread. Within the reactive pipeline that is the only place a Player*/
+// PlayerbotAI* may be touched -- the scope hs_queue.h states precisely. It
+// is not a module-wide claim: hs_script.cpp's turn delivery, hs_ambient.cpp,
+// hs_opener.cpp and the identity sweep touch players directly too, each from
+// the world thread, which is what actually makes any of it safe.
 class HsDeliveryWorldScript : public WorldScript
 {
 public:

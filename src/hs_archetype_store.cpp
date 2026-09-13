@@ -1,6 +1,7 @@
 #include "hs_archetype_store.h"
 #include "hs_archetype.h"
 #include "hs_config.h"
+#include "hs_log.h"
 
 #include "DatabaseEnv.h"
 #include "Log.h"
@@ -44,7 +45,7 @@ void Hs_LoadArchetypesFromDb()
 
     if (!result)
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] hside_archetype returned no rows -- every archetype falls back to a "
             "zero-weight placeholder (bots will draw CASUAL by Hs_ArchetypeForBot's own defensive "
             "fallback). Check that the module's base SQL installed correctly.");
@@ -67,7 +68,7 @@ void Hs_LoadArchetypesFromDb()
         }
         if (slot == kHsArchetypeCount)
         {
-            LOG_ERROR("module.hearthside", "[HearthsideChat] hside_archetype has an unrecognized enum_name '{}' -- ignored.", enumName);
+            LOG_ERROR(kHsLog, "[HearthsideChat] hside_archetype has an unrecognized enum_name '{}' -- ignored.", enumName);
             continue;
         }
 
@@ -89,13 +90,13 @@ void Hs_LoadArchetypesFromDb()
     for (size_t i = 0; i < kHsArchetypeCount; ++i)
     {
         if (!found[i])
-            LOG_ERROR("module.hearthside", "[HearthsideChat] hside_archetype is missing '{}' -- it will never be drawn (weight 0) until the row is added.", kEnumNames[i]);
+            LOG_ERROR(kHsLog, "[HearthsideChat] hside_archetype is missing '{}' -- it will never be drawn (weight 0) until the row is added.", kEnumNames[i]);
     }
 
     Hs_SetArchetypeTable(table);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} of {} archetype row(s) from hside_archetype.", matched, kHsArchetypeCount);
+        LOG_INFO(kHsLog, "[HearthsideChat] Loaded {} of {} archetype row(s) from hside_archetype.", matched, kHsArchetypeCount);
 }
 
 void Hs_LoadArchetypeOverridesFromDb()
@@ -113,7 +114,7 @@ void Hs_LoadArchetypeOverridesFromDb()
         HsArchetype archetype;
         if (!Hs_ArchetypeForName(enumName, archetype))
         {
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] hside_archetype_override names unrecognized enum_name '{}' for bot {} -- skipped.",
                 enumName, botGuid);
             continue;
@@ -124,7 +125,7 @@ void Hs_LoadArchetypeOverridesFromDb()
     } while (result->NextRow());
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} archetype override(s) from hside_archetype_override.", loaded);
+        LOG_INFO(kHsLog, "[HearthsideChat] Loaded {} archetype override(s) from hside_archetype_override.", loaded);
 }
 
 void Hs_SetArchetypeOverrideAndPersist(uint64_t botGuid, HsArchetype archetype)

@@ -3,6 +3,7 @@
 #include "hs_bot.h"
 #include "hs_config.h"
 #include "hs_identity_store.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 
 #include "Chat.h"
@@ -37,8 +38,14 @@ namespace
     // than a second framing layer for what is a cosmetic flavor line, this
     // just truncates. `.hearthside inspect` and the HTTP route already show
     // the untruncated text for anyone who needs it in full.
-    std::size_t constexpr kMaxVoiceRawLength  = 170;
-    std::size_t constexpr kMaxMemoryRawLength = 150;
+    //
+    // Review item 10: these budget the *encoded* field, not the raw string.
+    // UrlEncodeField expands %, ~, CR and LF to three bytes each, so a raw
+    // budget let an otherwise in-range voice block cross kMaxWireLength once
+    // encoded -- and SendHsiPacket drops such a packet whole rather than
+    // re-truncating, so the player's Inspect tab silently lost the field.
+    std::size_t constexpr kMaxVoiceFieldLength  = 170;
+    std::size_t constexpr kMaxMemoryFieldLength = 150;
     std::size_t constexpr kMaxMemoryLines     = 2;
     std::chrono::milliseconds constexpr kRateLimitWindow(500);
 
@@ -94,11 +101,30 @@ namespace
         return out.str();
     }
 
-    std::string TruncateForWire(std::string const& value, std::size_t maxLength)
+    // Encode first, then truncate on the encoded length -- the only length
+    // the wire budget is actually about (review item 10). Cutting the raw
+    // string first and encoding afterwards budgets the wrong number: text
+    // dense in %, ~, CR or LF triples in size at that step.
+    //
+    // Truncation walks the encoded string and never splits a %XX triple, so
+    // the result still decodes: the addon's UrlDecode would otherwise emit a
+    // literal "%4" or drop the pair, and a trailing bare "%" is exactly the
+    // case UrlDecodeField's own bounds check turns back into a stray percent.
+    std::string EncodeAndTruncateForWire(std::string const& value, std::size_t maxEncodedLength)
     {
-        if (value.size() <= maxLength)
-            return value;
-        return value.substr(0, maxLength) + "...";
+        std::string encoded = UrlEncodeField(value);
+        if (encoded.size() <= maxEncodedLength)
+            return encoded;
+
+        std::size_t cut = 0;
+        while (cut < encoded.size())
+        {
+            std::size_t step = (encoded[cut] == '%') ? 3 : 1;
+            if (cut + step > maxEncodedLength)
+                break;
+            cut += step;
+        }
+        return encoded.substr(0, cut) + "...";
     }
 
     std::pair<std::string, std::string> SplitOnce(std::string const& value, char separator)
@@ -138,7 +164,7 @@ namespace
 
         if (wire.size() > kMaxWireLength)
         {
-            LOG_WARN("module.hearthside", "[HearthsideChat] HSI bridge TX dropped, wireBytes={} exceeds {}", wire.size(), kMaxWireLength);
+            LOG_WARN(kHsLog, "[HearthsideChat] HSI bridge TX dropped, wireBytes={} exceeds {}", wire.size(), kMaxWireLength);
             return;
         }
 
@@ -240,8 +266,8 @@ namespace
 
         if (insp.cardActive && !insp.voiceBlock.empty())
         {
-            std::string voice = TruncateForWire(insp.voiceBlock, kMaxVoiceRawLength);
-            SendHsiPacket(player, "INSPECT_VOICE", token + "~" + UrlEncodeField(voice));
+            SendHsiPacket(player, "INSPECT_VOICE",
+                token + "~" + EncodeAndTruncateForWire(insp.voiceBlock, kMaxVoiceFieldLength));
         }
 
         // hasAnyMemoryRows is bot-global (any player this bot ever shared
@@ -264,9 +290,9 @@ namespace
 
             for (std::size_t i = 0; i < memoryLines.size() && i < kMaxMemoryLines; ++i)
             {
-                std::string text = TruncateForWire(memoryLines[i], kMaxMemoryRawLength);
                 SendHsiPacket(player, "INSPECT_MEMORY",
-                    token + "~" + std::to_string(i + 1) + "~" + UrlEncodeField(text));
+                    token + "~" + std::to_string(i + 1) + "~" +
+                    EncodeAndTruncateForWire(memoryLines[i], kMaxMemoryFieldLength));
             }
         }
     }

@@ -8,6 +8,7 @@
 #include "hs_identity_store.h"
 #include "hs_json.h"
 #include "hs_llm.h"
+#include "hs_log.h"
 #include "hs_queue.h"
 #include "hs_rag.h"
 
@@ -321,24 +322,29 @@ namespace
     // being far away: it is that one stored corpus row is replayed in every
     // zone the generator never saw, so anything place-specific is wrong
     // somewhere.
+    // Appended after BuildGenerationPrompt's trained Mode:/Category:/Channel:
+    // header, not a scene-setting intro of its own -- the tag already
+    // establishes "you're posting in Trade/General," so this only needs to
+    // say what belongs in the line.
     std::string BroadcastChannelPromptIntro(const std::string& channel)
     {
         if (channel == "trade")
-            return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of "
-                   "the Lich King player would post in the Trade channel -- read by the other "
-                   "players who are in a city right now, not someone standing next to you. Write "
-                   "exactly ONE short, casual, grammatically clean sentence about gearing up, "
-                   "professions, or gripes about prices in general terms -- never a specific "
-                   "item, quest, or exact gold price the other person could check and find "
-                   "wrong, and nothing that assumes the reader is in the same place as you.";
+            return " This line is for the Trade channel -- read by the other players who are in "
+                   "a city right now, not someone standing next to you. Write exactly ONE short "
+                   "line, the way a real player would actually type it, about gearing up, "
+                   "professions, or prices in general terms -- an offer, a plan, or a gripe, not "
+                   "always a complaint -- never a specific item, quest, or exact gold price the "
+                   "other person could check and find wrong, and nothing that assumes the reader "
+                   "is in the same place as you.";
         // general
-        return "You are helping write ambient lines an ordinary World of Warcraft: Wrath of the "
-               "Lich King player would post in the General channel for the zone they are standing "
-               "in -- read by the other players in that same zone, not someone standing next to "
-               "you. Write exactly ONE short, casual, grammatically clean sentence: quests, "
-               "gearing, or a general opinion about the game. The same line is reused in every "
-               "zone, so keep it true anywhere -- never name a place, and never say 'here'/'this "
-               "place' or anything implying the reader can see what you see.";
+        return " This line is for the General channel for the zone the character is standing in "
+               "-- read by the other players in that same zone, not someone standing next to "
+               "you. Write exactly ONE short line, the way a real player would actually type it: "
+               "quests, gearing, or a general opinion about the game -- pride, amusement, plain "
+               "observation, and complaint all belong here, so don't default to griping. The "
+               "same line is reused in every zone, so keep it true anywhere -- never name a "
+               "place, and never say 'here'/'this place' or anything implying the reader can see "
+               "what you see.";
     }
 
     // The keys that address a bucket label's own entry in hside_rag.
@@ -394,19 +400,72 @@ namespace
         return rag.empty() ? "" : " " + rag;
     }
 
+    // The dataset's Class: tag is the class-enum spelling (WARRIOR,
+    // DEATH_KNIGHT, ...) that `Claude/finetune/dataset_pilot_v2.jsonl`'s
+    // Mode: CORPUS_LINE rows were authored with, not Hs_ClassNameFor's
+    // lowercase prose form ("death knight") the rest of the generator/RAG
+    // path uses -- this is the one place that difference has to be bridged.
+    std::string ClassTagFor(const std::string& className)
+    {
+        std::string tag = className;
+        std::transform(tag.begin(), tag.end(), tag.begin(),
+            [](unsigned char c) { return c == ' ' ? '_' : static_cast<char>(std::toupper(c)); });
+        return tag;
+    }
+
     std::string BuildGenerationPrompt(const HsGenBucket& bucket, const std::vector<std::string>& promptSampleRows,
                                        bool sampleIsSiblingFallback, bool requiresPlaceholder)
     {
-        std::string prompt = bucket.channel.empty()
-            ? "You are helping write ambient background chat lines for an ordinary World of "
-              "Warcraft: Wrath of the Lich King player -- the way real players actually type "
-              "in /say or general chat, not narration or descriptive prose. Write exactly ONE "
-              "short, casual, grammatically clean sentence: a concrete opinion, gripe, or "
-              "observation about actual gameplay (a quest, a fight, gear, a class/spec choice, "
-              "grouping, professions, travel time) -- not a question, not addressed to anyone, "
-              "first person."
+        // Everything through the tag line below is exactly the shape
+        // dataset_pilot_v2.jsonl's Mode: CORPUS_LINE rows were trained
+        // against: "<universal preamble>\nMode: CORPUS_LINE\nCategory: <name>"
+        // plus at most one of Channel:/Class:/LevelBand:/Faction:/Zone: and
+        // an optional Placeholder: required line. Sending anything else here
+        // means the tuned checkpoint is reacting to a shape it never saw in
+        // training. Everything appended after the tag is runtime-only
+        // guidance the dataset never carried -- the same relationship the
+        // reactive tier's RAG/experience blocks have to its own trained
+        // "Archetype: X" tag (hs_queue.cpp).
+        std::string prompt = Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: CORPUS_LINE\nCategory: " + bucket.category;
+
+        if (!bucket.channel.empty())
+        {
+            std::string channelTag = bucket.channel;
+            std::transform(channelTag.begin(), channelTag.end(), channelTag.begin(),
+                [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+            prompt += "\nChannel: " + channelTag;
+        }
+        else if (bucket.tagColumn == "class_tag")
+            prompt += "\nClass: " + ClassTagFor(bucket.tagValueLabel);
+        else if (bucket.tagColumn == "level_band_tag")
+            prompt += "\nLevelBand: " + bucket.tagValueLabel;
+        else if (bucket.tagColumn == "faction_tag")
+            prompt += "\nFaction: " + bucket.tagValueLabel;
+        else if (bucket.tagColumn == "zone_tag")
+            prompt += "\nZone: " + bucket.tagValueLabel;
+
+        if (requiresPlaceholder)
+            prompt += "\nPlaceholder: required";
+
+        prompt += bucket.channel.empty()
+            ? " Write exactly ONE short line, the way a real player would actually type it in "
+              "/say or general chat, not narration or descriptive prose: a concrete opinion, "
+              "plan, small win, joke, or gripe about actual gameplay (a quest, a fight, gear, a "
+              "class/spec choice, grouping, professions, travel time) -- mix tones, don't "
+              "default to complaining -- not a question, not addressed to anyone, first person."
             : BroadcastChannelPromptIntro(bucket.channel);
 
+        // The style pass (hs_style.cpp) applies typo rate, casing, and a fixed
+        // 18-word abbreviation dictionary (you->u, because->bc, okay->k, ...)
+        // per delivering bot at *delivery* time, keyed off that bot's `care`.
+        // Writing those same substitutions into the stored line here would
+        // double them up and freeze in one bot's treatment for every bot that
+        // ever delivers this row -- the same reasoning
+        // `Claude/finetune/_FORMAT.md` R13 applies to the hand-authored
+        // reactive dataset. Real chat vocabulary outside that dictionary
+        // (gg, lfg, ngl, wtb, brb, idk, same, oof, ...) is not something the
+        // style pass adds, so it belongs in the line itself or the register
+        // never shows up at all -- that's R6's other half.
         prompt +=
             " Never describe scenery for its own sake (no 'the way the "
             "light...', no calling something peaceful/breathtaking/beautiful) -- if a place "
@@ -414,7 +473,10 @@ namespace
             "looks like. Never compare to how things usually are or used to be ('more than "
             "usual', 'lately', 'these days', 'still') -- this line is written once and reused "
             "for any player at any time, so it can't reference a real trend. No markdown, no "
-            "emoji, no quotation marks around the line itself, no modern internet slang.";
+            "emoji, no quotation marks around the line itself. Fragments and real chat "
+            "vocabulary are welcome (gg, lfg, ngl, wtb, pst, idk, same, oof, tbh) -- but spell "
+            "words out in full (write 'you'/'because'/'okay', not 'u'/'bc'/'k'): a separate "
+            "pass abbreviates per player at delivery, so doing it here would double up.";
 
         if (!bucket.tagValueLabel.empty())
         {
@@ -531,7 +593,7 @@ namespace
         if (!result.success || result.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
+                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
                     bucket.category, bucket.tagValueLabel, static_cast<int>(result.failure));
             return false;
         }
@@ -539,7 +601,7 @@ namespace
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(bucket.category, bucket.tagColumn, bucket.tagValueSql,
                                                       result.text, gen.model, gen.promptVersion);
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: bucket {}/{} candidate {} -- \"{}\"",
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: bucket {}/{} candidate {} -- \"{}\"",
                 bucket.category, bucket.tagValueLabel,
                 verdict.accepted ? "accepted" : ("rejected (" + verdict.reason + ")"), result.text);
 
@@ -580,16 +642,24 @@ namespace
     // Hs_ResolveScriptPlaceholders) so a claim is only ever true of
     // whichever two bots end up cast. A specific item, quest, or invented
     // biography still has no placeholder and stays flatly disallowed.
-    const std::string kScriptSystemPrompt =
-        "You are an ordinary player in World of Warcraft: Wrath of the Lich King, making small "
-        "talk with another player you don't know well. Keep it casual, brief, one short line at "
-        "a time -- the way real players actually chat. Stick to general opinions, feelings, and "
-        "gripes about the game. If you want to mention your own class, level, current zone, or "
-        "guild, write exactly one of these tokens instead of naming one directly: %my_class, "
-        "%my_level, %my_zone, %my_guild. For the other player's, use: %other_class, "
-        "%other_level, %other_zone, %other_guild. Never invent or state a specific item, quest, "
-        "or any other detail the other person could check and find wrong. No roleplay "
-        "narration, no asterisks, no mention of being an AI or a game.";
+    // The header through "Mode: SMALLTALK" is exactly the shape
+    // dataset_pilot_v2.jsonl's untagged Mode: SMALLTALK rows were trained
+    // against; everything after it is runtime-only guidance the dataset
+    // never carried (same relationship BuildGenerationPrompt's tag/guidance
+    // split has to its own trained Mode:/Category: line).
+    std::string ScriptSystemPrompt()
+    {
+        return Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK"
+            " Making small talk with another player you don't know well. Keep it casual, brief, "
+            "one short line at a time -- the way real players actually chat. Stick to general "
+            "opinions, feelings, plans, and small talk about the game -- vary the tone, not just "
+            "complaints. If you want to mention your own class, level, current zone, or guild, "
+            "write exactly one of these tokens instead of naming one directly: %my_class, "
+            "%my_level, %my_zone, %my_guild. For the other player's, use: %other_class, "
+            "%other_level, %other_zone, %other_guild. Never invent or state a specific item, "
+            "quest, or any other detail the other person could check and find wrong. No roleplay "
+            "narration, no asterisks, no mention of being an AI or a game.";
+    }
 
     const std::string kScriptOpeningTrigger =
         "(You've just noticed another player standing nearby. Say something casual to strike up "
@@ -701,12 +771,12 @@ namespace
 
         for (int i = 0; i < turnCount; ++i)
         {
-            HsLLMResult result = Hs_CallLLM(cfg, kScriptSystemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
+            HsLLMResult result = Hs_CallLLM(cfg, ScriptSystemPrompt(), ScriptTurnRagBlock(i == 0 ? "" : prevText),
                 history, prevText);
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
                 return false;
             }
@@ -717,7 +787,7 @@ namespace
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
                 return false;
             }
@@ -770,7 +840,7 @@ namespace
         }
 
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
@@ -784,35 +854,43 @@ namespace
     // line has no real item/price behind it the way a grounded lookup would.
     // Same turn-by-turn call/quality-gate/placeholder-discipline shape as
     // RunOneScriptGenerationCycle, just parameterized by kind and turn count.
+    // Same tag/guidance split as ScriptSystemPrompt above: "Mode:
+    // SMALLTALK\nChannel: TRADE|GENERAL" is the trained shape, everything
+    // after it is runtime-only.
     std::string ChannelScriptSystemPromptFor(HsChannelKind kind)
     {
+        std::string header = Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK\nChannel: ";
+
         switch (kind)
         {
             case HsChannelKind::Trade:
-                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
-                       "chatting in the Trade channel -- read by the other players who are in a "
-                       "city right now -- with another player you don't know well. Keep "
-                       "it casual and brief, one short line at a time. Talk about gearing up, "
-                       "professions, or gripes about prices in general terms -- never a specific "
-                       "item, quest, or exact gold price the other person could check and find "
-                       "wrong. If you want to mention your own class, level, current zone, or "
-                       "guild, write exactly one of these tokens instead of naming one directly: "
-                       "%my_class, %my_level, %my_zone, %my_guild. For the other player's, use: "
-                       "%other_class, %other_level, %other_zone, %other_guild. No roleplay "
-                       "narration, no asterisks, no mention of being an AI or a game.";
+                return header + "TRADE"
+                       " Chatting in the Trade channel -- read by the other players who are in a "
+                       "city right now -- with another player you don't know well. Keep it casual "
+                       "and brief, one short line at a time. Talk about gearing up, professions, "
+                       "or prices in general terms -- an offer, a plan, or a gripe, not always a "
+                       "complaint -- never a specific item, quest, or exact gold price the other "
+                       "person could check and find wrong. If you want to mention your own class, "
+                       "level, current zone, or guild, write exactly one of these tokens instead "
+                       "of naming one directly: %my_class, %my_level, %my_zone, %my_guild. For "
+                       "the other player's, use: %other_class, %other_level, %other_zone, "
+                       "%other_guild. No roleplay narration, no asterisks, no mention of being an "
+                       "AI or a game.";
             case HsChannelKind::General:
             default:
-                return "You are an ordinary player in World of Warcraft: Wrath of the Lich King, "
-                       "chatting in the General channel for the zone you are standing in -- read by "
-                       "the other players in that same zone -- with another player you don't know "
-                       "well. Keep it casual and brief, one short line at a time -- zone flavor, "
-                       "quests, or general opinions about the game. If you want to mention your own "
-                       "class, level, current zone, or guild, write exactly one of these tokens "
-                       "instead of naming one directly: %my_class, %my_level, %my_zone, %my_guild. "
-                       "For the other player's, use: %other_class, %other_level, %other_zone, "
-                       "%other_guild. Never invent or state a specific item, quest, or any other "
-                       "detail the other person could check and find wrong. No roleplay narration, "
-                       "no asterisks, no mention of being an AI or a game.";
+                return header + "GENERAL"
+                       " Chatting in the General channel for the zone you are standing in -- read "
+                       "by the other players in that same zone -- with another player you don't "
+                       "know well. Keep it casual and brief, one short line at a time -- zone "
+                       "flavor, quests, or general opinions about the game -- pride, amusement, "
+                       "plain observation, and complaint all belong here, so don't default to "
+                       "griping. If you want to mention your own class, level, current zone, or "
+                       "guild, write exactly one of these tokens instead of naming one directly: "
+                       "%my_class, %my_level, %my_zone, %my_guild. For the other player's, use: "
+                       "%other_class, %other_level, %other_zone, %other_guild. Never invent or "
+                       "state a specific item, quest, or any other detail the other person could "
+                       "check and find wrong. No roleplay narration, no asterisks, no mention of "
+                       "being an AI or a game.";
         }
     }
 
@@ -833,7 +911,7 @@ namespace
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
                 return false;
             }
@@ -844,7 +922,7 @@ namespace
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
                 return false;
             }
@@ -885,7 +963,7 @@ namespace
         }
 
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
                 scriptId, channelColumn, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
@@ -949,7 +1027,7 @@ namespace
             // livelock invisible. An operator seeing it knows exactly which
             // bot to look at, and that generation has moved on rather than
             // stopped.
-            LOG_WARN("module.hearthside.generator",
+            LOG_WARN(kHsLogGenerator,
                 "[HearthsideChat] Generator: card generation for bot {} failed {} times in a row; "
                 "parking it for this session so the other generation work can run. "
                 "Restart the worldserver (or fix the model/prompt) to retry it.",
@@ -1065,7 +1143,7 @@ namespace
         if (!voiceResult.success || voiceResult.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
+                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(voiceResult.failure));
             NoteCardGenerationFailed(pending.botGuid);
             return false;
@@ -1074,7 +1152,7 @@ namespace
         if (!voiceVerdict.accepted)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
+                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
                     pending.botGuid, voiceVerdict.reason, voiceResult.text);
             NoteCardGenerationFailed(pending.botGuid);
             return false;
@@ -1087,7 +1165,7 @@ namespace
         if (!factsResult.success || factsResult.text.empty())
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card facts call failed for bot {} (failure={}).",
+                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card facts call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(factsResult.failure));
             NoteCardGenerationFailed(pending.botGuid);
             return false;
@@ -1099,7 +1177,7 @@ namespace
         if (!factsVerdict.accepted)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card facts rejected for bot {} ({}) -- \"{}\"",
+                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card facts rejected for bot {} ({}) -- \"{}\"",
                     pending.botGuid, factsVerdict.reason, factsResult.text);
             NoteCardGenerationFailed(pending.botGuid);
             return false;
@@ -1120,7 +1198,14 @@ namespace
         // guid rather than trusted from the stored column, so the stored
         // value can never disagree with the card actually generated (for
         // instance after a GM pin via `.hearthside archetype`).
-        CharacterDatabase.Execute(
+        // Review item 2: DirectExecute, not Execute. Hs_InvalidateCardCache
+        // below clears this bot's entry, and the next chat request for it
+        // refills through FetchCardEntry's synchronous Query() -- which runs
+        // on a different pool than the async worker an Execute() queues onto,
+        // so the refill would read the row as it was *before* this update and
+        // cache "no card yet" for another kCardCacheTtlSeconds. That is the
+        // exact opposite of the comment on the invalidate.
+        CharacterDatabase.DirectExecute(
             "UPDATE hside_identity SET archetype = '{}', card_voice = '{}', card_facts = '{}', "
             "card_model = {}, card_prompt_version = {}, card_active = 1 WHERE bot_guid = {}",
             archetypeInfo.enumName, escapedVoice, factsCompact, modelSql, versionSql, pending.botGuid);
@@ -1130,7 +1215,7 @@ namespace
         NoteCardGenerationSucceeded(pending.botGuid);
 
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Generator: card for bot {} generated and activated.", pending.botGuid);
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card for bot {} generated and activated.", pending.botGuid);
 
         g_RowsAddedThisSession.fetch_add(1);
         return true;
@@ -1248,7 +1333,7 @@ uint32_t Hs_RunEvictionSweep()
         g_RowsEvictedThisSession.fetch_add(overflow);
 
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.generator", "[HearthsideChat] Eviction: bucket {}/{} trimmed {} row(s) ({} -> {}).",
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Eviction: bucket {}/{} trimmed {} row(s) ({} -> {}).",
                 bucket.category, bucket.tagValueLabel, overflow, count, g_HsGeneratorRowsPerBucket);
     }
 
@@ -1279,7 +1364,7 @@ uint32_t Hs_RunUnusedRowEvictionSweep()
     g_RowsEvictedThisSession.fetch_add(count);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside.generator",
+        LOG_INFO(kHsLogGenerator,
             "[HearthsideChat] Eviction: unused-row sweep removed {} row(s) unpicked for {}+ days.",
             count, kHsGenUnusedRowEvictionDays);
 
@@ -1381,15 +1466,24 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
     std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
     std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
+    // Review item 4: DirectExecute, not Execute. Both the near-duplicate
+    // check above (AllRowsInBucket) and the generator loop's own under-quota
+    // count run on the synchronous Query() pool, and GeneratorLoop re-enters
+    // immediately after a successful insert with no sleep. An async write
+    // still draining in the worker queue is invisible to both: the next cycle
+    // can re-select a bucket that is already full and accept a candidate that
+    // should have been rejected as too similar to the row just added.
+    // hside_corpus carries no unique constraint, so nothing downstream
+    // catches the duplicate either.
     if (tagColumn.empty())
     {
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "INSERT INTO hside_corpus (name, text, generated_at, model, prompt_version) VALUES ('{}', '{}', NOW(), {}, {})",
             escapedCategory, escapedText, modelSql, versionSql);
     }
     else
     {
-        CharacterDatabase.Execute(
+        CharacterDatabase.DirectExecute(
             "INSERT INTO hside_corpus (name, text, {}, generated_at, model, prompt_version) VALUES ('{}', '{}', {}, NOW(), {}, {})",
             tagColumn, escapedCategory, escapedText, tagValueSql, modelSql, versionSql);
     }

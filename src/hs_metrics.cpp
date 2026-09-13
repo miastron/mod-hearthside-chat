@@ -68,29 +68,40 @@ void Hs_SampleMetrics()
     // Per-archetype and per-channel reply-vs-silence counts, one row each:
     // variable cardinality, doesn't fit hside_metrics' flat per-interval row
     // (see hs_metrics.h's HsMetricsBreakdownRow doc comment).
+    // Review item 16: one multi-row INSERT for all three dimensions, not one
+    // statement per row. This is ~20 rows every sampling interval, and the
+    // six scalar counters above were already consolidated into a single
+    // Execute for exactly this reason -- the consolidation just never reached
+    // the breakdown loops.
+    std::string values;
+    auto appendValue = [&values](const char* dimension, const std::string& key,
+                                  uint32_t repliedCount, uint32_t silentCount)
+    {
+        if (!values.empty())
+            values += ",";
+        values += "('";
+        values += dimension;
+        values += "','" + key + "'," + std::to_string(repliedCount) + "," + std::to_string(silentCount) + ")";
+    };
+
     for (auto const& row : Hs_ArchetypeReplyCountsSnapshot())
     {
+        // The only one of the three that needs escaping: archetype names come
+        // from the hside_archetype table. The channel names below are fixed
+        // strings from this module's own enums.
         std::string escapedName = row.enumName;
         CharacterDatabase.EscapeString(escapedName);
-        CharacterDatabase.Execute(
-            "INSERT INTO hside_metrics_breakdown (dimension, dim_key, replied_count, silent_count) "
-            "VALUES ('archetype', '{}', {}, {})",
-            escapedName, row.repliedCount, row.silentCount);
+        appendValue("archetype", escapedName, row.repliedCount, row.silentCount);
     }
     for (auto const& row : Hs_ChannelReplyCountsSnapshot())
-    {
-        CharacterDatabase.Execute(
-            "INSERT INTO hside_metrics_breakdown (dimension, dim_key, replied_count, silent_count) "
-            "VALUES ('channel', '{}', {}, {})",
-            Hs_ReplyChannelName(row.channel), row.repliedCount, row.silentCount);
-    }
+        appendValue("channel", Hs_ReplyChannelName(row.channel), row.repliedCount, row.silentCount);
     for (auto const& row : Hs_ChannelBucketSaturationSnapshot())
-    {
+        appendValue("channel_bucket", Hs_ChannelKindName(row.kind), row.grantedCount, row.deniedCount);
+
+    if (!values.empty())
         CharacterDatabase.Execute(
-            "INSERT INTO hside_metrics_breakdown (dimension, dim_key, replied_count, silent_count) "
-            "VALUES ('channel_bucket', '{}', {}, {})",
-            Hs_ChannelKindName(row.kind), row.grantedCount, row.deniedCount);
-    }
+            "INSERT INTO hside_metrics_breakdown (dimension, dim_key, replied_count, silent_count) VALUES {}",
+            values);
 
     CharacterDatabase.Execute(
         "DELETE FROM hside_metrics_breakdown WHERE sampled_at < NOW() - INTERVAL {} DAY", kHsMetricsRetentionDays);

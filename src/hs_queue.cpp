@@ -1,5 +1,6 @@
 #include "hs_queue.h"
 #include "hs_archetype.h"
+#include "hs_bot.h"
 #include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
@@ -7,6 +8,7 @@
 #include "hs_identity.h"
 #include "hs_identity_store.h"
 #include "hs_llm.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_prune.h"
 #include "hs_rag.h"
@@ -32,6 +34,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -190,11 +193,76 @@ namespace
     std::mutex                     g_DeliveryMutex;
     std::deque<HsPendingReply>     g_DeliveryQueue;
 
+    // ---- one token bucket, four instances (review item 21) ----
+    //
+    // The reply, event, ambient and per-channel budgets are four independent
+    // policies over identical mechanism: refill for elapsed time, clamp to
+    // capacity, spend one token or refuse. Each used to spell that math out
+    // by hand -- the per-channel one had already generalized it into a
+    // struct, demonstrating the shape works, without the other three ever
+    // being folded in.
+    //
+    // Rate and capacity are arguments rather than members on purpose: every
+    // one of them is either a live-reloading config global or, for channels,
+    // a per-kind policy that `.reload config` replaces, so a bucket holding
+    // its own copy would keep spending yesterday's budget after a reload.
+    //
+    // None of these take a lock: each bucket keeps the mutex it already had
+    // (they are deliberately separate, so a Trade-channel line never waits
+    // behind a dungeon death), and the caller holds it across refill, test
+    // and spend -- the single critical section review B7 established.
+    struct HsTokenBucket
+    {
+        double            tokens = 0.0;
+        Clock::time_point lastRefill;
+        bool              initialized = false;
+
+        // Self-initializes full on first use, so a bucket is correct
+        // regardless of Hs_QueueStartup()/config-load ordering.
+        void RefillLocked(uint32_t ratePerMinute, uint32_t capacity, Clock::time_point now)
+        {
+            if (!initialized)
+            {
+                tokens      = static_cast<double>(capacity);
+                lastRefill  = now;
+                initialized = true;
+                return;
+            }
+
+            double elapsedSec = std::chrono::duration<double>(now - lastRefill).count();
+            lastRefill = now;
+            tokens = std::min(static_cast<double>(capacity),
+                              tokens + elapsedSec * (static_cast<double>(ratePerMinute) / 60.0));
+        }
+
+        bool TryTakeLocked(uint32_t ratePerMinute, uint32_t capacity, Clock::time_point now)
+        {
+            RefillLocked(ratePerMinute, capacity, now);
+            if (tokens < 1.0)
+                return false;
+            tokens -= 1.0;
+            return true;
+        }
+
+        // Peek: would TryTakeLocked refuse right now? Refills first, so this
+        // is not "the last take failed" but "there is nothing to take".
+        bool ExhaustedLocked(uint32_t ratePerMinute, uint32_t capacity, Clock::time_point now)
+        {
+            RefillLocked(ratePerMinute, capacity, now);
+            return tokens < 1.0;
+        }
+
+        // Capped at capacity so a refund can never bank a token the refill
+        // schedule would not have produced.
+        void RefundLocked(uint32_t capacity)
+        {
+            tokens = std::min(static_cast<double>(capacity), tokens + 1.0);
+        }
+    };
+
     // ---- token bucket: the primary load ceiling ----
-    std::mutex          g_BucketMutex;
-    double               g_BucketTokens = 0.0;
-    Clock::time_point    g_BucketLastRefill;
-    bool                 g_BucketInitialized = false;
+    std::mutex    g_BucketMutex;
+    HsTokenBucket g_Bucket;
 
     // ---- §4.17: one token bucket per channel, independent of the tier-2
     // bucket above: corpus-fallback channel replies never touch that one
@@ -203,14 +271,8 @@ namespace
     // separate config key. Same shape as the tier-2 bucket, keyed by channel
     // instead of global, one shared mutex since writes are rare (one
     // channel message at a time, never hot enough to need per-key locking).
-    struct HsChannelBucketState
-    {
-        double            tokens = 0.0;
-        Clock::time_point lastRefill;
-        bool              initialized = false;
-    };
-    std::mutex                                            g_ChannelBucketMutex;
-    std::unordered_map<HsChannelKind, HsChannelBucketState> g_ChannelBuckets;
+    std::mutex                                      g_ChannelBucketMutex;
+    std::unordered_map<HsChannelKind, HsTokenBucket> g_ChannelBuckets;
 
     // ---- Claude/archive/PLAN-ARBITER.md §8: the event tier's own bucket, independent of
     // the tier-2 bucket above so ambient event reactions can never spend the
@@ -218,10 +280,8 @@ namespace
     // the others; its own mutex because it is taken from the world thread at
     // every event fire site, and there is no reason for a death in a dungeon
     // to wait behind a Trade-channel line.
-    std::mutex        g_EventBucketMutex;
-    double            g_EventBucketTokens = 0.0;
-    Clock::time_point g_EventBucketLastRefill;
-    bool              g_EventBucketInitialized = false;
+    std::mutex    g_EventBucketMutex;
+    HsTokenBucket g_EventBucket;
 
     // ---- Claude/archive/PLAN-AMBIENT.md §2: the shared unprompted-speech budget. Same
     // lazy-init/refill shape as the three buckets above; its own mutex for
@@ -229,12 +289,10 @@ namespace
     // is not the mechanism but who spends it: three separate producers
     // (hs_ambient.cpp, hs_opener.cpp, hs_script.cpp) rather than one, which
     // is the whole point (see Hs_AmbientBucketTake in hs_queue.h).
-    std::mutex        g_AmbientBucketMutex;
-    double            g_AmbientBucketTokens = 0.0;
-    Clock::time_point g_AmbientBucketLastRefill;
-    bool              g_AmbientBucketInitialized = false;
-    uint64_t          g_AmbientBucketGranted     = 0;
-    uint64_t          g_AmbientBucketDenied      = 0;
+    std::mutex    g_AmbientBucketMutex;
+    HsTokenBucket g_AmbientBucket;
+    uint64_t      g_AmbientBucketGranted = 0;
+    uint64_t      g_AmbientBucketDenied  = 0;
 
     // ---- staleness windows for the opportunistic prunes below (hs_prune.h).
     // Every one of these maps is read only through a window far shorter than
@@ -507,27 +565,6 @@ namespace
             ++counts.replied;
     }
 
-    // Refills the bucket for elapsed time, capped at burst capacity. Caller
-    // holds g_BucketMutex. Self-initializes on first call so the bucket
-    // starts full regardless of Hs_QueueStartup()/config-load ordering.
-    void RefillBucketLocked()
-    {
-        Clock::time_point now = Clock::now();
-        if (!g_BucketInitialized)
-        {
-            g_BucketTokens      = static_cast<double>(g_HsBucketBurstCapacity);
-            g_BucketLastRefill  = now;
-            g_BucketInitialized = true;
-            return;
-        }
-
-        double elapsedSec = std::chrono::duration<double>(now - g_BucketLastRefill).count();
-        g_BucketLastRefill = now;
-
-        double ratePerSec = static_cast<double>(g_HsBucketRepliesPerMinute) / 60.0;
-        g_BucketTokens = std::min(static_cast<double>(g_HsBucketBurstCapacity), g_BucketTokens + elapsedSec * ratePerSec);
-    }
-
     // Review B7: refill, test and spend in one critical section. This used
     // to be a peek under g_BucketMutex, an unlocked run through three more
     // gates, and a decrement under a fresh acquisition -- correct only
@@ -538,19 +575,13 @@ namespace
     bool TryTakeBucketToken()
     {
         std::lock_guard<std::mutex> lock(g_BucketMutex);
-        RefillBucketLocked();
-        if (g_BucketTokens < 1.0)
-            return false;
-        g_BucketTokens -= 1.0;
-        return true;
+        return g_Bucket.TryTakeLocked(g_HsBucketRepliesPerMinute, g_HsBucketBurstCapacity, Clock::now());
     }
 
-    // Capped at burst capacity so a refund can never bank a token the
-    // refill schedule would not have produced.
     void RefundBucketToken()
     {
         std::lock_guard<std::mutex> lock(g_BucketMutex);
-        g_BucketTokens = std::min(static_cast<double>(g_HsBucketBurstCapacity), g_BucketTokens + 1.0);
+        g_Bucket.RefundLocked(g_HsBucketBurstCapacity);
     }
 
     // Updates the consecutive-failure count and flips the breaker open/closed
@@ -562,13 +593,13 @@ namespace
         {
             g_ConsecutiveFailures.store(0);
             if (g_BreakerOpen.exchange(false))
-                LOG_INFO("module.hearthside.llm", "[HearthsideChat] Circuit breaker closed - backend recovered.");
+                LOG_INFO(kHsLogLlm, "[HearthsideChat] Circuit breaker closed - backend recovered.");
             return;
         }
 
         uint32_t failures = g_ConsecutiveFailures.fetch_add(1) + 1;
         if (failures >= g_HsBreakerFailureThreshold && !g_BreakerOpen.exchange(true))
-            LOG_ERROR("module.hearthside.llm", "[HearthsideChat] Circuit breaker opened after {} consecutive failures.", failures);
+            LOG_ERROR(kHsLogLlm, "[HearthsideChat] Circuit breaker opened after {} consecutive failures.", failures);
     }
 
     void WorkerLoop()
@@ -603,16 +634,17 @@ namespace
                 if (req.isProbe)
                     g_ProbeInFlight.store(false);
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.chat", "[HearthsideChat] Dropping stale request for bot {} (age {}s > TTL {}s).",
+                    LOG_INFO(kHsLogChat, "[HearthsideChat] Dropping stale request for bot {} (age {}s > TTL {}s).",
                         req.botGuid, ageSec, g_HsQueueTTLSeconds);
                 continue;
             }
             RecordTtlOutcome(/*dropped=*/false);
 
-            // The bot's archetype, drawn deterministically from its GUID and
-            // restricted to the level-eligible pool (hs_archetype.h). Feeds
-            // both the LLM prompt's delta layer and the style pass's `care`
-            // baseline below.
+            // The bot's archetype, drawn deterministically from its GUID
+            // alone -- level stopped gating the draw on 2026-09-03, so a
+            // bot's archetype is fixed for the life of the character
+            // (hs_archetype.h). Feeds both the LLM prompt's delta layer and
+            // the style pass's `care` baseline below.
             HsArchetype archetype = Hs_ArchetypeForBot(req.botGuid);
             HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
 
@@ -749,7 +781,7 @@ namespace
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.llm", "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
+                    LOG_INFO(kHsLogLlm, "[HearthsideChat] No reply for bot {} (failure={}, httpStatus={}).",
                         req.botGuid, static_cast<int>(result.failure), result.httpStatus);
                 RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/false);
                 continue; // silence, not a canned fallback
@@ -769,12 +801,7 @@ namespace
             // one actually spoken always match byte-for-byte. `care`'s
             // baseline is the archetype's; TRADER is the only entry with an
             // abbreviation override today.
-            HsStyleContext styleCtx;
-            styleCtx.baselineCare         = archetypeInfo.care;
-            styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-            styleCtx.inCombat             = req.inCombat;
-            styleCtx.verbalTic            = cardSnapshot.verbalTic;
-            styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(req.botGuid); // §4.17: no Player* needed, safe off-thread
+            HsStyleContext styleCtx = Hs_BuildStyleContext(req.botGuid, req.inCombat);
             // Captured before result.text is overwritten below, so
             // HearthsideChat.DebugChatLog can log both the pre-style and
             // post-style text for an operator to review later.
@@ -1018,7 +1045,7 @@ void Hs_QueueShutdown()
         g_WorkerThread.join();
 
     if (abandoned)
-        LOG_INFO("module.hearthside",
+        LOG_INFO(kHsLog,
             "[HearthsideChat] Shutdown: dropped {} queued reply request(s) rather than draining them.", abandoned);
     // A shutdown arriving mid-Hs_CallLLM still waits out that one call's
     // remaining LLM.TimeoutSeconds. Bounded by a single timeout now instead
@@ -1128,7 +1155,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
             g_ProbeInFlight.store(false); // review B8: interval not consumed
         RefundBucketToken();               // review B7/C2
         if (g_HsDebugEnabled)
-            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Dropping request for bot {} - queue at max depth {}.", botGuid, g_HsQueueMaxDepth);
+            LOG_INFO(kHsLogChat, "[HearthsideChat] Dropping request for bot {} - queue at max depth {}.", botGuid, g_HsQueueMaxDepth);
         return false;
     }
 
@@ -1212,27 +1239,18 @@ bool Hs_EventBucketTake()
         return false; // budget of zero is a kill switch, not an empty-then-refill
 
     std::lock_guard<std::mutex> lock(g_EventBucketMutex);
-    Clock::time_point now = Clock::now();
-    if (!g_EventBucketInitialized)
-    {
-        g_EventBucketTokens      = static_cast<double>(g_HsEventBucketBurstCapacity);
-        g_EventBucketLastRefill  = now;
-        g_EventBucketInitialized = true;
-    }
-    else
-    {
-        double elapsedSec = std::chrono::duration<double>(now - g_EventBucketLastRefill).count();
-        g_EventBucketLastRefill = now;
-        double ratePerSec = static_cast<double>(g_HsEventBucketRepliesPerMinute) / 60.0;
-        g_EventBucketTokens = std::min(static_cast<double>(g_HsEventBucketBurstCapacity),
-                                        g_EventBucketTokens + elapsedSec * ratePerSec);
-    }
+    return g_EventBucket.TryTakeLocked(g_HsEventBucketRepliesPerMinute, g_HsEventBucketBurstCapacity,
+                                        Clock::now());
+}
 
-    if (g_EventBucketTokens < 1.0)
-        return false;
+bool Hs_EventBucketExhausted()
+{
+    if (g_HsEventBucketRepliesPerMinute == 0 || g_HsEventBucketBurstCapacity == 0)
+        return true; // same kill-switch reading as the take
 
-    g_EventBucketTokens -= 1.0;
-    return true;
+    std::lock_guard<std::mutex> lock(g_EventBucketMutex);
+    return g_EventBucket.ExhaustedLocked(g_HsEventBucketRepliesPerMinute, g_HsEventBucketBurstCapacity,
+                                          Clock::now());
 }
 
 // Review C2: refund for an event whose actor filtering left nobody to
@@ -1241,8 +1259,7 @@ bool Hs_EventBucketTake()
 void Hs_EventBucketRefund()
 {
     std::lock_guard<std::mutex> lock(g_EventBucketMutex);
-    g_EventBucketTokens = std::min(static_cast<double>(g_HsEventBucketBurstCapacity),
-                                    g_EventBucketTokens + 1.0);
+    g_EventBucket.RefundLocked(g_HsEventBucketBurstCapacity);
 }
 
 bool Hs_AmbientBucketTake()
@@ -1259,29 +1276,13 @@ bool Hs_AmbientBucketTake()
     }
 
     std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
-    Clock::time_point now = Clock::now();
-    if (!g_AmbientBucketInitialized)
-    {
-        g_AmbientBucketTokens      = static_cast<double>(g_HsAmbientBucketBurstCapacity);
-        g_AmbientBucketLastRefill  = now;
-        g_AmbientBucketInitialized = true;
-    }
-    else
-    {
-        double elapsedSec = std::chrono::duration<double>(now - g_AmbientBucketLastRefill).count();
-        g_AmbientBucketLastRefill = now;
-        double ratePerSec = static_cast<double>(g_HsAmbientBucketRepliesPerMinute) / 60.0;
-        g_AmbientBucketTokens = std::min(static_cast<double>(g_HsAmbientBucketBurstCapacity),
-                                          g_AmbientBucketTokens + elapsedSec * ratePerSec);
-    }
-
-    if (g_AmbientBucketTokens < 1.0)
+    if (!g_AmbientBucket.TryTakeLocked(g_HsAmbientBucketRepliesPerMinute, g_HsAmbientBucketBurstCapacity,
+                                        Clock::now()))
     {
         ++g_AmbientBucketDenied;
         return false;
     }
 
-    g_AmbientBucketTokens -= 1.0;
     ++g_AmbientBucketGranted;
     return true;
 }
@@ -1301,8 +1302,7 @@ bool Hs_AmbientBucketTake()
 void Hs_AmbientBucketRefund()
 {
     std::lock_guard<std::mutex> lock(g_AmbientBucketMutex);
-    g_AmbientBucketTokens = std::min(static_cast<double>(g_HsAmbientBucketBurstCapacity),
-                                      g_AmbientBucketTokens + 1.0);
+    g_AmbientBucket.RefundLocked(g_HsAmbientBucketBurstCapacity);
     if (g_AmbientBucketGranted > 0)
         --g_AmbientBucketGranted;
 }
@@ -1320,30 +1320,16 @@ bool Hs_ChannelBucketTake(HsChannelKind kind)
         return false;
 
     std::lock_guard<std::mutex> lock(g_ChannelBucketMutex);
-    HsChannelBucketState& state = g_ChannelBuckets[kind];
 
-    Clock::time_point now = Clock::now();
-    if (!state.initialized)
-    {
-        state.tokens      = static_cast<double>(ratePerMin);
-        state.lastRefill  = now;
-        state.initialized = true;
-    }
-    else
-    {
-        double elapsedSec = std::chrono::duration<double>(now - state.lastRefill).count();
-        state.lastRefill  = now;
-        double ratePerSec = static_cast<double>(ratePerMin) / 60.0;
-        state.tokens = std::min(static_cast<double>(ratePerMin), state.tokens + elapsedSec * ratePerSec);
-    }
-
-    if (state.tokens < 1.0)
+    // Burst capacity equals the channel's own RatePerMin (a channel can
+    // spend a full minute's budget at once, then waits), so the same value
+    // is passed for both -- no separate config key, as ever.
+    if (!g_ChannelBuckets[kind].TryTakeLocked(ratePerMin, ratePerMin, Clock::now()))
     {
         RecordChannelBucketAttempt(kind, /*denied=*/true);
         return false;
     }
 
-    state.tokens -= 1.0;
     RecordChannelBucketAttempt(kind, /*denied=*/false);
     return true;
 }
@@ -1355,9 +1341,7 @@ void Hs_ChannelBucketRefund(HsChannelKind kind)
 {
     {
         std::lock_guard<std::mutex> lock(g_ChannelBucketMutex);
-        HsChannelBucketState& state = g_ChannelBuckets[kind];
-        double cap = static_cast<double>(Hs_ChannelPolicyFor(kind).ratePerMin);
-        state.tokens = std::min(cap, state.tokens + 1.0);
+        g_ChannelBuckets[kind].RefundLocked(Hs_ChannelPolicyFor(kind).ratePerMin);
     }
     // Outside g_ChannelBucketMutex is not required (g_MetricsMutex is the
     // innermost lock, see RecordChannelBucketAttempt), but there is no
@@ -1463,6 +1447,140 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
     char nameBuf[100];
     snprintf(nameBuf, sizeof(nameBuf), entry->pattern[locale], areaName.c_str());
     return cMgr->GetChannel(nameBuf, bot, sendPacketOnMiss);
+}
+
+HsStyleContext Hs_BuildStyleContext(uint64_t botGuid, bool inCombat)
+{
+    HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(Hs_ArchetypeForBot(botGuid));
+
+    HsStyleContext ctx;
+    ctx.baselineCare         = archetypeInfo.care;
+    // -1.0f means "no override, use the care band" (hs_style.h). TRADER is
+    // the only archetype carrying one today.
+    ctx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
+    ctx.inCombat             = inCombat;
+    ctx.verbalTic            = Hs_LookupCardSnapshot(botGuid).verbalTic;
+    // No Player* needed, so this is safe off the world thread -- which is
+    // what lets the queue worker build its context the same way as every
+    // world-thread caller.
+    ctx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+    return ctx;
+}
+
+HsChannelScanPick Hs_PickChannelInstance(HsChannelKind kind, size_t minBots, bool requireRealPlayer,
+                                          size_t maxBotsPerInstance,
+                                          const std::function<bool(Player*)>& botEligible)
+{
+    HsChannelScanPick pick;
+
+    std::unordered_map<Channel*, std::vector<Player*>> botsByInstance;
+    std::vector<Player*>                                realPlayers;
+
+    bool excludeGroupedBots = Hs_ChannelPolicyFor(kind).excludeGroupedBots;
+
+    for (auto const& itr : ObjectAccessor::GetPlayers())
+    {
+        Player* candidate = itr.second;
+        if (!candidate || !candidate->IsInWorld())
+            continue;
+
+        // Real players are collected unresolved, deliberately. It is tempting
+        // to resolve their channel here too and group everyone in one pass,
+        // but that would make this scan's correctness depend on
+        // Hs_ResolveChannelForDelivery agreeing with the core about every
+        // channel's name -- and a disagreement there resolves a human to the
+        // wrong instance or to nullptr, which silences the surface outright
+        // rather than failing visibly. (Not hypothetical: the city-scoped
+        // names disagreed until the AreaID 3459 fix, and Trade carried no
+        // traffic at all for it.) Membership is tested below against the
+        // bot-resolved Channel* instead, which is exact because it is the
+        // same object, whatever that object happens to be called.
+        //
+        // A bare Hs_IsBot, not Hs_IsEligibleBot: an excluded bot is not a
+        // valid speaker, but it is also not the human whose presence makes a
+        // line worth speaking. The caller's own predicate decides speakers.
+        if (!Hs_IsBot(candidate))
+        {
+            realPlayers.push_back(candidate);
+            continue;
+        }
+
+        if (excludeGroupedBots && candidate->GetGroup())
+            continue;
+
+        if (botEligible && !botEligible(candidate))
+            continue;
+
+        // Self-resolved and self-tested (see Hs_ResolveChannelForDelivery's
+        // comment in hs_queue.h): the channel is resolved from candidate's
+        // own zone, so Player::IsInChannel(Channel*)'s type-only comparison
+        // is sound here even though it cannot tell instances apart in
+        // general -- candidate holds at most one channel of this DBC type at
+        // a time, and it can only be the one just asked about for its zone.
+        Channel* channel = Hs_ResolveChannelForDelivery(candidate, kind);
+        if (!channel || !candidate->IsInChannel(channel))
+            continue;
+
+        std::vector<Player*>& pool = botsByInstance[channel];
+        if (pool.size() < maxBotsPerInstance)
+            pool.push_back(candidate);
+    }
+
+    if (botsByInstance.empty())
+    {
+        pick.miss = HsChannelScanMiss::NoBotResolved;
+        return pick;
+    }
+    if (requireRealPlayer && realPlayers.empty())
+    {
+        pick.miss = HsChannelScanMiss::NoRealPlayerOnline;
+        return pick;
+    }
+
+    // Collect every instance that can carry a line, then pick among them.
+    // Taking the first one enumerated would let a single instance monopolize
+    // the surface on a realm with several populated cities -- and, worse,
+    // fire into an instance nobody is standing in: measured at ~98%
+    // inaudible on the test realm (334 bots, 8 of them sharing the player's
+    // instance).
+    std::vector<decltype(botsByInstance)::value_type*> eligibleInstances;
+    for (auto& entry : botsByInstance)
+    {
+        if (entry.second.size() < minBots)
+            continue;
+
+        if (requireRealPlayer)
+        {
+            // Per-instance, not per-type: entry.first was resolved from a
+            // bot, so a bare Player::IsInChannel would accept a human
+            // standing in a different zone's same-type channel.
+            bool heard = false;
+            for (Player* player : realPlayers)
+            {
+                if (Hs_IsInChannelInstance(player, kind, entry.first))
+                {
+                    heard = true;
+                    break; // presence test, not a count
+                }
+            }
+            if (!heard)
+                continue;
+        }
+
+        eligibleInstances.push_back(&entry);
+    }
+
+    if (eligibleInstances.empty())
+    {
+        pick.miss = HsChannelScanMiss::NoInstanceWithAudience;
+        return pick;
+    }
+
+    auto* chosen = eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
+    pick.channel = chosen->first;
+    pick.bots    = std::move(chosen->second);
+    pick.miss    = HsChannelScanMiss::None;
+    return pick;
 }
 
 bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel)
@@ -1582,7 +1700,7 @@ void Hs_DeliverPending()
                     // this is otherwise indistinguishable from the surface
                     // never having produced a line at all.
                     if (g_HsDebugEnabled)
-                        LOG_INFO("module.hearthside.chat",
+                        LOG_INFO(kHsLogChat,
                                  "[HearthsideChat] Bot {} dropped a {} line: channel did not resolve",
                                  bot->GetName(), Hs_ChannelKindName(reply.channelKind));
                     continue;
@@ -1612,7 +1730,7 @@ void Hs_DeliverPending()
                 // the count the core does expose. A city channel reporting
                 // only the human population is this bug coming back.
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.chat",
+                    LOG_INFO(kHsLogChat,
                              "[HearthsideChat] Bot {} (zone {}) speaking into '{}': {} player(s) in that instance",
                              bot->GetName(), bot->GetZoneId(), channel->GetName(), channel->GetNumPlayers());
 
@@ -1640,7 +1758,7 @@ void Hs_DeliverPending()
                 where += '/';
                 where += Hs_ChannelKindName(reply.channelKind);
             }
-            LOG_INFO("module.hearthside.chat", "[HearthsideChat] Bot {} replied [{}]: {}",
+            LOG_INFO(kHsLogChat, "[HearthsideChat] Bot {} replied [{}]: {}",
                      bot->GetName(), where, reply.text);
         }
 

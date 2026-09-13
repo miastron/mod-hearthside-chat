@@ -2,6 +2,7 @@
 #define MOD_HS_CORPUS_H
 
 #include "hs_channel.h"
+#include "hs_levelband.h" // Hs_LevelBandFor, kept reachable through this header
 
 #include <cstdint>
 #include <string>
@@ -82,23 +83,6 @@ std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t b
 // if nothing is eligible, same contract as the two functions above.
 std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t botLevel,
                                        uint8_t botFaction, uint32_t botZoneId);
-
-// The four level_band_tag labels used by chat_levelband_musing's seeded
-// rows: low 1-19, mid 20-59, high 60-79, endgame 80 (the level cap). Lined
-// up with WotLK's own leveling pace (Outland opens at 58, Northrend at 68,
-// raiding/dailies only exist at the level-80 cap) rather than an even
-// split.
-//
-// Inline and header-only (no hs_corpus.cpp dependency, which pulls in
-// AzerothCore's DatabaseEnv.h) so a standalone test harness can include
-// just this header, same pattern as hs_tier.h's HsParseTier/HsTierAllows.
-inline std::string Hs_LevelBandFor(uint8_t level)
-{
-    if (level >= 80) return "endgame";
-    if (level >= 60) return "high";
-    if (level >= 20) return "mid";
-    return "low";
-}
 
 // Card-only placeholder resolution: literal substring replacement, not a
 // template engine. There are exactly two card-only placeholders

@@ -27,7 +27,7 @@ extern bool g_HsDebugChatLogEnabled;
 // --------------------------------------------
 // Reading the std::string globals from a thread that is not the world thread
 //
-// `.reload config` re-runs LoadHearthsideChatConfig on the world thread,
+// `.reload config` re-runs Hs_LoadHearthsideChatConfig on the world thread,
 // which reassigns every std::string global below wholesale. Three other
 // threads read them concurrently and can hold one for a long time:
 //
@@ -130,7 +130,7 @@ extern uint32_t  g_HsReplyCountTwoPercent;
 // assignment). Name-based, matching mod-playerbots' own ExcludeNames
 // convention. g_HsExcludeNames is the raw comma-separated config value, kept
 // for `.hearthside status`-style visibility; Hs_IsExcludedBotName is the fast
-// lookup callers use, backed by a set parsed once in LoadHearthsideChatConfig
+// lookup callers use, backed by a set parsed once in Hs_LoadHearthsideChatConfig
 // rather than re-split on every chat message.
 extern std::string g_HsExcludeNames;
 bool Hs_IsExcludedBotName(const std::string& botName);
@@ -346,7 +346,7 @@ extern bool     g_HsBotChainRequireRealPlayer;
 // precedent in this module for a parameterized key family, so these are 21
 // explicit keys rather than a loop-driven one, matching how every other
 // HearthsideChat.* key is declared. Parsed here, then folded into an
-// HsChannelPolicy table (hs_channel.h) by LoadHearthsideChatConfig so the
+// HsChannelPolicy table (hs_channel.h) by Hs_LoadHearthsideChatConfig so the
 // hot path (hs_handler.cpp's Channel* hook) never touches config strings
 // directly.
 // --------------------------------------------
@@ -520,7 +520,7 @@ extern std::string g_HsHttpServerPrivateKey;      // required when port != 0; li
 extern uint32_t     g_HsHttpServerTimeoutSeconds; // startup-only
 extern bool         g_HsHttpControlEnable;        // live-reloads
 
-void LoadHearthsideChatConfig();
+void Hs_LoadHearthsideChatConfig();
 
 class HsConfigWorldScript : public WorldScript
 {

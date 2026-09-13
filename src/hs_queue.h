@@ -6,6 +6,7 @@
 #include "hs_topic_gate.h"     // HsTopicGateContext: §4.13 gear/group/instance/gold/zone facts
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -118,6 +119,14 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
 // work) when the bucket is empty. An admitted event still has to clear
 // Hs_TryEnqueue's own gates per bot on top of this.
 bool Hs_EventBucketTake();
+
+// Peek: true when Hs_EventBucketTake would fail right now. For a caller that
+// has expensive work to do *before* it can call FireEvent at all -- the
+// world-scoped witness scan in hs_event.cpp's level-up path is the one that
+// mattered (review item 14), since it walked the realm and collected actors
+// only for the budget gate inside FireEvent to throw the lot away. Takes no
+// token, so a caller that proceeds still has to clear Hs_EventBucketTake.
+bool Hs_EventBucketExhausted();
 
 // Review C2: refund for an event whose EligibleBot filtering left no actor
 // able to speak, so the budget paid for nothing.
@@ -337,6 +346,51 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
 // Channel* itself to group by instance, and already spell out the same two
 // halves with a single resolve. Calling this there would resolve twice.
 bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel);
+
+// Why a channel scan found nothing. Every one of these is a silent `return`
+// at the call site, and an operator seeing no Trade or General traffic
+// cannot otherwise tell them apart -- so the reason comes back rather than
+// being logged here, letting each surface word its own trace.
+enum class HsChannelScanMiss
+{
+    None,
+    NoBotResolved,          // no eligible bot resolved into this channel at all
+    NoRealPlayerOnline,     // requireRealPlayer and nobody human is online
+    NoInstanceWithAudience, // instances exist, none with both enough bots and a listener
+};
+
+struct HsChannelScanPick
+{
+    Channel*             channel = nullptr;
+    std::vector<Player*> bots;                                 // empty unless miss == None
+    HsChannelScanMiss    miss    = HsChannelScanMiss::NoBotResolved;
+};
+
+// Picks one instance of a global channel that can carry a line, plus the
+// eligible bots standing in it.
+//
+// Global channels are one Channel object per zone, so "is a bot in Trade" is
+// never the question -- "is a bot in *this player's* Trade" is. The scan
+// walks the online population once, groups bots by the Channel* they resolve
+// to (the same zone-qualified resolution delivery itself uses, which is what
+// makes same-Channel* equivalent to same-instance), drops instances without
+// enough bots or without a human to hear them, and picks uniformly among
+// what is left rather than taking whichever instance enumerated first.
+//
+// Review item 22: hs_ambient.cpp's TryAmbientChannel and hs_script.cpp's
+// TryFireChannelScript were near line-for-line copies of all of that, each
+// citing the other in comments. What actually differs between them is the
+// four arguments below -- how many bots an instance needs (one to muse, two
+// to hold a scene), whether a listener is required at all
+// (Ambient.RequireRealPlayer), how many bots are worth collecting per
+// instance, and which bots that surface considers eligible. HsChannelPolicy's
+// excludeGroupedBots is applied here for every caller (review item 23).
+//
+// botEligible runs after the cheap shared gates and before the resolve,
+// which is the expensive test (a DBC lookup plus a ChannelMgr string match).
+HsChannelScanPick Hs_PickChannelInstance(HsChannelKind kind, size_t minBots, bool requireRealPlayer,
+                                          size_t maxBotsPerInstance,
+                                          const std::function<bool(Player*)>& botEligible);
 
 // Seconds since this bot's last *successfully delivered* reply, or
 // UINT32_MAX if never. Read-only query for hs_arbiter's recent-speaker

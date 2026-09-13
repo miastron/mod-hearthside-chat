@@ -1,5 +1,6 @@
 #include "hs_rag_store.h"
 #include "hs_config.h"
+#include "hs_log.h"
 #include "hs_rag.h"
 
 #include "DatabaseEnv.h"
@@ -66,7 +67,7 @@ void Hs_LoadRagFromDb()
         // Logged at ERROR anyway, because the silent failure mode here is a
         // bot that goes back to inventing answers, which reads as a model
         // problem rather than a missing seed.
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] hside_rag returned no rows -- world-knowledge retrieval is off and "
             "bots will answer game questions from the model's own priors. Check that "
             "base/hside_rag.sql installed (regenerate it with data/rag/generate_rag_sql.py).");
@@ -85,7 +86,7 @@ void Hs_LoadRagFromDb()
 
         if (entry.id.empty() || entry.title.empty() || entry.content.empty())
         {
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] hside_rag row '{}' has an empty id, title or content -- skipped.", entry.id);
             continue;
         }
@@ -96,5 +97,5 @@ void Hs_LoadRagFromDb()
     Hs_SetRagTable(rows);
 
     if (g_HsDebugEnabled)
-        LOG_INFO("module.hearthside", "[HearthsideChat] Loaded {} world-knowledge entrie(s) from hside_rag.", rows.size());
+        LOG_INFO(kHsLog, "[HearthsideChat] Loaded {} world-knowledge entrie(s) from hside_rag.", rows.size());
 }

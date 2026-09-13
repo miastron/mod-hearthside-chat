@@ -1,4 +1,5 @@
 #include "hs_corpus.h"
+#include "hs_class.h"
 #include "hs_locale.h"
 
 #include "Bag.h"
@@ -99,37 +100,57 @@ namespace
 
         return picked.second;
     }
+
+    // Category set -> one line. The three public selectors below differ only
+    // in which categories they consider; everything after that -- resolve
+    // each category's tag axis against this bot, drop the ones it does not
+    // qualify for, pick one at random, then anti-repeat-pick a row within it
+    // -- was copy-pasted three times in this file (review item 20).
+    //
+    // categoryWhere is a SQL fragment, so it is the one thing a caller must
+    // not build from user input. All three build it from module constants:
+    // a fixed channel name (ChannelColumnFor's enum mapping), the literal
+    // "raid"/"party", or a 0/1 flag.
+    std::string SelectFromCategorySet(const std::string& categoryWhere, uint8_t botClass,
+                                       uint8_t botLevel, uint8_t botFaction, uint32_t botZoneId)
+    {
+        QueryResult catResult = CharacterDatabase.Query(
+            "SELECT name, tag_axis FROM hside_corpus_category WHERE {}", categoryWhere);
+        if (!catResult)
+            return "";
+
+        std::string band = Hs_LevelBandFor(botLevel);
+
+        // Each entry: category name, and the extra WHERE-clause fragment (if
+        // any) narrowing hside_corpus rows to this bot's tag value for that
+        // category's axis.
+        std::vector<std::pair<std::string, std::string>> eligible;
+        do
+        {
+            std::string name = (*catResult)[0].Get<std::string>();
+            std::string axis = (*catResult)[1].Get<std::string>();
+
+            std::string tagWhere;
+            if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
+                eligible.emplace_back(name, tagWhere);
+        } while (catResult->NextRow());
+
+        if (eligible.empty())
+            return "";
+
+        auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
+        return PickAntiRepeatRow(chosen.first, chosen.second);
+    }
 }
 
 std::string Hs_SelectCorpusLine(uint8_t botClass, uint8_t botLevel, uint8_t botFaction, uint32_t botZoneId, bool hasActiveCard)
 {
-    QueryResult catResult = CharacterDatabase.Query(
-        "SELECT name, tag_axis FROM hside_corpus_category WHERE channel IS NULL AND is_opener = 0 AND (card_gated = 0 OR {})",
-        hasActiveCard ? 1 : 0);
-    if (!catResult)
-        return "";
-
-    std::string band = Hs_LevelBandFor(botLevel);
-
-    // Each entry: category name, and the extra WHERE-clause fragment (if
-    // any) narrowing hside_corpus rows to this bot's tag value for that
-    // category's axis.
-    std::vector<std::pair<std::string, std::string>> eligible;
-    do
-    {
-        std::string name = (*catResult)[0].Get<std::string>();
-        std::string axis = (*catResult)[1].Get<std::string>();
-
-        std::string tagWhere;
-        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
-            eligible.emplace_back(name, tagWhere);
-    } while (catResult->NextRow());
-
-    if (eligible.empty())
-        return "";
-
-    auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
-    return PickAntiRepeatRow(chosen.first, chosen.second);
+    // The /say and direct-reply set: channel-less, non-opener categories,
+    // with the card-gated ones admitted only for a bot that has a card.
+    return SelectFromCategorySet(
+        std::string("channel IS NULL AND is_opener = 0 AND (card_gated = 0 OR ") +
+            (hasActiveCard ? "1" : "0") + ")",
+        botClass, botLevel, botFaction, botZoneId);
 }
 
 std::string Hs_SelectOpenerLine(const std::string& categoryName, uint8_t botClass, uint8_t botLevel,
@@ -185,62 +206,19 @@ std::string Hs_SelectChannelLine(HsChannelKind kind, uint8_t botClass, uint8_t b
     if (!ChannelColumnFor(kind, channelColumn))
         return "";
 
-    QueryResult catResult = CharacterDatabase.Query(
-        "SELECT name, tag_axis FROM hside_corpus_category WHERE channel = '{}' AND is_opener = 0 AND card_gated = 0",
-        channelColumn);
-    if (!catResult)
-        return "";
-
-    std::string band = Hs_LevelBandFor(botLevel);
-
-    std::vector<std::pair<std::string, std::string>> eligible;
-    do
-    {
-        std::string name = (*catResult)[0].Get<std::string>();
-        std::string axis = (*catResult)[1].Get<std::string>();
-
-        std::string tagWhere;
-        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
-            eligible.emplace_back(name, tagWhere);
-    } while (catResult->NextRow());
-
-    if (eligible.empty())
-        return "";
-
-    auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
-    return PickAntiRepeatRow(chosen.first, chosen.second);
+    return SelectFromCategorySet("channel = '" + channelColumn + "' AND is_opener = 0 AND card_gated = 0",
+                                  botClass, botLevel, botFaction, botZoneId);
 }
 
 std::string Hs_SelectGroupAmbientLine(bool isRaid, uint8_t botClass, uint8_t botLevel,
                                        uint8_t botFaction, uint32_t botZoneId)
 {
-    // Same shape as Hs_SelectChannelLine above. The only difference is
-    // which `channel` value scopes the category set, and that party/raid
-    // aren't an HsChannelKind (see hs_corpus.h for why they aren't).
-    QueryResult catResult = CharacterDatabase.Query(
-        "SELECT name, tag_axis FROM hside_corpus_category WHERE channel = '{}' AND is_opener = 0 AND card_gated = 0",
-        isRaid ? "raid" : "party");
-    if (!catResult)
-        return "";
-
-    std::string band = Hs_LevelBandFor(botLevel);
-
-    std::vector<std::pair<std::string, std::string>> eligible;
-    do
-    {
-        std::string name = (*catResult)[0].Get<std::string>();
-        std::string axis = (*catResult)[1].Get<std::string>();
-
-        std::string tagWhere;
-        if (TagWhereFor(axis, botClass, band, botFaction, botZoneId, tagWhere))
-            eligible.emplace_back(name, tagWhere);
-    } while (catResult->NextRow());
-
-    if (eligible.empty())
-        return "";
-
-    auto const& chosen = eligible[urand(0, static_cast<uint32_t>(eligible.size() - 1))];
-    return PickAntiRepeatRow(chosen.first, chosen.second);
+    // Same category set as Hs_SelectChannelLine, scoped by a different
+    // `channel` value: party/raid aren't an HsChannelKind (see hs_corpus.h
+    // for why they aren't).
+    return SelectFromCategorySet(std::string("channel = '") + (isRaid ? "raid" : "party") +
+                                     "' AND is_opener = 0 AND card_gated = 0",
+                                  botClass, botLevel, botFaction, botZoneId);
 }
 
 namespace
@@ -254,10 +232,20 @@ namespace
         if (!tmpl)
             return "";
 
+        // Review item 8: an empty display label is checked, not just a null
+        // template. Hs_LocalizedItemName returns "" when the name resolves
+        // empty as well as on null input, and "|h[]|h|r" is a hyperlink the
+        // client renders as an empty bracket pair. "" is what both callers
+        // already expect from the null branch, so this degrades to "no link
+        // available" rather than to malformed markup.
+        std::string name = Hs_LocalizedItemName(tmpl); // review H1
+        if (name.empty())
+            return "";
+
         std::ostringstream stream;
         stream << "|c" << std::hex << ItemQualityColors[tmpl->Quality] << std::dec
                << "|Hitem:" << tmpl->ItemId << ":0:0:0:0:0:0:0:0:0|h["
-               << Hs_LocalizedItemName(tmpl) << "]|h|r"; // review H1
+               << name << "]|h|r";
         return stream.str();
     }
 
@@ -266,9 +254,19 @@ namespace
         if (!quest)
             return "";
 
+        // Review item 7: Hs_LocalizedQuestTitle, not Quest::GetTitle. The
+        // raw accessor returns the enUS row, so on a non-enUS realm a
+        // %quest_link would show English next to a %item_link that correctly
+        // showed the realm locale -- the exact mismatch the H1 sweep closed
+        // for BuildItemLink seven lines above, which this function never got.
+        // Empty-guarded for the same reason as BuildItemLink (item 8).
+        std::string title = Hs_LocalizedQuestTitle(quest);
+        if (title.empty())
+            return "";
+
         std::ostringstream stream;
         stream << "|cffff7c0a|Hquest:" << quest->GetQuestId() << ":" << quest->GetQuestLevel()
-               << "|h[" << quest->GetTitle() << "]|h|r";
+               << "|h[" << title << "]|h|r";
         return stream.str();
     }
 
@@ -359,18 +357,21 @@ bool Hs_PickTradeableItem(Player* bot, HsTradeableItem& out)
 
 std::string Hs_ClassNameFor(uint8_t classId)
 {
+    // The words come from hs_class.h so hs_identity.cpp's card-fact
+    // validation checks against the same spellings (review item 19); the
+    // id mapping stays here, where the core's CLASS_* enum is in scope.
     switch (classId)
     {
-        case CLASS_WARRIOR:      return "warrior";
-        case CLASS_PALADIN:      return "paladin";
-        case CLASS_HUNTER:       return "hunter";
-        case CLASS_ROGUE:        return "rogue";
-        case CLASS_PRIEST:       return "priest";
-        case CLASS_DEATH_KNIGHT: return "death knight";
-        case CLASS_SHAMAN:       return "shaman";
-        case CLASS_MAGE:         return "mage";
-        case CLASS_WARLOCK:      return "warlock";
-        case CLASS_DRUID:        return "druid";
+        case CLASS_WARRIOR:      return HsClass::kNames[HsClass::Warrior];
+        case CLASS_PALADIN:      return HsClass::kNames[HsClass::Paladin];
+        case CLASS_HUNTER:       return HsClass::kNames[HsClass::Hunter];
+        case CLASS_ROGUE:        return HsClass::kNames[HsClass::Rogue];
+        case CLASS_PRIEST:       return HsClass::kNames[HsClass::Priest];
+        case CLASS_DEATH_KNIGHT: return HsClass::kNames[HsClass::DeathKnight];
+        case CLASS_SHAMAN:       return HsClass::kNames[HsClass::Shaman];
+        case CLASS_MAGE:         return HsClass::kNames[HsClass::Mage];
+        case CLASS_WARLOCK:      return HsClass::kNames[HsClass::Warlock];
+        case CLASS_DRUID:        return HsClass::kNames[HsClass::Druid];
         default:                 return "";
     }
 }

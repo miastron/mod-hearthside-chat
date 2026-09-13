@@ -111,9 +111,22 @@ namespace
     // random_device per event would be both slower and, on some libstdc++
     // builds, a repeated open of /dev/urandom. Hs_SeedEventArbiterForTest
     // overwrites it for the harness.
+    //
+    // Review item 5: thread_local, not a plain function-local static. Only
+    // the death path is deferred through g_PendingDeathMutex; every other
+    // hook feeding this arbiter (OnPlayerLevelChanged, OnPlayerPVPKill,
+    // OnPlayerGroupRollRewardItem, OnPlayerDuelStart/End) calls FireEvent
+    // inline on whatever thread the PlayerScript hook ran on, and combat,
+    // loot and duel processing are driven from Map::Update across
+    // MapUpdate.Threads workers. A shared mt19937 mutated from two of those
+    // at once is a data race on 2.5KB of engine state. hs_arbiter.cpp made
+    // the same observation and reached for urand() (thread_local underneath);
+    // this file keeps its own engine because Hs_SeedEventArbiterForTest needs
+    // a seedable one, and thread_local buys the same safety. The harness
+    // seeds and rolls on one thread, so determinism there is unchanged.
     std::mt19937& Rng()
     {
-        static std::mt19937 gen{ std::random_device{}() };
+        static thread_local std::mt19937 gen{ std::random_device{}() };
         return gen;
     }
 

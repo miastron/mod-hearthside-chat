@@ -1,4 +1,5 @@
 #include "hs_channel.h"
+#include "hs_hash.h"
 
 #include <algorithm>
 #include <array>
@@ -6,20 +7,6 @@
 
 namespace
 {
-    // SplitMix64's finalizer: same mixer hs_archetype.cpp/hs_style.cpp use
-    // for the same reason: AzerothCore GUIDs come from a small sequential
-    // counter, so std::hash<uint64_t> alone would scatter neighbouring GUIDs
-    // into neighbouring positions instead of a real shuffle.
-    uint64_t MixBits64(uint64_t x)
-    {
-        x ^= x >> 30;
-        x *= 0xBF58476D1CE4E5B9ULL;
-        x ^= x >> 27;
-        x *= 0x94D049BB133111EBULL;
-        x ^= x >> 31;
-        return x;
-    }
-
     // Independent salt from hs_archetype.cpp's/hs_style.cpp's own mixes.
     constexpr uint64_t kChannelSalt = 0x9E3779B97F4A7C15ULL;
 
@@ -76,7 +63,19 @@ const char* Hs_ChannelKindName(HsChannelKind kind)
 void Hs_SetChannelPolicyTable(const HsChannelPolicy (&table)[kHsChannelKindCount])
 {
     for (size_t i = 0; i < kHsChannelKindCount; ++i)
+    {
         g_ChannelPolicies[i] = table[i];
+
+        // Derived here rather than read from the caller's table, because it
+        // is a property of what a General channel *is* (one instance per
+        // zone) and not an operator preference -- there is no
+        // HearthsideChat.Channel.General.ExcludeGroupedBots key and there
+        // should not be one. Set centrally so the scans that consume it
+        // cannot each forget (review item 23); see the field's comment in
+        // hs_channel.h for why General and only General.
+        g_ChannelPolicies[i].excludeGroupedBots =
+            (static_cast<HsChannelKind>(i) == HsChannelKind::General);
+    }
 }
 
 HsChannelPolicy Hs_ChannelPolicyFor(HsChannelKind kind)
@@ -106,7 +105,7 @@ std::vector<HsChannelCandidate> Hs_OrderChannelCandidates(
     std::stable_sort(candidates.begin(), candidates.end(),
         [rngSeed](const HsChannelCandidate& a, const HsChannelCandidate& b)
         {
-            return MixBits64(a.guid ^ rngSeed ^ kChannelSalt) < MixBits64(b.guid ^ rngSeed ^ kChannelSalt);
+            return HsHash::Hs_MixBits64(a.guid ^ rngSeed ^ kChannelSalt) < HsHash::Hs_MixBits64(b.guid ^ rngSeed ^ kChannelSalt);
         });
 
     std::stable_partition(candidates.begin(), candidates.end(),

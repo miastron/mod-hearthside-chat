@@ -5,6 +5,8 @@
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_identity_store.h"
+#include "hs_log.h"
+#include "hs_proximity.h"
 #include "hs_prune.h"
 #include "hs_queue.h"
 #include "hs_rpgstate.h"
@@ -168,21 +170,15 @@ namespace
                 // here. Silent before this log, and indistinguishable from
                 // the surface never firing.
                 if (g_HsDebugEnabled)
-                    LOG_INFO("module.hearthside.chat",
+                    LOG_INFO(kHsLogChat,
                              "[HearthsideChat] Bot {} dropped an ambient line: unresolved placeholder in \"{}\"",
                              bot->GetName(), line);
                 return;
             }
         }
 
-        HsArchetype           archetype     = Hs_ArchetypeForBot(botGuid);
-        HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
-        HsStyleContext styleCtx;
-        styleCtx.baselineCare         = archetypeInfo.care;
-        styleCtx.abbrevOverrideChance = archetypeInfo.hasAbbrevOverride ? archetypeInfo.abbrevOverrideChance : -1.0f;
-        styleCtx.inCombat             = false; // BotBaseEligible already excluded in-combat bots
-        styleCtx.verbalTic            = snapshot.verbalTic;
-        styleCtx.tradeCareOffset      = Hs_TradeCareOffsetFor(botGuid);
+        // inCombat=false: BotBaseEligible already excluded in-combat bots.
+        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, /*inCombat=*/false);
 
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), listenerName, line, styleCtx);
         if (style.text.empty())
@@ -267,25 +263,13 @@ namespace
         // ~110k IsWithinDistInMap calls at the 334 bots this realm runs,
         // ~1M at 1000.
         //
-        // Bucketing is exact, not an approximation: IsWithinDistInMap is
-        // false across maps, the companion/audience tests already require
-        // the same team, and two players in different zones cannot be within
-        // Say.Distance (20 yards) of each other. So a bucket contains every
-        // possible match and the per-bot walk shrinks to "bots standing in
-        // the same zone as this one". Phase is still decided by
-        // IsWithinDistInMap itself, exactly as before -- this only narrows
-        // which pairs it is asked about.
-        using Cell = std::tuple<uint32_t, uint32_t, uint8_t>; // map, zone, team
-        auto cellOf = [](Player* p) {
-            return Cell{ p->GetMapId(), p->GetZoneId(), static_cast<uint8_t>(p->GetTeamId()) };
-        };
-
-        std::map<Cell, std::vector<Player*>> botsByCell;
-        std::map<Cell, std::vector<Player*>> playersByCell;
-        for (Player* bot : bots)
-            botsByCell[cellOf(bot)].push_back(bot);
-        for (Player* player : realPlayers)
-            playersByCell[cellOf(player)].push_back(player);
+        // Why the bucketing is exact rather than an approximation now lives
+        // in hs_proximity.h, along with the Cell/BucketByCell/InSameCell this
+        // used to spell out inline: review item 13 carried the same fix to
+        // hs_opener.cpp and hs_script.cpp, and three copies of it was one
+        // more than the duplication this review was already flagging.
+        HsProximity::Index botsByCell    = HsProximity::BucketByCell(bots);
+        HsProximity::Index playersByCell = HsProximity::BucketByCell(realPlayers);
 
         // (speaker, the nearby player whose name the style pass protects).
         std::vector<std::pair<Player*, Player*>> candidates;
@@ -299,22 +283,16 @@ namespace
             if (!Hs_IsBotSettled(bot))
                 continue;
 
-            const Cell cell = cellOf(bot);
-
             Player* audience = nullptr;
-            auto playerCell = playersByCell.find(cell);
-            if (playerCell != playersByCell.end())
+            for (Player* player : HsProximity::InSameCell(playersByCell, bot))
             {
-                for (Player* player : playerCell->second)
-                {
-                    // Map- and phase-aware; see hs_handler.cpp's /say
-                    // eligibility filter for why a bare GetDistance is wrong.
-                    // Team and map are already guaranteed by the bucket.
-                    if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
-                        continue;
-                    audience = player;
-                    break; // one is enough: this is a presence test, not a count
-                }
+                // Map- and phase-aware; see hs_handler.cpp's /say
+                // eligibility filter for why a bare GetDistance is wrong.
+                // Team and map are already guaranteed by the bucket.
+                if (!bot->IsWithinDistInMap(player, g_HsSayDistance))
+                    continue;
+                audience = player;
+                break; // one is enough: this is a presence test, not a count
             }
 
             if (!audience && g_HsAmbientRequireRealPlayer)
@@ -324,20 +302,16 @@ namespace
             // above, and the same map/phase-aware distance test: one
             // companion in earshot is the whole requirement.
             bool hasCompanion = false;
-            auto botCell = botsByCell.find(cell);
-            if (botCell != botsByCell.end())
+            for (Player* other : HsProximity::InSameCell(botsByCell, bot))
             {
-                for (Player* other : botCell->second)
-                {
-                    if (other == bot)
-                        continue;
-                    if (!other->IsAlive()) // a corpse is not company
-                        continue;
-                    if (!bot->IsWithinDistInMap(other, g_HsSayDistance))
-                        continue;
-                    hasCompanion = true;
-                    break;
-                }
+                if (other == bot)
+                    continue;
+                if (!other->IsAlive()) // a corpse is not company
+                    continue;
+                if (!bot->IsWithinDistInMap(other, g_HsSayDistance))
+                    continue;
+                hasCompanion = true;
+                break;
             }
             if (!hasCompanion)
                 continue;
@@ -473,65 +447,6 @@ namespace
         if (!HsTierAllows(Hs_ChannelPolicyFor(kind).maxTier, HsTier::Corpus))
             return;
 
-        std::unordered_map<Channel*, std::vector<Player*>> botsByInstance;
-        std::vector<Player*>                                realPlayers;
-
-        for (auto const& itr : ObjectAccessor::GetPlayers())
-        {
-            Player* candidate = itr.second;
-            if (!candidate || !candidate->IsInWorld())
-                continue;
-
-            // Real players are collected unresolved, deliberately. It is
-            // tempting to resolve their channel here too and group everyone
-            // in one pass, but that would make this scan's correctness depend
-            // on Hs_ResolveChannelForDelivery agreeing with the core about
-            // every channel's name: and a disagreement there resolves a
-            // human to the wrong instance or to nullptr, which silences the
-            // surface outright rather than failing visibly. (That is not
-            // hypothetical: the city-scoped names disagreed until the
-            // AreaID 3459 fix, and Trade carried no traffic at all for it.)
-            // Membership is tested below against the bot-resolved Channel*
-            // instead, which is exact because it is the same object, whatever
-            // that object happens to be called.
-            if (!Hs_IsBot(candidate))
-            {
-                realPlayers.push_back(candidate);
-                continue;
-            }
-
-            // Every cheap gate precedes the resolve:
-            // Hs_ResolveChannelForDelivery is a DBC lookup plus a ChannelMgr
-            // string match, by far the most expensive test in this loop.
-            if (!BotBaseEligible(candidate))
-                continue;
-
-            // A grouped bot's zone-wide General instance is exactly the zone
-            // its dungeon/party shares, so without this it can get pulled
-            // into musing at the zone's General channel instead of at its own
-            // party -- TryAmbientGroup above is the surface meant to speak
-            // for it. Trade is unaffected: it's city-scoped, and grouping
-            // there isn't the same "which chat window is this really for"
-            // conflict a dungeon party is.
-            if (kind == HsChannelKind::General && candidate->GetGroup())
-                continue;
-
-            // Self-resolved and self-tested (see hs_queue.h's
-            // Hs_ResolveChannelForDelivery comment): channel is resolved
-            // from candidate's own zone, so Player::IsInChannel(Channel*)'s
-            // type-only comparison is sound here even though it can't tell
-            // instances apart in general -- candidate holds at most one
-            // channel of this DBC type at a time, and it can only be the one
-            // this function just asked about for candidate's own zone.
-            Channel* channel = Hs_ResolveChannelForDelivery(candidate, kind);
-            if (!channel || !candidate->IsInChannel(channel))
-                continue;
-
-            std::vector<Player*>& pool = botsByInstance[channel];
-            if (pool.size() < kMaxCandidates)
-                pool.push_back(candidate);
-        }
-
         // One reason-tagged trace per bail, under the debug flag only. The
         // whole surface fails silently otherwise: every exit below is a
         // bare `return`, so an operator seeing no Trade or General traffic
@@ -540,52 +455,30 @@ namespace
         auto bail = [kind](const char* why)
         {
             if (g_HsDebugEnabled)
-                LOG_INFO("module.hearthside.chat", "[HearthsideChat] ambient {} skipped: {}",
+                LOG_INFO(kHsLogChat, "[HearthsideChat] ambient {} skipped: {}",
                          Hs_ChannelKindName(kind), why);
         };
 
-        if (botsByInstance.empty())
-            return bail("no eligible bot resolved into the channel");
-        if (g_HsAmbientRequireRealPlayer && realPlayers.empty())
-            return bail("RequireRealPlayer is on and no real player is online");
+        // The scan itself is shared with hs_script.cpp's channel scenes
+        // (review item 22, Hs_PickChannelInstance in hs_queue.h). One bot is
+        // enough here -- musing aloud needs no second party, unlike a scene.
+        HsChannelScanPick pick = Hs_PickChannelInstance(
+            kind, /*minBots=*/1, g_HsAmbientRequireRealPlayer,
+            /*maxBotsPerInstance=*/kMaxCandidates, BotBaseEligible);
 
-        // Collect the instances that can actually carry a line, then pick
-        // one: rather than taking the first eligible instance found, which
-        // on a realm with several populated cities would let whichever
-        // instance enumerated first monopolize the surface.
-        std::vector<std::vector<Player*>*> eligibleInstances;
-        for (auto& entry : botsByInstance)
+        switch (pick.miss)
         {
-            if (entry.second.empty())
-                continue;
-
-            if (g_HsAmbientRequireRealPlayer)
-            {
-                // Per-instance, not per-type: entry.first was resolved from
-                // a bot, so a bare Player::IsInChannel would accept a human
-                // standing in a different zone's same-type channel. See
-                // Hs_IsInChannelInstance (hs_queue.h).
-                bool heard = false;
-                for (Player* player : realPlayers)
-                {
-                    if (Hs_IsInChannelInstance(player, kind, entry.first))
-                    {
-                        heard = true;
-                        break; // presence test, not a count
-                    }
-                }
-                if (!heard)
-                    continue;
-            }
-
-            eligibleInstances.push_back(&entry.second);
+            case HsChannelScanMiss::NoBotResolved:
+                return bail("no eligible bot resolved into the channel");
+            case HsChannelScanMiss::NoRealPlayerOnline:
+                return bail("RequireRealPlayer is on and no real player is online");
+            case HsChannelScanMiss::NoInstanceWithAudience:
+                return bail("no channel instance had both a bot and a real player in it");
+            case HsChannelScanMiss::None:
+                break;
         }
-        if (eligibleInstances.empty())
-            return bail("no channel instance had both a bot and a real player in it");
 
-        std::vector<Player*>* pool =
-            eligibleInstances[urand(0, static_cast<uint32_t>(eligibleInstances.size() - 1))];
-        Player* speaker = (*pool)[urand(0, static_cast<uint32_t>(pool->size() - 1))];
+        Player* speaker = pick.bots[urand(0, static_cast<uint32_t>(pick.bots.size() - 1))];
 
         // This channel's own rate limit before the shared budget: it is the
         // narrower constraint, and a channel throttled by its own RatePerMin

@@ -126,10 +126,16 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid);
 // Byte-identical for every bot sharing the archetype (until the table is
 // reloaded), so it belongs after the shared baseline prefix (system rules +
 // few-shot) and before per-bot-pair history: it's the only unshared part
-// of the persona. The profanity directive is deliberately scoped to the
-// game (gear, rotations, loot, other players' choices), never the real
-// person on the other end. That boundary is part of the generated prompt
-// text itself, not left to model judgement.
+// of the persona.
+//
+// The profanity directive carries no scoping language. It used to say the
+// swearing was about the game (gear, rotations, loot) and never the person
+// on the other end; that sentence was dropped 2026-08-24 because the
+// archetype voices hold the register on their own and the arbiter's rate
+// limits make a sustained pile-on structurally impossible. See
+// Hs_ArchetypePromptLine's own comment in hs_archetype.cpp for the full
+// reasoning -- this header described the removed guarantee as current until
+// review item 12.
 std::string Hs_ArchetypePromptLine(HsArchetype a);
 
 #endif // MOD_HS_ARCHETYPE_H

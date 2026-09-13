@@ -7,6 +7,7 @@
 #include "hs_http_auth.h"
 #include "hs_identity_store.h"
 #include "hs_json.h"
+#include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_opener.h"
 #include "hs_queue.h"
@@ -344,7 +345,7 @@ void Hs_HttpServerStart()
 
     if (g_HsHttpServerPrivateKey.empty())
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] HTTP server not started: HearthsideChat.HttpServerPrivateKey is not set.");
         return;
     }
@@ -358,7 +359,7 @@ void Hs_HttpServerStart()
 
         if (!svr->bind_to_port(g_HsHttpServerBind.c_str(), static_cast<int>(g_HsHttpServerPort)))
         {
-            LOG_ERROR("module.hearthside",
+            LOG_ERROR(kHsLog,
                 "[HearthsideChat] HTTP server failed to bind to {}:{} -- port may be in use or address invalid. "
                 "HTTP server disabled; the rest of the module continues normally.",
                 g_HsHttpServerBind, g_HsHttpServerPort);
@@ -376,15 +377,15 @@ void Hs_HttpServerStart()
         std::string bindAddr = g_HsHttpServerBind;
         uint32_t    bindPort = g_HsHttpServerPort;
         s_thread = std::make_unique<std::thread>([bindAddr, bindPort]() {
-            LOG_INFO("module.hearthside", "[HearthsideChat] HTTP server listening on {}:{}", bindAddr, bindPort);
+            LOG_INFO(kHsLog, "[HearthsideChat] HTTP server listening on {}:{}", bindAddr, bindPort);
             s_server->listen_after_bind();
             s_running.store(false);
-            LOG_INFO("module.hearthside", "[HearthsideChat] HTTP server stopped.");
+            LOG_INFO(kHsLog, "[HearthsideChat] HTTP server stopped.");
         });
     }
     catch (const std::exception& ex)
     {
-        LOG_ERROR("module.hearthside",
+        LOG_ERROR(kHsLog,
             "[HearthsideChat] HTTP server exception during startup: {}. HTTP server disabled; "
             "the rest of the module continues normally.", ex.what());
         s_server.reset();

@@ -1229,7 +1229,7 @@ HearthsideChat.Generator.PromptVersion = v3
 #                  queue. If consumption outpaces production the bots
 #                  simply stop chatting to each other -- running dry is the
 #                  correct failure mode.
-#     Default:     15
+#     Default:     50
 HearthsideChat.Generator.ScriptsPerPool = 50
 
 # --------------------------------------------
