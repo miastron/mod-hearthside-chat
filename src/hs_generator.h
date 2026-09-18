@@ -51,10 +51,16 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
                                     const std::string& tagValueSql, const std::string& candidateText,
                                     const std::string& model, const std::string& promptVersion);
 
-// Eviction is by exposure first, age second. Trims every (category, bucket)
-// whose row count exceeds Generator.RowsPerBucket back down to quota,
-// removing the most-exposed rows first (generated_at ASC as the tiebreaker
-// for equal exposure, hand-authored/NULL rows protected last). Runs
+// Eviction protects hand-authored rows absolutely, then goes by exposure,
+// then age. Trims every (category, bucket) whose row count exceeds
+// Generator.RowsPerBucket back down to quota, removing the most-exposed
+// GENERATED rows first (generated_at ASC as the tiebreaker for equal
+// exposure). A hand-authored/NULL row is only ever evicted once every
+// generated row in its bucket is gone. That ordering is load-bearing and was
+// wrong until 2026-09-17: with exposure leading the sort, seed rows were
+// evicted first precisely because they are the only content a fresh bucket
+// has to speak, which cost channel_general_chat all 24 of its seed rows on
+// 2026-09-14. Runs
 // independently of the generator's enable flag (hs_main.cpp's
 // HsCorpusLifecycleWorldScript): a bucket can go over quota via
 // `.hearthside capture` or a lowered RowsPerBucket even while generation

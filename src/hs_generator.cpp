@@ -1372,16 +1372,32 @@ uint32_t Hs_RunEvictionSweep()
         std::string escapedCategory = bucket.category;
         CharacterDatabase.EscapeString(escapedCategory);
 
-        // Exposure first (most-heard evicted first), generated_at second --
-        // NULL (hand-authored) rows sort last among ties, so a tie between a
-        // hand-authored line and a generator line evicts the generator one.
+        // Hand-authored protection first, exposure second. `(generated_at IS
+        // NULL) ASC` has to lead the sort, not follow times_used: DELETE ...
+        // ORDER BY ... LIMIT removes the rows that sort FIRST, so with
+        // times_used leading, the most-spoken rows go first -- and the seed
+        // rows are always the most-spoken, because they are the only content
+        // in a fresh bucket until the generator fills it. That wiped all 24
+        // channel_general_chat seed rows on 2026-09-14 (the busiest bucket,
+        // so the largest exposure gap) while quieter buckets kept theirs,
+        // and it took the generator's own tone reference with it -- the
+        // header in base/hside_corpus.sql samples up to five corpus rows per
+        // bucket as the voice for everything generated into it, so the
+        // bucket then regenerated off its own output.
+        //
+        // With NULL sorting last and leading the sort, a hand-authored row is
+        // only ever touched once every generated row in the bucket is gone,
+        // which means RowsPerBucket is below the seed count -- a config
+        // problem, and evicting the most-heard seed row is the right answer
+        // to it. times_used DESC still orders the generated rows among
+        // themselves, so "most-heard evicted first" is unchanged for them.
         //
         // Review A4: DirectExecute, so the counts EnumerateBucketsWithCounts
         // reads on the next sweep reflect this one rather than racing an
         // eviction still queued on the async worker.
         CharacterDatabase.DirectExecute(
             "DELETE FROM hside_corpus WHERE name = '{}' {} "
-            "ORDER BY times_used DESC, (generated_at IS NULL) ASC, generated_at ASC LIMIT {}",
+            "ORDER BY (generated_at IS NULL) ASC, times_used DESC, generated_at ASC LIMIT {}",
             escapedCategory, tagWhere, overflow);
         evictedTotal += overflow;
         g_RowsEvictedThisSession.fetch_add(overflow);
