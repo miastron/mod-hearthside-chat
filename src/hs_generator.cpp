@@ -769,10 +769,11 @@ namespace
         "(Say something casual to open a short back-and-forth in this channel.)";
 
     // One full attempt: generate a randomized-length (kScriptTurnCountMin..
-    // kScriptTurnCountMax) run of lines as a single continuous exchange
-    // (reusing the reactive tier's own history-append mechanism, hs_llm.h's
-    // HsHistoryTurn: turn N's trigger is turn N-1's text, so the model is
-    // always just replying, the same shape as two real people alternating).
+    // kScriptTurnCountMax) run of lines. Turn N's trigger is turn N-1's text,
+    // so the model is always just replying, but the prior turns are NOT
+    // replayed as history -- that is the 2026-09-17 change documented in the
+    // loop below, and it is what keeps each call inside the single-turn shape
+    // the LoRA was trained on.
     // Turns are labelled speaker_slot 0/1 by position after the fact; the
     // model never needs to know there are two characters, since both share
     // the identical baseline voice. A single line per call is required, not
@@ -789,14 +790,40 @@ namespace
 
         int turnCount = static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax));
 
-        std::vector<HsHistoryTurn> history;
         std::string prevText = kScriptOpeningTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns; // slot, text
 
+        // No history: every turn is generated from a fresh context with only
+        // the previous line as its trigger, which is the shape the LoRA was
+        // trained on. 2081 of the 2129 rows in dataset_pilot_v2.jsonl are a
+        // single system -> user -> assistant triple and the eval split has no
+        // multi-turn row at all, so replaying real prior turns here put the
+        // model out of distribution on every turn after the first.
+        //
+        // Measured against the live endpoint 2026-09-17
+        // (Tests/script_turn_collapse.py), 40 scripts x 6 turns: turn 0, the
+        // only turn whose prompt carried no history, produced 0 of 40
+        // collapsed lines, while turns 1-5 produced 28 of 200 (14%) reaching
+        // for one template -- "same zone, same time, same nothing", "same
+        // level, same class, same zone, same chat". Handed a conversation it
+        // was not trained on, structural mirroring of the previous speaker is
+        // the cheapest locally-coherent thing the model can emit.
+        //
+        // Not a sampler or prompt problem, both ruled out by measurement
+        // before this change: DRY at 0.8 made it worse (1.7% -> 4.6%), and two
+        // explicit anti-mirroring instructions moved it 7% -> 7% and 10%. The
+        // construction is nearly absent from the training data (4 rows of
+        // 2129), so it is not learned content being reproduced -- it is what
+        // out-of-distribution output looks like here.
+        //
+        // The cost is real: turns no longer see each other, so a script reads
+        // as several lines on a theme rather than a thread. Restoring the
+        // thread means teaching the shape, not sending it -- multi-turn rows
+        // in the dataset, then a retrain.
         for (int i = 0; i < turnCount; ++i)
         {
             HsLLMResult result = Hs_CallLLM(cfg, ScriptSystemPrompt(), ScriptTurnRagBlock(i == 0 ? "" : prevText),
-                history, prevText);
+                {}, prevText);
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
@@ -817,7 +844,6 @@ namespace
             }
 
             turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
-            history.push_back({ prevText, result.text });
             prevText = result.text;
         }
 
@@ -924,14 +950,18 @@ namespace
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         std::string systemPrompt = ChannelScriptSystemPromptFor(kind);
-        std::vector<HsHistoryTurn> history;
         std::string prevText = kChannelScriptOpeningTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns;
 
+        // Fresh context per turn, for the reason documented at length in
+        // RunOneScriptGenerationCycle above: the fine-tune is single-turn and
+        // replaying prior turns collapses the output into mirrored sentence
+        // shapes. Only 2 turns here, so this path saw less of it than the
+        // /say scripts did, but it is the same mismatch.
         for (int i = 0; i < kChannelScriptTurnCount; ++i)
         {
             HsLLMResult result = Hs_CallLLM(cfg, systemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
-                history, prevText);
+                {}, prevText);
             if (!result.success || result.text.empty())
             {
                 if (g_HsDebugEnabled)
@@ -952,7 +982,6 @@ namespace
             }
 
             turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
-            history.push_back({ prevText, result.text });
             prevText = result.text;
         }
 
