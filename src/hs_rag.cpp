@@ -88,6 +88,62 @@ namespace
         return t;
     }
 
+    // Terms that cannot, on their own, identify one entry. Two different
+    // things land in here and the gate below treats them the same way:
+    //
+    //   - ordinary English that is also a retrieval handle ("holy", "arms",
+    //     "fire", "down"). Corpus idf cannot find these -- it measures rarity
+    //     *in this corpus*, not in English, and "blacksmithing" and "holy"
+    //     sit at the same idf here. So it has to be authored.
+    //   - spec words and abbreviations shared by more than one class
+    //     ("frost" is mage and death knight, "restoration" is druid and
+    //     shaman, "prot" is warrior and paladin). Retrieving one of them on
+    //     a coin flip is worse than retrieving nothing.
+    //
+    // Being listed here costs an entry nothing when the query also carries a
+    // real handle: "ret pally", "frost mage", "bm hunter" all still resolve,
+    // because the class word is unambiguous. It only bites when such a term
+    // is the *only* thing that matched, which is the measured signature of a
+    // plain-English collision:
+    //
+    //     "holy crap that was close"                    -> Holy Paladin 0.51
+    //     "my arms are killing me"                      -> Arms Warrior 0.81
+    //     "there was a fire down the street last night" -> Razorfen Downs 0.50
+    //
+    // Grow this list when a collision is *measured*, not when one is imagined:
+    // a word added here stops being able to answer on its own. The generic
+    // fantasy nouns ("light", "storm", "dark") were tried and left off for
+    // exactly that reason -- none of them produced a false positive, and
+    // "where is the dark portal" needs "dark" to keep pulling its weight.
+    bool IsAmbiguousTerm(const std::string& t)
+    {
+        static const std::unordered_set<std::string> kAmbiguous = []{
+            // Stemmed on the way in, because the scorer stems query terms:
+            // "arms" reaches the gate as "arm", and a raw list never matches.
+            static const char* const kRaw[] = {
+                // spec and role words that are also everyday English
+                "arms", "fury", "fire", "frost", "holy", "shadow", "blood",
+                "combat", "balance", "protection", "restoration", "discipline",
+                "survival", "beast", "mastery", "arcane", "feral", "elemental",
+                "cat", "bear",
+                // spec abbreviations: too short to be evidence by themselves,
+                // and "bm" is Beast Mastery *and* Black Morass
+                "prot", "ret", "resto", "disc", "sub", "demo", "bm", "mm",
+                "sv", "ele", "enh", "affli", "destro",
+                // measured collision: "down the street" -> Razorfen Downs
+                "down", "downs"
+            };
+
+            std::unordered_set<std::string> out;
+            for (const char* w : kRaw)
+                out.insert(Stem(w));
+
+            return out;
+        }();
+
+        return kAmbiguous.count(t) != 0;
+    }
+
     std::string Normalize(const std::string& s)
     {
         std::string out;
@@ -327,6 +383,10 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
     std::unordered_map<uint32_t, float>    covered;
     std::unordered_map<uint32_t, uint32_t> handleHits;
 
+    // The subset of handleHits that is not IsAmbiguousTerm. Drives the
+    // eligibility gate below; handleHits itself keeps driving specificity.
+    std::unordered_map<uint32_t, uint32_t> unambiguousHandleHits;
+
     for (const std::string& t : queryTerms)
     {
         auto post = idx.postings.find(t);
@@ -338,8 +398,18 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         {
             covered[entryWeight.first] += termIdf * entryWeight.second;
 
+            // Handle weight only -- title or keyword. A term that appears
+            // merely in an entry's *prose* corroborates a hit but is never
+            // evidence that the entry is what was asked about: "fire" reaches
+            // Razorfen Downs through "Mordresh Fire Eye" in its content, which
+            // is how a sentence about a house fire retrieved a dungeon.
             if (entryWeight.second >= kWeightKeyword)
+            {
                 handleHits[entryWeight.first]++;
+
+                if (!IsAmbiguousTerm(t))
+                    unambiguousHandleHits[entryWeight.first]++;
+            }
         }
     }
 
@@ -376,6 +446,29 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         auto           hit     = handleHits.find(kv.first);
         if (handles > 0 && hit != handleHits.end())
             score += kSpecificityBonus * (static_cast<float>(hit->second) / static_cast<float>(handles));
+
+        // Eligibility, which is a separate question from score. Scoring
+        // normalizes by query mass, so one matched term in a short sentence
+        // scores *high* -- that is the point of the normalization and it is
+        // what makes short questions work ("how do i get to dalaran" -> 1.36
+        // on a single term). The cost is that one accidental match in an
+        // ordinary English sentence scores just as confidently, and no
+        // threshold separates the two: measured against this corpus, every
+        // false positive matched exactly one handle, while every genuine hit
+        // matched either two handles or one unambiguous one.
+        //
+        // So: an entry is eligible if the query hit a handle that means
+        // something on its own, or hit two handles of any kind. The second
+        // clause is what keeps "should i go cat or bear" working -- two
+        // ambiguous words together are a real signal even though neither is
+        // alone. See Tests/test_hs_rag_ambiguity.cpp.
+        const uint32_t handleMatches = handleHits.count(kv.first)
+                                     ? handleHits[kv.first] : 0u;
+        const uint32_t namedMatches  = unambiguousHandleHits.count(kv.first)
+                                     ? unambiguousHandleHits[kv.first] : 0u;
+
+        if (namedMatches == 0 && handleMatches < 2)
+            continue;
 
         if (score >= minScore)
             hits.push_back({ &idx.entries[kv.first], score });
@@ -470,6 +563,22 @@ std::string Hs_RagContextRandom(uint32_t selector, uint32_t maxChars, const std:
     // it, and a drawn entry has no score to report.
     std::vector<HsRagHit> hits{ { &idx.entries[pick], 1.0f } };
     return Hs_RagContextLine(hits, maxChars, prefix);
+}
+
+std::string Hs_RagBlockLeadTitle(const std::string& block, const std::string& prefix)
+{
+    if (block.empty() || block.size() <= prefix.size())
+        return "";
+
+    if (block.compare(0, prefix.size(), prefix) != 0)
+        return "";
+
+    const std::string body = block.substr(prefix.size());
+    const size_t      sep  = body.find(" -- ");
+
+    // No separator means the block was truncated inside the title (a very
+    // small maxChars); the leading text is still the best label available.
+    return sep == std::string::npos ? body.substr(0, 48) : body.substr(0, sep);
 }
 
 std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars, const std::string& prefix)

@@ -24,9 +24,15 @@ uint32_t     g_HsLLMMaxTokens      = 60;
 std::string g_HsLLMTemplate = "llama3";
 
 // A "player, not character" frame, avoids the terse "Hmph."-collapse
-// failure mode seen with an in-fiction frame. This is a placeholder
-// single-sentence frame; the fuller shared-prefix baseline persona +
-// few-shot register examples live elsewhere.
+// failure mode seen with an in-fiction frame.
+//
+// This default is byte-identical to the system turn's first line in all 2129
+// rows of Claude/finetune/dataset_pilot_v2.jsonl, and that is the reason to
+// leave it alone: the module targets a model tuned on that dataset, so
+// changing the wording here puts every request into a shape the tune has
+// never seen. (Claude/finetune/_FORMAT.md quotes a different, shorter
+// preamble -- the doc is stale, the dataset is not.) The archetype tag is
+// appended as line 2 by hs_llm.cpp, not spelled out here.
 std::string g_HsLLMSystemPrompt =
     "You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. "
     "No roleplay, no asterisks, no mention of being an AI or a game. If you don't know "
@@ -228,7 +234,7 @@ uint32_t     g_HsChannelTradeRatePerMin         = 3;
 uint32_t     g_HsChannelTradeMaxCandidates      = 8;
 
 std::string g_HsChannelGeneralMaxTier          = "corpus";
-uint32_t     g_HsChannelGeneralRatePerMin       = 3;
+uint32_t     g_HsChannelGeneralRatePerMin       = 1;
 uint32_t     g_HsChannelGeneralMaxCandidates    = 8;
 
 std::string g_HsChannelLookingForGroupMaxTier         = "off";
@@ -420,7 +426,7 @@ void Hs_LoadHearthsideChatConfig()
     g_HsChannelTradeMaxCandidates        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.Trade.MaxCandidates", 8);
 
     g_HsChannelGeneralMaxTier           = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.General.MaxTier", "corpus");
-    g_HsChannelGeneralRatePerMin         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.RatePerMin", 3);
+    g_HsChannelGeneralRatePerMin         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.RatePerMin", 1);
     g_HsChannelGeneralMaxCandidates       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.MaxCandidates", 8);
 
 

@@ -30,7 +30,19 @@ struct HsGenVerdict
 // or reply alike -- "sup"/"hey"/"yeah" are all fine at any position) sits
 // in a back-and-forth and doesn't need to carry a whole thought by itself.
 // Still rejects an all-whitespace candidate regardless.
-HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions = false, bool allowShort = false);
+// `allowReply` opts out of just the standalone-line checks (reads_as_reply,
+// references_trend). The opener_* categories are the case for it: an opener
+// fires *because* something happened -- a rez, a group invite, a shared kill
+// -- so "thanks for the pick-up." and "nice work on that one." are the right
+// shape there and the wrong shape in a zone musing. Every other category is
+// spoken unprompted into a channel and has to stand on its own.
+HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions = false,
+                             bool allowShort = false, bool allowReply = false);
+
+// True for the categories whose lines answer something that just happened,
+// rather than being said unprompted. Exposed so the generator and the test
+// harness classify a bucket the same way.
+bool Hs_CategoryIsResponse(const std::string& category);
 
 // Placeholder discipline: if any of `existingRows` (the bucket's
 // hand-authored exemplars) uses a placeholder, `candidate` must use one too,
@@ -61,7 +73,8 @@ HsGenVerdict Hs_ScriptPlaceholderDiscipline(const std::string& candidate);
 // at the first failure: what both callers actually call.
 HsGenVerdict Hs_EvaluateCandidate(const std::string& candidate,
                                    const std::vector<std::string>& existingRows,
-                                   bool categoryCardGated);
+                                   bool categoryCardGated,
+                                   bool categoryIsResponse = false);
 
 // True if `text` contains a `%word`-shaped placeholder token. Exposed
 // individually (beyond Hs_PlaceholderDiscipline) because hs_generator.cpp's

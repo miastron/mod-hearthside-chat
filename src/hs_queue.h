@@ -92,6 +92,20 @@ void Hs_QueueShutdown();
 // carried the kind since §4.17. Without it the worker's delivery push would
 // take HsPendingReply's default and misdeliver every channel hop into Trade.
 //
+// triggerIsStateLine says the userPrompt is a synthetic line describing
+// something that happened ("You were out on your own and have just been
+// killed."), not something anybody said. The worker then states it as a
+// fact alongside the bot's other state and puts a react-instruction in the
+// slot the player's message would occupy, the same shape hs_engagement.cpp
+// uses for a follow-up.
+//
+// Deliberately NOT folded into isEvent, even though hs_event.cpp is the
+// only caller that passes it: hs_botchain.cpp also passes isEvent for a
+// live chain hop, where the trigger is a real utterance by another bot and
+// belongs in the trigger slot untouched. isEvent means "the sender is not a
+// real player" and gates identity/history side effects; this flag is about
+// which slot the text goes in, and the two are not the same question.
+//
 // chainScopeId/chainSeq tag a bot-to-bot chain hop (hs_botchain.h); 0 means
 // "not a hop", which is every other caller. They are carried through to
 // delivery so Hs_DeliverPending can drop a hop whose scope was taken over by
@@ -104,7 +118,8 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false,
                     HsChannelKind channelKind = HsChannelKind::Trade,
-                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0);
+                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0,
+                    bool triggerIsStateLine = false);
 
 // Claude/archive/PLAN-ARBITER.md §8: the event tier's own token bucket
 // (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket

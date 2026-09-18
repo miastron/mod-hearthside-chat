@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 namespace HsCardFacts
 {
@@ -196,44 +197,200 @@ std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout)
         "roughly 50 tokens.";
 }
 
-std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint8_t level, bool hasGuild,
-                                     const std::string& guildName, const std::string& ownClassName)
+namespace
 {
-    std::string prompt =
-        "You are helping fill out a structured fact sheet for a World of Warcraft player "
-        "character (level " + std::to_string(static_cast<int>(level)) +
-        ") whose personality summary is: \"You mostly talk about: " + archetypeTalksAbout + ".\" ";
+    // GBNF alternation of literal values: root ::= "a" | "b" | "c".
+    // Every value here comes from a compile-time table in this file or
+    // hs_class.h (lowercase words and hyphens, no quotes or backslashes), so
+    // there is nothing to escape; a caller-supplied string would need it.
+    std::string GrammarOneOf(const std::vector<std::string>& values)
+    {
+        if (values.empty())
+            return "";
+        std::string g = "root ::= ";
+        for (size_t i = 0; i < values.size(); ++i)
+        {
+            if (i)
+                g += " | ";
+            g += "\"" + values[i] + "\"";
+        }
+        return g;
+    }
+}
 
-    prompt += hasGuild
-        ? ("This character is in a guild called \"" + guildName + "\". ")
-        : std::string("This character is not currently in a guild. ");
+char const* Hs_CardFactTrigger()
+{
+    return "Answer in one short line. Reply with only the answer.";
+}
 
-    prompt +=
-        "Reply with ONLY compact JSON (no markdown fences, no commentary) with exactly these eight "
-        "string keys. Your reply must be a SINGLE LINE with ZERO line breaks anywhere in it -- not "
-        "right after the opening brace, not between fields, not before the closing brace. Do not "
-        "pretty-print or indent your reply. The eight keys:\n"
-        "main_focus: one of leveling, gearing_up, dailies, raiding, pvp, professions, "
-        "achievements, collecting -- pick one plausible for a level " + std::to_string(static_cast<int>(level)) +
-        " character.\n"
-        "current_goal: one short concrete near-term thing this character is working on right now.\n"
-        "played_since: one of vanilla, bc, wrath.\n"
-        "preferred_content: one of 5-mans, raids, pvp, solo.\n"
-        "held_opinion: one short game opinion about a real instance, zone, or item.\n"
-        "verbal_tic: a short literal word or phrase this character says often, or an empty string "
-        "if none.\n"
-        "guild_stance: \"" + std::string(hasGuild ? "guilded" : "unguilded") + "\" -- must match "
-        "this character's actual guild status above.\n"
-        "alt: the name of a different WoW class than this character's own, lowercase.";
+HsCardFactAsk Hs_CardFactAsk(uint32_t index, const std::string& archetypeTalksAbout, uint8_t level,
+                              bool hasGuild, const std::string& guildName,
+                              const std::string& ownClassName)
+{
+    // Shared lead-in. Short on purpose: the long fact-sheet framing the old
+    // single-call prompt used is what pushed the model out of the register it
+    // can actually answer in.
+    const std::string who =
+        "You are a level " + std::to_string(static_cast<int>(level)) +
+        " World of Warcraft player. You mostly talk about: " + archetypeTalksAbout + ". ";
 
-    // Review C10: naming the class the model must avoid, rather than
-    // leaving "this character's own" for it to infer from the personality
-    // summary, which never states it. The validator rejects a match either
-    // way; telling the model up front is what keeps that from becoming a
-    // repeated rejection on the same bot (review B2's livelock shape).
-    if (!ownClassName.empty())
-        prompt += " This character is a " + ownClassName +
-                  ", so alt must NOT be \"" + ownClassName + "\".";
+    switch (index)
+    {
+        case 0:
+        {
+            // Only the focuses that are plausible at this level reach the
+            // grammar, so main_focus_not_plausible_for_level (review C11)
+            // cannot be generated. The prompt still names them: the model
+            // picks better when it can see the options, and the grammar is
+            // what makes the pick binding.
+            std::vector<std::string> allowed;
+            for (size_t i = 0; i < HsCardFacts::kMainFocusCount; ++i)
+                if (Hs_MainFocusPlausibleForLevel(HsCardFacts::kMainFocusValues[i], level))
+                    allowed.emplace_back(HsCardFacts::kMainFocusValues[i]);
 
-    return prompt;
+            std::string list;
+            for (size_t i = 0; i < allowed.size(); ++i)
+                list += (i ? ", " : "") + allowed[i];
+
+            return { "main_focus",
+                     who + "What are you mainly doing in the game these days? One of: " + list + ".",
+                     GrammarOneOf(allowed), "" };
+        }
+        case 1:
+            return { "current_goal", who +
+                "What is the one thing you are working on right now?", "", "" };
+        case 2:
+        {
+            std::vector<std::string> allowed(HsCardFacts::kPlayedSinceValues,
+                                             HsCardFacts::kPlayedSinceValues + HsCardFacts::kPlayedSinceCount);
+            return { "played_since",
+                     who + "When did you start playing? One of: vanilla, bc, wrath.",
+                     GrammarOneOf(allowed), "" };
+        }
+        case 3:
+        {
+            std::vector<std::string> allowed(HsCardFacts::kPreferredContentValues,
+                                             HsCardFacts::kPreferredContentValues + HsCardFacts::kPreferredContentCount);
+            return { "preferred_content",
+                     who + "What kind of content do you like best? One of: 5-mans, raids, pvp, solo.",
+                     GrammarOneOf(allowed), "" };
+        }
+        case 4:
+            return { "held_opinion", who +
+                "Give one opinion you hold about a dungeon, raid, zone or item in the game.",
+                "", "" };
+        case 5:
+            // Freeform by design: a tic is the one card fact that has to be
+            // this character's own words, so there is no vocabulary to
+            // constrain it to. "none" is normalised to empty by
+            // Hs_NormalizeCardFactValue.
+            return { "verbal_tic", who +
+                "Is there a short word or phrase you say a lot in chat? Answer with just that "
+                "word or phrase, or the word none.", "", "" };
+        case 6:
+            // Not asked. The guild row is already in hand; a model restating
+            // it can only disagree with it, and Hs_ValidateCardFacts rejects
+            // the whole card when it does.
+            (void)guildName;
+            return { "guild_stance", "", "", hasGuild ? "guilded" : "unguilded" };
+        default:
+        {
+            // The bot's own class is dropped from the grammar, so
+            // alt_is_the_characters_own_class (review C10) cannot be
+            // generated either.
+            std::vector<std::string> allowed;
+            for (size_t i = 0; i < HsClass::Count; ++i)
+                if (ownClassName.empty() || ownClassName != HsClass::kNames[i])
+                    allowed.emplace_back(HsClass::kNames[i]);
+
+            std::string p = who + "Name one other class you also play, lowercase.";
+            if (!ownClassName.empty())
+                p += " It must not be " + ownClassName + ".";
+            return { "alt", p, GrammarOneOf(allowed), "" };
+        }
+    }
+}
+
+std::string Hs_NormalizeCardFactValue(uint32_t index, std::string raw)
+{
+    auto trim = [](std::string& s)
+    {
+        auto notSpace = [](unsigned char c) { return !std::isspace(c); };
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), notSpace));
+        s.erase(std::find_if(s.rbegin(), s.rend(), notSpace).base(), s.end());
+    };
+
+    // Collapse any stray newline first: everything below assumes one line.
+    for (char& c : raw)
+        if (c == '\n' || c == '\r')
+            c = ' ';
+    trim(raw);
+
+    // "main_focus: raiding" -> "raiding". The model echoes the key back often
+    // enough to be worth handling, and only when the prefix is exactly this
+    // field's own key, so a colon inside a real answer survives.
+    const std::string key = Hs_CardFactAsk(index, "", 1, false, "").key;
+    if (raw.size() > key.size() + 1 && raw.compare(0, key.size(), key) == 0
+        && raw[key.size()] == ':')
+    {
+        raw = raw.substr(key.size() + 1);
+        trim(raw);
+    }
+
+    if (raw.size() >= 2 && raw.front() == '"' && raw.back() == '"')
+    {
+        raw = raw.substr(1, raw.size() - 2);
+        trim(raw);
+    }
+    while (!raw.empty() && (raw.back() == '.' || raw.back() == '!'))
+    {
+        raw.pop_back();
+        trim(raw);
+    }
+
+    // The four enum fields answer from a fixed vocabulary, so case and the
+    // space/underscore difference are transcription noise rather than a wrong
+    // answer. The freeform fields keep whatever the model wrote.
+    const bool isEnum = (index == 0 || index == 2 || index == 3 || index == 6);
+    if (isEnum)
+    {
+        for (char& c : raw)
+        {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            if (c == ' ')
+                c = '_';
+        }
+    }
+
+    // verbal_tic: "none" is how the prompt invites an empty answer, and the
+    // validator treats empty as "no tic".
+    //
+    // An answer that runs long is treated the same way, and that is the point
+    // rather than a shortcut. A tic is one or two words; when this model
+    // instead writes a sentence ("explain the mechanic, i'm always unsure")
+    // what it has actually told us is that this character has no catchphrase,
+    // which is a legal value. The alternative was a length-bounded grammar,
+    // and it was measured and rejected: capping the sampler at 20 characters
+    // stops it mid-word and stores "check it before youa" as a bot's
+    // catchphrase, which is worse than having none. Failing the card was the
+    // other alternative, and it would fail most cards over the least
+    // important of the eight fields.
+    if (index == 5)
+    {
+        std::string lower = raw;
+        for (char& c : lower)
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (lower == "none" || lower == "no" || lower == "nothing")
+            return "";
+        if (raw.size() > 20 || raw.find_first_of("\"`*[]{}") != std::string::npos)
+            return "";
+    }
+
+    if (index == 7)
+    {
+        for (char& c : raw)
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+
+    return raw;
 }

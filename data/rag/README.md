@@ -84,6 +84,45 @@ with rosters, but per-boss entries only for bosses players actually name (Ragnar
 Hakkar, C'Thun, Illidan, Kael'thas, Kil'jaeden, Archimonde, and similar) — a mid-tier Classic
 dungeon boss retrieves nothing today, and a death against one just falls back to a bare trigger.
 
+## The 30 spec entries are hand-written, and their abilities are realm-verified
+
+`wow_specs.json` carries one entry per WotLK talent tree. Unlike the instance and boss files it
+is hand-authored, so it has its own verification step rather than a generator:
+
+| Claim | Checked against |
+|---|---|
+| the ability exists in 3.3.5a | `Spell.dbc`, name field (auto-calibrated, not hardcoded) |
+| the ability belongs to that tree | `SkillLineAbility.dbc` — `SkillLine.dbc` |
+
+[`Tests/verify_spec_abilities.py`](../../Tests/verify_spec_abilities.py) runs both over
+[`Tests/spec_ability_names.txt`](../../Tests/spec_ability_names.txt) on the realm. **Both checks
+matter.** `Spell.dbc` alone only proves a name exists: `Vendetta` is a real 3.3.5a spell name and
+is not the rogue ability, so name-existence is weak evidence by itself. In WotLK the per-class
+spell skill lines are named after the talent trees, so `SkillLineAbility.dbc` answers the claim
+the entry actually makes. Druid `Swipe` was dropped for failing exactly this second check — it
+resolves only to `Pet - Bear`.
+
+Two authoring conventions specific to this file:
+
+- **Title is `"<Spec> <Class>"`**, never the bare spec word. Both halves earn aboutness, which is
+  what lets `"how do i play frost mage"` beat *Mage Class* without `frost` having to carry it
+  alone.
+- **No bare spec nickname in `keywords`.** `resto`, `prot`, `bm` and friends are on
+  `IsAmbiguousTerm` and are inert as a sole handle regardless, so listing them buys nothing and
+  costs specificity (Rule 2). List the disambiguated pair instead — `"resto shaman"`,
+  `"bm hunter"`, `"prot pally"`. Ability names are the best handles these entries have:
+  `"whats killing spree"` retrieves *Combat Rogue* at 0.92 off the ability name alone.
+
+**Watch the prose, not just the keywords.** Content no longer confers eligibility, but it still
+contributes to coverage, and two collisions surfaced this way during authoring: Affliction's DoTs
+originally "roll on the target", which made `"should i roll a warlock or a mage"` retrieve
+*Affliction Warlock* over *Warlock Class*, and an Arcane entry described a "running judgement",
+borrowing a paladin ability word. Both were reworded.
+
+**These entries serve player questions, not the generator.** `hs_generator.cpp` buckets on
+`class_tag`/`faction_tag`/`zone_tag` and has no spec bucket, so a spec entry is reachable only
+through scored retrieval against something a player actually typed.
+
 ## Schema
 
 ```json
@@ -131,6 +170,12 @@ entries are truncated at the `maxChars` budget on a word boundary.
 `pwsh -File Tests\run_cpp_tests.ps1 -Filter rag` after any edit — the harness asserts real
 question→entry outcomes and prints the current separation margin (below).
 
+**6. A word that appears only in an entry's prose is not a handle.** Eligibility (below) counts
+title and keyword matches only. *Razorfen Downs* was retrieved by "there was a fire down the
+street last night" because `fire` sits inside *Mordresh Fire Eye* in its content — prose
+corroborates a hit, it never establishes one. If a term should be able to fetch an entry, put it
+in `keywords`.
+
 ## The threshold and its margin
 
 Ships at `minScore = 0.45`, `maxEntries = 2`. The harness prints something like:
@@ -150,6 +195,50 @@ retrieving nothing. A subtler failure than an over-broad entry stealing a query:
 reduce to a single surviving term that happens to sit in several entries' *prose* but nobody's
 `keywords`, in which case ties break on `id` and an unrelated entry wins. The fix is the same —
 add the term to the one entry that should own it, promoting it to keyword weight.
+
+## The eligibility gate
+
+The threshold answers "is this a good enough match." It cannot answer "is this a match at all,"
+and the two come apart badly on short input. Because the score normalizes by *query* mass, one
+matched term in a short sentence scores high — which is the whole point (`"how do i get to
+dalaran"` retrieves Dalaran at 1.36 on a single term) and also the whole problem. Measured on the
+shipping corpus, before this gate existed:
+
+```
+"my arms are killing me"                      → Battleground Rules      0.48
+"i work in fire safety"                       → Midsummer Fire Festival 0.57
+"there was a fire down the street last night" → Razorfen Downs          0.50
+```
+
+No threshold separates those from real questions — they outscore `"where do i train
+blacksmithing"` (0.60). What separates them is that each hit exactly **one** authored handle, and
+that handle was a word doing ordinary English duty.
+
+So `hs_rag.cpp` gates on handles, independently of score. An entry is returned only when the
+query:
+
+- hit a **title or keyword** term (never prose — Rule 6) that is **not** on
+  `IsAmbiguousTerm`'s list, **or**
+- hit **two** handles of any kind — which is what keeps `"should i go cat or bear"` working,
+  since neither word identifies anything alone but the pair plainly does.
+
+`IsAmbiguousTerm` holds two kinds of word and treats them identically: ordinary English that is
+also a retrieval handle (`holy`, `arms`, `fire`, `down`), and spec words or abbreviations shared
+by more than one class (`frost` is mage and death knight, `restoration` is druid and shaman,
+`prot` is warrior and paladin, `bm` is Beast Mastery *and* Black Morass). Corpus IDF cannot find
+the first kind — it measures rarity **in this corpus**, not in English, and `blacksmithing`
+and `holy` sit at the same IDF here — so the list has to be authored.
+
+**Grow that list only from a measured collision.** A word added to it loses the ability to answer
+on its own. Generic fantasy nouns (`light`, `storm`, `dark`) were tried and deliberately left
+off: none produced a false positive, and `"where is the dark portal"` needs `dark` pulling its
+weight. [`Tests/test_hs_rag_ambiguity.cpp`](../../Tests/test_hs_rag_ambiguity.cpp) pins both
+directions and is the file to run after any edit to the list — its section 3 exists
+specifically to catch a real question going quiet.
+
+Being listed costs an entry nothing when the query also carries a real handle: `"shadow priest"`
+(1.16), `"holy paladin"` (1.15), `"hows blood furnace"` (0.95) and `"is the blood queen hard"`
+(0.87) all resolve normally.
 
 ## Why the scoring looks like this
 

@@ -182,7 +182,12 @@ namespace
         return true;
     }
 
-    // The one place every trigger converges: ceiling, event budget,
+    // Defined below, next to NearbyBots, since it is the same kind of scan;
+    // declared here because FireEvent is the only caller and reads better
+    // before the helpers it uses.
+    bool RealPlayerInSayRange(Player* origin);
+
+    // The one place every trigger converges: ceiling, event budget, audience,
     // candidate assembly, arbitration, dispatch.
     //
     // `origin` is whoever the event happened around: the player who died,
@@ -213,6 +218,16 @@ namespace
         // the thing players notice (Claude/archive/PLAN-ARBITER.md §8).
         if (!Hs_EventBucketTake())
             return;
+
+        // Audience gate, /say only: party and raid carry their own. Refunds
+        // the token it just spent -- nothing was ever going to be heard, so
+        // this must not cost the budget the way a real reaction does (the
+        // same reasoning as the empty-candidates refund below).
+        if (channel == HsReplyChannel::Say && !RealPlayerInSayRange(origin))
+        {
+            Hs_EventBucketRefund();
+            return;
+        }
 
         std::vector<HsEventCandidate> candidates;
         std::vector<Player*>          bots;
@@ -268,7 +283,9 @@ namespace
             bool admitted = Hs_TryEnqueue(candidates[index].botGuid, bot->GetName(),
                 origin->GetGUID().GetRawValue(), origin->GetName(), channel,
                 candidates[index].trigger, bot->IsInCombat(), bot->GetLevel(), rpgStatus,
-                topicGate, /*isFollowUp=*/false, /*isEvent=*/true);
+                topicGate, /*isFollowUp=*/false, /*isEvent=*/true,
+                HsChannelKind::Trade, /*chainScopeId=*/0, /*chainSeq=*/0,
+                /*triggerIsStateLine=*/true);
 
             if (admitted)
                 g_EventsFiredThisSession.fetch_add(1);
@@ -309,6 +326,47 @@ namespace
             found.push_back(candidate);
         }
         return found;
+    }
+
+    // Is there a real player close enough to read a /say line from here?
+    //
+    // Events had no audience test of any kind before 2026-09-13, and /say is
+    // the one channel where that matters: a party or raid reaction has the
+    // group as its audience by construction, but a solo death fires wherever
+    // the bot happened to die. On the test realm that was 103 of 333 logged
+    // reactions -- roughly a third of everything the module said all day --
+    // and almost none of it had a human within a hundred yards. Each one
+    // still cost an LLM call and a token from the event bucket, so the
+    // budget meant to cover reactions players actually witness was being
+    // spent on an empty hillside.
+    //
+    // Unconditional rather than a config key: a line nobody can hear has no
+    // value at any setting, which is not true of the ambient surfaces that
+    // do give the operator an Ambient.RequireRealPlayer switch.
+    //
+    // Cost is bounded by the event token bucket, not by how often things die
+    // -- the caller spends a token first, so this walk runs at most
+    // Events.Bucket.RepliesPerMinute times a minute.
+    bool RealPlayerInSayRange(Player* origin)
+    {
+        for (auto const& itr : ObjectAccessor::GetPlayers())
+        {
+            Player* candidate = itr.second;
+            if (!candidate || candidate == origin || !candidate->IsInWorld())
+                continue;
+            // An excluded bot is not a real player: the same three-way
+            // distinction hs_ambient.cpp's scan documents. Hs_IsBot alone
+            // would be enough here, but reading it this way keeps the two
+            // scans saying the same thing.
+            if (Hs_IsBot(candidate))
+                continue;
+            if (candidate->GetTeamId() != origin->GetTeamId())
+                continue; // opposing faction can't read /say
+            if (!candidate->IsWithinDistInMap(origin, g_HsSayDistance))
+                continue;
+            return true;
+        }
+        return false;
     }
 }
 
@@ -580,6 +638,16 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
 void HsEventPvpKillHandler::OnPlayerPVPKill(Player* killer, Player* killed)
 {
     if (!g_HsEnable || !killer || !killed || !EligibleBot(killer))
+        return;
+
+    // The core reaches this hook with killer == killed often enough to
+    // matter: 18 of ~40 killing-blow rows in hside_chat_log on 2026-09-13
+    // were a bot told it had killed itself ("You have just killed
+    // Azaedrine in a fight." delivered to Azaedrine), which is the single
+    // most obviously-fake line the module has produced. Guarded on GUID
+    // rather than pointer identity so a re-resolved Player* for the same
+    // character is caught too.
+    if (killer->GetGUID() == killed->GetGUID())
         return;
 
     std::vector<HsEventActor> actors;

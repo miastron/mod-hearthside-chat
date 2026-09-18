@@ -779,9 +779,17 @@ HearthsideChat.Channel.Trade.MaxCandidates = 8
 #     Description: General channel -- casual zone chatter. Resolved per
 #                  zone, so a bot's audience is only the other players
 #                  standing in the same zone.
-#     Default:     corpus / 3 / 8
+#
+#                  RatePerMin dropped 3 -> 1 on 2026-09-13 (operator read
+#                  from the live realm): 3/min is 180 lines an hour into a
+#                  channel a player sits in all session, which reads as a
+#                  busier General than a real one. Real General chat is
+#                  bursty and mostly quiet, and the module has no burst
+#                  shape to spend a higher rate on -- so the honest setting
+#                  is the low steady one.
+#     Default:     corpus / 1 / 8
 HearthsideChat.Channel.General.MaxTier = corpus
-HearthsideChat.Channel.General.RatePerMin = 3
+HearthsideChat.Channel.General.RatePerMin = 1
 HearthsideChat.Channel.General.MaxCandidates = 8
 
 # HearthsideChat.Channel.LookingForGroup.MaxTier / .RatePerMin / .MaxCandidates

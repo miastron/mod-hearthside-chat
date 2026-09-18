@@ -379,9 +379,29 @@ namespace
 
         std::string rag = Hs_RagContextForKeys(RagKeysFor(bucket), g_HsRagGeneratorMaxChars,
                                                kHsRagGeneratorPrefix);
+        char const* how = "keyed";
+
         if (rag.empty())
+        {
             rag = Hs_RagContextFor(bucket.tagValueLabel, 1, g_HsRagMinScore,
                                    g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+            how = "scored-fallback";
+        }
+
+        // Whether a generation prompt actually carried ground truth was the
+        // one thing the log could not answer, which made "the generator is
+        // producing vague filler" impossible to diagnose: an ungrounded
+        // prompt and a grounded one the model ignored read identically in
+        // the output. Logged per bucket rather than per cycle because the
+        // keyed lookup succeeds or misses *per label*, and a label that
+        // misses is exactly the case worth seeing (it falls through to the
+        // scored pass, which has a threshold and can legitimately return
+        // nothing).
+        LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator RAG: bucket {}/{} -> {} [{}]",
+                 bucket.category, bucket.tagValueLabel,
+                 rag.empty() ? std::string("NO BLOCK")
+                             : Hs_RagBlockLeadTitle(rag, kHsRagGeneratorPrefix),
+                 how);
 
         return rag.empty() ? "" : " " + rag;
     }
@@ -397,6 +417,13 @@ namespace
 
         std::string rag = Hs_RagContextRandom(urand(0, 0xFFFFFF), g_HsRagGeneratorMaxChars,
                                               kHsRagGeneratorPrefix);
+
+        // "NO BLOCK" here means the table is empty, not that nothing scored:
+        // the random draw has no threshold to miss.
+        LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator RAG: untagged draw -> {} [random]",
+                 rag.empty() ? std::string("NO BLOCK")
+                             : Hs_RagBlockLeadTitle(rag, kHsRagGeneratorPrefix));
+
         return rag.empty() ? "" : " " + rag;
     }
 
@@ -447,121 +474,118 @@ namespace
         if (requiresPlaceholder)
             prompt += "\nPlaceholder: required";
 
-        prompt += bucket.channel.empty()
-            ? " Write exactly ONE short line, the way a real player would actually type it in "
-              "/say or general chat, not narration or descriptive prose: a concrete opinion, "
-              "plan, small win, joke, or gripe about actual gameplay (a quest, a fight, gear, a "
-              "class/spec choice, grouping, professions, travel time) -- mix tones, don't "
-              "default to complaining -- not a question, not addressed to anyone, first person."
-            : BroadcastChannelPromptIntro(bucket.channel);
+        // Everything from here on is appended on its OWN LINE, so the tag
+        // block above terminates exactly as it does in every training row.
+        // It used to be welded onto the last tag line ("Zone: Dragonblight
+        // Write exactly ONE short line...") -- the tag never ended, so even
+        // the part of the prompt that was in the trained shape wasn't.
+        std::string body;
 
-        // The style pass (hs_style.cpp) applies typo rate, casing, and a fixed
-        // 18-word abbreviation dictionary (you->u, because->bc, okay->k, ...)
-        // per delivering bot at *delivery* time, keyed off that bot's `care`.
-        // Writing those same substitutions into the stored line here would
-        // double them up and freeze in one bot's treatment for every bot that
-        // ever delivers this row -- the same reasoning
-        // `Claude/finetune/_FORMAT.md` R13 applies to the hand-authored
-        // reactive dataset. Real chat vocabulary outside that dictionary
-        // (gg, lfg, ngl, wtb, brb, idk, same, oof, ...) is not something the
-        // style pass adds, so it belongs in the line itself or the register
-        // never shows up at all -- that's R6's other half.
-        prompt +=
-            " Never describe scenery for its own sake (no 'the way the "
-            "light...', no calling something peaceful/breathtaking/beautiful) -- if a place "
-            "comes up, talk about what's actually happening there for a player, not what it "
-            "looks like. Never compare to how things usually are or used to be ('more than "
-            "usual', 'lately', 'these days', 'still') -- this line is written once and reused "
-            "for any player at any time, so it can't reference a real trend. No markdown, no "
-            "emoji, no quotation marks around the line itself. Fragments and real chat "
-            "vocabulary are welcome (gg, lfg, ngl, wtb, pst, idk, same, oof, tbh) -- but spell "
-            "words out in full (write 'you'/'because'/'okay', not 'u'/'bc'/'k'): a separate "
-            "pass abbreviates per player at delivery, so doing it here would double up.";
+        // The channel branch keeps its instruction prose. Unlike the rules
+        // below it carries a correctness constraint the gate cannot check
+        // (a broadcast line is replayed in every zone, so it may not name a
+        // place or say "here"), and the shape probe never exercised a
+        // channel bucket. Measure before removing it: Tests/generator_shape_probe.py
+        // with a channel bucket added, scored the same way.
+        if (!bucket.channel.empty())
+            body += BroadcastChannelPromptIntro(bucket.channel);
 
-        if (!bucket.tagValueLabel.empty())
-        {
-            if (bucket.tagColumn == "zone_tag")
-                prompt += " Write this one as something a player currently in " + bucket.tagValueLabel +
-                          " would say about being there -- not a description of the zone itself.";
-            else if (bucket.tagColumn == "level_band_tag")
-                prompt += " Write this one as something a player around the " + bucket.tagValueLabel +
-                          " level range would say.";
-            else
-                prompt += " Write this one as something a " + bucket.tagValueLabel + " player specifically would say.";
-
-            // Ground the bucket in what is actually true of its subject
-            // (hs_rag.h). The two rules above are not the same kind of rule,
-            // and grounding changed only one of them.
-            //
-            // "Never describe scenery" was a workaround: with no ground truth
-            // the only safe thing to say about a place was what it looked
-            // like, so a zone_tag bucket produced lines that could have been
-            // about anywhere. The rule stays -- scenery is still not what a
-            // player talks about -- but it is no longer the constraint it was,
-            // because the zone's own entry is now in the prompt and the model
-            // can be concrete about the Wrathgate questline in Dragonblight or
-            // the Argent Tournament dailies in Icecrown instead. That is the
-            // whole point of tagging a bucket by zone, and it is why the
-            // hand-authored zone rows in base/hside_corpus.sql were rewritten:
-            // they were authored under the old constraint, and the generator
-            // samples them as its tone reference, so a scenery row here now
-            // teaches against the entry sitting next to it in the same prompt.
-            //
-            // "Never reference a trend" is not a workaround and grounding does
-            // not relax it. A stored row is replayed for any player at any
-            // time, so "lately" can never be true of the moment it is said in.
-            //
-            // Generation is the safest place in the module to inject
-            // retrieval, which is why it is on by default while the reactive
-            // path is the knob an operator turns second: a wrong paragraph
-            // here yields a candidate that still has to clear
-            // Hs_QualityGate/Hs_PlaceholderDiscipline/Hs_DedupCheck, lands in
-            // hside_corpus tagged with this run's prompt_version, and can be
-            // read back and evicted wholesale before any player sees it. The
-            // same mistake on the reactive path is already in the chat window.
-            //
-            // RagBlockForLabel addresses the entry by key, because the bucket
-            // label is a name the *server* supplied (a zone from kZoneIds, a
-            // class from Hs_ClassNameFor), not a guess from free text: an
-            // address, not a query, so it skips the threshold and its
-            // narrowing margin entirely.
-            //
-            // level_band_tag takes the untagged draw instead: no entry
-            // describes "the 40s", so addressing that label can only miss and
-            // scoring it can only produce a near-miss.
-            prompt += bucket.tagColumn == "level_band_tag" ? RagBlockRandom()
-                                                           : RagBlockForLabel(bucket);
-        }
+        // No instruction prose for the non-channel buckets. It used to spell
+        // out register, length, point of view, the no-markdown/no-emoji rules,
+        // the no-trend rule and the spell-words-out rule on every single
+        // generation call. Measured 2026-09-14 against the tuned checkpoint
+        // (Tests/generator_shape_probe.py, 120 candidates per shape, scored
+        // through this module's own Hs_EvaluateCandidate by
+        // Tests/score_generator_candidates.cpp): dropping all of it took
+        // acceptance from 107/120 to 112/120, left pre-abbreviated words at
+        // 0/120 either way, and left markdown/quote characters at 0. The tune
+        // already holds those rules -- _FORMAT.md R6/R13 trained them -- and
+        // the gate catches the two that matter anyway (references_trend,
+        // markdown_or_quote_chars).
+        //
+        // What is NOT dropped is everything below: the per-call grounding the
+        // weights cannot contain. Tags alone, with no RAG block and no
+        // samples, scored 0/30 on zone-specific facts against 10/30 for this
+        // shape -- byte-matching the training rows exactly would throw
+        // retrieval away, which is the one thing the generator prompt is for.
+        // Retrieved world knowledge, addressed by the bucket's own label.
+        //
+        // RagBlockForLabel addresses the entry by key, because the bucket
+        // label is a name the *server* supplied (a zone from kZoneIds, a
+        // class from Hs_ClassNameFor), not a guess from free text: an
+        // address, not a query, so it skips the threshold and its narrowing
+        // margin entirely. level_band_tag takes the untagged draw instead --
+        // no entry describes "the 40s", so addressing that label can only
+        // miss and scoring it can only produce a near-miss. An untagged
+        // bucket also takes the untagged draw: that is exactly the case that
+        // produced invented vocabulary, because it was the one reaching the
+        // model with no ground truth at all.
+        //
+        // Generation is the safest place in the module to inject retrieval,
+        // which is why it is on by default while the reactive path is the
+        // knob an operator turns second: a wrong paragraph here yields a
+        // candidate that still has to clear Hs_QualityGate/
+        // Hs_PlaceholderDiscipline/Hs_DedupCheck, lands in hside_corpus
+        // tagged with this run's prompt_version, and can be read back and
+        // evicted wholesale before any player sees it. The same mistake on
+        // the reactive path is already in the chat window.
+        if (bucket.tagValueLabel.empty() || bucket.tagColumn == "level_band_tag")
+            body += RagBlockRandom();
         else
-        {
-            // Nothing to address. See Hs_RagContextRandom: an untagged bucket
-            // is exactly the case that produced invented vocabulary, because
-            // it was the one reaching the model with no ground truth at all.
-            prompt += RagBlockRandom();
-        }
+            body += RagBlockForLabel(bucket);
 
         if (requiresPlaceholder)
-            prompt += " This category's lines always include a game placeholder token like "
-                      "%item_link written literally -- yours must include one too.";
+            body += " This category's lines always include a game placeholder token like "
+                    "%item_link written literally -- yours must include one too.";
 
         if (!promptSampleRows.empty())
         {
-            prompt += sampleIsSiblingFallback
+            body += sampleIsSiblingFallback
                 ? " Existing lines from a related bucket in this category (for tone only -- "
                   "yours is for a different case, write something new, not a variation of these):"
                 : " Existing lines already in this exact category (for tone and topic reference "
                   "only -- write something different, not a variation of these):";
             for (auto const& row : promptSampleRows)
-                prompt += "\n- " + row;
+                body += "\n- " + row;
         }
+
+        // The leading space each clause above carries is what used to join it
+        // to the tag line; a newline replaces it, and an all-empty body adds
+        // nothing at all rather than a trailing blank line.
+        while (!body.empty() && body.front() == ' ')
+            body.erase(body.begin());
+        if (!body.empty())
+            prompt += "\n" + body;
 
         return prompt;
     }
 
+    // What one generation attempt did -- 2026-09-14.
+    //
+    // This used to be a bool, and the loop below slept for the full
+    // Generator.QuotaSatisfiedBackoffSeconds (300s by default) on anything
+    // falsy. That conflated two opposite situations: "every quota is
+    // satisfied, there is genuinely nothing to do" and "there is work, and
+    // this one candidate happened to be refused by the gate". The second is
+    // ordinary -- the gate rejects a fair share of candidates by design --
+    // and answering it with a five-minute sleep made generation run in
+    // bursts separated by idle stretches instead of steadily.
+    //
+    // BackendFailed stays on the long backoff deliberately: retrying a dead
+    // or timing-out endpoint every few seconds is the failure mode the
+    // single long sleep was accidentally protecting against, and that
+    // protection should survive being made explicit.
+    enum class HsGenCycle
+    {
+        Added,          // something landed; loop straight back
+        Idle,           // nothing under quota / nothing pending: sleep long
+        Rejected,       // a candidate was produced and refused: retry soon
+        BackendFailed,  // the endpoint did not answer: sleep long, don't hammer it
+    };
+
     // One full attempt: pick an under-quota bucket, generate one candidate,
-    // validate, insert on accept. Returns true only if a row was actually
-    // added: the caller uses that to decide how eagerly to loop back.
-    bool RunOneGenerationCycle()
+    // validate, insert on accept.
+    HsGenCycle RunOneGenerationCycle()
     {
         std::vector<std::pair<HsGenBucket, uint32_t>> buckets = EnumerateBucketsWithCounts();
         std::vector<HsGenBucket> underQuota;
@@ -570,7 +594,7 @@ namespace
                 underQuota.push_back(entry.first);
 
         if (underQuota.empty())
-            return false; // quota satisfied everywhere: caller backs off
+            return HsGenCycle::Idle; // quota satisfied everywhere
 
         HsGenBucket const& bucket = underQuota[urand(0, static_cast<uint32_t>(underQuota.size() - 1))];
 
@@ -595,7 +619,7 @@ namespace
             if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
                     bucket.category, bucket.tagValueLabel, static_cast<int>(result.failure));
-            return false;
+            return HsGenCycle::BackendFailed;
         }
 
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(bucket.category, bucket.tagColumn, bucket.tagValueSql,
@@ -608,7 +632,7 @@ namespace
         if (verdict.accepted)
             g_RowsAddedThisSession.fetch_add(1);
 
-        return verdict.accepted;
+        return verdict.accepted ? HsGenCycle::Added : HsGenCycle::Rejected;
     }
 
     uint32_t ScriptReserveDepthQuery()
@@ -649,8 +673,8 @@ namespace
     // split has to its own trained Mode:/Category: line).
     std::string ScriptSystemPrompt()
     {
-        return Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK"
-            " Making small talk with another player you don't know well. Keep it casual, brief, "
+        return Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK\n"
+            "Making small talk with another player you don't know well. Keep it casual, brief, "
             "one short line at a time -- the way real players actually chat. Stick to general "
             "opinions, feelings, plans, and small talk about the game -- vary the tone, not just "
             "complaints. If you want to mention your own class, level, current zone, or guild, "
@@ -758,7 +782,7 @@ namespace
     // Aborts (returns false, no partial script ever inserted) on the first
     // LLM failure or quality-gate rejection; the caller's backoff already
     // handles retrying later, the same as a failed corpus generation.
-    bool RunOneScriptGenerationCycle()
+    HsGenCycle RunOneScriptGenerationCycle()
     {
         HsLLMConfig cfg;
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
@@ -778,7 +802,7 @@ namespace
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
-                return false;
+                return HsGenCycle::BackendFailed;
             }
 
             HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
@@ -789,7 +813,7 @@ namespace
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
-                return false;
+                return HsGenCycle::Rejected;
             }
 
             turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
@@ -843,7 +867,7 @@ namespace
             LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
-        return true;
+        return HsGenCycle::Added;
     }
 
     // §4.17: a channel variant of the exchange above: shorter (2 turns),
@@ -864,8 +888,8 @@ namespace
         switch (kind)
         {
             case HsChannelKind::Trade:
-                return header + "TRADE"
-                       " Chatting in the Trade channel -- read by the other players who are in a "
+                return header + "TRADE\n"
+                       "Chatting in the Trade channel -- read by the other players who are in a "
                        "city right now -- with another player you don't know well. Keep it casual "
                        "and brief, one short line at a time. Talk about gearing up, professions, "
                        "or prices in general terms -- an offer, a plan, or a gripe, not always a "
@@ -878,8 +902,8 @@ namespace
                        "AI or a game.";
             case HsChannelKind::General:
             default:
-                return header + "GENERAL"
-                       " Chatting in the General channel for the zone you are standing in -- read "
+                return header + "GENERAL\n"
+                       "Chatting in the General channel for the zone you are standing in -- read "
                        "by the other players in that same zone -- with another player you don't "
                        "know well. Keep it casual and brief, one short line at a time -- zone "
                        "flavor, quests, or general opinions about the game -- pride, amusement, "
@@ -894,7 +918,7 @@ namespace
         }
     }
 
-    bool RunOneChannelScriptGenerationCycle(HsChannelKind kind)
+    HsGenCycle RunOneChannelScriptGenerationCycle(HsChannelKind kind)
     {
         HsLLMConfig cfg;
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
@@ -913,7 +937,7 @@ namespace
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
                         i, static_cast<int>(result.failure));
-                return false;
+                return HsGenCycle::BackendFailed;
             }
 
             HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
@@ -924,7 +948,7 @@ namespace
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
                         i, verdict.reason, result.text);
-                return false;
+                return HsGenCycle::Rejected;
             }
 
             turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
@@ -967,7 +991,7 @@ namespace
                 scriptId, channelColumn, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
-        return true;
+        return HsGenCycle::Added;
     }
 
     // Review B2: card generation has absolute priority in GeneratorLoop, and
@@ -1124,11 +1148,11 @@ namespace
     // card_active, and pushes the bot's name into playerbots' recycling-
     // exclusion vectors immediately rather than waiting for the next
     // startup/reload reconcile.
-    bool RunOneCardGenerationCycle()
+    HsGenCycle RunOneCardGenerationCycle()
     {
         PendingCard pending;
         if (!ClaimOnePendingCard(pending))
-            return false;
+            return HsGenCycle::Idle;
 
         HsArchetype archetype = Hs_ArchetypeForBot(pending.botGuid);
         HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(archetype);
@@ -1146,7 +1170,7 @@ namespace
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(voiceResult.failure));
             NoteCardGenerationFailed(pending.botGuid);
-            return false;
+            return HsGenCycle::BackendFailed;
         }
         HsGenVerdict voiceVerdict = Hs_ValidateVoiceBlock(voiceResult.text);
         if (!voiceVerdict.accepted)
@@ -1155,32 +1179,49 @@ namespace
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
                     pending.botGuid, voiceVerdict.reason, voiceResult.text);
             NoteCardGenerationFailed(pending.botGuid);
-            return false;
+            return HsGenCycle::Rejected;
         }
 
-        std::string factsPrompt = Hs_BuildCardFactsPrompt(archetypeInfo.talksAbout, pending.lastKnownLevel,
-                                                            guild.hasGuild, guild.name, guild.className);
-        HsLLMResult factsResult = Hs_CallLLM(cfg, factsPrompt, "", {},
-            "Reply now with only the JSON, all on one line, no line breaks.");
-        if (!factsResult.success || factsResult.text.empty())
+        // Eight short questions, not one JSON document. See hs_identity.h's
+        // HsCardFactAsk: the tuned model returned valid JSON 0 times in 10
+        // here, and one-short-answer-per-prompt is the only shape every
+        // training row has. Costs eight calls per card instead of one, which
+        // this path can afford -- it runs once per bot on the idle generator
+        // thread, behind PendingCardCount(), not on any reply.
+        hs_json facts = hs_json::object();
+        for (uint32_t i = 0; i < kHsCardFactCount; ++i)
         {
-            if (g_HsDebugEnabled)
-                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card facts call failed for bot {} (failure={}).",
-                    pending.botGuid, static_cast<int>(factsResult.failure));
-            NoteCardGenerationFailed(pending.botGuid);
-            return false;
+            HsCardFactAsk const ask = Hs_CardFactAsk(i, archetypeInfo.talksAbout, pending.lastKnownLevel,
+                                                      guild.hasGuild, guild.name, guild.className);
+            if (ask.prompt.empty())
+            {
+                facts[ask.key] = ask.fixed;
+                continue;
+            }
+
+            HsLLMResult fieldResult =
+                Hs_CallLLM(cfg, ask.prompt, "", {}, Hs_CardFactTrigger(), ask.grammar);
+            if (!fieldResult.success || fieldResult.text.empty())
+            {
+                if (g_HsDebugEnabled)
+                    LOG_INFO(kHsLogGenerator,
+                        "[HearthsideChat] Generator: card fact '{}' call failed for bot {} (failure={}).",
+                        ask.key, pending.botGuid, static_cast<int>(fieldResult.failure));
+                NoteCardGenerationFailed(pending.botGuid);
+                return HsGenCycle::BackendFailed;
+            }
+            facts[ask.key] = Hs_NormalizeCardFactValue(i, fieldResult.text);
         }
-        hs_json facts = hs_json::parse(factsResult.text, nullptr, /*allow_exceptions=*/false);
-        HsGenVerdict factsVerdict = facts.is_discarded()
-            ? HsGenVerdict{ false, "not_valid_json" }
-            : Hs_ValidateCardFacts(facts, pending.lastKnownLevel, guild.hasGuild, guild.className);
+
+        HsGenVerdict factsVerdict =
+            Hs_ValidateCardFacts(facts, pending.lastKnownLevel, guild.hasGuild, guild.className);
         if (!factsVerdict.accepted)
         {
             if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card facts rejected for bot {} ({}) -- \"{}\"",
-                    pending.botGuid, factsVerdict.reason, factsResult.text);
+                    pending.botGuid, factsVerdict.reason, facts.dump());
             NoteCardGenerationFailed(pending.botGuid);
-            return false;
+            return HsGenCycle::Rejected;
         }
 
         std::string escapedVoice = voiceResult.text;
@@ -1218,7 +1259,7 @@ namespace
             LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card for bot {} generated and activated.", pending.botGuid);
 
         g_RowsAddedThisSession.fetch_add(1);
-        return true;
+        return HsGenCycle::Added;
     }
 
     void GeneratorLoop()
@@ -1239,21 +1280,34 @@ namespace
             // key (Claude/archive/ISSUES.md's "separate generator reserve or a
             // truncation rule" question, answered as "shared target" for
             // now: easy to split later against live-realm evidence).
-            bool added;
+            HsGenCycle outcome;
             if (PendingCardCount() > 0)
-                added = RunOneCardGenerationCycle();
+                outcome = RunOneCardGenerationCycle();
             else if (ScriptReserveDepthQuery() < g_HsGeneratorScriptsPerPool)
-                added = RunOneScriptGenerationCycle();
+                outcome = RunOneScriptGenerationCycle();
             else if (ChannelScriptReserveDepthQuery(HsChannelKind::Trade) < g_HsGeneratorScriptsPerPool)
-                added = RunOneChannelScriptGenerationCycle(HsChannelKind::Trade);
+                outcome = RunOneChannelScriptGenerationCycle(HsChannelKind::Trade);
             else if (ChannelScriptReserveDepthQuery(HsChannelKind::General) < g_HsGeneratorScriptsPerPool)
-                added = RunOneChannelScriptGenerationCycle(HsChannelKind::General);
+                outcome = RunOneChannelScriptGenerationCycle(HsChannelKind::General);
             else
-                added = RunOneGenerationCycle();
+                outcome = RunOneGenerationCycle();
 
-            if (!added)
-                GeneratorSleep(g_HsGeneratorQuotaSatisfiedBackoffSeconds);
-            // else loop straight back: re-checks idle before the next attempt.
+            switch (outcome)
+            {
+                case HsGenCycle::Added:
+                    // Loop straight back; re-checks idle before the next attempt.
+                    break;
+                case HsGenCycle::Rejected:
+                    // There is still work here, this candidate just missed.
+                    // The poll interval, not the quota backoff -- see
+                    // HsGenCycle's comment for what that conflation cost.
+                    GeneratorSleep(g_HsGeneratorPollIntervalSeconds);
+                    break;
+                case HsGenCycle::Idle:
+                case HsGenCycle::BackendFailed:
+                    GeneratorSleep(g_HsGeneratorQuotaSatisfiedBackoffSeconds);
+                    break;
+            }
         }
     }
 }
@@ -1448,7 +1502,8 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
 
     std::vector<std::string> existingRows = AllRowsInBucket(category, tagColumn, tagValueSql);
 
-    HsGenVerdict verdict = Hs_EvaluateCandidate(candidateText, existingRows, cardGated);
+    HsGenVerdict verdict = Hs_EvaluateCandidate(candidateText, existingRows, cardGated,
+                                                 Hs_CategoryIsResponse(category));
     if (!verdict.accepted)
         return verdict;
 

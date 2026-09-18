@@ -49,6 +49,38 @@ CREATE TABLE IF NOT EXISTS `hside_corpus` (
   KEY `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Makes this file safe to edit, which it was not before 2026-09-13.
+--
+-- UpdateFetcher hashes every file under base/ and re-runs any whose SHA1
+-- changed (Updates.Redundancy = 1, the core default and this realm's
+-- setting), a comment-only edit included. hside_corpus has no UNIQUE key, so
+-- a plain re-apply of the INSERTs below duplicates every seeded row rather
+-- than colliding loudly -- which is why the repo CLAUDE.md has had to treat
+-- this file as frozen once shipped.
+--
+-- Scoped two ways, and both are load-bearing:
+--
+--   generated_at IS NULL -- that column is exactly the hand-authored /
+--   generator-authored split (hs_generator.cpp sets it on insert), so a
+--   re-apply reloads the seed content and leaves accumulated generator rows
+--   alone. base/hside_rag.sql can open with a bare DELETE because nothing
+--   writes to hside_rag at runtime; this table is written to constantly.
+--
+--   name IN (...) -- hside_corpus is seeded by more than one file.
+--   base/hside_corpus_category_ambient_group.sql owns the three ambient_*
+--   categories, and an unscoped DELETE here wipes its 30 rows on re-apply
+--   with no way to get them back: that file's own hash is already tracked,
+--   so UpdateFetcher will never run it again. (Learned the hard way on
+--   2026-09-13 -- the first version of this header did exactly that.) A new
+--   category added below must be added to this list too.
+DELETE FROM `hside_corpus` WHERE `generated_at` IS NULL AND `name` IN (
+  'chat_gripe_general', 'chat_class_banter', 'chat_levelband_musing',
+  'channel_trade_wts', 'channel_general_chat', 'chat_faction_banter',
+  'chat_zone_musing', 'chat_carded_focus',
+  'opener_group_formed', 'opener_rez', 'opener_joint_kill',
+  'opener_dungeon_complete', 'opener_prolonged_proximity'
+);
+
 INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
 -- chat_gripe_general: tag_axis none; unfalsifiable opinions/gripes
 ('chat_gripe_general', 'man this zone has been a grind lately', NULL),
@@ -143,34 +175,51 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- replayed in every zone there is, so the text still has to be phrased as a
 -- general statement (not "here"/"this place"), questions, gripes, nothing
 -- checkable
-('channel_general_chat', 'anyone else think some of these zones are way bigger than the map makes them look'),
-('channel_general_chat', 'feels like professions never get enough love from anybody'),
-('channel_general_chat', 'some questlines really drag once you''re past the halfway point'),
-('channel_general_chat', 'gearing up an alt always takes longer than i remember'),
-('channel_general_chat', 'bag space is never enough, no matter how many bags you buy'),
-('channel_general_chat', 'leveling a second character always goes faster than the first one did'),
-('channel_general_chat', 'some zones just have way better music than others'),
-('channel_general_chat', 'flight paths could really use a rework'),
-('channel_general_chat', 'professions feel like a second job some days'),
-('channel_general_chat', 'some fights just aren''t fun no matter how many times you run them'),
-('channel_general_chat', 'funny how one class always ends up over-represented in every group'),
-('channel_general_chat', 'never really understood why some zones get so little traffic'),
+--
+-- Rewritten 2026-09-13. The originals were all true and none of them said
+-- anything: "always another goal worth chasing in this game", "still
+-- surprises me how much content there is to get through", "feels like
+-- there's always something going on somewhere on the server". Every one
+-- could have been typed about any MMO ever made, which is what made them
+-- read as fake -- a real player complains about a *specific* thing. The
+-- zone-agnostic constraint above is what pushed them that way: with "here"
+-- off the table the easy move is to go abstract. The fix is to be concrete
+-- about the parts of the game that are the same in every zone (travel,
+-- bags, professions, repair bills, group composition) instead.
+--
+-- Second constraint, new: these rows are hs_generator.cpp's tone reference
+-- for this bucket, so a vague row here teaches the model to generate more
+-- vague rows. Every line below also passes the generator's own quality gate
+-- (hs_gen_validate.cpp) -- no reply-shaped openers, no trend claims -- so
+-- the sample never contradicts the rules the candidate is judged against.
+('channel_general_chat', 'escort quests where the npc walks slower than you do are a special kind of pain'),
+('channel_general_chat', 'the repair bill after a bad night costs more than the run brought in'),
+('channel_general_chat', 'half my bag space is quest items i am scared to vendor'),
+('channel_general_chat', 'riding skill costs more than the mount and nobody warns you'),
+('channel_general_chat', 'flight paths route you through three stops to go one zone over'),
+('channel_general_chat', 'dual spec paid for itself the first week i had it'),
+('channel_general_chat', 'engineering is a money pit and i would take it again on every alt'),
+('channel_general_chat', 'cooking dailies are the only dailies i actually look forward to'),
+('channel_general_chat', 'fishing is either the most relaxing thing in the game or the most boring'),
+('channel_general_chat', 'every group needs a tank and somehow nobody ever wants to be one'),
+('channel_general_chat', 'elite quests dropped in the middle of a zone chain stop a solo run dead'),
+('channel_general_chat', 'corpse runs teach you the map faster than any guide ever did'),
 -- General opinions/banter with nothing tied to a zone or place. These were
 -- authored for a separate channel_world_chat category; 3.3.5a has no World
 -- channel, so they were folded in here rather than discarded: they already
 -- satisfy this category's "true in any zone" rule.
-('channel_general_chat', 'feels like there''s always something going on somewhere on the server'),
-('channel_general_chat', 'never gets old finding a new questline to dig into'),
-('channel_general_chat', 'some days this game just clicks and other days it just doesn''t'),
-('channel_general_chat', 'hard to beat a group that actually knows what it''s doing'),
-('channel_general_chat', 'still surprises me how much content there is to get through'),
-('channel_general_chat', 'some builds just feel better than others no matter what the numbers say'),
-('channel_general_chat', 'never underestimate a good addon setup'),
-('channel_general_chat', 'always another goal worth chasing in this game'),
-('channel_general_chat', 'some nights everything just goes right'),
-('channel_general_chat', 'funny how a slow session can turn into a good one out of nowhere'),
-('channel_general_chat', 'still finding mechanics in this game that surprise me'),
-('channel_general_chat', 'always somebody grinding something a little unusual');
+('channel_general_chat', 'heirlooms make leveling an alt feel like cheating in the best way'),
+('channel_general_chat', 'emblems pile up faster than the vendors give me reasons to spend them'),
+('channel_general_chat', 'glyphs are the cheapest upgrade in the game and half the server skips them'),
+('channel_general_chat', 'the hearthstone cooldown is always five minutes longer than i need it to be'),
+('channel_general_chat', 'gathering nodes vanish the second somebody else lands next to you'),
+('channel_general_chat', 'resist gear sits in my bank taking up room for one fight a patch'),
+('channel_general_chat', 'a good tank makes a pug feel like a guild run'),
+('channel_general_chat', 'nothing humbles you like pulling two patrols at once'),
+('channel_general_chat', 'the auction house cut always stings more on a slow sale'),
+('channel_general_chat', 'ganking a lowbie says more about the ganker than the lowbie'),
+('channel_general_chat', 'summoning stones have saved more raid nights than any buff'),
+('channel_general_chat', 'quest text tells you exactly where to go and i end up running the wrong way anyway');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- opener_*: fired only by hs_opener.cpp's shared-context triggers

@@ -57,6 +57,21 @@ namespace
     constexpr uint32_t kSelfCorrectionMinDelaySeconds = 2;
     constexpr uint32_t kSelfCorrectionMaxDelaySeconds = 5;
 
+    // An event reaction has no player line to answer, so it needs the same
+    // shape hs_engagement.cpp already uses for a follow-up: the trigger slot
+    // carries an instruction, and the thing being reacted to is stated as a
+    // fact in personaLine with the rest of the bot's state.
+    //
+    // Before 2026-09-13 the event text went in as the trigger -- the slot a
+    // player's chat message occupies -- and the model read it as something
+    // somebody had said *to* the bot. 310 of the 333 rows in hside_chat_log
+    // that day were event reactions, and they came back as conversational
+    // agreement with a statement nobody had made: "that", "i meant that",
+    // "yes, that's the last of it", "no, i was in a guild, and i'm out of
+    // one". The event text itself was fine; it was in the wrong slot.
+    const std::string kEventReactionTrigger =
+        "Say one short line reacting to what just happened. Don't restate it.";
+
     // A short, factual line describing what the bot is actually doing right
     // now (mod-playerbots' own NewRpgStatus), appended to personaLine in
     // WorkerLoop below so a free-generating reply can't contradict
@@ -150,6 +165,7 @@ namespace
         HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
         bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h): no score, no history write
         bool         isEvent;     // event reaction (hs_event.h): as isFollowUp, plus no first-meeting record
+        bool         triggerIsStateLine = false; // prompt is a synthetic state line, not an utterance (hs_queue.h)
         HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
         uint64_t     chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop
         uint32_t     chainSeq     = 0; // the scope generation this hop was issued under
@@ -700,8 +716,25 @@ namespace
                 // risk. Only when scored retrieval found nothing, so a
                 // question about something specific is never displaced by the
                 // room the bot happens to be standing in.
+                char const* how = "scored";
+
                 if (ragLine.empty() && !req.topicGate.instanceName.empty())
+                {
                     ragLine = Hs_RagContextForKeys({ req.topicGate.instanceName }, g_HsRagMaxChars);
+                    how     = "instance-keyed";
+                }
+
+                // The same question the generator side now answers: an empty
+                // block and a block the model ignored are indistinguishable
+                // in the delivered line. "how do i play frost mage" retrieving
+                // Frost Mage at 1.09 and still producing a generic reply is a
+                // model problem; the same reply with NO BLOCK is a retrieval
+                // problem, and they want opposite fixes.
+                LOG_INFO(kHsLogChat, "[HearthsideChat] Reply RAG: bot {} <- \"{}\" -> {} [{}]",
+                         req.botName, req.prompt,
+                         ragLine.empty() ? std::string("NO BLOCK")
+                                         : Hs_RagBlockLeadTitle(ragLine, kHsRagReplyPrefix),
+                         how);
 
                 if (!ragLine.empty())
                     personaLine += "\n" + ragLine;
@@ -739,6 +772,25 @@ namespace
                     personaLine += "\n" + experienceLine;
             }
 
+            // The event fact, and the trigger the model actually answers.
+            // See kEventReactionTrigger above for why these are two slots
+            // rather than one.
+            //
+            // Appended after the experience block rather than before it:
+            // that block is last because it changes as the bot plays, and
+            // this one changes faster still -- it is different on every
+            // single event -- so it belongs at the very end of the prefix,
+            // where it costs the prompt cache nothing above it.
+            //
+            // req.prompt stays the event text for everything else that
+            // reads it: RAG scores against it (the block above, which
+            // relies on an event naming its boss or item precisely so
+            // retrieval can find it) and hside_chat_log records it as the
+            // trigger, which is what makes a debug row readable.
+            std::string const& modelTrigger = req.triggerIsStateLine ? kEventReactionTrigger : req.prompt;
+            if (req.triggerIsStateLine)
+                personaLine += "\n" + req.prompt;
+
             // One snapshot per request instead of six reads of the live
             // globals. This is the worker thread; `.reload config` reassigns
             // those strings from the world thread, and the systemPrompt below
@@ -764,7 +816,7 @@ namespace
             std::vector<HsHistoryTurn> history = HistorySnapshot(req.botGuid, req.senderGuid);
 
             g_ReactiveWorkerBusy.store(true);
-            HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, req.prompt);
+            HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, modelTrigger);
             g_ReactiveWorkerBusy.store(false);
 
             RecordOutcome(result.success);
@@ -1056,7 +1108,8 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
-                    HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq)
+                    HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq,
+                    bool triggerIsStateLine)
 {
     // 1. Token bucket. Taken atomically (review B7) and refunded on every
     // later bail-out, so the bucket can never be driven negative by two
@@ -1142,6 +1195,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
             req.topicGate  = topicGate;
             req.isFollowUp = isFollowUp;
             req.isEvent    = isEvent;
+            req.triggerIsStateLine = triggerIsStateLine;
             req.channelKind  = channelKind;
             req.chainScopeId = chainScopeId;
             req.chainSeq     = chainSeq;

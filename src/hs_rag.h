@@ -84,6 +84,20 @@ size_t Hs_RagEntryCount();
 // best first. Ties break on id so the prompt prefix stays byte-stable
 // across identical questions, which matters for the backend's prefix cache.
 //
+// Clearing `minScore` is necessary but not sufficient: an entry must also be
+// *eligible*, which is a separate question from how it scores and is not
+// expressible as a threshold. Scoring normalizes by query mass, so one
+// matched term in a short sentence scores high -- that is what makes "how do
+// i get to dalaran" work at 1.36 on a single term, and it is also why "my
+// arms are killing me" retrieved Battleground Rules at 0.48 and "a fire down
+// the street" retrieved Razorfen Downs at 0.50. Every measured false positive
+// of that shape hit exactly one authored handle; every genuine hit had either
+// two handles or one that means something on its own.
+//
+// So an entry is returned only when the query hit a handle (title or keyword,
+// never prose) that is not IsAmbiguousTerm, or hit two handles of any kind.
+// Tests/test_hs_rag_ambiguity.cpp pins both directions.
+//
 // Both bounds are caller-supplied rather than read from hs_config.h here,
 // for the same reason HsStyleContext's fields are: hs_config.h pulls in
 // AzerothCore's ScriptMgr.h and would end this file's standalone testability.
@@ -185,5 +199,18 @@ std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t 
 // calls. Returns "" only when the table is empty.
 std::string Hs_RagContextRandom(uint32_t selector, uint32_t maxChars,
                                 const std::string& prefix = kHsRagReplyPrefix);
+
+// The lead entry's title inside an already-formatted block, for logging.
+// Returns "" when `block` is empty or does not start with `prefix`.
+//
+// It parses the block rather than taking the hits because no production
+// caller has the hits: the one-shot accessors above never let a pointer
+// escape their lock, which is the whole reason they exist. So a caller that
+// wants to say *what* it retrieved has only the string.
+//
+// Only the first title, deliberately -- a two-entry block formats as
+// "Title -- content Title -- content", which cannot be split back apart
+// unambiguously, and the lead hit is the one worth naming in a log anyway.
+std::string Hs_RagBlockLeadTitle(const std::string& block, const std::string& prefix);
 
 #endif // MOD_HS_RAG_H

@@ -1,0 +1,212 @@
+[
+  {
+    "id": "spec_arms_warrior",
+    "title": "Arms Warrior",
+    "content": "Arms is the two-handed warrior tree, built around Mortal Strike and the healing debuff it leaves. Overpower punishes a target that dodges and Rend bleeds it, while Sweeping Strikes spreads damage across a pack. Bladestorm is the deep talent: a channelled spin that hits everything nearby and cannot be interrupted by most crowd control.",
+    "keywords": ["arms warrior", "arms spec", "mortal strike", "bladestorm", "sweeping strikes", "overpower", "two handed warrior"],
+    "tags": ["spec", "warrior"]
+  },
+  {
+    "id": "spec_fury_warrior",
+    "title": "Fury Warrior",
+    "content": "Fury dual-wields and runs on Bloodthirst and Whirlwind, spending rage about as fast as it builds. Titan's Grip is the tree's signature: it allows two-handed weapons in both hands at a hit penalty. Death Wish and Rampage push damage higher, the first by taking more of it.",
+    "keywords": ["fury warrior", "fury spec", "bloodthirst", "titans grip", "death wish", "rampage", "dual wield warrior"],
+    "tags": ["spec", "warrior"]
+  },
+  {
+    "id": "spec_protection_warrior",
+    "title": "Protection Warrior",
+    "content": "Protection is the warrior tanking tree. Shield Slam and Devastate hold threat, and Shockwave stuns everything in a cone ahead of you. Last Stand and Spell Reflection are the survival cooldowns, and Vigilance hands threat back from whoever is pulling too much.",
+    "keywords": ["protection warrior", "prot warrior", "warrior tank", "shield slam", "devastate", "shockwave", "vigilance", "spell reflection"],
+    "tags": ["spec", "warrior"]
+  },
+  {
+    "id": "spec_holy_paladin",
+    "title": "Holy Paladin",
+    "content": "Holy is the paladin healing tree, built on Holy Light and Flash of Light with Holy Shock as the instant. Beacon of Light defines it: heals landed on one target are duplicated onto the beacon, so healing the tank also heals whoever is beaconed. Sacred Shield and Divine Favor fill out the kit, and it runs on mana like every paladin spec.",
+    "keywords": ["holy paladin", "holy pally", "paladin healer", "beacon of light", "holy shock", "holy light", "flash of light", "sacred shield"],
+    "tags": ["spec", "paladin"]
+  },
+  {
+    "id": "spec_protection_paladin",
+    "title": "Protection Paladin",
+    "content": "Protection is the paladin tanking tree and the best in the game at holding several targets at once. Avenger's Shield pulls at range, Hammer of the Righteous strikes three targets, and Holy Shield turns blocked hits into damage. Ardent Defender and Righteous Fury are what keep the plate standing.",
+    "keywords": ["protection paladin", "prot paladin", "prot pally", "paladin tank", "avengers shield", "hammer of the righteous", "holy shield", "ardent defender"],
+    "tags": ["spec", "paladin"]
+  },
+  {
+    "id": "spec_retribution_paladin",
+    "title": "Retribution Paladin",
+    "content": "Retribution is the paladin melee damage tree. Crusader Strike and Divine Storm are the core, and Divine Storm hits everything around you while healing part of the group. Seal of Command and Repentance come from this tree too.",
+    "keywords": ["retribution paladin", "ret paladin", "ret pally", "crusader strike", "divine storm", "seal of command", "repentance"],
+    "tags": ["spec", "paladin"]
+  },
+  {
+    "id": "spec_beast_mastery_hunter",
+    "title": "Beast Mastery Hunter",
+    "content": "Beast Mastery pushes the pet as far as it will go: extra pet talent points, exotic pets no other tree can tame, and Bestial Wrath as a burst window. The Beast Within extends that window to the hunter as well. Kill Command and Intimidation come from here, and it is the easiest hunter tree to level alone with.",
+    "keywords": ["beast mastery", "bm hunter", "beast mastery hunter", "bestial wrath", "kill command", "the beast within", "exotic pet", "pet hunter"],
+    "tags": ["spec", "hunter"]
+  },
+  {
+    "id": "spec_marksmanship_hunter",
+    "title": "Marksmanship Hunter",
+    "content": "Marksmanship is the ranged damage tree, built on Aimed Shot and Chimera Shot. Trueshot Aura raises the group's attack power, Silencing Shot interrupts casters, and Readiness resets the hunter's shot cooldowns outright. It leans on the hunter rather than the pet.",
+    "keywords": ["marksmanship hunter", "mm hunter", "marksman hunter", "aimed shot", "chimera shot", "silencing shot", "trueshot aura", "readiness"],
+    "tags": ["spec", "hunter"]
+  },
+  {
+    "id": "spec_survival_hunter",
+    "title": "Survival Hunter",
+    "content": "Survival is the traps-and-fire tree. Explosive Shot is its core attack and Lock and Load refunds it from traps and periodic damage. Black Arrow and Wyvern Sting come from here, and the tree raises the whole group's melee critical strike chance.",
+    "keywords": ["survival hunter", "sv hunter", "explosive shot", "lock and load", "black arrow", "wyvern sting"],
+    "tags": ["spec", "hunter"]
+  },
+  {
+    "id": "spec_assassination_rogue",
+    "title": "Assassination Rogue",
+    "content": "Assassination is the poison and dagger tree, built on Mutilate, which strikes with both weapons at once and requires daggers. Envenom spends combo points as poison damage, Hunger For Blood ramps it up, and Cold Blood guarantees a critical strike. It is at its best on a single target.",
+    "keywords": ["assassination rogue", "mutilate rogue", "mutilate", "envenom", "cold blood", "hunger for blood", "poison rogue", "dagger rogue"],
+    "tags": ["spec", "rogue"]
+  },
+  {
+    "id": "spec_combat_rogue",
+    "title": "Combat Rogue",
+    "content": "Combat is the steady damage tree and the one indifferent to which weapons you carry. Sinister Strike builds combo points, Blade Flurry adds a second target, and Adrenaline Rush floods energy. Killing Spree is the deep talent: the rogue teleports between nearby targets, swinging at each.",
+    "keywords": ["combat rogue", "sinister strike", "blade flurry", "adrenaline rush", "killing spree"],
+    "tags": ["spec", "rogue"]
+  },
+  {
+    "id": "spec_subtlety_rogue",
+    "title": "Subtlety Rogue",
+    "content": "Subtlety is the stealth and burst tree and the strongest rogue tree in PvP. Shadowstep closes from behind, Hemorrhage replaces the standard builder, and Preparation resets the escape cooldowns. Shadow Dance is the deep talent: a window where stealth-only abilities work in the open.",
+    "keywords": ["subtlety rogue", "sub rogue", "shadow dance", "shadowstep", "hemorrhage", "premeditation", "stealth rogue"],
+    "tags": ["spec", "rogue"]
+  },
+  {
+    "id": "spec_discipline_priest",
+    "title": "Discipline Priest",
+    "content": "Discipline heals by preventing damage rather than repairing it: Power Word: Shield absorbs the hit before it lands and Rapture returns mana when the shield breaks. Penance is the tree's signature, a channelled three-tick heal that can also be aimed at an enemy. Pain Suppression and Power Infusion are the cooldowns that earn it a raid slot.",
+    "keywords": ["discipline priest", "disc priest", "penance", "power word shield", "pain suppression", "power infusion", "rapture", "shield healer"],
+    "tags": ["spec", "priest"]
+  },
+  {
+    "id": "spec_holy_priest",
+    "title": "Holy Priest",
+    "content": "Holy is the priest throughput tree, built for keeping several people up at once. Circle of Healing hits a target's whole party, Prayer of Mending bounces to whoever takes damage next, and Lightwell is the tree's much-ignored free heal. Guardian Spirit is the emergency button: it prevents one death outright.",
+    "keywords": ["holy priest", "circle of healing", "guardian spirit", "prayer of mending", "lightwell", "priest healer"],
+    "tags": ["spec", "priest"]
+  },
+  {
+    "id": "spec_shadow_priest",
+    "title": "Shadow Priest",
+    "content": "Shadow is the priest damage tree and it is played entirely in Shadowform. Shadow Word: Pain, Vampiric Touch and Mind Flay keep damage rolling while Mind Blast fills the gaps. Vampiric Embrace and Vampiric Touch feed health and mana back to the group, which is most of why raids bring one. Dispersion is the escape and mana cooldown.",
+    "keywords": ["shadow priest", "shadowform", "mind flay", "vampiric touch", "vampiric embrace", "shadow word pain", "mind blast", "dispersion"],
+    "tags": ["spec", "priest"]
+  },
+  {
+    "id": "spec_blood_death_knight",
+    "title": "Blood Death Knight",
+    "content": "Blood is the self-healing death knight tree, and in this expansion it is a damage tree that happens to be very hard to kill. Heart Strike is the core strike, Vampiric Blood and Rune Tap keep it standing, and Dancing Rune Weapon summons a copy of the weapon to fight alongside it. It is the usual choice for levelling alone.",
+    "keywords": ["blood death knight", "blood dk", "heart strike", "vampiric blood", "dancing rune weapon", "rune tap"],
+    "tags": ["spec", "death knight"]
+  },
+  {
+    "id": "spec_frost_death_knight",
+    "title": "Frost Death Knight",
+    "content": "Frost is the dual-wield and burst death knight tree. Obliterate and Frost Strike are the core, Howling Blast hits everything around the target, and Killing Machine and Rime make those strikes free or guaranteed to crit. Hungering Cold freezes everything nearby. It also tanks perfectly well.",
+    "keywords": ["frost death knight", "frost dk", "obliterate", "howling blast", "frost strike", "killing machine", "hungering cold"],
+    "tags": ["spec", "death knight"]
+  },
+  {
+    "id": "spec_unholy_death_knight",
+    "title": "Unholy Death Knight",
+    "content": "Unholy is the disease and pet tree. Scourge Strike scales with the diseases already on the target and Unholy Blight spreads damage around it. Master of Ghouls makes the ghoul a permanent pet rather than a short summon, Summon Gargoyle is the deep cooldown, and Bone Shield keeps the death knight alive while it works.",
+    "keywords": ["unholy death knight", "unholy dk", "scourge strike", "summon gargoyle", "bone shield", "unholy blight", "permanent ghoul"],
+    "tags": ["spec", "death knight"]
+  },
+  {
+    "id": "spec_elemental_shaman",
+    "title": "Elemental Shaman",
+    "content": "Elemental is the caster shaman tree. Lightning Bolt and Chain Lightning are the filler and Lava Burst is the payoff, since it always critically strikes a target burning from Flame Shock. Thunderstorm knocks everything back and returns mana, and Elemental Mastery guarantees a critical strike. Its totems buff the whole group.",
+    "keywords": ["elemental shaman", "ele shaman", "lava burst", "chain lightning", "thunderstorm", "elemental mastery", "caster shaman"],
+    "tags": ["spec", "shaman"]
+  },
+  {
+    "id": "spec_enhancement_shaman",
+    "title": "Enhancement Shaman",
+    "content": "Enhancement is the melee shaman tree, dual-wielding behind Windfury Weapon for extra attacks. Stormstrike and Lava Lash are the strikes, and Maelstrom Weapon turns melee swings into instant Lightning Bolts and Chain Heals. Feral Spirit calls two wolves as a cooldown.",
+    "keywords": ["enhancement shaman", "enh shaman", "stormstrike", "lava lash", "feral spirit", "maelstrom weapon", "windfury weapon", "melee shaman"],
+    "tags": ["spec", "shaman"]
+  },
+  {
+    "id": "spec_restoration_shaman",
+    "title": "Restoration Shaman",
+    "content": "Restoration is the shaman healing tree and the strongest party healer of this expansion. Chain Heal bounces between injured group members, Riptide is the instant that strengthens the next Chain Heal, and Earth Shield sits on the tank soaking hits. Mana Tide Totem gives the group its mana back.",
+    "keywords": ["restoration shaman", "resto shaman", "chain heal", "riptide", "earth shield", "mana tide totem", "earthliving weapon", "shaman healer"],
+    "tags": ["spec", "shaman"]
+  },
+  {
+    "id": "spec_arcane_mage",
+    "title": "Arcane Mage",
+    "content": "Arcane is the burst and mana-management tree. Arcane Blast hits harder with every stack and costs more mana for it, so the spec is a constant decision about when to dump the stack with Arcane Barrage or Arcane Missiles. Presence of Mind and Arcane Power are the burst cooldowns. It has the highest ceiling and the worst mana problems.",
+    "keywords": ["arcane mage", "arcane blast", "arcane barrage", "arcane missiles", "arcane power", "presence of mind", "missile barrage"],
+    "tags": ["spec", "mage"]
+  },
+  {
+    "id": "spec_fire_mage",
+    "title": "Fire Mage",
+    "content": "Fire is built on critical strikes feeding themselves: Hot Streak turns two crits in a row into an instant Pyroblast. Fireball and Scorch are the fillers, Living Bomb ticks and then explodes, and Combustion is the burst cooldown. Without critical strike rating the whole tree stalls.",
+    "keywords": ["fire mage", "hot streak", "living bomb", "pyroblast", "combustion", "fireball"],
+    "tags": ["spec", "mage"]
+  },
+  {
+    "id": "spec_frost_mage",
+    "title": "Frost Mage",
+    "content": "Frost is the survivable mage tree and the usual choice for levelling alone. Frostbolt slows whatever it hits and Frost Nova roots, while Shatter turns frozen targets into guaranteed critical strikes for Ice Lance. Summon Water Elemental gives Frost a pet, and Deep Freeze is a stun that instead deals heavy damage to anything immune to stuns.",
+    "keywords": ["frost mage", "frostbolt", "ice lance", "deep freeze", "icy veins", "water elemental", "fingers of frost", "frost nova"],
+    "tags": ["spec", "mage"]
+  },
+  {
+    "id": "spec_affliction_warlock",
+    "title": "Affliction Warlock",
+    "content": "Affliction is the damage-over-time tree. Corruption, Curse of Agony and Unstable Affliction tick on the target while Haunt raises all of that damage and returns the healing to the warlock. Drain Soul hits far harder on a target about to die. Strong on one target and unforgiving if the timers are left to lapse.",
+    "keywords": ["affliction warlock", "affli warlock", "unstable affliction", "haunt", "curse of agony", "drain soul", "dot warlock"],
+    "tags": ["spec", "warlock"]
+  },
+  {
+    "id": "spec_demonology_warlock",
+    "title": "Demonology Warlock",
+    "content": "Demonology is the pet tree. The Felguard is its own summon, Demonic Empowerment buffs whatever demon is out, and Soul Link splits damage between warlock and pet. Metamorphosis is the deep talent: the warlock becomes a demon with its own abilities. Demonic Pact hands the raid spell power off the pet's critical strikes.",
+    "keywords": ["demonology warlock", "demo warlock", "felguard", "metamorphosis", "demonic empowerment", "soul link", "demonic pact", "pet warlock"],
+    "tags": ["spec", "warlock"]
+  },
+  {
+    "id": "spec_destruction_warlock",
+    "title": "Destruction Warlock",
+    "content": "Destruction is the direct damage tree, built on Immolate and Incinerate with Conflagrate consuming the Immolate for a burst. Chaos Bolt is the deep talent: it cannot be resisted and ignores absorption shields. Backdraft speeds up casting afterwards and Shadowburn is the finisher.",
+    "keywords": ["destruction warlock", "destro warlock", "chaos bolt", "conflagrate", "incinerate", "immolate", "shadowburn", "backdraft"],
+    "tags": ["spec", "warlock"]
+  },
+  {
+    "id": "spec_balance_druid",
+    "title": "Balance Druid",
+    "content": "Balance is the caster druid tree, played in Moonkin Form, which is why everyone calls it boomkin. Eclipse alternates a bonus between Starfire and Wrath, so the spec swings between arcane and nature damage. Moonfire and Insect Swarm keep damage ticking, Starfall rains on everything nearby, and Typhoon knocks targets back.",
+    "keywords": ["balance druid", "boomkin", "moonkin", "moonkin form", "starfall", "eclipse", "starfire", "insect swarm", "typhoon", "caster druid"],
+    "tags": ["spec", "druid"]
+  },
+  {
+    "id": "spec_feral_druid",
+    "title": "Feral Druid",
+    "content": "Feral covers both melee roles: cat form for damage, dire bear form for tanking. As a cat it builds combo points with Rake and Shred and spends them on Rip and Savage Roar; as a bear it holds threat with Maul and Mangle. Mangle is the tree's shared signature and Berserk is its cooldown in either form.",
+    "keywords": ["feral druid", "cat form", "bear form", "dire bear form", "mangle", "shred", "savage roar", "rake", "kitty druid", "feral tank"],
+    "tags": ["spec", "druid"]
+  },
+  {
+    "id": "spec_restoration_druid",
+    "title": "Restoration Druid",
+    "content": "Restoration heals with rolling periodic spells rather than large casts: Rejuvenation and Lifebloom tick away while Nourish and Regrowth cover the gaps. Wild Growth is the tree's raid heal and Swiftmend consumes a Rejuvenation or Regrowth for an instant one. Tree of Life is the form the spec heals in.",
+    "keywords": ["restoration druid", "resto druid", "tree of life", "wild growth", "swiftmend", "rejuvenation", "lifebloom", "nourish", "druid healer"],
+    "tags": ["spec", "druid"]
+  }
+]

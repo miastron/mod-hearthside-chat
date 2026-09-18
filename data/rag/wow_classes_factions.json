@@ -59,7 +59,7 @@
     "id": "wow_classes_druid",
     "title": "Druid Class",
     "content": "Druids are shapeshifting spellcasters with three talent trees: Balance (ranged DPS), Feral Combat (melee DPS in cat form and tanking in bear form), and Restoration (healing). They can transform into various animal forms for different roles. Druids have strong utility with crowd control, healing, and mobility. They are highly versatile and can adapt to different group needs.",
-    "keywords": ["druid", "shapeshift", "healer", "tank", "dps", "feral", "balance", "restoration"],
+    "keywords": ["druid", "shapeshift", "healer", "tank", "dps", "feral", "balance", "restoration", "cat form", "bear form", "moonkin form", "tree of life"],
     "tags": ["class", "hybrid", "versatile", "shapeshift"]
   },
   {

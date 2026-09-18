@@ -65,33 +65,15 @@ namespace
         return s;
     }
 
-    // Fixed, byte-identical for every bot. Teaches register (casual/
-    // short/lowercase) rather than subject matter, which would leak answers
-    // into unrelated replies. Deliberately off-topic from anything a bot
-    // will actually be asked. Widened from the original 5 (all short
-    // affirmative/compliant replies) to also cover the registers real chat
-    // needs and the model had never been shown: a non-answer, a question
-    // thrown back, a flat one-word brush-off, and a subject change.
-    const std::vector<std::pair<std::string, std::string>>& Fewshot()
-    {
-        static const std::vector<std::pair<std::string, std::string>> examples =
-        {
-            { "you around later?", "prob yeah, after work" },
-            { "did you see what they did to the patch notes", "lol yeah" },
-            { "hey can i ask you something", "sure" },
-            { "what do you think", "eh. not sure tbh" },
-            { "thanks!!", "np" },
-            // non-answer
-            { "so what's the deal with that", "honestly couldn't tell you" },
-            // question thrown back
-            { "you doing anything fun this weekend", "eh not really, you?" },
-            // one-word reply
-            { "you good?", "yeah" },
-            // subject change
-            { "man that fight was rough", "yeah. anyway you selling that or keeping it" },
-        };
-        return examples;
-    }
+    // Fewshot() lived here until 2026-09-14. It taught register to a
+    // general-purpose instruct model in context; a model fine-tuned on
+    // Claude/finetune/*.jsonl has that register in its weights, and zero
+    // training rows contain a few-shot block, so sending nine pairs put
+    // every live request into a shape the tune had never seen. Removed
+    // with the archetype-tag fix -- see Hs_ArchetypePromptLine in
+    // hs_archetype.cpp for the measurement that motivated both. The nine
+    // pairs themselves are preserved in Tests/opener_diversity.py as
+    // LIVE_FEWSHOT, so the old shape stays reproducible for comparison.
 
     // ------------------------------------------------------------------
     // Chat-markup dialects for apiType=llamacpp's native /completion.
@@ -141,9 +123,9 @@ namespace
     // Mistral and Gemma have no system role at all. Both upstream templates
     // handle that by folding system content into the following user turn, so
     // this does the same rather than inventing a system turn those models
-    // never saw. Note what this costs: the archetype delta stops being its
-    // own turn and joins the next user turn, so for these two dialects the
-    // cache-shared prefix ends at the few-shot block.
+    // never saw. Note what this costs: for these two dialects the rules and
+    // the archetype tag join the first user turn, so there is no cached
+    // system prefix at all -- every request differs from the first byte.
     std::vector<std::pair<HsRole, std::string>> FoldSystemTurns(
         std::vector<std::pair<HsRole, std::string>> turns)
     {
@@ -226,7 +208,7 @@ namespace
     }
 
     // "\n" is in every list for the same reason it always was: chat lines are
-    // one line, and without it a model that reads the few-shot block as a
+    // one line, and without it a model that reads the prior history turns as a
     // transcript keeps completing turns until n_predict chops it mid-sentence.
     json StopSequencesFor(HsDialect dialect)
     {
@@ -255,8 +237,6 @@ namespace
                               const std::vector<HsHistoryTurn>& history, const std::string& trigger)
     {
         size_t total = systemPrompt.size() + archetypeLine.size() + trigger.size();
-        for (auto const& ex : Fewshot())
-            total += ex.first.size() + ex.second.size();
         for (auto const& turn : history)
             total += turn.trigger.size() + turn.reply.size();
         return static_cast<uint32_t>(total);
@@ -406,13 +386,40 @@ namespace
 
 HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
                         const std::string& archetypeLine,
-                        const std::vector<HsHistoryTurn>& history, const std::string& trigger)
+                        const std::vector<HsHistoryTurn>& history, const std::string& trigger,
+                        const std::string& grammar)
 {
     HsLLMResult result{ false, "", HsLLMFailure::None, 0, 0, 0 };
     result.promptChars = PromptCharCount(systemPrompt, archetypeLine, history, trigger);
 
     const bool isLlamaCpp = IEquals(cfg.apiType, "llamacpp");
     const bool isOllama   = IEquals(cfg.apiType, "ollama");
+
+    // One system turn, second layer on its own line -- 2026-09-14. This is
+    // the fine-tune's shape: every row in Claude/finetune/dataset_pilot_v2.jsonl
+    // is a single system turn whose line 2 is the tag ("Archetype: MENTOR" on
+    // the reply path, "Mode: SMALLTALK"/"Mode: CORPUS_LINE" on the
+    // generator's), and nothing else.
+    //
+    // It used to go as a SECOND system turn placed after the few-shot block,
+    // to keep the shared prefix byte-identical across every bot for the
+    // prompt cache. That ordering was chosen before there was a tuned model
+    // to serve and it cost more than it bought: the tune keys off the tag,
+    // and it never saw one in this position. See hs_archetype.cpp's
+    // Hs_ArchetypePromptLine for the measurement.
+    //
+    // The prompt-cache consequence is real but small and one-sided: the
+    // cached prefix is now per-archetype (twelve variants) rather than one,
+    // while removing Fewshot() took eighteen turns out of every single
+    // request. Net prompt size falls sharply; only the number of distinct
+    // cache entries rises.
+    std::string systemTurn = systemPrompt;
+    if (!archetypeLine.empty())
+    {
+        if (!systemTurn.empty())
+            systemTurn += "\n";
+        systemTurn += archetypeLine;
+    }
 
     std::string url = BaseUrlNoTrailingSlash(cfg.baseUrl);
     json body;
@@ -432,26 +439,16 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         // Generator.LLM.Template) picks which one, since the reactive and
         // generator endpoints can point at differently-tuned models.
         //
-        // Layer order matters for prompt caching: system rules, then the
-        // fixed few-shot block (byte-identical for every bot, this whole
-        // prefix is what the server reuses), then the archetype delta
-        // (byte-identical across bots sharing an archetype, but not across
-        // all bots, so it sits after the truly-shared prefix rather than
-        // inside it), then this bot-player pair's history as real prior
-        // turns so a later turn's prompt is a strict byte extension of an
-        // earlier one, then the new trigger.
+        // Layer order: the single system turn (rules + tag, see systemTurn
+        // above), then this bot-player pair's history as real prior turns so
+        // a later turn's prompt is a strict byte extension of an earlier one,
+        // then the new trigger. Still cache-friendly -- the prefix is now
+        // shared by every bot of the same archetype rather than by every bot.
         //
         // That order is dialect-independent, so it is built once
         // as role/content turns and rendered by RenderPrompt above.
         std::vector<std::pair<HsRole, std::string>> turns;
-        turns.emplace_back(HsRole::System, systemPrompt);
-        for (auto const& ex : Fewshot())
-        {
-            turns.emplace_back(HsRole::User, ex.first);
-            turns.emplace_back(HsRole::Assistant, ex.second);
-        }
-        if (!archetypeLine.empty())
-            turns.emplace_back(HsRole::System, archetypeLine);
+        turns.emplace_back(HsRole::System, systemTurn);
         for (auto const& h : history)
         {
             turns.emplace_back(HsRole::User, h.trigger);
@@ -471,6 +468,11 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["min_p"]        = 0.05;
         body["cache_prompt"] = true;
         body["stop"]         = stopSequences;
+
+        // See hs_llm.h: constrains the sampler, so an out-of-vocabulary
+        // answer is unreachable rather than rejected after the fact.
+        if (!grammar.empty())
+            body["grammar"] = grammar;
 
         // Only meaningful now that history gives DRY a cross-turn window to
         // look back through (dry_penalty_last_n: 64, never -1, that
@@ -492,15 +494,8 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         url += "/api/chat";
 
         json messages = json::array();
-        if (!systemPrompt.empty())
-            messages.push_back({ {"role", "system"}, {"content", systemPrompt} });
-        for (auto const& ex : Fewshot())
-        {
-            messages.push_back({ {"role", "user"}, {"content", ex.first} });
-            messages.push_back({ {"role", "assistant"}, {"content", ex.second} });
-        }
-        if (!archetypeLine.empty())
-            messages.push_back({ {"role", "system"}, {"content", archetypeLine} });
+        if (!systemTurn.empty())
+            messages.push_back({ {"role", "system"}, {"content", systemTurn} });
         for (auto const& turn : history)
         {
             messages.push_back({ {"role", "user"}, {"content", turn.trigger} });
@@ -521,15 +516,8 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         url += "/chat/completions";
 
         json messages = json::array();
-        if (!systemPrompt.empty())
-            messages.push_back({ {"role", "system"}, {"content", systemPrompt} });
-        for (auto const& ex : Fewshot())
-        {
-            messages.push_back({ {"role", "user"}, {"content", ex.first} });
-            messages.push_back({ {"role", "assistant"}, {"content", ex.second} });
-        }
-        if (!archetypeLine.empty())
-            messages.push_back({ {"role", "system"}, {"content", archetypeLine} });
+        if (!systemTurn.empty())
+            messages.push_back({ {"role", "system"}, {"content", systemTurn} });
         for (auto const& turn : history)
         {
             messages.push_back({ {"role", "user"}, {"content", turn.trigger} });

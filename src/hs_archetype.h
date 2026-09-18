@@ -121,21 +121,23 @@ void Hs_ClearArchetypeOverride(uint64_t botGuid);
 // caching.
 HsArchetype Hs_ArchetypeForBot(uint64_t botGuid);
 
-// The archetype delta line for the LLM prompt: "You mostly talk about:
-// <talksAbout>." plus a profanity directive when profanityLevel > 0.
-// Byte-identical for every bot sharing the archetype (until the table is
-// reloaded), so it belongs after the shared baseline prefix (system rules +
-// few-shot) and before per-bot-pair history: it's the only unshared part
-// of the persona.
+// The archetype tag for the LLM prompt: "Archetype: <enumName>", and nothing
+// else. This module targets a model fine-tuned on Claude/finetune/*.jsonl,
+// and this is the exact form all 1949 archetype-tagged training rows use, so
+// the tag is what the tune keys off.
 //
-// The profanity directive carries no scoping language. It used to say the
-// swearing was about the game (gear, rotations, loot) and never the person
-// on the other end; that sentence was dropped 2026-08-24 because the
-// archetype voices hold the register on their own and the arbiter's rate
-// limits make a sustained pile-on structurally impossible. See
-// Hs_ArchetypePromptLine's own comment in hs_archetype.cpp for the full
-// reasoning -- this header described the removed guarantee as current until
-// review item 12.
+// It is not a description and must not become one again. Until 2026-09-14
+// this emitted prose ("You mostly talk about: <talksAbout>." plus a profanity
+// directive) -- a form the tune had never seen, which flattened every
+// archetype into one voice at runtime. Hs_ArchetypePromptLine's own comment
+// in hs_archetype.cpp carries the measurement; `talksAbout` and
+// `profanityLevel` remain the dataset's source of truth and simply are not
+// restated in the prompt.
+//
+// Byte-identical for every bot sharing the archetype (until the table is
+// reloaded). hs_llm.cpp appends it to the system turn as its second line,
+// matching the training rows, so the cached prompt prefix is shared per
+// archetype rather than across all bots.
 std::string Hs_ArchetypePromptLine(HsArchetype a);
 
 #endif // MOD_HS_ARCHETYPE_H

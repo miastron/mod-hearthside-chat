@@ -95,8 +95,64 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
 // guild context the caller already resolved, not invented biography. Same
 // discipline as hs_archetype.h's Hs_ArchetypePromptLine.
 std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout);
-std::string Hs_BuildCardFactsPrompt(const std::string& archetypeTalksAbout, uint8_t level, bool hasGuild,
-                                     const std::string& guildName, const std::string& ownClassName = "");
+
+// One card fact, asked on its own -- 2026-09-14. Replaces
+// Hs_BuildCardFactsPrompt, which asked for all eight keys at once as a single
+// line of JSON.
+//
+// That prompt cannot work against the model this module targets. Measured on
+// the live endpoint with the real trigger, the tuned Llama-3.2-1B returned
+// valid JSON 0 times in 10, under the shipped prompt shape and under the
+// pre-2026-09-14 one alike; it answers "main_focus: gathering and explaining
+// gearing_up", because a chat-only fine-tune answers in chat register. The
+// same model returns valid JSON for a bare, unframed JSON request, so the
+// capability is suppressed by the WoW-chat framing rather than absent -- but
+// the framing is not optional here, so the JSON ask is.
+//
+// Asking one short question at a time is what the tune *is* good at: every
+// training row is a single short line answering a single short prompt. The
+// caller assembles the eight answers into the same object Hs_ValidateCardFacts
+// already checks, so the validator is unchanged.
+//
+// `prompt` empty means this field is not asked at all and `fixed` holds the
+// value -- guild_stance is a fact the server already has from the guild row,
+// and asking a model to restate it can only introduce a disagreement the
+// validator then rejects the whole card for.
+// `grammar` is a GBNF alternation of exactly the values that are valid for
+// THIS bot, passed to Hs_CallLLM so the sampler cannot emit anything else.
+// Empty for the freeform fields, which have no vocabulary to constrain.
+//
+// Built per bot on purpose, not from the static enum tables: main_focus omits
+// the values Hs_MainFocusPlausibleForLevel rejects at this level, and alt
+// omits the bot's own class. That turns two of the deterministic card
+// rejections behind the generator livelock (review C10's
+// alt_is_the_characters_own_class, C11's main_focus_not_plausible_for_level)
+// from "caught by the validator, card thrown away, bot retried" into
+// "unreachable".
+struct HsCardFactAsk
+{
+    char const* key;
+    std::string prompt;
+    std::string grammar;
+    std::string fixed;
+};
+
+constexpr uint32_t kHsCardFactCount = 8;
+
+// `index` in [0, kHsCardFactCount).
+HsCardFactAsk Hs_CardFactAsk(uint32_t index, const std::string& archetypeTalksAbout, uint8_t level,
+                              bool hasGuild, const std::string& guildName,
+                              const std::string& ownClassName = "");
+
+// The shared user turn for every asked field.
+char const* Hs_CardFactTrigger();
+
+// Trims a raw one-line model answer into the value the validator expects:
+// whitespace, wrapping quotes, a trailing period, leading "key:" echo, and
+// for the enum fields a lowercase/underscore normalisation ("Gearing Up" ->
+// "gearing_up"). Parsing a reply, not judging it -- a value this cannot
+// rescue still fails Hs_ValidateCardFacts on its own merits.
+std::string Hs_NormalizeCardFactValue(uint32_t index, std::string raw);
 
 // verbal_tic becomes a protected token in the style pass (hs_style.cpp).
 // Empty return means no tic: a missing key, wrong type, or empty string

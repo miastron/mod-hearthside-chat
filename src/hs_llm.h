@@ -82,18 +82,38 @@ struct HsHistoryTurn
 // persistent connection for the module's whole reactive tier with no
 // locking needed.
 //
-// archetypeLine (hs_archetype.h, Hs_ArchetypePromptLine) is the per-bot
-// personality delta, a distinct layer from systemPrompt: systemPrompt and
-// the fixed few-shot block are byte-identical across every bot regardless
-// of archetype (the cache-shared prefix), and archetypeLine is what
-// actually differs, so it's placed after the few-shot block and before
-// history rather than folded into systemPrompt itself. Pass an empty
-// string for no delta (e.g. the scripted-conversation path generates
-// against the baseline alone).
+// archetypeLine (hs_archetype.h, Hs_ArchetypePromptLine) is the per-bot tag,
+// a distinct argument from systemPrompt but not a distinct turn: it is
+// appended to the system turn as its own second line, because that is the
+// shape every fine-tuning row uses ("Archetype: MENTOR" on the reply path,
+// "Mode: SMALLTALK"/"Mode: CORPUS_LINE" on the generator's -- the generator
+// passes its per-call layer here too). Pass an empty string for no second
+// line. Before 2026-09-14 this went as a separate system turn after a
+// few-shot block, a shape no training row contains; see hs_llm.cpp's
+// systemTurn comment.
+// grammar is an optional GBNF grammar constraining what the sampler may
+// emit -- added 2026-09-14 for the card-fact fields whose answer must come
+// from a fixed vocabulary (hs_identity.h's HsCardFactAsk).
+//
+// This is a sampler constraint, not a check on the reply: a token outside
+// the grammar is never generated in the first place, so there is nothing to
+// validate or retry. That distinction is the reason it is here at all. The
+// tuned model ignores "answer with exactly one of these words" in the prompt
+// -- measured 0/10 on the enum fields, which answered "vanilla, so i can
+// explain most things" -- and returns the bare token 8/8 under a grammar.
+//
+// Empty means unconstrained, which is every caller but the card fields.
+// llamacpp only: llama.cpp's /completion takes `grammar` directly, while the
+// openai and ollama branches have no equivalent and ignore it. That is a
+// real limitation rather than a shrug -- a card generated through those
+// backends falls back to the old behaviour of relying on the prompt alone --
+// but this module targets a llama.cpp-served fine-tune (see the module's
+// CLAUDE.md), so the other two branches are compatibility paths.
 HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg,
                         const std::string& systemPrompt,
                         const std::string& archetypeLine,
                         const std::vector<HsHistoryTurn>& history,
-                        const std::string& trigger);
+                        const std::string& trigger,
+                        const std::string& grammar = "");
 
 #endif // MOD_HS_LLM_H

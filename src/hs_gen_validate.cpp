@@ -40,6 +40,71 @@ namespace
         "what", "who", "when", "where", "why", "how", "are", "do", "does", "did", "is", "anyone", "can",
     };
 
+    // Words that only make sense as the first word of a *reply*. A corpus
+    // line is spoken unprompted, so opening with agreement, a conjunction,
+    // or a greeting means the line is answering something that was never
+    // said. See ReadsAsReply below for the evidence this list came from.
+    const std::vector<std::string> kReplyLeadWords = {
+        // agreement / acknowledgement
+        "yeah", "yea", "yep", "yup", "nah", "nope", "ok", "okay", "sure", "right",
+        "exactly", "agreed", "true", "same", "thanks", "glad", "guess", "honestly",
+        // conjunctions continuing someone else's sentence
+        "and", "but", "so", "or", "also", "plus", "anyway", "besides",
+        // interjections that answer a turn
+        "oh", "ah", "huh", "well",
+        // greetings: addressed at a person, not the channel
+        "hello", "hi", "hey", "sup", "welcome",
+    };
+
+    // Demonstratives pointing at something the line never names. Leading
+    // "it"/"this" are deliberately absent: "it's always the last boss" is
+    // ordinary standalone commentary, while "that was rough" is not.
+    //
+    // Only counts when the demonstrative is *bare* -- followed by a verb or
+    // by "one", not by the noun it is pointing at. "these quest chains are
+    // getting long" names its own subject and is fine; "that was rough" and
+    // "that one still hurts" do not.
+    const std::vector<std::string> kAnaphoricLeadWords = {
+        "that", "those", "these", "them",
+    };
+    const std::vector<std::string> kBareDemonstrativeFollowers = {
+        "is", "are", "was", "were", "s", "re", "ll", "d", "one", "ones", "aint",
+    };
+
+    // The same words as the *last* word of a line, where they can only be
+    // pointing back at a turn that isn't there ("i'll probably sell it",
+    // "i meant that").
+    //
+    // Only applied to a short line. Past about six words a line usually
+    // names its own antecedent before the pronoun -- "people only notice my
+    // aura when i forget to switch it", "the troggs pushing down on
+    // thelsamar respawn faster than i can clear them" -- and the seed-corpus
+    // harness caught ten of those before this bound went in.
+    const std::vector<std::string> kAnaphoricTailWords = {
+        "that", "it", "this", "one", "them", "those", "him", "her", "then",
+    };
+    constexpr size_t kMaxTokensForTailAnaphora = 6;
+
+    // A stored line is replayed for any player at any time, so it can never
+    // say how things are *now* relative to before. BuildGenerationPrompt
+    // (hs_generator.cpp) has told the model this since the beginning; the
+    // gate never enforced it.
+    //
+    // "still" is deliberately absent, despite being on that prompt's own
+    // list. It looked like the clearest case in
+    // BuildGenerationPrompt's list, but the hand-authored corpus uses it for
+    // statements that are timeless rather than comparative -- "ironforge's
+    // still my favorite city", "icecrown still gives me a chill every time",
+    // "still figuring out where everything is around here" -- and the
+    // seed-corpus harness flagged nine of them at once. The word does not
+    // carry the claim; the comparison does.
+    const std::vector<std::string> kTrendWords = {
+        "lately", "nowadays", "recently", "anymore",
+    };
+    const std::vector<std::string> kTrendPhrases = {
+        "these days", "more than usual", "used to be", "than it used to",
+    };
+
     std::string ToLower(const std::string& s)
     {
         std::string out = s;
@@ -158,6 +223,66 @@ namespace
         return std::find(kQuestionLeadWords.begin(), kQuestionLeadWords.end(), tokens.front()) != kQuestionLeadWords.end();
     }
 
+    // Does this read as a turn in a conversation rather than a line
+    // somebody typed into an empty channel?
+    //
+    // Added 2026-09-13 off live-realm evidence. The generator had written
+    // 1032 of the 1238 rows in hside_corpus, and a large share of them were
+    // reply fragments with nothing to reply to: "guess that's on me", "i'm
+    // doing alright, thanks for asking", "and another one, for anyone else
+    // reading this", "same as before", "i'll be here until then". Delivered
+    // unprompted into /say or General, every one of them reads as somebody
+    // answering a question nobody asked -- which is a more obvious tell than
+    // a dull line, because a real player's chat is never shaped like that.
+    //
+    // BuildGenerationPrompt already asks for "not addressed to anyone, first
+    // person" and bans trend words. Nothing enforced either, and a 1B model
+    // does not reliably honour a paragraph of guidance it was never trained
+    // on. So the rule moves here, where it is deterministic and testable.
+    //
+    // Precision over recall on purpose: a rejected candidate costs one more
+    // generation cycle on an idle-time task, while an accepted bad row is
+    // replayed to players until something evicts it.
+    bool ReadsAsReply(const std::string& trimmed)
+    {
+        std::vector<std::string> tokens = Tokenize(ToLower(trimmed));
+        if (tokens.empty())
+            return false;
+
+        if (std::find(kReplyLeadWords.begin(), kReplyLeadWords.end(), tokens.front()) != kReplyLeadWords.end())
+            return true;
+        if (std::find(kAnaphoricLeadWords.begin(), kAnaphoricLeadWords.end(), tokens.front()) != kAnaphoricLeadWords.end()
+            && (tokens.size() == 1
+                || std::find(kBareDemonstrativeFollowers.begin(), kBareDemonstrativeFollowers.end(), tokens[1])
+                       != kBareDemonstrativeFollowers.end()))
+            return true;
+        if (tokens.size() <= kMaxTokensForTailAnaphora
+            && std::find(kAnaphoricTailWords.begin(), kAnaphoricTailWords.end(), tokens.back()) != kAnaphoricTailWords.end())
+            return true;
+
+        // "that one"/"this one" anywhere: the line is singling out a thing
+        // the listener is expected to already have in mind.
+        for (size_t i = 0; i + 1 < tokens.size(); ++i)
+            if ((tokens[i] == "that" || tokens[i] == "this") && tokens[i + 1] == "one")
+                return true;
+
+        return false;
+    }
+
+    bool ReferencesTrend(const std::string& trimmed)
+    {
+        std::string lowered = ToLower(trimmed);
+        for (auto const& phrase : kTrendPhrases)
+            if (lowered.find(phrase) != std::string::npos)
+                return true;
+
+        std::vector<std::string> tokens = Tokenize(lowered);
+        for (auto const& tok : tokens)
+            if (std::find(kTrendWords.begin(), kTrendWords.end(), tok) != kTrendWords.end())
+                return true;
+        return false;
+    }
+
     bool ContainsSlang(const std::string& trimmed)
     {
         std::vector<std::string> tokens = Tokenize(trimmed);
@@ -191,7 +316,16 @@ double Hs_JaccardSimilarity(const std::string& a, const std::string& b)
     return unionSize == 0 ? 0.0 : static_cast<double>(intersection) / static_cast<double>(unionSize);
 }
 
-HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions, bool allowShort)
+bool Hs_CategoryIsResponse(const std::string& category)
+{
+    // Prefix match rather than a list: every opener_* bucket is reactive by
+    // construction (hs_opener.h), and a new one should inherit that without
+    // needing this file touched.
+    return category.rfind("opener_", 0) == 0;
+}
+
+HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions, bool allowShort,
+                             bool allowReply)
 {
     std::string trimmed = Trim(candidate);
 
@@ -209,6 +343,18 @@ HsGenVerdict Hs_QualityGate(const std::string& candidate, bool allowQuestions, b
         return { false, "modern_slang" };
     if (!allowQuestions && ReadsAsQuestion(trimmed))
         return { false, "reads_as_question" };
+
+    // Both gated on !allowShort, which is the module's existing "this line
+    // has to stand alone with no surrounding context" predicate (see the
+    // header). A scripted bot-to-bot turn sits in a back-and-forth, so
+    // answering the previous turn is exactly what it should do, and a
+    // script is spoken once rather than stored and replayed, so a trend
+    // word in one is not the lie it would be in a corpus row.
+    bool mustStandAlone = !allowShort && !allowReply;
+    if (mustStandAlone && ReadsAsReply(trimmed))
+        return { false, "reads_as_reply" };
+    if (mustStandAlone && ReferencesTrend(trimmed))
+        return { false, "references_trend" };
 
     return { true, "" };
 }
@@ -255,9 +401,11 @@ HsGenVerdict Hs_ScriptPlaceholderDiscipline(const std::string& candidate)
 
 HsGenVerdict Hs_EvaluateCandidate(const std::string& candidate,
                                    const std::vector<std::string>& existingRows,
-                                   bool categoryCardGated)
+                                   bool categoryCardGated,
+                                   bool categoryIsResponse)
 {
-    HsGenVerdict quality = Hs_QualityGate(candidate);
+    HsGenVerdict quality = Hs_QualityGate(candidate, /*allowQuestions=*/false, /*allowShort=*/false,
+                                           /*allowReply=*/categoryIsResponse);
     if (!quality.accepted)
         return quality;
 
