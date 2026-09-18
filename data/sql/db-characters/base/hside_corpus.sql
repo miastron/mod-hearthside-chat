@@ -85,7 +85,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
 -- chat_gripe_general: tag_axis none; unfalsifiable opinions/gripes
 ('chat_gripe_general', 'man this zone has been a grind lately', NULL),
 ('chat_gripe_general', 'still can''t believe that pack respawned so fast', NULL),
-('chat_gripe_general', 'not gonna lie, today''s been a rough one', NULL),
+('chat_gripe_general', 'today''s been a rough one', NULL),
 ('chat_gripe_general', 'starting to think my luck is just bad this week', NULL),
 ('chat_gripe_general', 'these fetch quests never end', NULL),
 ('chat_gripe_general', 'some days you''re the hammer, some days you''re the nail', NULL),
@@ -102,7 +102,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `class_tag`) VALUES
 ('chat_class_banter', 'my arms are getting tired from all this swinging', 1),
 ('chat_class_banter', 'you never saw me, i was never here', 4),
 ('chat_class_banter', 'picked more locks today than i can count', 4),
-('chat_class_banter', 'stealth makes everything easier, honestly', 4),
+('chat_class_banter', 'stealth makes everything easier', 4),
 ('chat_class_banter', 'sharpened my daggers this morning, feeling good', 4),
 ('chat_class_banter', 'portals are so much more convenient than walking everywhere', 8),
 ('chat_class_banter', 'conjured a whole feast, help yourselves', 8),
@@ -151,7 +151,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `level_band_tag`) VALUES
 ('chat_levelband_musing', 'these instances are no joke at this point', 'high'),
 ('chat_levelband_musing', 'getting closer to endgame, can feel it', 'high'),
 ('chat_levelband_musing', 'grinding rep is the real end boss', 'high'),
-('chat_levelband_musing', 'back to dailies again, as always', 'endgame'),
+('chat_levelband_musing', 'back to dailies again', 'endgame'),
 ('chat_levelband_musing', 'raid nights really do fly by', 'endgame'),
 ('chat_levelband_musing', 'still chasing that one drop', 'endgame'),
 ('chat_levelband_musing', 'feels like i''ve seen everything twice now', 'endgame');
@@ -195,7 +195,7 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_general_chat', 'escort quests where the npc walks slower than you do are a special kind of pain'),
 ('channel_general_chat', 'the repair bill after a bad night costs more than the run brought in'),
 ('channel_general_chat', 'half my bag space is quest items i am scared to vendor'),
-('channel_general_chat', 'riding skill costs more than the mount and nobody warns you'),
+('channel_general_chat', 'riding skill costs more than the mount'),
 ('channel_general_chat', 'flight paths route you through three stops to go one zone over'),
 ('channel_general_chat', 'dual spec paid for itself the first week i had it'),
 ('channel_general_chat', 'engineering is a money pit and i would take it again on every alt'),
@@ -244,16 +244,16 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('opener_prolonged_proximity', 'you sticking around this area too?'),
 ('opener_prolonged_proximity', 'guess we had the same idea coming out here.'),
 -- chat_carded_focus: card-gated (%main_focus, %current_goal)
-('chat_carded_focus', 'still grinding away at %main_focus, honestly'),
+('chat_carded_focus', 'still grinding away at %main_focus'),
 ('chat_carded_focus', 'lately it is all about %current_goal for me'),
 ('chat_carded_focus', 'main focus right now is %main_focus'),
-('chat_carded_focus', 'not gonna lie, %current_goal has been eating all my playtime');
+('chat_carded_focus', '%current_goal has been eating all my playtime');
 
 INSERT INTO `hside_corpus` (`name`, `text`, `faction_tag`) VALUES
 -- chat_faction_banter: tag_axis faction; generic pride/rivalry, nothing hostile or player-targeted
 ('chat_faction_banter', 'proud to fly Alliance colors out here', 0),
 ('chat_faction_banter', 'hard to beat stormwind for getting everywhere quickly', 0),
-('chat_faction_banter', 'gotta say, our side''s architecture just hits different', 0),
+('chat_faction_banter', 'our side''s architecture just hits different', 0),
 ('chat_faction_banter', 'always good to see fellow Alliance out and about', 0),
 ('chat_faction_banter', 'ironforge''s still my favorite city, hard to beat', 0),
 ('chat_faction_banter', 'been Alliance since day one, never looked back', 0),
@@ -261,7 +261,7 @@ INSERT INTO `hside_corpus` (`name`, `text`, `faction_tag`) VALUES
 ('chat_faction_banter', 'long boat ride out to darnassus but it has everything in one place', 0),
 ('chat_faction_banter', 'proud to fly Horde colors out here', 1),
 ('chat_faction_banter', 'orgrimmar''s always felt like home to me', 1),
-('chat_faction_banter', 'gotta say, our side''s got the better music honestly', 1),
+('chat_faction_banter', 'our side''s got the better music', 1),
 ('chat_faction_banter', 'always good to see fellow Horde out and about', 1),
 ('chat_faction_banter', 'thunder bluff''s still my favorite city, hard to beat', 1),
 ('chat_faction_banter', 'been Horde since day one, never looked back', 1),
@@ -278,38 +278,38 @@ INSERT INTO `hside_corpus` (`name`, `text`, `zone_tag`) VALUES
 ('chat_zone_musing', 'spiders all through these woods, watch your step around dolanaar', 141),
 ('chat_zone_musing', 'darnassus is quiet in a way i actually like', 141),
 ('chat_zone_musing', 'durotar''s harsher than it looks, respect anyone who started here', 14),
-('chat_zone_musing', 'razor hill''s a good little hub, underrated honestly', 14),
+('chat_zone_musing', 'razor hill''s a good little hub', 14),
 ('chat_zone_musing', 'tirisfal''s fog never really gets old', 85),
-('chat_zone_musing', 'undercity''s layout still confuses me sometimes, not gonna lie', 85),
+('chat_zone_musing', 'undercity''s layout still turns me around', 85),
 ('chat_zone_musing', 'cougars past bloodhoof village will jump you if you pull more than one', 215),
 ('chat_zone_musing', 'stepped off a bridge again, the lifts are the only safe way between rises', 215),
-('chat_zone_musing', 'redridge always feels a bit sleepy, in a good way', 44),
-('chat_zone_musing', 'lakeshire''s a nice quiet stop honestly', 44),
+('chat_zone_musing', 'redridge always feels a bit sleepy', 44),
+('chat_zone_musing', 'lakeshire''s a nice quiet stop', 44),
 ('chat_zone_musing', 'the troggs pushing down on thelsamar respawn faster than i can clear them', 38),
-('chat_zone_musing', 'silverpine''s always felt a little gloomy, fits the vibe though', 130),
+('chat_zone_musing', 'silverpine''s always felt a little gloomy', 130),
 ('chat_zone_musing', 'the barrens are as big as everyone says', 17),
 ('chat_zone_musing', 'crossroads is always busy, good spot to regroup', 17),
 ('chat_zone_musing', 'stranglethorn''s a lot louder than i remembered', 33),
-('chat_zone_musing', 'booty bay''s chaos is honestly kind of charming', 33),
-('chat_zone_musing', 'dustwallow''s swampy but grows on you after a while', 15),
+('chat_zone_musing', 'booty bay''s got a brawl on the docks most days', 33),
+('chat_zone_musing', 'dustwallow''s swampy the whole way through', 15),
 ('chat_zone_musing', 'nerubians in the tunnels are rough solo, worth finding a group first', 3537),
 ('chat_zone_musing', 'vrykul around utgarde keep hit a lot harder than the wildlife does', 495),
 ('chat_zone_musing', 'dragonblight lives up to the name, bones everywhere', 65),
-('chat_zone_musing', 'icecrown still gives me a chill every time, and not just the weather', 210);
+('chat_zone_musing', 'icecrown still gives me a chill every time', 210);
 
 INSERT INTO `hside_corpus` (`name`, `text`, `event_id`) VALUES
 -- chat_gripe_general seasonal rows: real AzerothCore game_event ids
 -- (azerothcore-wotlk-pb/data/sql/base/db_world/game_event.sql), unfalsifiable
 -- flavor only: dormant outside the event window via hs_corpus.cpp's
 -- EventDormancyWhere
-('chat_gripe_general', 'this whole zone smells like pumpkin, hallow''s end is really something', 12),
-('chat_gripe_general', 'been dodging trick-or-treaters all week, hallow''s end never gets old', 12),
+('chat_gripe_general', 'this whole zone smells like pumpkin for hallow''s end', 12),
+('chat_gripe_general', 'been dodging trick-or-treaters all week', 12),
 ('chat_gripe_general', 'winter veil''s got the whole place looking festive', 2),
 ('chat_gripe_general', 'been unwrapping presents all morning, love this time of year', 2),
 ('chat_gripe_general', 'lunar festival elders are everywhere this year', 7),
-('chat_gripe_general', 'love is in the air out there, hard to miss honestly', 8),
+('chat_gripe_general', 'love is in the air out there', 8),
 ('chat_gripe_general', 'been handing out valentines all week for love is in the air', 8),
-('chat_gripe_general', 'noblegarden eggs are hidden everywhere this year, wild', 9),
-('chat_gripe_general', 'kids running around everywhere for children''s week, kind of nice actually', 10),
+('chat_gripe_general', 'noblegarden eggs are hidden everywhere this year', 9),
+('chat_gripe_general', 'kids running around everywhere for children''s week', 10),
 ('chat_gripe_general', 'brewfest tents are up, place smells like beer and sausages', 24),
 ('chat_gripe_general', 'pilgrim''s bounty spread looks incredible this year', 26);
