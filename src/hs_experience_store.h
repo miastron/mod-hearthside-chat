@@ -132,6 +132,41 @@ public:
 // This is the entry the ring's collapsing was really built for: repeated
 // deaths in one place fold into a single "died in Sholazar Basin (4 times)",
 // which is both the noise fix and the only wipe-shaped signal the module has.
+// Duels and group membership, added 2026-09-20.
+//
+// hs_event.cpp already hooks both duel ends, but it hooks them to *speak*:
+// FireEvent produces a proactive line at the moment the duel resolves. That
+// is a different job from this one. Nothing recorded the outcome where a
+// later *reply* could read it, and reply prompts read this ring
+// (hs_queue.cpp's Hs_ExperienceContext call), so a bot that had just lost a
+// duel answered "bwahahaha" with "ur not even trying" and "you're terrible"
+// with "you're not helping" -- a winner's taunt and a group-content framing,
+// from a bot that had just lost a duel (realm 2026-09-20).
+//
+// Two PlayerScripts already share PLAYERHOOK_ON_PLAYER_JUST_DIED, so a third
+// script on a hook hs_event.cpp also takes is the established shape here, not
+// a new one.
+class HsExperienceDuelHandler : public PlayerScript
+{
+public:
+    HsExperienceDuelHandler() : PlayerScript("HsExperienceDuelHandler", { PLAYERHOOK_ON_DUEL_END }) {}
+    void OnPlayerDuelEnd(Player* winner, Player* loser, DuelCompleteType type) override;
+};
+
+// Group joins arrive on GroupScript, not PlayerScript: PLAYERHOOK_CAN_GROUP_ACCEPT
+// is a gate that fires before the join and can veto it, which is the wrong
+// moment and the wrong contract for recording that a join happened.
+// GROUPHOOK_ON_ADD_MEMBER fires after the fact and carries the member's guid.
+//
+// This is the module's only GroupScript; it is registered in hs_main.cpp
+// alongside the PlayerScripts.
+class HsExperienceGroupHandler : public GroupScript
+{
+public:
+    HsExperienceGroupHandler() : GroupScript("HsExperienceGroupHandler", { GROUPHOOK_ON_ADD_MEMBER }) {}
+    void OnAddMember(Group* group, ObjectGuid guid) override;
+};
+
 class HsExperienceDeathHandler : public PlayerScript
 {
 public:

@@ -47,6 +47,14 @@ namespace
             case HsExperienceKind::MoneyGained:    return "made about " + entry.subject + " gold";
             case HsExperienceKind::ZoneEntered:    return "arrived in " + entry.subject;
             case HsExperienceKind::Died:           return "died in " + entry.subject;
+            case HsExperienceKind::DuelWon:        return "won a duel against " + entry.subject;
+            case HsExperienceKind::DuelLost:       return "lost a duel to " + entry.subject;
+            // Phrased as the join rather than as "are in a party" because
+            // every other clause in this block is something the bot did and
+            // the prefix reads "you ..." -- a state clause mid-list would not
+            // scan. The subject ("a party") is fixed, so it is spelled out
+            // here rather than interpolated.
+            case HsExperienceKind::PartyJoined:    return "joined a party";
         }
         return "";
     }
@@ -64,6 +72,9 @@ const char* Hs_ExperienceKindName(HsExperienceKind kind)
         case HsExperienceKind::MoneyGained:    return "money_gained";
         case HsExperienceKind::ZoneEntered:    return "zone_entered";
         case HsExperienceKind::Died:           return "died";
+        case HsExperienceKind::DuelWon:        return "duel_won";
+        case HsExperienceKind::DuelLost:       return "duel_lost";
+        case HsExperienceKind::PartyJoined:    return "party_joined";
     }
     return "unknown";
 }

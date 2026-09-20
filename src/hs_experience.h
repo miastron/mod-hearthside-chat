@@ -55,9 +55,34 @@ enum class HsExperienceKind : uint8_t
     MoneyGained,    // subject: gold amount as text, threshold-filtered at the hook
     ZoneEntered,    // subject: the zone name
     Died,           // subject: the zone it happened in
+    DuelWon,        // subject: the opponent's name
+    DuelLost,       // subject: the opponent's name
+    PartyJoined,    // subject: "a party" -- membership, not an event about anyone
+
+    // The three above were added 2026-09-20 for a failure the other eight
+    // could not prevent. hs_event.cpp has had duel hooks all along, but those
+    // only fire a proactive line at the moment the duel ends; nothing put the
+    // outcome anywhere a *reply* could see it, and this ring is what reply
+    // prompts read (hs_queue.cpp). A bot that had just lost a duel answered
+    // "bwahahaha" with "ur not even trying" -- a winner's taunt -- and
+    // answered "you're terrible" with "you're not helping", which frames a
+    // duel as group content (realm 2026-09-20, hside_chat_log ids 1-3). It
+    // was not guessing badly; it had nothing to guess from.
+    //
+    // PartyJoined's subject is the fixed string "a party" rather than a
+    // roster or an inviter name: the useful fact is membership, not who else
+    // is in it, and a roster would go stale inside the ring's own window.
+    // It is not empty because Hs_RecordExperience drops empty subjects by
+    // contract, and because the fixed value is what lets the ring collapse
+    // repeat joins into `count` instead of stacking them.
+    // It sits in a ring that decays rather than in durable
+    // state on purpose: "just joined a party" stops being worth saying on its
+    // own, which is exactly what windowSeconds already does. Repeats collapse
+    // into `count` like every other kind, so a bot rejoining the same group
+    // does not stack entries.
 };
 
-constexpr size_t kHsExperienceKindCount = 8;
+constexpr size_t kHsExperienceKindCount = 11;
 
 // Distinct (kind, subject) pairs held per bot. Small on purpose: this block
 // is per-request prompt weight on a T1000, and the fine-tune's whole goal is

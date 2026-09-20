@@ -349,6 +349,16 @@ void Addmod_hearthside_chatScripts()
     new HsExperienceSkillHandler();
     new HsExperienceLevelHandler();
     new HsExperienceDeathHandler();
+    // HsExperienceDuelHandler shares PLAYERHOOK_ON_DUEL_END with
+    // hs_event.cpp's HsEventDuelHandler, the same deliberate overlap the two
+    // comments above describe: hs_event decides whether the bot *says*
+    // something about the duel, this one only records that it happened so a
+    // later reply is not written as though it had not (2026-09-20).
+    new HsExperienceDuelHandler();
+    // The module's only GroupScript. Group joins are not on PlayerScript --
+    // see hs_experience_store.h for why GROUPHOOK_ON_ADD_MEMBER rather than
+    // PLAYERHOOK_CAN_GROUP_ACCEPT.
+    new HsExperienceGroupHandler();
     // Event triggers (hs_event.h). HsEventDeathHandler takes the same
     // PLAYERHOOK_ON_PLAYER_JUST_DIED as HsMemoryDeathHandler above; both
     // run, and neither depends on the other's ordering.

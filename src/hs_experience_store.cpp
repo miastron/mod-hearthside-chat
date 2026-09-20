@@ -8,6 +8,7 @@
 #include "DBCStructure.h"
 #include "Item.h"
 #include "ItemTemplate.h"
+#include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Player.h"
 #include "QuestDef.h"
@@ -194,6 +195,53 @@ void HsExperienceLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlev
 
     Hs_RecordExperience(player->GetGUID().GetRawValue(), HsExperienceKind::LevelUp,
                         std::to_string(player->GetLevel()));
+}
+
+// Both sides of a duel are recorded, so a bot that won does not start
+// commiserating and a bot that lost does not start gloating. hs_event.cpp
+// makes the same DUEL_INTERRUPTED exclusion: an interrupted duel has no
+// winner, so there is nothing true to record.
+//
+// Unlike hs_event.cpp's version this does not care which of the two is the
+// "subject" for arbitration purposes -- both are recorded independently,
+// because both will later be answering someone.
+void HsExperienceDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelCompleteType type)
+{
+    if (!g_HsExperienceEnable || type == DUEL_INTERRUPTED || !winner || !loser)
+        return;
+
+    if (Hs_IsBot(winner))
+        Hs_RecordExperience(winner->GetGUID().GetRawValue(), HsExperienceKind::DuelWon,
+                            loser->GetName());
+
+    if (Hs_IsBot(loser))
+        Hs_RecordExperience(loser->GetGUID().GetRawValue(), HsExperienceKind::DuelLost,
+                            winner->GetName());
+}
+
+// Fires for every member added, including the ones added while the group is
+// being formed, so this is the one hook here that can fire for a player the
+// module otherwise never touches -- hence the Hs_IsBot filter at the site,
+// same as every other hook in this file.
+//
+// ObjectAccessor rather than the Group*: OnAddMember carries only the guid,
+// and Hs_IsBot needs the Player*. A member who is not in world (offline
+// invite accepted on login) resolves to nullptr and records nothing, which
+// is correct -- it will not be answering anyone either.
+void HsExperienceGroupHandler::OnAddMember(Group* /*group*/, ObjectGuid guid)
+{
+    if (!g_HsExperienceEnable)
+        return;
+
+    Player* member = ObjectAccessor::FindPlayer(guid);
+    if (!member || !Hs_IsBot(member))
+        return;
+
+    // Fixed subject, not a roster or an inviter name: the fact is membership,
+    // not who else is in it, and a roster would go stale inside the ring's own
+    // window. It must be non-empty -- Hs_RecordExperience drops empty subjects
+    // -- and being fixed is also what lets repeat joins collapse into `count`.
+    Hs_RecordExperience(member->GetGUID().GetRawValue(), HsExperienceKind::PartyJoined, "a party");
 }
 
 void HsExperienceDeathHandler::OnPlayerJustDied(Player* player)
