@@ -313,3 +313,39 @@ INSERT INTO `hside_corpus` (`name`, `text`, `event_id`) VALUES
 ('chat_gripe_general', 'kids running around everywhere for children''s week', 10),
 ('chat_gripe_general', 'brewfest tents are up, place smells like beer and sausages', 24),
 ('chat_gripe_general', 'pilgrim''s bounty spread looks incredible this year', 26);
+
+-- Retrospective register, added 2026-09-20. WotLK is a 2010 expansion and the
+-- people playing it now know that: they are replaying content they half
+-- remember, catching up on content they missed the first time, or comparing it
+-- to where the game went afterwards. None of the seed rows carried that voice,
+-- so the generator had no tone reference for it and wrote every line as though
+-- the content were brand new -- which is also where a lot of its invented
+-- mechanics came from ("every single profession in this zone is on cooldown
+-- right now", realm 2026-09-20), since a model with nothing true to say about
+-- the present will make something up.
+--
+-- Deliberately a sprinkle, not a sweep: roughly one row in six across these two
+-- categories. A bot that ALWAYS talks about how it used to be is its own tic,
+-- and the generator amplifies whatever it is shown (see the hedge-tag pass,
+-- 2026-09-17).
+--
+-- Safe under R3/the anti-invention rule for the same reason it reads well:
+-- memory and opinion are unfalsifiable. "the group finder changed this game
+-- more than any patch did" cannot be checked and found wrong the way an
+-- invented item or quest can.
+INSERT INTO `hside_corpus` (`name`, `text`) VALUES
+('channel_general_chat', 'played this the first time around and remember almost none of it correctly'),
+('channel_general_chat', 'the group finder changed this game more than any patch ever did'),
+('channel_general_chat', 'everything after this expansion lost the plot as far as i am concerned'),
+('channel_general_chat', 'back when this was new nobody had any of the fights figured out'),
+('channel_general_chat', 'retail went a direction i never followed and i do not regret it'),
+('channel_general_chat', 'people used to spend an hour forming a group for one run'),
+('channel_general_chat', 'missed most of this content when it was current, catching up on it now'),
+('channel_general_chat', 'half the tricks everyone takes for granted now took months to work out'),
+('channel_general_chat', 'this is the version everyone says they miss and they actually meant it'),
+('channel_general_chat', 'my memory of this place was a lot kinder than the actual grind is'),
+('chat_gripe_general', 'forgot how long all of this took before people optimised it to death'),
+('chat_gripe_general', 'coming back years later means relearning things i never really knew'),
+('chat_gripe_general', 'everyone knows the route now, felt a lot less solved at the time'),
+('chat_zone_musing', 'remember this zone being bigger, everything shrinks with time'),
+('chat_zone_musing', 'first ran through here years ago and barely recognise half of it');
