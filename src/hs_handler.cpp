@@ -595,9 +595,23 @@ namespace
     }
 }
 
+// LANG_ADDON is checked first in all five hooks below. An addon message is
+// not chat: it reaches these hooks because AzerothCore routes it through the
+// same CHAT_MSG_* opcodes, but its body is a machine protocol frame, and the
+// client never displays it. Without this guard the module fed those frames to
+// the model as triggers and delivered the answers to open channels --
+// observed on the realm 2026-09-20, where mod-multibot-bridge's MBOT protocol
+// produced replies like "Faster", "Slow down" and "go Ahead" to bodies such
+// as "MBOT	GET~SELF_BOT~52107671-self-state-10" (hside_chat_log ids 4-11,
+// five of eleven reactive replies that session).
+//
+// lang, not a prefix scan: hs_bridge.cpp:303 already discriminates on exactly
+// this for its own HSI	 envelope, and a prefix list would need extending for
+// every addon on the realm. Guarding the language covers all of them,
+// including addons this module has never heard of.
 bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg)
 {
-    if (!g_HsEnable || type != CHAT_MSG_SAY || msg.empty())
+    if (!g_HsEnable || lang == LANG_ADDON || type != CHAT_MSG_SAY || msg.empty())
         return true;
 
     if (!player || Hs_IsBot(player))
@@ -649,7 +663,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
 bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Player* receiver)
 {
-    if (!g_HsEnable || type != CHAT_MSG_WHISPER || msg.empty())
+    if (!g_HsEnable || lang == LANG_ADDON || type != CHAT_MSG_WHISPER || msg.empty())
         return true;
 
     if (!player || !receiver || player == receiver)
@@ -684,7 +698,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 // bot chimes into.
 bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Group* group)
 {
-    if (!g_HsEnable || msg.empty() || !player || !group)
+    if (!g_HsEnable || lang == LANG_ADDON || msg.empty() || !player || !group)
         return true;
     if (type != CHAT_MSG_PARTY && type != CHAT_MSG_PARTY_LEADER &&
         type != CHAT_MSG_RAID && type != CHAT_MSG_RAID_LEADER)
@@ -735,7 +749,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
 bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Guild* guild)
 {
-    if (!g_HsEnable || type != CHAT_MSG_GUILD || msg.empty() || !player || !guild)
+    if (!g_HsEnable || lang == LANG_ADDON || type != CHAT_MSG_GUILD || msg.empty() || !player || !guild)
         return true;
     if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
@@ -780,7 +794,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 // against reply chance on one message.
 bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t lang, std::string& msg, Channel* channel)
 {
-    if (!g_HsEnable || type != CHAT_MSG_CHANNEL || msg.empty() || !player || !channel)
+    if (!g_HsEnable || lang == LANG_ADDON || type != CHAT_MSG_CHANNEL || msg.empty() || !player || !channel)
         return true;
     if (Hs_IsBot(player))
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
