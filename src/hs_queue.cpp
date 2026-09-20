@@ -1137,9 +1137,8 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
-                    bool botSettled,
                     HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq,
-                    bool triggerIsStateLine)
+                    bool triggerIsStateLine, bool botSettled)
 {
     // 1. Token bucket. Taken atomically (review B7) and refunded on every
     // later bail-out, so the bucket can never be driven negative by two

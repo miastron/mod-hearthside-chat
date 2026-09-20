@@ -117,6 +117,9 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false,
+                    HsChannelKind channelKind = HsChannelKind::Trade,
+                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0,
+                    bool triggerIsStateLine = false,
                     // Hs_IsBotSettled (hs_rpgstate.h), sampled on the world
                     // thread at enqueue because that helper touches
                     // PlayerbotAI* and the worker may not. Only the distracted
@@ -124,10 +127,15 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     // real value: the other three callers are bot-initiated,
                     // which the distracted path already excludes outright, so
                     // paying for an isMoving() there would buy nothing.
-                    bool botSettled = false,
-                    HsChannelKind channelKind = HsChannelKind::Trade,
-                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0,
-                    bool triggerIsStateLine = false);
+                    //
+                    // Last in the list on purpose: every parameter from
+                    // channelKind on is passed positionally by at least one
+                    // caller, so inserting ahead of them silently rebinds
+                    // their arguments (it did, 2026-09-20 -- hs_botchain.cpp
+                    // and hs_event.cpp failed to compile on HsChannelKind ->
+                    // bool, which is the good case; a bool-compatible type
+                    // would have compiled and misbehaved).
+                    bool botSettled = false);
 
 // Claude/archive/PLAN-ARBITER.md §8: the event tier's own token bucket
 // (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket

@@ -597,7 +597,15 @@ namespace
         // stepped away (hs_queue.cpp's distracted block).
         bool botSettled = Hs_IsBotSettled(bot);
 
-        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false, /*isEvent=*/false, botSettled) && g_HsDebugEnabled)
+        // Every default between isEvent and botSettled is spelled out:
+        // botSettled is last in the list and there is no way to reach it
+        // otherwise. Passing it positionally earlier is what broke the
+        // 2026-09-20 build.
+        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel,
+                           rpgStatus, topicGate, /*isFollowUp=*/false, /*isEvent=*/false,
+                           /*channelKind=*/HsChannelKind::Trade,
+                           /*chainScopeId=*/0, /*chainSeq=*/0, /*triggerIsStateLine=*/false, botSettled)
+            && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
