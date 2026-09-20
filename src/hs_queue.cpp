@@ -162,6 +162,7 @@ namespace
         bool         inCombat;    // style pass: combat `care` offset
         uint8_t      botLevel;    // archetype eligibility filter (hs_archetype.h)
         NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
+    bool         botSettled;  // Hs_IsBotSettled at enqueue; gates the distracted reply only
         HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
         bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h): no score, no history write
         bool         isEvent;     // event reaction (hs_event.h): as isFollowUp, plus no first-meeting record
@@ -991,7 +992,35 @@ namespace
             // here, so nothing has to be threaded through HsQueuedRequest.
             std::string       distractedFiller;
             Clock::time_point distractedFillerAt = now;
-            if (!botInitiated && TryClaimDistractedReply(req.botGuid, archetypeInfo.distractedChance))
+            // Gated on the bot's own live activity, added 2026-09-20. The
+            // mechanic shipped rolling on chance alone, so a bot could
+            // apologise for being away while its AI was visibly questing or
+            // running somewhere -- observed on the realm, and the exact
+            // behaviour that had been ruled out when this was designed.
+            // req.rpgStatus is captured on the world thread at enqueue
+            // (Hs_EnqueueReply), so the worker can read it without touching
+            // a Player*.
+            // Settled-state gate, added 2026-09-20. The mechanic shipped
+            // rolling on chance alone, so a bot could apologise for being away
+            // while its own AI was visibly questing or running somewhere --
+            // observed on the realm, and the behaviour that had been ruled out
+            // when this was designed.
+            //
+            // Reuses Hs_IsBotSettled (hs_rpgstate.h) rather than testing
+            // req.rpgStatus here, so there is one definition of "this bot is
+            // not doing anything". That helper AND-s the rpg state with
+            // isMoving() precisely because state alone is too coarse: a
+            // questing bot stops constantly, and RPG_IDLE is a transient that
+            // rolls straight into the next activity. It is world-thread only,
+            // hence sampling it at enqueue into req.botSettled.
+            //
+            // Note this does not contradict hs_rpgstate.h's documented scope
+            // ("deliberately does not gate direct replies"). That scope is
+            // about whether a bot answers at all, which is untouched here: a
+            // walking bot still replies, it just replies without claiming to
+            // have been afk.
+            if (!botInitiated && req.botSettled &&
+                TryClaimDistractedReply(req.botGuid, archetypeInfo.distractedChance))
             {
                 std::string rawFiller = kDistractedFillers[urand(0, static_cast<uint32_t>(kDistractedFillers.size()) - 1)];
 
@@ -1108,6 +1137,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
                     const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
                     bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
                     const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
+                    bool botSettled,
                     HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq,
                     bool triggerIsStateLine)
 {
@@ -1192,6 +1222,7 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
             req.inCombat   = inCombat;
             req.botLevel   = botLevel;
             req.rpgStatus  = rpgStatus;
+            req.botSettled = botSettled;
             req.topicGate  = topicGate;
             req.isFollowUp = isFollowUp;
             req.isEvent    = isEvent;

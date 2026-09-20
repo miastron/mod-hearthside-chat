@@ -337,7 +337,20 @@ HearthsideChat.MinDeliveryDelayMs = 400
 # --------------------------------------------
 # Occasionally a bot answers late and says so: a short canned line
 # ("sorry, was afk", "back", ...) after a delay, then the real reply a full
-# typing delay after that. How often this happens is set per bot
+# typing delay after that.
+#
+# Only fires when the bot is *settled* -- stationary, and either resting or
+# milling about between NPCs somewhere it has arrived (Hs_IsBotSettled,
+# hs_rpgstate.h, the same gate ambient musing and openers already use). A bot
+# that is questing, grinding, travelling or fighting is visibly doing
+# something, and apologising for having stepped away while it walks a quest
+# route reads as a lie rather than as flavor.
+#
+# This does not stop an unsettled bot from replying -- it replies normally,
+# just without the "sorry, was afk" framing. Not a config key: there is no
+# sensible reason to want the un-gated version.
+#
+# How often this happens is set per bot
 # personality in the database (hside_archetype.distracted_chance), not
 # here -- it's meant to read as a personality quirk, not as the AI server
 # being slow. It is deliberately NOT tied to actual backend slowness or to

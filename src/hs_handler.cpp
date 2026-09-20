@@ -11,6 +11,7 @@
 #include "hs_identity_store.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
+#include "hs_rpgstate.h"
 #include "hs_queue.h"
 #include "hs_reflex.h"
 #include "hs_script.h"
@@ -590,7 +591,13 @@ namespace
         // prompt this feeds, so the read would be wasted work.
         HsTopicGateContext topicGate = BuildTopicGateContext(bot);
 
-        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false) && g_HsDebugEnabled)
+        // Sampled here, on the world thread, because Hs_IsBotSettled touches
+        // PlayerbotAI*. Only the distracted reply reads it: a bot that is not
+        // settled still answers, it just answers without claiming to have
+        // stepped away (hs_queue.cpp's distracted block).
+        bool botSettled = Hs_IsBotSettled(bot);
+
+        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel, rpgStatus, topicGate, /*isFollowUp=*/false, /*isEvent=*/false, botSettled) && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
