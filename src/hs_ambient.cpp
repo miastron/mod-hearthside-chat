@@ -516,7 +516,7 @@ namespace
         // Corpus-only, permanently: see hs_ambient.h. "inference" is
         // accepted and behaves exactly as "corpus"; there is no generated
         // ambient path and no plan for one.
-        if (!HsTierAllows(HsParseTier(g_HsMaxTierAmbient), HsTier::Corpus))
+        if (!HsTierAllows(g_HsMaxTierAmbient, HsTier::Corpus))
             return;
 
         // Which surfaces are switched on at all. Cheap config and policy

@@ -74,7 +74,9 @@ namespace
             Hs_IsBackendDown() ? "DOWN (circuit breaker open)" : "up",
             Hs_PendingQueueDepth(), g_HsQueueMaxDepth);
         handler->PSendSysMessage("[HearthsideChat] MaxTier - DirectReply: {}  Ambient: {}  Openers: {}  BotToBot: {}  Reflex: {}  EngagementFollowUp: {}  Events: {}",
-            g_HsMaxTierDirectReply, g_HsMaxTierAmbient, g_HsMaxTierOpeners, g_HsMaxTierBotToBot, g_HsMaxTierReflex, g_HsMaxTierEngagementFollowUp, g_HsMaxTierEvents);
+            HsTierName(g_HsMaxTierDirectReply), HsTierName(g_HsMaxTierAmbient), HsTierName(g_HsMaxTierOpeners),
+            HsTierName(g_HsMaxTierBotToBot), HsTierName(g_HsMaxTierReflex), HsTierName(g_HsMaxTierEngagementFollowUp),
+            HsTierName(g_HsMaxTierEvents));
         handler->PSendSysMessage("[HearthsideChat] BotQuestion mode: {}", g_HsBotQuestionMode);
         handler->PSendSysMessage("[HearthsideChat] Generator: {}  Reactive idle: {}  Rows added this session: {}  Rows evicted this session: {}",
             g_HsGeneratorEnabled ? "on" : "off", Hs_IsReactiveIdle() ? "yes" : "no",

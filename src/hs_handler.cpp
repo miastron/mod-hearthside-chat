@@ -11,18 +11,17 @@
 #include "hs_identity_store.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
-#include "hs_rpgstate.h"
 #include "hs_queue.h"
 #include "hs_reflex.h"
 #include "hs_script.h"
 #include "hs_style.h"
 #include "hs_tier.h"
-#include "hs_topic_gate.h"
 #include "hs_locale.h"
 
 #include "Channel.h"    // §4.17 channel hook: Channel::GetChannelId()/GetName()
 #include "DBCStores.h"
 #include "Group.h"
+#include "GroupReference.h"
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "Item.h"
@@ -74,41 +73,6 @@ namespace
         return out;
     }
 
-    // §4.13's remaining topic-gate facts, read fresh per request like
-    // inCombat/botLevel: gear, group, and instance are all as volatile as
-    // combat. hs_topic_gate.h stays pure/no-AC-dependency for standalone
-    // testing, so this Player*-reading half lives here (and is duplicated
-    // in hs_engagement.cpp's TryFireFollowUp) rather than there.
-    HsTopicGateContext BuildTopicGateContext(Player* bot)
-    {
-        HsTopicGateContext ctx;
-        ctx.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
-
-        if (Group* group = bot->GetGroup())
-        {
-            ctx.inGroup       = true;
-            ctx.isGroupLeader = group->IsLeader(bot->GetGUID());
-        }
-
-        if (Map* map = bot->GetMap())
-        {
-            ctx.inInstance = map->IsDungeon() || map->IsRaid();
-            if (ctx.inInstance)
-                ctx.instanceName = map->GetMapName();
-        }
-
-        ctx.goldCopper = bot->GetMoney();
-
-        if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
-        {
-            std::string name = Hs_LocalizedAreaName(entry); // review H1
-            if (!name.empty())
-                ctx.zoneName = name;
-        }
-
-        return ctx;
-    }
-
     // Once a bot is selected, the reflex pattern table is checked before
     // anything else. A match is a complete answer, not a fallback trigger --
     // it never falls through to inference even when the trigger also
@@ -121,8 +85,7 @@ namespace
     {
         handled = false;
 
-        HsTier reflexCeiling = HsParseTier(g_HsMaxTierReflex);
-        if (!HsTierAllows(reflexCeiling, HsTier::Reflex))
+        if (!HsTierAllows(g_HsMaxTierReflex, HsTier::Reflex))
             return;
 
         HsReflexMatch match = Hs_MatchReflex(msg, botGuid, senderGuid, Hs_ParseBotQuestionMode(g_HsBotQuestionMode));
@@ -529,7 +492,7 @@ namespace
             return;
 
         // Universal placeholders only: channel_* categories are never
-        // card_gated (hs_corpus.cpp's ChannelColumnFor query), so no card
+        // card_gated (Hs_SelectChannelLine's category filter), so no card
         // placeholder pass is needed here, unlike TryCorpusFallback.
         if (line.find('%') != std::string::npos)
         {
@@ -559,16 +522,7 @@ namespace
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
         uint64_t senderGuid = sender->GetGUID().GetRawValue();
         bool     inCombat   = bot->IsInCombat(); // context modulates care downward in combat
-        uint8_t  botLevel   = bot->GetLevel();   // archetype eligibility filter
-
-        // The bot's live mod-playerbots activity, read here (only the
-        // world thread may touch PlayerbotAI*) and carried into the queued
-        // request as a plain enum value so the worker thread can fold it
-        // into the prompt without touching a game object off-thread --
-        // same pattern inCombat/botLevel already use.
-        NewRpgStatus rpgStatus = RPG_IDLE;
-        if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot))
-            rpgStatus = botAI->rpgInfo.GetStatus();
+        uint8_t  botLevel   = bot->GetLevel();   // corpus fallback's level-band tag
 
         bool reflexHandled = false;
         TryReflex(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
@@ -578,34 +532,18 @@ namespace
         if (TryGrounded(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel))
             return;
 
-        HsTier ceiling = HsParseTier(g_HsMaxTierDirectReply);
-        if (!HsTierAllows(ceiling, HsTier::Inference))
+        if (!HsTierAllows(g_HsMaxTierDirectReply, HsTier::Inference))
         {
-            if (HsTierAllows(ceiling, HsTier::Corpus))
+            if (HsTierAllows(g_HsMaxTierDirectReply, HsTier::Corpus))
                 TryCorpusFallback(bot, sender, channel, botGuid, senderGuid, inCombat, botLevel);
             return;
         }
 
-        // §4.13's remaining topic-gate facts. Only read here, not for the
-        // reflex/grounded/corpus tiers above: those never reach the LLM
-        // prompt this feeds, so the read would be wasted work.
-        HsTopicGateContext topicGate = BuildTopicGateContext(bot);
-
-        // Sampled here, on the world thread, because Hs_IsBotSettled touches
-        // PlayerbotAI*. Only the distracted reply reads it: a bot that is not
-        // settled still answers, it just answers without claiming to have
-        // stepped away (hs_queue.cpp's distracted block).
-        bool botSettled = Hs_IsBotSettled(bot);
-
-        // Every default between isEvent and botSettled is spelled out:
-        // botSettled is last in the list and there is no way to reach it
-        // otherwise. Passing it positionally earlier is what broke the
-        // 2026-09-20 build.
-        if (!Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(), channel, msg, inCombat, botLevel,
-                           rpgStatus, topicGate, /*isFollowUp=*/false, /*isEvent=*/false,
-                           /*channelKind=*/HsChannelKind::Trade,
-                           /*chainScopeId=*/0, /*chainSeq=*/0, /*triggerIsStateLine=*/false, botSettled)
-            && g_HsDebugEnabled)
+        // The topic-gate facts, rpg status and settled state are read only
+        // here, not for the reflex/grounded/corpus tiers above: those never
+        // reach the LLM prompt they feed. A plain direct reply sets none of
+        // the request's kind flags.
+        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, sender, channel, msg)) && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 }
@@ -649,10 +587,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         Player* candidate = itr.second;
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
-        if (!Hs_IsBot(candidate))
-            continue;
-        if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        if (!Hs_IsEligibleBot(candidate))
+            continue; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (candidate->GetTeamId() != player->GetTeamId())
             continue; // opposing faction can't read /say
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
@@ -690,10 +626,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     // bot-to-bot which is only ever witnessed via /say, so this handler
     // needs the same abort-on-interrupt call the /say path already has.
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
-    if (!Hs_IsBot(receiver))
-        return true;
-    if (Hs_IsExcludedBotName(receiver->GetName()))
-        return true; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
+    if (!Hs_IsEligibleBot(receiver))
+        return true; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
     if (g_HsDisableRepliesInCombat && receiver->IsInCombat())
         return true;
 
@@ -731,20 +665,21 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     bool subgroupScoped = (type == CHAT_MSG_PARTY || type == CHAT_MSG_PARTY_LEADER);
 
+    // The group's own member list, not a realm walk filtered down to it.
     std::vector<Player*> eligible;
-    for (auto const& itr : ObjectAccessor::GetPlayers())
+    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
     {
-        Player* candidate = itr.second;
+        Player* candidate = itr->GetSource();
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
-        if (!Hs_IsBot(candidate))
-            continue;
+        // A member away in a battleground is still on this list (through its
+        // original-group reference) but its party chat goes to the BG raid.
         if (candidate->GetGroup() != group)
             continue;
         if (subgroupScoped && !group->SameSubGroup(player, candidate))
             continue;
-        if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        if (!Hs_IsEligibleBot(candidate))
+            continue; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
         eligible.push_back(candidate);
@@ -771,23 +706,20 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
-    uint32_t guildId = guild->GetId();
+    // The guild's own online members (Guild::BroadcastWorker resolves each
+    // one and skips `player`), not a realm walk filtered down to the id.
     std::vector<Player*> eligible;
-    for (auto const& itr : ObjectAccessor::GetPlayers())
+    auto collect = [&eligible](Player* candidate)
     {
-        Player* candidate = itr.second;
-        if (!candidate || candidate == player || !candidate->IsInWorld())
-            continue;
-        if (!Hs_IsBot(candidate))
-            continue;
-        if (candidate->GetGuildId() != guildId)
-            continue;
-        if (Hs_IsExcludedBotName(candidate->GetName()))
-            continue; // HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        if (!candidate->IsInWorld())
+            return;
+        if (!Hs_IsEligibleBot(candidate))
+            return; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
-            continue;
+            return;
         eligible.push_back(candidate);
-    }
+    };
+    guild->BroadcastWorker(collect, player);
     if (eligible.empty())
         return true;
 
@@ -920,5 +852,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
 void HsDeliveryWorldScript::OnUpdate(uint32_t /*diff*/)
 {
+    // Hook work deferred off the map-update threads first (hs_queue.h), so
+    // anything it queues for delivery is visible to the drain below.
+    Hs_RunDeferredWork();
     Hs_DeliverPending();
 }

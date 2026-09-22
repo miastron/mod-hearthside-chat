@@ -11,6 +11,7 @@
 #include <vector>
 
 class Channel;
+class ObjectGuid;
 class Player;
 
 // The runtime queue. A fixed worker pool of exactly one thread (slots in
@@ -45,97 +46,111 @@ void Hs_QueueStartup();
 // Signals the worker to stop and joins it. Call once at worldserver shutdown.
 void Hs_QueueShutdown();
 
+// One reactive-tier request. Hs_MakeReplyRequest fills everything that has
+// to be read off a Player* on the world thread; the caller then sets, by
+// name, the fields that say what kind of request this is.
+//
+// A struct rather than the seventeen positional parameters Hs_TryEnqueue
+// used to take. Most of those were bools and small enums passed by position
+// behind a run of defaults, so inserting one reordered its neighbours'
+// meaning: it did on 2026-09-20, and failed to compile only because the
+// rebound argument happened to be an HsChannelKind landing on a bool.
+struct HsReplyRequest
+{
+    uint64_t       botGuid    = 0;
+    std::string    botName;       // style pass: protected from typo injection
+    uint64_t       senderGuid = 0;
+    std::string    senderName;    // style pass: protected from typo injection
+    HsReplyChannel channel    = HsReplyChannel::Say;
+    std::string    prompt;        // what is being answered; see triggerIsStateLine
+
+    // ---- bot state, sampled on the world thread by Hs_MakeReplyRequest ----
+    // Only the world thread may touch Player*/PlayerbotAI*, so the worker
+    // reads these values instead of the objects.
+    bool               inCombat   = false;    // style pass: combat `care` offset
+    uint8_t            botLevel   = 0;        // Hs_BumpInteractionScore's card-retirement check
+    NewRpgStatus       rpgStatus  = RPG_IDLE; // mod-playerbots' live activity, stated in the prompt as a fact
+    bool               botSettled = false;    // Hs_IsBotSettled (hs_rpgstate.h); gates the distracted reply only
+    HsTopicGateContext topicGate;             // §4.13 gear/group/instance/gold/zone facts (hs_topic_gate.h)
+
+    // ---- what kind of request this is ----
+
+    // A self-initiated engagement follow-up (hs_engagement.cpp): same
+    // admission gates as any reply, but the worker skips the
+    // interaction-score bump and the history write -- bot-initiated, not a
+    // scored player utterance, and not useful prior-turn context.
+    bool isFollowUp = false;
+
+    // The sender is not a real player: an event reaction (hs_event.cpp),
+    // whose "sender" is whoever the event happened around, or a bot-to-bot
+    // chain hop (hs_botchain.cpp). Suppresses everything isFollowUp does
+    // (history, score bump, engagement re-arm, distracted reply) plus
+    // Hs_EnsureFirstMeetingRecorded, since "met" between two bots is not a
+    // fact about any player.
+    bool isEvent = false;
+
+    // `prompt` is a synthetic line describing something that happened ("You
+    // were out on your own and have just been killed."), not something
+    // anybody said. The worker states it as a fact alongside the bot's other
+    // state and puts a react-instruction in the slot a player's message would
+    // occupy. Deliberately not folded into isEvent: a chain hop is isEvent
+    // too, and its trigger is a real line another bot said, which belongs in
+    // the trigger slot untouched.
+    bool triggerIsStateLine = false;
+
+    // Only meaningful when channel == HsReplyChannel::Channel, exactly as on
+    // Hs_DeliverReflexReply. A live chain hop is the one tier-2 producer
+    // that can deliver into a global channel.
+    HsChannelKind channelKind = HsChannelKind::Trade;
+
+    // A bot-to-bot chain hop (hs_botchain.h); 0 = not a hop. Carried to
+    // delivery so Hs_DeliverPending can drop a hop whose scope a real player
+    // took over while it was still generating. Checked at delivery rather
+    // than cancelled at abort time, since a hop's scope is not keyed by the
+    // player whose message triggers the abort.
+    uint64_t chainScopeId = 0;
+    uint32_t chainSeq     = 0;
+};
+
+// World thread only. Fills the identity and bot-state halves of a request
+// from the live objects; the caller sets the kind flags afterwards. The one
+// place the topic-gate facts, the rpg status and the settled test are read
+// for a reply -- four callers used to spell the same reads out by hand.
+HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt);
+
 // Attempts to admit one reactive-tier request. Applies, in order: the token
 // bucket, the per-bot cooldown, the circuit breaker (silently, except for
 // the one probe request let through per interval while open), and the
 // bounded-queue depth cap. Returns false and does nothing further if any
 // gate rejects: silence, not a queued retry.
+bool Hs_TryEnqueue(HsReplyRequest request);
+
+// Runs `work` on the world thread, from the next Hs_RunDeferredWork call
+// (HsDeliveryWorldScript::OnUpdate, every world tick).
 //
-// botName/senderName are carried through to the worker thread so the style
-// pass (hs_style.h) can protect them from typo injection; the world thread
-// already has both in hand at the call site (hs_handler.cpp). inCombat is
-// likewise read at the call site (only the world thread touches Player*)
-// and feeds the style pass's combat `care` offset. botLevel lets the worker
-// thread restrict its archetype draw (hs_archetype.h) to the level-eligible
-// pool. rpgStatus is `botAI->rpgInfo.GetStatus()` (mod-playerbots'
-// NewRpgStatus: questing, grinding, outdoor PvP, resting, etc.), folded
-// into the prompt as a short factual line so a bot can't claim to be doing
-// something the realm's own state contradicts (e.g. "pvping" while
-// mid-quest).
+// For PlayerScript/GroupScript/GuildScript hooks. Most of them fire from
+// inside Map::Update -- Unit::Kill, Player::Update, InstanceScript encounter
+// credit -- and Map::Update runs on MapUpdate.Threads worker threads, several
+// maps at once (8 on the test realm). From there it is not safe to walk
+// ObjectAccessor::GetPlayers(), read a player on another map, or touch the
+// module's world-thread-only state, and not cheap to block on the database.
+// World::Update runs the map update before OnWorldUpdate, so deferred work
+// normally runs later in the same tick.
 //
-// isFollowUp is true only for a self-initiated engagement follow-up
-// (hs_engagement.cpp): same admission gates as any reply, but the worker
-// skips the interaction-score bump and the history write for these:
-// bot-initiated, not a scored player utterance, and not useful prior-turn
-// context.
-//
-// isEvent is the same idea for an event reaction (hs_event.cpp): also
-// bot-initiated, so it suppresses the history append, the score bump, the
-// engagement re-arm, and the distracted-reply roll exactly as isFollowUp
-// does. It suppresses one thing more, Hs_EnsureFirstMeetingRecorded,
-// because an event's "sender" is whoever the event happened around, which
-// for a bot's own death or a bot-only group is another bot; recording a
-// first meeting between two bots would seed identity state off something
-// no player was part of. That single difference is why this is its own flag
-// rather than a second caller passing isFollowUp.
-//
-// topicGate carries §4.13's remaining topic-gate facts (gear, group
-// membership/leadership, in-instance, gold, zone), read at the call site
-// like inCombat/botLevel/rpgStatus, then folded into the prompt as plain
-// facts (hs_topic_gate.h) rather than an instruction.
-//
-// channelKind is only meaningful when `channel == HsReplyChannel::Channel`,
-// exactly as on Hs_DeliverReflexReply below. It exists on this path because
-// hs_botchain.h's live chain hop is the first tier-2 producer that can
-// deliver into a global channel: every earlier channel reply was
-// corpus-only and reached delivery through Hs_DeliverReflexReply, which has
-// carried the kind since §4.17. Without it the worker's delivery push would
-// take HsPendingReply's default and misdeliver every channel hop into Trade.
-//
-// triggerIsStateLine says the userPrompt is a synthetic line describing
-// something that happened ("You were out on your own and have just been
-// killed."), not something anybody said. The worker then states it as a
-// fact alongside the bot's other state and puts a react-instruction in the
-// slot the player's message would occupy, the same shape hs_engagement.cpp
-// uses for a follow-up.
-//
-// Deliberately NOT folded into isEvent, even though hs_event.cpp is the
-// only caller that passes it: hs_botchain.cpp also passes isEvent for a
-// live chain hop, where the trigger is a real utterance by another bot and
-// belongs in the trigger slot untouched. isEvent means "the sender is not a
-// real player" and gates identity/history side effects; this flag is about
-// which slot the text goes in, and the two are not the same question.
-//
-// chainScopeId/chainSeq tag a bot-to-bot chain hop (hs_botchain.h); 0 means
-// "not a hop", which is every other caller. They are carried through to
-// delivery so Hs_DeliverPending can drop a hop whose scope was taken over by
-// a real player while it was still generating (the same stale-line problem
-// Hs_CancelPendingFollowUpsFor solves for engagement follow-ups), but checked
-// at delivery rather than cancelled at abort time, since a hop's scope is not
-// keyed by the player whose message triggers the abort.
-bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
-                    const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
-                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent = false,
-                    HsChannelKind channelKind = HsChannelKind::Trade,
-                    uint64_t chainScopeId = 0, uint32_t chainSeq = 0,
-                    bool triggerIsStateLine = false,
-                    // Hs_IsBotSettled (hs_rpgstate.h), sampled on the world
-                    // thread at enqueue because that helper touches
-                    // PlayerbotAI* and the worker may not. Only the distracted
-                    // reply reads it, and only the direct-reply caller passes a
-                    // real value: the other three callers are bot-initiated,
-                    // which the distracted path already excludes outright, so
-                    // paying for an isMoving() there would buy nothing.
-                    //
-                    // Last in the list on purpose: every parameter from
-                    // channelKind on is passed positionally by at least one
-                    // caller, so inserting ahead of them silently rebinds
-                    // their arguments (it did, 2026-09-20 -- hs_botchain.cpp
-                    // and hs_event.cpp failed to compile on HsChannelKind ->
-                    // bool, which is the good case; a bool-compatible type
-                    // would have compiled and misbehaved).
-                    bool botSettled = false);
+// The closure must capture GUIDs and plain values, never a Player*, Group*,
+// Guild* or anything else the hook was handed: re-resolve on the world
+// thread, where the object may since have gone. Returns false (the work is
+// dropped) when the backlog cap is reached, which only a stalled world
+// thread should ever hit. Callable from any thread.
+bool Hs_DeferToWorldThread(std::function<void()> work);
+
+// World thread only: runs everything Hs_DeferToWorldThread queued so far.
+void Hs_RunDeferredWork();
+
+// The re-resolve half of that contract: a GUID captured on a map thread,
+// back to a live Player* on the world thread, or nullptr if they left the
+// world in between.
+Player* Hs_FindInWorld(ObjectGuid guid);
 
 // Claude/archive/PLAN-ARBITER.md §8: the event tier's own token bucket
 // (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket
@@ -276,7 +291,10 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
 // for why Whisper/Party/Raid/Guild are excluded). Called from every actual
 // delivery point regardless of tier -- Hs_DeliverPending's dispatch loop
 // covers reflex/grounded/corpus/ambient/opener/reactive, hs_script.cpp's two
-// direct Say() sites call it themselves. A no-op on empty text. This is not
+// direct Say() sites call it themselves -- but for a reply's primary line
+// only: the "sorry, was afk" filler and a `*correction` fragment are flavor
+// attached to a line, and "You recently said: \"*healer\"" is noise in the
+// next prompt, not context. A no-op on empty text. This is not
 // a relationship or identity write (contrast hs_identity_store.h/
 // hs_memory_store.h): it only ever feeds this same bot's own future
 // Hs_RecentUtteranceContext.

@@ -4,19 +4,12 @@
 #include "hs_config.h" // every g_Hs* key below, and Hs_IsExcludedBotName
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
-#include "hs_topic_gate.h"
-#include "hs_locale.h"
 
 #include "Channel.h" // Hs_ResolveChannelForDelivery's return
-#include "DBCStores.h"
 #include "Group.h"
 #include "GroupReference.h"
-#include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus
-#include "PlayerbotMgr.h"
 #include "Random.h"
 
 #include <atomic>
@@ -25,6 +18,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
@@ -66,43 +60,6 @@ namespace
             else
                 ++it;
         }
-    }
-
-    // §4.13's remaining topic-gate facts. Read here on the world thread and
-    // carried into the queued request as plain values, exactly as
-    // hs_handler.cpp's BuildTopicGateContext and hs_engagement.cpp's
-    // TryFireFollowUp already do: this file duplicates that read rather
-    // than sharing it, per the convention hs_handler.cpp states at its own
-    // copy (hs_topic_gate.h stays free of any AzerothCore dependency so it
-    // can carry a standalone harness).
-    HsTopicGateContext BuildTopicGateContext(Player* bot)
-    {
-        HsTopicGateContext ctx;
-        ctx.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
-
-        if (Group* group = bot->GetGroup())
-        {
-            ctx.inGroup       = true;
-            ctx.isGroupLeader = group->IsLeader(bot->GetGUID());
-        }
-
-        if (Map* map = bot->GetMap())
-        {
-            ctx.inInstance = map->IsDungeon() || map->IsRaid();
-            if (ctx.inInstance)
-                ctx.instanceName = map->GetMapName();
-        }
-
-        ctx.goldCopper = bot->GetMoney();
-
-        if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
-        {
-            std::string name = Hs_LocalizedAreaName(entry); // review H1
-            if (!name.empty())
-                ctx.zoneName = name;
-        }
-
-        return ctx;
     }
 
     // Party/raid candidates: the speaker's own group, subgroup-scoped for
@@ -226,7 +183,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     // not. Because a ceiling is permissive, "inference" still permits the
     // scripted replay path hs_script.cpp gates at HsTier::Corpus: the two
     // mechanisms run together, they do not replace each other.
-    if (!HsTierAllows(HsParseTier(g_HsMaxTierBotToBot), HsTier::Inference))
+    if (!HsTierAllows(g_HsMaxTierBotToBot, HsTier::Inference))
         return;
 
     // Checked before the scope map is touched below, not just as part of the
@@ -351,27 +308,18 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     // one depth counter, and the depth cap would stop meaning what it says.
     Player* responder = selected[0];
 
-    uint64_t responderGuid = responder->GetGUID().GetRawValue();
-    bool     inCombat      = responder->IsInCombat();
-    uint8_t  botLevel      = responder->GetLevel();
-
-    NewRpgStatus rpgStatus = RPG_IDLE;
-    if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(responder))
-        rpgStatus = botAI->rpgInfo.GetStatus();
-
     // isEvent, not isFollowUp: hs_queue.h documents that flag as the one for
     // a request whose "sender" is another bot, and that is exactly this case.
     // It suppresses the history write, the interaction-score bump, the
     // engagement re-arm, the distracted-reply roll, and: the part only this
     // flag carries: Hs_EnsureFirstMeetingRecorded, so a chain can never
     // seed identity state from two bots meeting each other.
-    bool admitted = Hs_TryEnqueue(responderGuid, responder->GetName(),
-                                   speaker->GetGUID().GetRawValue(), speaker->GetName(),
-                                   channel, text, inCombat, botLevel, rpgStatus,
-                                   BuildTopicGateContext(responder),
-                                   /*isFollowUp=*/false, /*isEvent=*/true,
-                                   kind, scopeId, seq);
-    if (!admitted)
+    HsReplyRequest request = Hs_MakeReplyRequest(responder, speaker, channel, text);
+    request.isEvent      = true;
+    request.channelKind  = kind;
+    request.chainScopeId = scopeId;
+    request.chainSeq     = seq;
+    if (!Hs_TryEnqueue(std::move(request)))
         return; // bucket/cooldown/breaker/queue-depth: silence, not a retry
 
     {

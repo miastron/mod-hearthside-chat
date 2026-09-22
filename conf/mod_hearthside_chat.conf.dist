@@ -155,9 +155,10 @@ HearthsideChat.LLM.MaxTokens = 60
 # HearthsideChat.LLM.SystemPrompt
 #     Description: The instructions given to the AI before every reply,
 #                  telling it to sound like an ordinary player rather than
-#                  a character. A second, fixed example block is added
-#                  automatically and isn't editable here (it lives in
-#                  hs_llm.cpp).
+#                  a character. The bot's "Archetype:" tag is added as a
+#                  second line automatically. The fine-tuned model was
+#                  trained on this exact wording, so changing it moves every
+#                  request away from what the model has seen.
 HearthsideChat.LLM.SystemPrompt = You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. No roleplay, no asterisks, no mention of being an AI or a game. If you don't know something specific, deflect vaguely instead of making it up.
 
 # HearthsideChat.LLM.HistoryTurns

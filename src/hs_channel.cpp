@@ -60,6 +60,14 @@ const char* Hs_ChannelKindName(HsChannelKind kind)
     return kChannelNames[static_cast<size_t>(kind)];
 }
 
+std::string Hs_ChannelColumnName(HsChannelKind kind)
+{
+    std::string column = Hs_ChannelKindName(kind);
+    for (char& c : column)
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return column;
+}
+
 void Hs_SetChannelPolicyTable(const HsChannelPolicy (&table)[kHsChannelKindCount])
 {
     for (size_t i = 0; i < kHsChannelKindCount; ++i)

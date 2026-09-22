@@ -18,6 +18,7 @@
 
 #include "DBCStores.h"
 #include "Group.h"
+#include "GroupMgr.h"
 #include "GroupReference.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
@@ -124,7 +125,7 @@ namespace
         if (Hs_IsExcludedBotName(bot->GetName()))
             return;
 
-        HsTier ceiling = HsParseTier(g_HsMaxTierOpeners);
+        HsTier ceiling = g_HsMaxTierOpeners;
         if (!HsTierAllows(ceiling, HsTier::Corpus)) // MaxTier.Openers is corpus-only in v1
             return;
 
@@ -211,51 +212,75 @@ namespace
     }
 }
 
-void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
+// ---- The four event triggers: recorded on the hook, fired on the world thread ----
+//
+// Every hook below fires from game code that runs inside Map::Update -- a
+// creature kill and its credit, a resurrection, an instance's encounter
+// state, a bot's own AI accepting a group invite -- and Map::Update runs on
+// MapUpdate.Threads worker threads, several maps at once. What these triggers
+// do next (a realm-wide proximity question inside FireOpener's settled test,
+// Hs_RecordMemoryEvent's and Hs_BumpInteractionScore's synchronous DB round
+// trips, reads of group members standing on other maps) belongs on the
+// world thread, so each hook captures GUIDs and hands the rest to
+// Hs_DeferToWorldThread (hs_queue.h). Same shape as hs_event.cpp's hooks.
+namespace
 {
-    if (!group)
-        return;
-    Player* newMember = ObjectAccessor::FindPlayer(guid);
-    if (!newMember || !newMember->IsInWorld())
-        return;
-
-    bool newIsBot = Hs_IsBot(newMember);
-
-    // An excluded bot joining is not a greeter and is not the human side
-    // either, so there is nothing to do for this call at all; bailing
-    // here (rather than inside FireOpener) is what keeps the grouped_in_zone
-    // memory write below from happening for it.
-    if (newIsBot && !Hs_IsEligibleBot(newMember))
-        return;
-
-    // Find "the other side": if the joiner is a bot, the bot it should
-    // greet is itself and the target is the first real player already in
-    // the group; if the joiner is a real player, the greeter is the first
-    // bot already there. Either way this fires once per OnAddMember call,
-    // not once per bot in the group.
-    Player* bot    = newIsBot ? newMember : nullptr;
-    Player* player = newIsBot ? nullptr   : newMember;
-
-    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    // The first real player in `group` other than `except`, or nullptr.
+    Player* FirstRealPlayerIn(Group* group, Player* except)
     {
-        Player* member = itr->GetSource();
-        if (!member || member == newMember || !member->IsInWorld())
-            continue;
-
-        // IsBot for the human-side test, IsEligibleBot for the greeter:
-        // an excluded bot is neither, so it is skipped as a greeter without
-        // ever being mistaken for the real player.
-        if (newIsBot && !player && !Hs_IsBot(member))
-            player = member;
-        else if (!newIsBot && !bot && Hs_IsEligibleBot(member))
-            bot = member;
-
-        if (bot && player)
-            break;
+        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+        {
+            Player* member = itr->GetSource();
+            if (member && member != except && member->IsInWorld() && !Hs_IsBot(member))
+                return member;
+        }
+        return nullptr;
     }
 
-    if (bot && player)
+    void GreetNewMember(Group* group, ObjectGuid newMemberGuid)
     {
+        Player* newMember = Hs_FindInWorld(newMemberGuid);
+        if (!newMember)
+            return;
+
+        bool newIsBot = Hs_IsBot(newMember);
+
+        // An excluded bot joining is not a greeter and is not the human side
+        // either, so there is nothing to do for this call at all; bailing
+        // here (rather than inside FireOpener) is what keeps the grouped_in_zone
+        // memory write below from happening for it.
+        if (newIsBot && !Hs_IsEligibleBot(newMember))
+            return;
+
+        // Find "the other side": if the joiner is a bot, the bot it should
+        // greet is itself and the target is the first real player already in
+        // the group; if the joiner is a real player, the greeter is the first
+        // bot already there. Either way this fires once per OnAddMember call,
+        // not once per bot in the group.
+        Player* bot    = newIsBot ? newMember : nullptr;
+        Player* player = newIsBot ? nullptr   : newMember;
+
+        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+        {
+            Player* member = itr->GetSource();
+            if (!member || member == newMember || !member->IsInWorld())
+                continue;
+
+            // IsBot for the human-side test, IsEligibleBot for the greeter:
+            // an excluded bot is neither, so it is skipped as a greeter without
+            // ever being mistaken for the real player.
+            if (newIsBot && !player && !Hs_IsBot(member))
+                player = member;
+            else if (!newIsBot && !bot && Hs_IsEligibleBot(member))
+                bot = member;
+
+            if (bot && player)
+                break;
+        }
+
+        if (!bot || !player)
+            return;
+
         // "Grouped in a zone" is a shared-experience memory beat
         // independent of whether an opener actually fires: not a player
         // utterance, so it's recorded here at the trigger site rather than
@@ -268,14 +293,29 @@ void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
                               kHsMemoryEventGroupedInZone, Hs_BuildGroupedInZoneText(zone));
 
         // Party/raid, not /say: see FireOpener's `channel` note. Decided off
-        // the `group` this hook was handed rather than bot->GetGroup(), which
-        // is not guaranteed to be wired up yet at OnAddMember time; by the
-        // time Hs_DeliverPending calls SayToParty/SayToRaid (a 400-1500ms
-        // reflex delay later) it is, and SayToRaid is the one that needs the
-        // raid flag to be right.
+        // the group itself, re-resolved by GUID for this call, rather than
+        // bot->GetGroup(), which is not guaranteed to be wired up yet at
+        // OnAddMember time; by the time Hs_DeliverPending calls
+        // SayToParty/SayToRaid (a 400-1500ms reflex delay later) it is, and
+        // SayToRaid is the one that needs the raid flag to be right.
         FireOpener(bot, player, "opener_group_formed",
                     group->isRaidGroup() ? HsReplyChannel::Raid : HsReplyChannel::Party);
     }
+}
+
+void HsOpenerGroupHandler::OnAddMember(Group* group, ObjectGuid guid)
+{
+    if (!group || !HsTierAllows(g_HsMaxTierOpeners, HsTier::Corpus))
+        return;
+
+    // The group by GUID, not the pointer: it can be disbanded before the
+    // world thread gets here, and GroupMgr answers that with nullptr.
+    ObjectGuid::LowType groupId = group->GetGUID().GetCounter();
+    Hs_DeferToWorldThread([groupId, guid]()
+    {
+        if (Group* live = sGroupMgr->GetGroupByGUID(groupId))
+            GreetNewMember(live, guid);
+    });
 }
 
 void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*killed*/)
@@ -284,42 +324,47 @@ void HsOpenerKillHandler::OnPlayerCreatureKill(Player* killer, Creature* /*kille
     // fires once per player who does, not once per player with kill
     // credit, so "jointly" is scoped to this direction rather than a
     // cross-player correlation cache (hs_opener.h).
-    if (!killer || !Hs_IsEligibleBot(killer)) // ExcludeNames: never the speaker
+    //
+    // The tests here read only the killer: this is the busiest hook the
+    // module takes, so everything that can end it cheaply does so before a
+    // deferral is queued.
+    if (!killer || !killer->GetGroup() || !HsTierAllows(g_HsMaxTierOpeners, HsTier::Corpus))
+        return;
+    if (!Hs_IsEligibleBot(killer)) // ExcludeNames: never the speaker
         return;
 
-    Group* group = killer->GetGroup();
-    if (!group)
-        return;
-
-    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    ObjectGuid killerGuid = killer->GetGUID();
+    Hs_DeferToWorldThread([killerGuid]()
     {
-        Player* member = itr->GetSource();
-        if (!member || member == killer || !member->IsInWorld() || Hs_IsBot(member))
-            continue;
-        FireOpener(killer, member, "opener_joint_kill");
-        break; // one opener per kill, not one per real player in the group
-    }
+        Player* bot = Hs_FindInWorld(killerGuid);
+        Group* group = bot ? bot->GetGroup() : nullptr;
+        if (!group)
+            return;
+        // One opener per kill, not one per real player in the group.
+        if (Player* member = FirstRealPlayerIn(group, bot))
+            FireOpener(bot, member, "opener_joint_kill");
+    });
 }
 
 void HsOpenerResurrectHandler::OnPlayerResurrect(Player* player, float /*restorePercent*/, bool& /*applySickness*/)
 {
     // Scoped to the bot-receives-rez direction: the hook carries no
     // caster/giver reference (hs_opener.h).
-    if (!player || !Hs_IsEligibleBot(player)) // ExcludeNames: never the speaker
+    if (!player || !player->GetGroup() || !HsTierAllows(g_HsMaxTierOpeners, HsTier::Corpus))
+        return;
+    if (!Hs_IsEligibleBot(player)) // ExcludeNames: never the speaker
         return;
 
-    Group* group = player->GetGroup();
-    if (!group)
-        return;
-
-    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    ObjectGuid guid = player->GetGUID();
+    Hs_DeferToWorldThread([guid]()
     {
-        Player* member = itr->GetSource();
-        if (!member || member == player || !member->IsInWorld() || Hs_IsBot(member))
-            continue;
-        FireOpener(player, member, "opener_rez");
-        break;
-    }
+        Player* bot = Hs_FindInWorld(guid);
+        Group* group = bot ? bot->GetGroup() : nullptr;
+        if (!group)
+            return;
+        if (Player* member = FirstRealPlayerIn(group, bot))
+            FireOpener(bot, member, "opener_rez");
+    });
 }
 
 void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCreditType /*type*/, uint32_t /*creditEntry*/,
@@ -330,6 +375,9 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
     if (!dungeonCompleted || !map) // nonzero only on the dungeon's actual last encounter, not every boss
         return;
 
+    // The pair is picked here, from the instance's own player list -- this
+    // hook runs on the thread updating this map, so its list is the one thing
+    // it may walk -- and only the GUIDs cross to the world thread.
     Player* bot    = nullptr;
     Player* player = nullptr;
     Map::PlayerList const& players = map->GetPlayers();
@@ -357,23 +405,33 @@ void HsOpenerEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCr
             break;
     }
 
-    if (bot && player)
+    if (!bot || !player)
+        return;
+
+    ObjectGuid  botGuid    = bot->GetGUID();
+    ObjectGuid  playerGuid = player->GetGUID();
+    // Uses Map::GetMapName() rather than resolving dungeonCompleted's
+    // LFG dungeon id to a display name; the map's own name is real,
+    // always available, and equally truthful for this purpose.
+    std::string mapName    = map->GetMapName();
+    Hs_DeferToWorldThread([botGuid, playerGuid, mapName]()
     {
+        Player* liveBot    = Hs_FindInWorld(botGuid);
+        Player* livePlayer = Hs_FindInWorld(playerGuid);
+        if (!liveBot || !livePlayer)
+            return;
+
         // "Dungeon completed together" is a shared-experience signal
         // independent of whether an opener fires: not a player
         // utterance, so it's scored here rather than in hs_queue.cpp's
         // WorkerLoop. One representative bot/player pair; exact
         // multiplicity across a multi-bot group doesn't need to be exact.
-        Hs_BumpInteractionScore(bot->GetGUID().GetRawValue(), bot->GetLevel(), kHsScoreWeightDungeonComplete);
+        Hs_BumpInteractionScore(botGuid.GetRawValue(), liveBot->GetLevel(), kHsScoreWeightDungeonComplete);
+        Hs_RecordMemoryEvent(botGuid.GetRawValue(), playerGuid.GetRawValue(),
+                              kHsMemoryEventDungeonCompleted, Hs_BuildDungeonCompletedText(mapName));
 
-        // Uses Map::GetMapName() rather than resolving dungeonCompleted's
-        // LFG dungeon id to a display name; the map's own name is real,
-        // always available, and equally truthful for this purpose.
-        Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(),
-                              kHsMemoryEventDungeonCompleted, Hs_BuildDungeonCompletedText(map->GetMapName()));
-
-        FireOpener(bot, player, "opener_dungeon_complete");
-    }
+        FireOpener(liveBot, livePlayer, "opener_dungeon_complete");
+    });
 }
 
 void Hs_ScanProximityOpeners()

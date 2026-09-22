@@ -6,22 +6,16 @@
 #include "hs_log.h"
 #include "hs_queue.h"
 #include "hs_tier.h"
-#include "hs_topic_gate.h"
 #include "hs_locale.h"
 
 #include "Creature.h"
-#include "DBCStores.h"
 #include "Group.h"
 #include "GroupReference.h"
 #include "Item.h"
 #include "ItemTemplate.h"
 #include "Log.h"
-#include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus, rpgInfo.GetStatus()
-#include "PlayerbotMgr.h"
 #include "SharedDefines.h"
 
 #include <atomic>
@@ -35,46 +29,12 @@ namespace
 {
     std::atomic<uint32_t> g_EventsFiredThisSession{ 0 };
 
-    // Same read hs_handler.cpp's BuildTopicGateContext does, duplicated for
-    // the same reason it is already duplicated in hs_engagement.cpp:
-    // hs_topic_gate.h stays pure/no-AzerothCore for standalone testing, so
-    // the Player*-reading half has to live at each call site.
-    HsTopicGateContext BuildTopicGateContext(Player* bot)
-    {
-        HsTopicGateContext ctx;
-        ctx.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
-
-        if (Group* group = bot->GetGroup())
-        {
-            ctx.inGroup       = true;
-            ctx.isGroupLeader = group->IsLeader(bot->GetGUID());
-        }
-
-        if (Map* map = bot->GetMap())
-        {
-            ctx.inInstance = map->IsDungeon() || map->IsRaid();
-            if (ctx.inInstance)
-                ctx.instanceName = map->GetMapName();
-        }
-
-        ctx.goldCopper = bot->GetMoney();
-
-        if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
-        {
-            std::string name = Hs_LocalizedAreaName(entry); // review H1
-            if (!name.empty())
-                ctx.zoneName = name;
-        }
-
-        return ctx;
-    }
-
     // ---- Why no trigger below names a zone ---------------------------------
     // Claude/archive/PLAN-ARBITER.md §6 originally called for a bracketed "[Elwynn Forest] ..."
     // state line on every non-death trigger. Dropped 2026-08-24 (operator
     // decision) for three reasons, in order of weight:
     //
-    // 1. It is already in the prompt. BuildTopicGateContext above reads the
+    // 1. It is already in the prompt. Hs_MakeReplyRequest (hs_queue.h) reads the
     //    zone (and the instance name inside a dungeon), and hs_topic_gate.cpp
     //    turns it into "You are currently in Elwynn Forest." on the persona
     //    line for every one of these requests. A bracketed copy states it
@@ -206,7 +166,7 @@ namespace
         // fallback: a canned line reacting to a specific death or roll
         // would have to be generic enough to be wrong most of the time, so
         // anything below inference is silence, not a downgrade.
-        HsTier ceiling = HsParseTier(g_HsMaxTierEvents);
+        HsTier ceiling = g_HsMaxTierEvents;
         if (!HsTierAllows(ceiling, HsTier::Inference))
             return;
 
@@ -274,20 +234,11 @@ namespace
         {
             Player* bot = bots[index];
 
-            NewRpgStatus rpgStatus = RPG_IDLE;
-            if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot))
-                rpgStatus = botAI->rpgInfo.GetStatus();
+            HsReplyRequest request = Hs_MakeReplyRequest(bot, origin, channel, candidates[index].trigger);
+            request.isEvent            = true;
+            request.triggerIsStateLine = true;
 
-            HsTopicGateContext topicGate = BuildTopicGateContext(bot);
-
-            bool admitted = Hs_TryEnqueue(candidates[index].botGuid, bot->GetName(),
-                origin->GetGUID().GetRawValue(), origin->GetName(), channel,
-                candidates[index].trigger, bot->IsInCombat(), bot->GetLevel(), rpgStatus,
-                topicGate, /*isFollowUp=*/false, /*isEvent=*/true,
-                HsChannelKind::Trade, /*chainScopeId=*/0, /*chainSeq=*/0,
-                /*triggerIsStateLine=*/true);
-
-            if (admitted)
+            if (Hs_TryEnqueue(std::move(request)))
                 g_EventsFiredThisSession.fetch_add(1);
             else if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogChat, "[HearthsideChat] Event {} enqueue rejected for bot {}.",
@@ -555,6 +506,178 @@ void HsEventDeathDrainWorldScript::OnUpdate(uint32 /*diff*/)
     DrainPendingDeaths();
 }
 
+// ---- The other five hooks: recorded here, dispatched on the world thread ----
+//
+// The deferred-death block above found that PlayerScript hooks fire from
+// Map::Update on MapUpdate.Threads worker threads (8 on the test realm), and
+// that is not special to deaths. A ding comes out of Unit::Kill's XP award,
+// a killing blow out of Unit::Kill, a duel's start and end out of
+// Player::Update, a roll's award out of the group's loot code. Dispatching
+// inline meant FireEvent ran on those threads: a realm-wide
+// ObjectAccessor::GetPlayers() walk for the audience and witness scans, and
+// topic-gate reads of group members standing on other maps that another
+// thread is updating at that moment.
+//
+// So each hook now captures GUIDs and the strings it will need, applies only
+// the cheap tests that read nothing but the hook's own arguments, and hands
+// the rest to Hs_DeferToWorldThread (hs_queue.h). World::Update runs the map
+// update before OnWorldUpdate, so the reaction is still decided in the same
+// tick.
+namespace
+{
+    // Ceiling and budget, both scalars or locked, so safe from any thread:
+    // a stream of dings or kills costs a queue entry only when a reaction
+    // could still happen. FireEvent checks both again for real.
+    bool EventCouldFire()
+    {
+        return HsTierAllows(g_HsMaxTierEvents, HsTier::Inference) && !Hs_EventBucketExhausted();
+    }
+
+    void FireLevelUp(Player* player, uint8 newLevel)
+    {
+        std::string levelText = std::to_string(static_cast<uint32_t>(newLevel));
+        std::vector<HsEventActor> actors;
+
+        // The one who dinged speaks in second person, everyone else in third:
+        // one arbitration over the combined pool, each side carrying its own
+        // trigger and its own affinity type (the same shape the duel end uses).
+        if (Hs_IsBot(player) && EligibleBot(player))
+        {
+            actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::LevelUpSelf,
+                "You have just reached level " + levelText + "." });
+        }
+
+        std::string witnessTrigger = std::string(player->GetName()) +
+            " has just reached level " + levelText + ".";
+
+        Group* group = player->GetGroup();
+        if (group)
+        {
+            for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+            {
+                Player* member = itr->GetSource();
+                if (!member || member == player || !EligibleBot(member))
+                    continue;
+                actors.push_back({ member, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
+            }
+        }
+        else
+        {
+            // Review item 14: the budget gate lives inside FireEvent, which is
+            // called at the bottom of this function -- so this scan (a realm
+            // walk with a distance check per candidate, NearbyBots above) ran
+            // in full and had its result discarded every time the bucket was
+            // already empty. Returning rather than skipping just the scan:
+            // with no budget FireEvent would drop the event regardless of
+            // which actors were collected.
+            if (Hs_EventBucketExhausted())
+                return;
+
+            // World-scoped: a ding in the open is worth a "gz" from whoever is
+            // standing there, real player present or not.
+            for (Player* nearby : NearbyBots(player, nullptr))
+                actors.push_back({ nearby, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
+        }
+
+        // LEVEL_UP_SELF drives the reply count when the bot itself dinged, since
+        // that is the more constrained draw; a real player's ding falls back to
+        // the witness bias, which is the one that almost always produces a "gz".
+        HsEventType primary = (Hs_IsBot(player) && EligibleBot(player))
+            ? HsEventType::LevelUpSelf : HsEventType::LevelUpGroup;
+
+        FireEvent(primary, player, actors, group ? GroupChannelFor(group) : HsReplyChannel::Say);
+    }
+
+    void FirePvpKill(Player* killer, std::string const& killedName)
+    {
+        if (!EligibleBot(killer))
+            return;
+
+        std::vector<HsEventActor> actors;
+        actors.push_back({ killer, HsEventInvolvement::Subject, HsEventType::KillingBlow,
+            "You have just killed " + killedName + " in a fight." });
+
+        // Spoken to the killer's own side. The victim is cross-faction and
+        // cannot read it either way; the audience is whoever shares the killer's
+        // group, or /say range if it has none.
+        Group* group = killer->GetGroup();
+        FireEvent(HsEventType::KillingBlow, killer, actors,
+            group ? GroupChannelFor(group) : HsReplyChannel::Say);
+    }
+
+    void FireRollWon(Player* player, std::string const& itemName, std::vector<ObjectGuid> const& rollers)
+    {
+        Group* group = player->GetGroup();
+        if (!group)
+            return;
+
+        std::vector<HsEventActor> actors;
+
+        if (EligibleBot(player))
+        {
+            actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::RollWon,
+                "You have just won the roll for " + itemName + "." });
+        }
+
+        std::string lostTrigger = std::string(player->GetName()) +
+            " has just won the roll for " + itemName + ".";
+        for (ObjectGuid const& rollerGuid : rollers)
+        {
+            Player* loser = Hs_FindInWorld(rollerGuid);
+            if (!loser || !EligibleBot(loser))
+                continue;
+            actors.push_back({ loser, HsEventInvolvement::Affected, HsEventType::RollLost, lostTrigger });
+        }
+
+        HsEventType primary = EligibleBot(player) ? HsEventType::RollWon : HsEventType::RollLost;
+        FireEvent(primary, player, actors, GroupChannelFor(group));
+    }
+
+    void FireDuelStart(Player* player1, Player* player2)
+    {
+        std::vector<HsEventActor> actors;
+        auto addSide = [&actors](Player* bot, Player* opponent)
+        {
+            if (!EligibleBot(bot))
+                return;
+            actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::DuelStart,
+                "A duel between you and " + std::string(opponent->GetName()) + " is starting." });
+        };
+        addSide(player1, player2);
+        addSide(player2, player1);
+
+        // The two participants are the only valid speakers: a bystander
+        // commenting on someone else's duel is not one of the sixteen triggers.
+        FireEvent(HsEventType::DuelStart, player1, actors, HsReplyChannel::Say);
+    }
+
+    void FireDuelEnd(Player* winner, Player* loser)
+    {
+        std::vector<HsEventActor> actors;
+
+        // One pass over {winner, loser}, each carrying its own outcome. Which
+        // trigger text reaches Hs_CallLLM is therefore decided by which side the
+        // arbiter picks, not fixed here, and each side's affinity resolves
+        // against its own event type, so an archetype can be eager to gloat and
+        // reluctant to admit a loss (Claude/archive/PLAN-ARBITER.md §2).
+        if (EligibleBot(winner))
+        {
+            actors.push_back({ winner, HsEventInvolvement::Subject, HsEventType::DuelWon,
+                "You have just won a duel against " + std::string(loser->GetName()) + "." });
+        }
+        if (EligibleBot(loser))
+        {
+            actors.push_back({ loser, HsEventInvolvement::Subject, HsEventType::DuelLost,
+                "You have just lost a duel to " + std::string(winner->GetName()) + "." });
+        }
+
+        // DUEL_WON supplies the count bias for the combined pass; both duel
+        // outcomes carry the same heavy bias toward silence, so which one is
+        // read here does not change the distribution.
+        FireEvent(HsEventType::DuelWon, winner, actors, HsReplyChannel::Say);
+    }
+}
+
 void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
 {
     if (!g_HsEnable || !player || !player->IsInWorld())
@@ -573,71 +696,29 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
         // was survives that, so its conversation history stops being useful
         // prior-turn context and starts being wrong. This hook is the only
         // signal that covers every bot: hside_identity's own retirement
-        // sweep only walks carded rows.
+        // sweep only walks carded rows. Every map it clears is under its own
+        // mutex, so this one runs inline.
         if (newLevel < oldlevel && Hs_IsBot(player))
             Hs_ForgetBotHistory(player->GetGUID().GetRawValue());
         return;
     }
 
-    std::string levelText = std::to_string(static_cast<uint32_t>(newLevel));
-    std::vector<HsEventActor> actors;
+    if (!EventCouldFire())
+        return;
 
-    // The one who dinged speaks in second person, everyone else in third:
-    // one arbitration over the combined pool, each side carrying its own
-    // trigger and its own affinity type (the same shape the duel end uses).
-    if (Hs_IsBot(player) && EligibleBot(player))
+    // newLevel is captured, not re-read at dispatch: a quest turn-in worth
+    // two levels fires this hook twice, and each ding says its own number.
+    ObjectGuid guid = player->GetGUID();
+    Hs_DeferToWorldThread([guid, newLevel]()
     {
-        actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::LevelUpSelf,
-            "You have just reached level " + levelText + "." });
-    }
-
-    std::string witnessTrigger = std::string(player->GetName()) +
-        " has just reached level " + levelText + ".";
-
-    Group* group = player->GetGroup();
-    if (group)
-    {
-        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
-        {
-            Player* member = itr->GetSource();
-            if (!member || member == player || !EligibleBot(member))
-                continue;
-            actors.push_back({ member, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
-        }
-    }
-    else
-    {
-        // Review item 14: the budget gate lives inside FireEvent, which is
-        // called at the bottom of this function -- so this scan (a realm walk
-        // with a distance check per candidate, NearbyBots above) ran in full
-        // and had its result discarded every time the bucket was already
-        // empty. That is exactly the cost FireEvent's own comment claims to
-        // avoid ("a busy dungeon's stream of deaths and rolls costs almost
-        // nothing when the budget is already gone"), and a wipe followed by a
-        // ding is when the bucket is emptiest. Returning rather than skipping
-        // just the scan: with no budget FireEvent would drop the event
-        // regardless of which actors were collected.
-        if (Hs_EventBucketExhausted())
-            return;
-
-        // World-scoped: a ding in the open is worth a "gz" from whoever is
-        // standing there, real player present or not.
-        for (Player* nearby : NearbyBots(player, nullptr))
-            actors.push_back({ nearby, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
-    }
-
-    // LEVEL_UP_SELF drives the reply count when the bot itself dinged, since
-    // that is the more constrained draw; a real player's ding falls back to
-    // the witness bias, which is the one that almost always produces a "gz".
-    HsEventType primary = (Hs_IsBot(player) && EligibleBot(player))
-        ? HsEventType::LevelUpSelf : HsEventType::LevelUpGroup;
-
-    FireEvent(primary, player, actors, group ? GroupChannelFor(group) : HsReplyChannel::Say);
+        if (Player* dinged = Hs_FindInWorld(guid))
+            FireLevelUp(dinged, newLevel);
+    });
 }
 
 void HsEventPvpKillHandler::OnPlayerPVPKill(Player* killer, Player* killed)
 {
-    if (!g_HsEnable || !killer || !killed || !EligibleBot(killer))
+    if (!g_HsEnable || !killer || !killed)
         return;
 
     // The core reaches this hook with killer == killed often enough to
@@ -650,16 +731,18 @@ void HsEventPvpKillHandler::OnPlayerPVPKill(Player* killer, Player* killed)
     if (killer->GetGUID() == killed->GetGUID())
         return;
 
-    std::vector<HsEventActor> actors;
-    actors.push_back({ killer, HsEventInvolvement::Subject, HsEventType::KillingBlow,
-        "You have just killed " + std::string(killed->GetName()) + " in a fight." });
+    if (!Hs_IsBot(killer) || !EventCouldFire())
+        return;
 
-    // Spoken to the killer's own side. The victim is cross-faction and
-    // cannot read it either way; the audience is whoever shares the killer's
-    // group, or /say range if it has none.
-    Group* group = killer->GetGroup();
-    FireEvent(HsEventType::KillingBlow, killer, actors,
-        group ? GroupChannelFor(group) : HsReplyChannel::Say);
+    // The victim's name, captured now: the killing blow is the moment it is
+    // true, and the victim may release and leave before the drain.
+    ObjectGuid  killerGuid = killer->GetGUID();
+    std::string killedName = killed->GetName();
+    Hs_DeferToWorldThread([killerGuid, killedName]()
+    {
+        if (Player* bot = Hs_FindInWorld(killerGuid))
+            FirePvpKill(bot, killedName);
+    });
 }
 
 void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item, uint32 /*count*/,
@@ -675,69 +758,53 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
     if (proto->Quality < ITEM_QUALITY_RARE)
         return;
 
-    Group* group = player->GetGroup();
-    if (!group)
+    if (!player->GetGroup() || !EventCouldFire())
         return;
 
     std::string itemName = Hs_LocalizedItemName(proto); // review H1
     // Review item 8: Hs_LocalizedItemName returns "" for a template whose
     // name resolves empty, not only for a null one. Both trigger strings
-    // below interpolate it into a sentence ("...won the roll for ."), and
-    // that sentence is fed verbatim into a bot-to-bot reaction prompt. An
-    // item nobody can name is not worth an event.
+    // interpolate it into a sentence ("...won the roll for ."), and that
+    // sentence is fed verbatim into a bot-to-bot reaction prompt. An item
+    // nobody can name is not worth an event.
     if (itemName.empty())
         return;
 
-    std::vector<HsEventActor> actors;
-
-    if (EligibleBot(player))
-    {
-        actors.push_back({ player, HsEventInvolvement::Subject, HsEventType::RollWon,
-            "You have just won the roll for " + itemName + "." });
-    }
-
-    // Only bots that actually rolled on it lost anything. A bot that
-    // passed has nothing to react to, and treating it as a candidate is the
-    // kind of state the trigger never established (Claude/archive/PLAN-ARBITER.md §7
-    // rule 2).
-    std::string lostTrigger = std::string(player->GetName()) +
-        " has just won the roll for " + itemName + ".";
+    // Only bots that actually rolled on it lost anything. A bot that passed
+    // has nothing to react to, and treating it as a candidate is the kind of
+    // state the trigger never established (Claude/archive/PLAN-ARBITER.md §7
+    // rule 2). Read out of the Roll now: it does not outlive the award.
+    std::vector<ObjectGuid> rollers;
     for (auto const& vote : roll->playerVote)
     {
         if (vote.first == player->GetGUID())
             continue;
-        if (vote.second != NEED && vote.second != GREED)
-            continue;
-
-        Player* loser = ObjectAccessor::FindPlayer(vote.first);
-        if (!loser || !EligibleBot(loser))
-            continue;
-        actors.push_back({ loser, HsEventInvolvement::Affected, HsEventType::RollLost, lostTrigger });
+        if (vote.second == NEED || vote.second == GREED)
+            rollers.push_back(vote.first);
     }
 
-    HsEventType primary = EligibleBot(player) ? HsEventType::RollWon : HsEventType::RollLost;
-    FireEvent(primary, player, actors, GroupChannelFor(group));
+    ObjectGuid winnerGuid = player->GetGUID();
+    Hs_DeferToWorldThread([winnerGuid, itemName, rollers]()
+    {
+        if (Player* winner = Hs_FindInWorld(winnerGuid))
+            FireRollWon(winner, itemName, rollers);
+    });
 }
 
 void HsEventDuelHandler::OnPlayerDuelStart(Player* player1, Player* player2)
 {
-    if (!g_HsEnable || !player1 || !player2)
+    if (!g_HsEnable || !player1 || !player2 || !EventCouldFire())
         return;
 
-    std::vector<HsEventActor> actors;
-    auto addSide = [&actors](Player* bot, Player* opponent)
+    ObjectGuid guid1 = player1->GetGUID();
+    ObjectGuid guid2 = player2->GetGUID();
+    Hs_DeferToWorldThread([guid1, guid2]()
     {
-        if (!EligibleBot(bot))
-            return;
-        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::DuelStart,
-            "A duel between you and " + std::string(opponent->GetName()) + " is starting." });
-    };
-    addSide(player1, player2);
-    addSide(player2, player1);
-
-    // The two participants are the only valid speakers: a bystander
-    // commenting on someone else's duel is not one of the sixteen triggers.
-    FireEvent(HsEventType::DuelStart, player1, actors, HsReplyChannel::Say);
+        Player* first  = Hs_FindInWorld(guid1);
+        Player* second = Hs_FindInWorld(guid2);
+        if (first && second)
+            FireDuelStart(first, second);
+    });
 }
 
 void HsEventDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelCompleteType type)
@@ -746,29 +813,18 @@ void HsEventDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelComp
         return;
     if (type == DUEL_INTERRUPTED)
         return; // nobody won; there is no outcome to react to
+    if (!EventCouldFire())
+        return;
 
-    std::vector<HsEventActor> actors;
-
-    // One pass over {winner, loser}, each carrying its own outcome. Which
-    // trigger text reaches Hs_CallLLM is therefore decided by which side the
-    // arbiter picks, not fixed here, and each side's affinity resolves
-    // against its own event type, so an archetype can be eager to gloat and
-    // reluctant to admit a loss (Claude/archive/PLAN-ARBITER.md §2).
-    if (EligibleBot(winner))
+    ObjectGuid winnerGuid = winner->GetGUID();
+    ObjectGuid loserGuid  = loser->GetGUID();
+    Hs_DeferToWorldThread([winnerGuid, loserGuid]()
     {
-        actors.push_back({ winner, HsEventInvolvement::Subject, HsEventType::DuelWon,
-            "You have just won a duel against " + std::string(loser->GetName()) + "." });
-    }
-    if (EligibleBot(loser))
-    {
-        actors.push_back({ loser, HsEventInvolvement::Subject, HsEventType::DuelLost,
-            "You have just lost a duel to " + std::string(winner->GetName()) + "." });
-    }
-
-    // DUEL_WON supplies the count bias for the combined pass; both duel
-    // outcomes carry the same heavy bias toward silence, so which one is
-    // read here does not change the distribution.
-    FireEvent(HsEventType::DuelWon, winner, actors, HsReplyChannel::Say);
+        Player* won  = Hs_FindInWorld(winnerGuid);
+        Player* lost = Hs_FindInWorld(loserGuid);
+        if (won && lost)
+            FireDuelEnd(won, lost);
+    });
 }
 
 uint32_t Hs_EventsFiredThisSession()

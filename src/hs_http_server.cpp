@@ -1,5 +1,6 @@
 #include "hs_http_server.h"
 #include "hs_ambient.h"
+#include "hs_bot.h"
 #include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_event.h"
@@ -28,6 +29,8 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <future>
 #include <memory>
 #include <string>
 #include <thread>
@@ -62,6 +65,49 @@ namespace
     void SendError(hs_httplib::Response& res, int status, const std::string& message)
     {
         SendJson(res, hs_json{ {"error", message} }, status);
+    }
+
+    // How long a control route waits for the world thread to answer before
+    // giving up with a 503. The world thread drains deferred work every
+    // tick, tens of milliseconds apart; this only has to outlast a hitch.
+    constexpr auto kWorldThreadWait = std::chrono::seconds(5);
+
+    // The bot-guid gate every mutating control route shares -- review item
+    // 1's check, which the `.hearthside` commands got and these routes did
+    // not, so `POST /api/bot/<a human's guid>/promote` promoted a real player
+    // and the generator went on to write that player a character card.
+    //
+    // Hs_IsBotGuid cannot run on this thread: it reads PlayerbotsMgr's bot
+    // map, CharacterCache and mod-playerbots' addclass cache, all
+    // unsynchronized containers the world thread writes. So the question is
+    // handed to the world thread and this one waits, bounded, for the answer.
+    // The promise is shared with the closure, so an answer that arrives after
+    // the wait gave up lands on a live object and is simply discarded.
+    //
+    // Returns the guid, or 0 with the error response already written.
+    uint64_t RequireBotGuid(const hs_httplib::Request& req, hs_httplib::Response& res)
+    {
+        uint64_t guid = ParseGuidParam(req);
+        if (guid == 0)
+        {
+            SendError(res, 400, "Invalid guid");
+            return 0;
+        }
+
+        auto answer = std::make_shared<std::promise<bool>>();
+        std::future<bool> isBot = answer->get_future();
+        if (!Hs_DeferToWorldThread([guid, answer]() { answer->set_value(Hs_IsBotGuid(guid)); }) ||
+            isBot.wait_for(kWorldThreadWait) != std::future_status::ready)
+        {
+            SendError(res, 503, "World thread did not answer; try again");
+            return 0;
+        }
+        if (!isBot.get())
+        {
+            SendError(res, 404, "Bot not found");
+            return 0;
+        }
+        return guid;
     }
 
     // Read-half gate: a valid bearer token only. Returns false (and has
@@ -103,18 +149,16 @@ namespace
         j["backend_down"]   = Hs_IsBackendDown();
         j["queue_depth"]    = Hs_PendingQueueDepth();
         j["queue_max_depth"] = g_HsQueueMaxDepth;
-        // Hs_ConfigString, not a direct read: this route runs on the HTTP
-        // server thread, and `.reload config` reassigns these from the world
-        // thread. The equivalent read in `.hearthside status`
-        // (hs_command.cpp) is safe unguarded because the GM command handler
-        // *is* the world thread. See hs_config.h's cross-thread section.
+        // Parsed HsTier scalars (hs_config.h), so a direct read from this
+        // thread is fine; HsTierName gives back the config spelling.
         j["max_tier"] = {
-            {"direct_reply", Hs_ConfigString(g_HsMaxTierDirectReply)},
-            {"ambient",      Hs_ConfigString(g_HsMaxTierAmbient)},
-            {"openers",      Hs_ConfigString(g_HsMaxTierOpeners)},
-            {"bot_to_bot",   Hs_ConfigString(g_HsMaxTierBotToBot)},
-            {"reflex",       Hs_ConfigString(g_HsMaxTierReflex)},
-            {"events",       Hs_ConfigString(g_HsMaxTierEvents)},
+            {"direct_reply",         HsTierName(g_HsMaxTierDirectReply)},
+            {"ambient",              HsTierName(g_HsMaxTierAmbient)},
+            {"openers",              HsTierName(g_HsMaxTierOpeners)},
+            {"bot_to_bot",           HsTierName(g_HsMaxTierBotToBot)},
+            {"reflex",               HsTierName(g_HsMaxTierReflex)},
+            {"engagement_follow_up", HsTierName(g_HsMaxTierEngagementFollowUp)},
+            {"events",               HsTierName(g_HsMaxTierEvents)},
         };
         j["generator"] = {
             {"enabled",               g_HsGeneratorEnabled},
@@ -284,9 +328,10 @@ namespace
         svr.Post("/api/bot/:guid/promote", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             if (!RequireControlEnabled(res)) return;
-            uint64_t botGuid = ParseGuidParam(req);
+            uint64_t botGuid = RequireBotGuid(req, res);
+            if (botGuid == 0) return;
             uint8_t  level   = LookupBotLevel(botGuid);
-            if (botGuid == 0 || level == 0) { SendError(res, 404, "Bot not found"); return; }
+            if (level == 0) { SendError(res, 404, "Bot not found"); return; }
             bool promoted = Hs_ForcePromote(botGuid, level);
             SendJson(res, hs_json{ {"bot_guid", botGuid}, {"promoted", promoted} });
         });
@@ -294,8 +339,8 @@ namespace
         svr.Post("/api/bot/:guid/demote", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             if (!RequireControlEnabled(res)) return;
-            uint64_t botGuid = ParseGuidParam(req);
-            if (botGuid == 0) { SendError(res, 400, "Invalid guid"); return; }
+            uint64_t botGuid = RequireBotGuid(req, res);
+            if (botGuid == 0) return;
             bool demoted = Hs_ForceDemote(botGuid);
             SendJson(res, hs_json{ {"bot_guid", botGuid}, {"demoted", demoted} });
         });
@@ -303,9 +348,10 @@ namespace
         svr.Post("/api/bot/:guid/retire", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             if (!RequireControlEnabled(res)) return;
-            uint64_t botGuid = ParseGuidParam(req);
+            uint64_t botGuid = RequireBotGuid(req, res);
+            if (botGuid == 0) return;
             uint8_t  level   = LookupBotLevel(botGuid);
-            if (botGuid == 0 || level == 0) { SendError(res, 404, "Bot not found"); return; }
+            if (level == 0) { SendError(res, 404, "Bot not found"); return; }
             Hs_RetireCard(botGuid, level);
             SendJson(res, hs_json{ {"bot_guid", botGuid}, {"retired", true} });
         });
@@ -313,8 +359,8 @@ namespace
         svr.Post("/api/bot/:guid/pin", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             if (!RequireControlEnabled(res)) return;
-            uint64_t botGuid = ParseGuidParam(req);
-            if (botGuid == 0) { SendError(res, 400, "Invalid guid"); return; }
+            uint64_t botGuid = RequireBotGuid(req, res);
+            if (botGuid == 0) return;
             Hs_GmPinBot(botGuid);
             SendJson(res, hs_json{ {"bot_guid", botGuid}, {"pinned", true} });
         });
@@ -322,8 +368,8 @@ namespace
         svr.Post("/api/bot/:guid/unpin", [](const hs_httplib::Request& req, hs_httplib::Response& res) {
             if (!RequireAuth(req, res)) return;
             if (!RequireControlEnabled(res)) return;
-            uint64_t botGuid = ParseGuidParam(req);
-            if (botGuid == 0) { SendError(res, 400, "Invalid guid"); return; }
+            uint64_t botGuid = RequireBotGuid(req, res);
+            if (botGuid == 0) return;
             Hs_GmUnpinBot(botGuid);
             SendJson(res, hs_json{ {"bot_guid", botGuid}, {"pinned", false} });
         });
@@ -419,7 +465,9 @@ void Hs_HttpServerStop()
     // The join is bounded: stop() closes the listen socket, so the accept
     // loop breaks on its next iteration (httplib.h:11590-11597), and the
     // task queue's own shutdown then waits only for in-flight requests,
-    // themselves bounded by HttpServerTimeoutSeconds.
+    // themselves bounded by HttpServerTimeoutSeconds. A control request
+    // waiting in RequireBotGuid is waiting on *this* thread, which is here
+    // rather than ticking, so it gives up after kWorldThreadWait with a 503.
     if (s_thread && s_thread->joinable())
         s_thread->join();
     s_thread.reset();

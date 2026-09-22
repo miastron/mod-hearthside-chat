@@ -418,79 +418,20 @@ namespace
         return text;
     }
 
-    // ---- role-label stripping (one LLM tell among several below) ----
+    // StripRoleLabel lived here until 2026-09-22: it deleted a turn label the
+    // model prefixed onto its own reply ("A: yeah"). That was measured on
+    // 2026-08-26 against a Qwen tune fed a Q:/A: few-shot frame, a shape
+    // hs_llm.cpp stopped sending on 2026-09-14. Re-measured against the live
+    // Llama 3.2 1B tune (Tests/live_reply_tells_probe.py, 960 replies across
+    // all twelve archetypes, both the trained and the live prompt shape): no
+    // reply opened with a label. A filter on output that no longer occurs is
+    // only a way for real text to get deleted.
 
-    // Strips a turn label the model prefixed onto its own reply: "A: yeah",
-    // "Assistant: sure", "Bregan: nah working". Measured 2026-08-26 on the
-    // Qwen3.5-2B fine-tune, where 69% of replies (27 of 39) opened with a
-    // literal "A:", the model continuing the Q:/A: few-shot pattern the
-    // benchmark's `terse` frame inlines as system text. That frame is being
-    // retired for this model (Tests/opener_diversity.py's `tuned`), but the
-    // failure mode is generic to base-model tunes and this is the last place
-    // it can be caught: hs_llm.cpp's StripWrappingQuotes handles quotes only,
-    // and without this a bot says "A: yeah, a few times" in party chat.
-    //
-    // Deliberately conservative: this deletes player-visible text, so it
-    // fires only on a fixed label vocabulary plus the two names actually in
-    // play at the call site. No generic "<Capitalized>:" rule: "tip: use the
-    // tram" is a thing a real player types.
-    bool IsRoleLabel(const std::string& lowerLabel, const std::string& botName,
-                      const std::string& senderName)
+    // Strips known LLM tells: dashes (em dash and "--"), leading "Ah,",
+    // emoji, restating the question. All literal and mechanical.
+    std::string StripLLMTells(const std::string& text)
     {
-        static const std::vector<std::string> kLabels = {
-            "a", "q", "assistant", "user", "system", "player", "bot",
-            "reply", "answer", "response",
-        };
-        for (const std::string& label : kLabels)
-            if (lowerLabel == label)
-                return true;
-        // The bot labelling its line with its own name, or with the name of
-        // the person it is answering, is the same tell wearing a costume.
-        if (!botName.empty() && lowerLabel == HsText::Hs_ToLowerAscii(botName))
-            return true;
-        if (!senderName.empty() && lowerLabel == HsText::Hs_ToLowerAscii(senderName))
-            return true;
-        return false;
-    }
-
-    std::string StripRoleLabel(const std::string& text, const std::string& botName,
-                                const std::string& senderName)
-    {
-        size_t colon = text.find(':');
-        // Bounded so this never scans a whole reply looking for a colon that
-        // is really punctuation mid-sentence.
-        if (colon == std::string::npos || colon == 0 || colon > 24)
-            return text;
-
-        std::string label = text.substr(0, colon);
-        while (!label.empty() && label.back() == ' ')
-            label.pop_back();
-        if (label.empty())
-            return text;
-        // A label is one bare word. "no idea:" is a sentence, not a label.
-        if (label.find(' ') != std::string::npos)
-            return text;
-
-        if (!IsRoleLabel(HsText::Hs_ToLowerAscii(label), botName, senderName))
-            return text;
-
-        std::string rest = text.substr(colon + 1);
-        size_t firstNonSpace = rest.find_first_not_of(" \t");
-        if (firstNonSpace == std::string::npos)
-            return text; // label was the entire reply; leave it to the caller
-        return rest.substr(firstNonSpace);
-    }
-
-    // Strips known LLM tells: role label, dashes (em dash and "--"),
-    // leading "Ah,", emoji, restating the question. All literal and mechanical.
-    std::string StripLLMTells(const std::string& text, const std::string& botName,
-                               const std::string& senderName)
-    {
-        // Before anything else: a role label sits in front of the real
-        // reply, so every tell below would otherwise be measured against
-        // the label rather than the text.
-        std::string s = StripRoleLabel(text, botName, senderName);
-        s = StripEmoji(s);
+        std::string s = StripEmoji(text);
         s = StripDashes(s, "\xE2\x80\x94"); // em dash, U+2014
         s = StripDashes(s, "--");
 
@@ -961,7 +902,7 @@ HsStyleResult Hs_ApplyStyle(uint64_t botGuid, const std::string& botName,
     std::string working = ExtractProtectedSpans(text, spans);
     working = MaskLiteralPhrase(working, ctx.verbalTic, spans);
 
-    working = StripLLMTells(working, botName, senderName);
+    working = StripLLMTells(working);
     if (working.empty())
         return { RestoreProtectedSpans(working, spans), "" };
 

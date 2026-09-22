@@ -82,6 +82,13 @@ uint32_t Hs_RunEvictionSweep();
 // frozen 2026-08-25). Returns the number of rows evicted.
 uint32_t Hs_RunUnusedRowEvictionSweep();
 
+// Deletes scripts played more than kHsConsumedScriptRetentionDays ago, with
+// their turn rows, plus any turn row left without a header. Nothing else
+// ever removed a consumed script, so both tables grew by every scene the
+// realm played. Same daily cadence as the two corpus sweeps above
+// (hs_main.cpp). Returns the number of scripts removed.
+uint32_t Hs_RunConsumedScriptSweep();
+
 // Promoted bots whose card generation failed repeatedly enough that the
 // generator gave up on them for this session (review B2). Non-zero means
 // some bots will stay uncarded until the worldserver is restarted -- but

@@ -46,12 +46,77 @@ namespace
     std::mutex              g_GeneratorSleepMutex;
     std::condition_variable g_GeneratorSleepCv;
 
-    // Returns as soon as shutdown is signalled, otherwise after `seconds`.
-    void GeneratorSleep(uint32_t seconds)
+    // Returns as soon as shutdown is signalled, otherwise after `duration`.
+    void GeneratorSleep(std::chrono::milliseconds duration)
     {
         std::unique_lock<std::mutex> lock(g_GeneratorSleepMutex);
-        g_GeneratorSleepCv.wait_for(lock, std::chrono::seconds(seconds),
-                                    [] { return g_StopGenerator.load(); });
+        g_GeneratorSleepCv.wait_for(lock, duration, [] { return g_StopGenerator.load(); });
+    }
+
+    void GeneratorSleep(uint32_t seconds)
+    {
+        GeneratorSleep(std::chrono::milliseconds(static_cast<int64_t>(seconds) * 1000));
+    }
+
+    // How often a generator call waiting for the reactive worker re-checks.
+    // A reply takes a second or two, so this only bounds the lag after one.
+    constexpr std::chrono::milliseconds kYieldPollInterval{250};
+
+    // Every generation call goes through here, not straight to Hs_CallLLM.
+    //
+    // Two things used to be checked only at the top of GeneratorLoop, once
+    // per cycle, while a cycle can make many calls back to back -- a card is
+    // one voice call plus eight fact calls, a /say script up to six turns --
+    // against the same endpoint the reactive tier uses by default:
+    //
+    //   - Whether a live reply is waiting (Hs_IsReactiveIdle). A player who
+    //     spoke mid-card waited behind the rest of the card, while hs_queue.h
+    //     promised the generator yields before every call.
+    //   - Whether the worldserver is shutting down. Hs_GeneratorShutdown's
+    //     join waited out every remaining call in the cycle, up to nine
+    //     Generator.LLM.TimeoutSeconds, not the one call it documented.
+    //
+    // Now each call waits for the reactive worker to go idle first, and a
+    // shutdown during that wait (or before the call) returns a result that
+    // reads as "backend did not answer": the cycle abandons, no card is
+    // parked for it, and the loop sees the stop flag.
+    HsLLMResult GeneratorCallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
+                                 const std::string& layer, const std::string& trigger,
+                                 const std::string& grammar = "")
+    {
+        while (!g_StopGenerator.load() && !Hs_IsReactiveIdle())
+            GeneratorSleep(kYieldPollInterval);
+
+        if (g_StopGenerator.load())
+        {
+            HsLLMResult stopped{};
+            stopped.failure = HsLLMFailure::ConnectionFailed;
+            return stopped;
+        }
+        return Hs_CallLLM(cfg, systemPrompt, layer, {}, trigger, grammar);
+    }
+
+    // A call that produced no line. Every caller then asks
+    // Hs_LLMBackendAnswered (hs_llm.h) what that means for its cycle: a
+    // backend that answered with nothing usable is a rejection like any other
+    // -- retry soon, and it counts against a card -- while one that did not
+    // answer at all is an outage, which gets the long backoff and must not
+    // count against the row that happened to be in flight.
+    bool CallFailed(HsLLMResult const& result)
+    {
+        return !result.success || result.text.empty();
+    }
+
+    // NULL for an empty value, otherwise the escaped value quoted: how every
+    // generated row records the model and prompt_version it came from. NULL
+    // rather than '' because hand-authored rows use NULL, and an empty string
+    // would read as a set-but-blank value instead of "not supplied".
+    std::string SqlStringOrNull(std::string value)
+    {
+        if (value.empty())
+            return "NULL";
+        CharacterDatabase.EscapeString(value);
+        return "'" + value + "'";
     }
 
     // Fills `cfg` for one generation call and hands back the string snapshot
@@ -102,6 +167,13 @@ namespace
     // corpus line costs nothing while it waits, and eviction should catch
     // rows that are never picked, not ones that just haven't come up yet.
     constexpr uint32_t kHsGenUnusedRowEvictionDays = 90;
+
+    // How long a played script is kept. consumed_by_zone/consumed_witness are
+    // diagnostics, and `.hearthside status`'s consumed_last_24h reads the
+    // last day of them, so a week keeps every consumer whole while stopping
+    // hside_script and hside_script_turn from growing by every scene the
+    // realm ever plays.
+    constexpr uint32_t kHsConsumedScriptRetentionDays = 7;
 
     // The 10 playable WotLK classes (id 10 is unused in the class enum).
     const std::vector<uint8_t> kValidClassIds = {
@@ -202,16 +274,14 @@ namespace
     {
         std::vector<std::pair<HsGenBucket, uint32_t>> result;
 
-        QueryResult catResult = CharacterDatabase.Query("SELECT name, tag_axis, card_gated, channel FROM hside_corpus_category");
-        if (!catResult)
-            return result;
-
-        do
+        // The in-memory category table (hs_corpus.h), not a query of its own
+        // per cycle; only the row counts below still come from the database.
+        for (HsCorpusCategory const& entry : *Hs_CorpusCategories())
         {
-            std::string category  = (*catResult)[0].Get<std::string>();
-            std::string axis      = (*catResult)[1].Get<std::string>();
-            bool        cardGated = (*catResult)[2].Get<uint8_t>() != 0;
-            std::string channel   = (*catResult)[3].IsNull() ? "" : (*catResult)[3].Get<std::string>();
+            std::string const& category  = entry.name;
+            std::string const& axis      = entry.tagAxis;
+            bool               cardGated = entry.cardGated;
+            std::string const& channel   = entry.channel;
 
             // Review D1: the five count queries below interpolate the
             // category name straight into a WHERE clause. AllRowsInBucket /
@@ -303,7 +373,7 @@ namespace
                     result.push_back({ HsGenBucket{ category, "zone_tag", std::to_string(zone.first), zone.second, cardGated, channel }, count });
                 }
             }
-        } while (catResult->NextRow());
+        }
 
         return result;
     }
@@ -613,13 +683,13 @@ namespace
         HsLLMConfig cfg;
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
-        HsLLMResult result = Hs_CallLLM(cfg, prompt, "", {}, "Write one new line now. Reply with only the line itself.");
-        if (!result.success || result.text.empty())
+        HsLLMResult result = GeneratorCallLLM(cfg, prompt, "", "Write one new line now. Reply with only the line itself.");
+        if (CallFailed(result))
         {
             if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: LLM call failed for bucket {}/{} (failure={}).",
                     bucket.category, bucket.tagValueLabel, static_cast<int>(result.failure));
-            return HsGenCycle::BackendFailed;
+            return Hs_LLMBackendAnswered(result) ? HsGenCycle::Rejected : HsGenCycle::BackendFailed;
         }
 
         HsGenVerdict verdict = Hs_TryInsertCorpusRow(bucket.category, bucket.tagColumn, bucket.tagValueSql,
@@ -646,43 +716,48 @@ namespace
 
     uint32_t ChannelScriptReserveDepthQuery(HsChannelKind kind)
     {
-        std::string channelColumn = std::string(Hs_ChannelKindName(kind));
-        std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         QueryResult result = CharacterDatabase.Query(
-            "SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL AND channel = '{}'", channelColumn);
+            "SELECT COUNT(*) FROM hside_script WHERE consumed_at IS NULL AND channel = '{}'",
+            Hs_ChannelColumnName(kind));
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
+
+    // The runtime-only guidance every script prompt shares, after its
+    // trained "Mode: SMALLTALK" header. A live-fire test still produced one
+    // script naming a real dungeon under an earlier version with no escape
+    // hatch, so these give the model a safe, closed vocabulary for the one
+    // class of personal fact players actually mention in small talk (own/
+    // other's class, level, zone, guild): the eight %my_*/%other_* tokens,
+    // resolved per bot at delivery time (hs_corpus.h's
+    // Hs_ResolveScriptPlaceholders) so a claim is only ever true of whichever
+    // two bots end up cast. A specific item, quest, or invented biography
+    // still has no placeholder and stays flatly disallowed.
+    const std::string kScriptPlaceholderRules =
+        "If you want to mention your own class, level, current zone, or guild, write exactly one of "
+        "these tokens instead of naming one directly: %my_class, %my_level, %my_zone, %my_guild. For "
+        "the other player's, use: %other_class, %other_level, %other_zone, %other_guild.";
+    const std::string kScriptNoInventedFacts =
+        "Never invent or state a specific item, quest, or any other detail the other person could "
+        "check and find wrong.";
+    const std::string kScriptNoRoleplay =
+        "No roleplay narration, no asterisks, no mention of being an AI or a game.";
 
     // Baseline persona only, no archetype and no card: personality is
     // applied per speaker at delivery by the style pass (hs_script.cpp), so
     // the generator's job is clean, neutral dialogue: gripes, opinions, and
-    // preferences, nothing checkable. A live-fire test still produced one
-    // script naming a real dungeon under an earlier version with no escape
-    // hatch, so this version gives the model a safe, closed vocabulary for
-    // the one class of personal fact players actually mention in small talk
-    // (own/other's class, level, zone, guild): the eight %my_*/%other_*
-    // tokens, resolved per bot at delivery time (hs_corpus.h's
-    // Hs_ResolveScriptPlaceholders) so a claim is only ever true of
-    // whichever two bots end up cast. A specific item, quest, or invented
-    // biography still has no placeholder and stays flatly disallowed.
-    // The header through "Mode: SMALLTALK" is exactly the shape
-    // dataset_pilot_v2.jsonl's untagged Mode: SMALLTALK rows were trained
-    // against; everything after it is runtime-only guidance the dataset
-    // never carried (same relationship BuildGenerationPrompt's tag/guidance
-    // split has to its own trained Mode:/Category: line).
+    // preferences, nothing checkable. The header through "Mode: SMALLTALK"
+    // is exactly the shape dataset_pilot_v2.jsonl's untagged Mode: SMALLTALK
+    // rows were trained against; everything after it is runtime-only
+    // guidance the dataset never carried (same relationship
+    // BuildGenerationPrompt's tag/guidance split has to its own trained
+    // Mode:/Category: line).
     std::string ScriptSystemPrompt()
     {
         return Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK\n"
             "Making small talk with another player you don't know well. Keep it casual, brief, "
             "one short line at a time -- the way real players actually chat. Stick to general "
             "opinions, feelings, plans, and small talk about the game -- vary the tone, not just "
-            "complaints. If you want to mention your own class, level, current zone, or guild, "
-            "write exactly one of these tokens instead of naming one directly: %my_class, "
-            "%my_level, %my_zone, %my_guild. For the other player's, use: %other_class, "
-            "%other_level, %other_zone, %other_guild. Never invent or state a specific item, "
-            "quest, or any other detail the other person could check and find wrong. No roleplay "
-            "narration, no asterisks, no mention of being an AI or a game.";
+            "complaints. " + kScriptPlaceholderRules + " " + kScriptNoInventedFacts + " " + kScriptNoRoleplay;
     }
 
     const std::string kScriptOpeningTrigger =
@@ -768,29 +843,68 @@ namespace
     const std::string kChannelScriptOpeningTrigger =
         "(Say something casual to open a short back-and-forth in this channel.)";
 
-    // One full attempt: generate a randomized-length (kScriptTurnCountMin..
-    // kScriptTurnCountMax) run of lines. Turn N's trigger is turn N-1's text,
-    // so the model is always just replying, but the prior turns are NOT
-    // replayed as history -- that is the 2026-09-17 change documented in the
-    // loop below, and it is what keeps each call inside the single-turn shape
-    // the LoRA was trained on.
+    // §4.17: a channel variant of the /say prompt, naming the channel itself
+    // so the model's opening line reads as belonging there instead of a
+    // chance meeting. Trade still forbids AH-shaped price claims (same §4.13
+    // rule TRADER's live-price commentary follows) since a generated line has
+    // no real item/price behind it the way a grounded lookup would. Same
+    // tag/guidance split as ScriptSystemPrompt above: "Mode:
+    // SMALLTALK\nChannel: TRADE|GENERAL" is the trained shape, everything
+    // after it is runtime-only.
+    std::string ChannelScriptSystemPromptFor(HsChannelKind kind)
+    {
+        std::string header = Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK\nChannel: ";
+
+        switch (kind)
+        {
+            case HsChannelKind::Trade:
+                return header + "TRADE\n"
+                       "Chatting in the Trade channel -- read by the other players who are in a "
+                       "city right now -- with another player you don't know well. Keep it casual "
+                       "and brief, one short line at a time. Talk about gearing up, professions, "
+                       "or prices in general terms -- an offer, a plan, or a gripe, not always a "
+                       "complaint -- never a specific item, quest, or exact gold price the other "
+                       "person could check and find wrong. " + kScriptPlaceholderRules + " " + kScriptNoRoleplay;
+            case HsChannelKind::General:
+            default:
+                return header + "GENERAL\n"
+                       "Chatting in the General channel for the zone you are standing in -- read "
+                       "by the other players in that same zone -- with another player you don't "
+                       "know well. Keep it casual and brief, one short line at a time -- zone "
+                       "flavor, quests, or general opinions about the game -- pride, amusement, "
+                       "plain observation, and complaint all belong here, so don't default to "
+                       "griping. " + kScriptPlaceholderRules + " " + kScriptNoInventedFacts + " " + kScriptNoRoleplay;
+        }
+    }
+
+    // One full attempt at a script: `turnCount` lines, then one row of
+    // hside_script plus one hside_script_turn per line. `channel` is "" for a
+    // /say script, else the lowercase column value (Hs_ChannelColumnName)
+    // that files it in that channel's reserve. The /say and channel variants
+    // used to be two copies of this function.
+    //
+    // Turn N's trigger is turn N-1's text, so the model is always just
+    // replying, but the prior turns are NOT replayed as history -- that is
+    // the 2026-09-17 change documented in the loop below, and it is what
+    // keeps each call inside the single-turn shape the LoRA was trained on.
     // Turns are labelled speaker_slot 0/1 by position after the fact; the
     // model never needs to know there are two characters, since both share
     // the identical baseline voice. A single line per call is required, not
     // a stylistic choice: Hs_CallLLM stops generation at the first newline
     // (hs_llm.cpp), so one call cannot produce a multi-turn script.
     //
-    // Aborts (returns false, no partial script ever inserted) on the first
-    // LLM failure or quality-gate rejection; the caller's backoff already
-    // handles retrying later, the same as a failed corpus generation.
-    HsGenCycle RunOneScriptGenerationCycle()
+    // Abandons (nothing inserted) on the first failed call or quality-gate
+    // rejection; the caller's backoff handles retrying later, the same as a
+    // failed corpus generation.
+    HsGenCycle GenerateScript(const std::string& systemPrompt, const std::string& openingTrigger,
+                              int turnCount, const std::string& channel)
     {
+        char const* what = channel.empty() ? "script" : "channel script";
+
         HsLLMConfig cfg;
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
-        int turnCount = static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax));
-
-        std::string prevText = kScriptOpeningTrigger;
+        std::string prevText = openingTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns; // slot, text
 
         // No history: every turn is generated from a fresh context with only
@@ -822,14 +936,14 @@ namespace
         // in the dataset, then a retrain.
         for (int i = 0; i < turnCount; ++i)
         {
-            HsLLMResult result = Hs_CallLLM(cfg, ScriptSystemPrompt(), ScriptTurnRagBlock(i == 0 ? "" : prevText),
-                {}, prevText);
-            if (!result.success || result.text.empty())
+            HsLLMResult result = GeneratorCallLLM(cfg, systemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
+                prevText);
+            if (CallFailed(result))
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} LLM call failed (failure={}).",
-                        i, static_cast<int>(result.failure));
-                return HsGenCycle::BackendFailed;
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: {} turn {} LLM call failed (failure={}).",
+                        what, i, static_cast<int>(result.failure));
+                return Hs_LLMBackendAnswered(result) ? HsGenCycle::Rejected : HsGenCycle::BackendFailed;
             }
 
             HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
@@ -838,8 +952,8 @@ namespace
             if (!verdict.accepted)
             {
                 if (g_HsDebugEnabled)
-                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script turn {} rejected ({}) -- \"{}\"",
-                        i, verdict.reason, result.text);
+                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: {} turn {} rejected ({}) -- \"{}\"",
+                        what, i, verdict.reason, result.text);
                 return HsGenCycle::Rejected;
             }
 
@@ -855,172 +969,55 @@ namespace
         // *writer* to race against: application-side id generation, the
         // same idiom ObjectMgr uses for mail/auction ids.
         //
-        // Review A1: it does, however, race against *itself*. Execute()
-        // enqueues onto the async worker while Query() runs on a different,
-        // synchronous connection, so a second generation cycle finishing
-        // before the first cycle's queued INSERT drained would read the same
-        // MAX(id) and mint a duplicate id: the second header insert then
-        // fails on the primary key while its turn rows still land against
-        // the first script. Every write below is therefore DirectExecute
-        // (same synchronous connection pool Query() uses, so it is committed
-        // and visible before this function returns). This thread already
-        // blocks for seconds per LLM call, so a handful of synchronous
-        // inserts costs nothing here.
+        // Review A1: it does, however, race against *itself* unless the
+        // previous script's rows are committed before this read, which is why
+        // the write below is synchronous.
         QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
         uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
 
-        std::string escapedModel = gen.model;
-        CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = gen.promptVersion;
-        CharacterDatabase.EscapeString(escapedVersion);
-        std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
-        std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
-
-        CharacterDatabase.DirectExecute(
-            "INSERT INTO hside_script (id, turn_count, generated_at, model, prompt_version) VALUES ({}, {}, NOW(), {}, {})",
-            scriptId, turnCount, modelSql, versionSql);
-
+        // Header and turns in one synchronous transaction. They used to be
+        // separate writes, header first, so a crash or failed insert between
+        // them left an unclaimed header with no turns -- and the claim in
+        // hs_script.cpp takes the lowest unclaimed id and skips a turnless
+        // one without consuming it, so that one header then stood in front of
+        // the whole reserve for good. Committed together, a header is only
+        // ever visible with all of its turns.
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        trans->Append(
+            "INSERT INTO hside_script (id, turn_count, channel, generated_at, model, prompt_version) "
+            "VALUES ({}, {}, {}, NOW(), {}, {})",
+            scriptId, turnCount, channel.empty() ? std::string("NULL") : ("'" + channel + "'"),
+            SqlStringOrNull(gen.model), SqlStringOrNull(gen.promptVersion));
         for (size_t i = 0; i < turns.size(); ++i)
         {
             std::string escapedText = turns[i].second;
             CharacterDatabase.EscapeString(escapedText);
-            CharacterDatabase.DirectExecute(
+            trans->Append(
                 "INSERT INTO hside_script_turn (script_id, turn_no, speaker_slot, text) VALUES ({}, {}, {}, '{}')",
                 scriptId, static_cast<uint32_t>(i), turns[i].first, escapedText);
         }
+        CharacterDatabase.DirectCommitTransaction(trans);
 
         if (g_HsDebugEnabled)
-            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: script {} inserted ({} turns).", scriptId, turns.size());
+            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: {} {} inserted{}{} ({} turns).",
+                what, scriptId, channel.empty() ? "" : " for ", channel, turns.size());
 
         g_RowsAddedThisSession.fetch_add(1);
         return HsGenCycle::Added;
     }
 
-    // §4.17: a channel variant of the exchange above: shorter (2 turns),
-    // and swaps the neutral small-talk framing for one naming the channel
-    // itself, so the model's opening line reads as belonging there instead
-    // of a chance meeting. Trade still forbids AH-shaped price claims (same
-    // §4.13 rule TRADER's live-price commentary follows) since a generated
-    // line has no real item/price behind it the way a grounded lookup would.
-    // Same turn-by-turn call/quality-gate/placeholder-discipline shape as
-    // RunOneScriptGenerationCycle, just parameterized by kind and turn count.
-    // Same tag/guidance split as ScriptSystemPrompt above: "Mode:
-    // SMALLTALK\nChannel: TRADE|GENERAL" is the trained shape, everything
-    // after it is runtime-only.
-    std::string ChannelScriptSystemPromptFor(HsChannelKind kind)
+    // A /say script: a randomized length (kScriptTurnCountMin..Max), so
+    // consecutive exchanges don't all read as the same fixed-length shape.
+    HsGenCycle RunOneScriptGenerationCycle()
     {
-        std::string header = Hs_ConfigString(g_HsLLMSystemPrompt) + "\nMode: SMALLTALK\nChannel: ";
-
-        switch (kind)
-        {
-            case HsChannelKind::Trade:
-                return header + "TRADE\n"
-                       "Chatting in the Trade channel -- read by the other players who are in a "
-                       "city right now -- with another player you don't know well. Keep it casual "
-                       "and brief, one short line at a time. Talk about gearing up, professions, "
-                       "or prices in general terms -- an offer, a plan, or a gripe, not always a "
-                       "complaint -- never a specific item, quest, or exact gold price the other "
-                       "person could check and find wrong. If you want to mention your own class, "
-                       "level, current zone, or guild, write exactly one of these tokens instead "
-                       "of naming one directly: %my_class, %my_level, %my_zone, %my_guild. For "
-                       "the other player's, use: %other_class, %other_level, %other_zone, "
-                       "%other_guild. No roleplay narration, no asterisks, no mention of being an "
-                       "AI or a game.";
-            case HsChannelKind::General:
-            default:
-                return header + "GENERAL\n"
-                       "Chatting in the General channel for the zone you are standing in -- read "
-                       "by the other players in that same zone -- with another player you don't "
-                       "know well. Keep it casual and brief, one short line at a time -- zone "
-                       "flavor, quests, or general opinions about the game -- pride, amusement, "
-                       "plain observation, and complaint all belong here, so don't default to "
-                       "griping. If you want to mention your own class, level, current zone, or "
-                       "guild, write exactly one of these tokens instead of naming one directly: "
-                       "%my_class, %my_level, %my_zone, %my_guild. For the other player's, use: "
-                       "%other_class, %other_level, %other_zone, %other_guild. Never invent or "
-                       "state a specific item, quest, or any other detail the other person could "
-                       "check and find wrong. No roleplay narration, no asterisks, no mention of "
-                       "being an AI or a game.";
-        }
+        return GenerateScript(ScriptSystemPrompt(), kScriptOpeningTrigger,
+                              static_cast<int>(urand(kScriptTurnCountMin, kScriptTurnCountMax)), "");
     }
 
     HsGenCycle RunOneChannelScriptGenerationCycle(HsChannelKind kind)
     {
-        HsLLMConfig cfg;
-        const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
-
-        std::string systemPrompt = ChannelScriptSystemPromptFor(kind);
-        std::string prevText = kChannelScriptOpeningTrigger;
-        std::vector<std::pair<uint8_t, std::string>> turns;
-
-        // Fresh context per turn, for the reason documented at length in
-        // RunOneScriptGenerationCycle above: the fine-tune is single-turn and
-        // replaying prior turns collapses the output into mirrored sentence
-        // shapes. Only 2 turns here, so this path saw less of it than the
-        // /say scripts did, but it is the same mismatch.
-        for (int i = 0; i < kChannelScriptTurnCount; ++i)
-        {
-            HsLLMResult result = Hs_CallLLM(cfg, systemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
-                {}, prevText);
-            if (!result.success || result.text.empty())
-            {
-                if (g_HsDebugEnabled)
-                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} LLM call failed (failure={}).",
-                        i, static_cast<int>(result.failure));
-                return HsGenCycle::BackendFailed;
-            }
-
-            HsGenVerdict verdict = Hs_QualityGate(result.text, /*allowQuestions=*/true, /*allowShort=*/true);
-            if (verdict.accepted)
-                verdict = Hs_ScriptPlaceholderDiscipline(result.text);
-            if (!verdict.accepted)
-            {
-                if (g_HsDebugEnabled)
-                    LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script turn {} rejected ({}) -- \"{}\"",
-                        i, verdict.reason, result.text);
-                return HsGenCycle::Rejected;
-            }
-
-            turns.emplace_back(static_cast<uint8_t>(i % 2), result.text);
-            prevText = result.text;
-        }
-
-        QueryResult idResult = CharacterDatabase.Query("SELECT COALESCE(MAX(id), 0) + 1 FROM hside_script");
-        uint32_t scriptId = idResult ? (*idResult)[0].Get<uint32_t>() : 1;
-
-        std::string escapedModel = gen.model;
-        CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = gen.promptVersion;
-        CharacterDatabase.EscapeString(escapedVersion);
-        std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
-        std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
-
-        std::string channelColumn = std::string(Hs_ChannelKindName(kind));
-        std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
-        // Review A1: DirectExecute, for the same reason the /say variant
-        // above documents -- the next cycle's MAX(id)+1 read must see this
-        // row.
-        CharacterDatabase.DirectExecute(
-            "INSERT INTO hside_script (id, turn_count, channel, generated_at, model, prompt_version) VALUES ({}, {}, '{}', NOW(), {}, {})",
-            scriptId, kChannelScriptTurnCount, channelColumn, modelSql, versionSql);
-
-        for (size_t i = 0; i < turns.size(); ++i)
-        {
-            std::string escapedText = turns[i].second;
-            CharacterDatabase.EscapeString(escapedText);
-            CharacterDatabase.DirectExecute(
-                "INSERT INTO hside_script_turn (script_id, turn_no, speaker_slot, text) VALUES ({}, {}, {}, '{}')",
-                scriptId, static_cast<uint32_t>(i), turns[i].first, escapedText);
-        }
-
-        if (g_HsDebugEnabled)
-            LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: channel script {} inserted for {} ({} turns).",
-                scriptId, channelColumn, turns.size());
-
-        g_RowsAddedThisSession.fetch_add(1);
-        return HsGenCycle::Added;
+        return GenerateScript(ChannelScriptSystemPromptFor(kind), kChannelScriptOpeningTrigger,
+                              kChannelScriptTurnCount, Hs_ChannelColumnName(kind));
     }
 
     // Review B2: card generation has absolute priority in GeneratorLoop, and
@@ -1035,7 +1032,11 @@ namespace
     // Parked rows are the fix: after kCardAttemptsBeforeParking consecutive
     // failures a bot's guid is set aside, excluded from both the pending
     // count and the claim, so the loop falls through to the other work
-    // types. In-memory rather than a card_attempts column deliberately: a
+    // types. Only a failure the *row* caused counts -- a validator rejection,
+    // or a backend that answered with nothing usable -- not an outage: a
+    // call the backend never answered says nothing about this bot, and
+    // counting it parked pending cards one by one through any outage longer
+    // than a few backoffs. In-memory rather than a card_attempts column deliberately: a
     // worldserver restart is exactly when an operator has changed a model,
     // a prompt or a validator, so retrying then is the behaviour you want,
     // and it needs no schema migration. Touched only from the generator
@@ -1191,15 +1192,17 @@ namespace
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
 
         std::string voicePrompt = Hs_BuildVoiceBlockPrompt(archetypeInfo.talksAbout);
-        HsLLMResult voiceResult = Hs_CallLLM(cfg, voicePrompt, "", {},
+        HsLLMResult voiceResult = GeneratorCallLLM(cfg, voicePrompt, "",
             "Write it now. Reply with only the persona note itself.");
-        if (!voiceResult.success || voiceResult.text.empty())
+        if (CallFailed(voiceResult))
         {
             if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
                     pending.botGuid, static_cast<int>(voiceResult.failure));
+            if (!Hs_LLMBackendAnswered(voiceResult))
+                return HsGenCycle::BackendFailed;
             NoteCardGenerationFailed(pending.botGuid);
-            return HsGenCycle::BackendFailed;
+            return HsGenCycle::Rejected;
         }
         HsGenVerdict voiceVerdict = Hs_ValidateVoiceBlock(voiceResult.text);
         if (!voiceVerdict.accepted)
@@ -1228,16 +1231,17 @@ namespace
                 continue;
             }
 
-            HsLLMResult fieldResult =
-                Hs_CallLLM(cfg, ask.prompt, "", {}, Hs_CardFactTrigger(), ask.grammar);
-            if (!fieldResult.success || fieldResult.text.empty())
+            HsLLMResult fieldResult = GeneratorCallLLM(cfg, ask.prompt, "", Hs_CardFactTrigger(), ask.grammar);
+            if (CallFailed(fieldResult))
             {
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogGenerator,
                         "[HearthsideChat] Generator: card fact '{}' call failed for bot {} (failure={}).",
                         ask.key, pending.botGuid, static_cast<int>(fieldResult.failure));
+                if (!Hs_LLMBackendAnswered(fieldResult))
+                    return HsGenCycle::BackendFailed;
                 NoteCardGenerationFailed(pending.botGuid);
-                return HsGenCycle::BackendFailed;
+                return HsGenCycle::Rejected;
             }
             facts[ask.key] = Hs_NormalizeCardFactValue(i, fieldResult.text);
         }
@@ -1257,12 +1261,6 @@ namespace
         CharacterDatabase.EscapeString(escapedVoice);
         std::string factsCompact = facts.dump();
         CharacterDatabase.EscapeString(factsCompact);
-        std::string escapedModel = gen.model;
-        CharacterDatabase.EscapeString(escapedModel);
-        std::string escapedVersion = gen.promptVersion;
-        CharacterDatabase.EscapeString(escapedVersion);
-        std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
-        std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
 
         // archetype is written back here too: it's recomputed above from the
         // guid rather than trusted from the stored column, so the stored
@@ -1278,7 +1276,8 @@ namespace
         CharacterDatabase.DirectExecute(
             "UPDATE hside_identity SET archetype = '{}', card_voice = '{}', card_facts = '{}', "
             "card_model = {}, card_prompt_version = {}, card_active = 1 WHERE bot_guid = {}",
-            archetypeInfo.enumName, escapedVoice, factsCompact, modelSql, versionSql, pending.botGuid);
+            archetypeInfo.enumName, escapedVoice, factsCompact, SqlStringOrNull(gen.model),
+            SqlStringOrNull(gen.promptVersion), pending.botGuid);
 
         Hs_InvalidateCardCache(pending.botGuid); // review G1: a brand-new card must be visible immediately
         Hs_PushBotIntoExcludeVectors(pending.botGuid);
@@ -1357,8 +1356,9 @@ void Hs_GeneratorShutdown()
     if (g_GeneratorThread.joinable())
         g_GeneratorThread.join();
     // A shutdown arriving mid-Hs_CallLLM still waits out that call's
-    // remaining Generator.LLM.TimeoutSeconds (30s default): bounded, and
-    // the same exposure the reactive worker already has.
+    // remaining Generator.LLM.TimeoutSeconds (30s default), and no further
+    // call starts after it (GeneratorCallLLM): bounded by one call, the same
+    // exposure the reactive worker already has.
 }
 
 uint32_t Hs_GeneratorRowsAddedThisSession()
@@ -1470,6 +1470,32 @@ uint32_t Hs_RunUnusedRowEvictionSweep()
     return count;
 }
 
+uint32_t Hs_RunConsumedScriptSweep()
+{
+    QueryResult countResult = CharacterDatabase.Query(
+        "SELECT COUNT(*) FROM hside_script WHERE consumed_at < NOW() - INTERVAL {} DAY",
+        kHsConsumedScriptRetentionDays);
+    uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
+
+    // Headers first, then every turn row left without one. The second
+    // statement is keyed on "no header" rather than on the same date test,
+    // so it cannot disagree with the first about a script consumed right at
+    // the boundary, and it also picks up turns orphaned any other way.
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+    trans->Append("DELETE FROM hside_script WHERE consumed_at < NOW() - INTERVAL {} DAY",
+        kHsConsumedScriptRetentionDays);
+    trans->Append("DELETE t FROM hside_script_turn t LEFT JOIN hside_script s ON s.id = t.script_id "
+                  "WHERE s.id IS NULL");
+    CharacterDatabase.DirectCommitTransaction(trans);
+
+    if (g_HsDebugEnabled && count > 0)
+        LOG_INFO(kHsLogGenerator,
+            "[HearthsideChat] Eviction: consumed-script sweep removed {} script(s) played {}+ days ago.",
+            count, kHsConsumedScriptRetentionDays);
+
+    return count;
+}
+
 uint32_t Hs_EvictGenerationRun(const std::string& promptVersion)
 {
     std::string escaped = promptVersion;
@@ -1525,25 +1551,21 @@ std::vector<HsCorpusReviewRow> Hs_ReviewCorpusRows(const std::string& category, 
 
 std::string Hs_LookupCategoryAxis(const std::string& category)
 {
-    std::string escapedCategory = category;
-    CharacterDatabase.EscapeString(escapedCategory);
-    QueryResult result = CharacterDatabase.Query(
-        "SELECT tag_axis FROM hside_corpus_category WHERE name = '{}'", escapedCategory);
-    return result ? (*result)[0].Get<std::string>() : "";
+    HsCorpusCategory found;
+    return Hs_FindCorpusCategory(category, found) ? found.tagAxis : "";
 }
 
 HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::string& tagColumn,
                                     const std::string& tagValueSql, const std::string& candidateText,
                                     const std::string& model, const std::string& promptVersion)
 {
+    HsCorpusCategory found;
+    if (!Hs_FindCorpusCategory(category, found))
+        return { false, "unknown_category" };
+    bool cardGated = found.cardGated;
+
     std::string escapedCategory = category;
     CharacterDatabase.EscapeString(escapedCategory);
-
-    QueryResult catResult = CharacterDatabase.Query(
-        "SELECT card_gated FROM hside_corpus_category WHERE name = '{}'", escapedCategory);
-    if (!catResult)
-        return { false, "unknown_category" };
-    bool cardGated = (*catResult)[0].Get<uint8_t>() != 0;
 
     std::vector<std::string> existingRows = AllRowsInBucket(category, tagColumn, tagValueSql);
 
@@ -1554,17 +1576,11 @@ HsGenVerdict Hs_TryInsertCorpusRow(const std::string& category, const std::strin
 
     std::string escapedText = candidateText;
     CharacterDatabase.EscapeString(escapedText);
-    std::string escapedModel = model;
-    CharacterDatabase.EscapeString(escapedModel);
-    std::string escapedVersion = promptVersion;
-    CharacterDatabase.EscapeString(escapedVersion);
 
-    // NULL rather than an empty string for either: hand-authored rows use
-    // NULL, and an empty string would read as a set-but-blank value instead
-    // of "not supplied" (e.g. a generator configured with no model name, or
-    // a GM capture's prompt_version).
-    std::string modelSql   = escapedModel.empty()   ? "NULL" : ("'" + escapedModel + "'");
-    std::string versionSql = escapedVersion.empty() ? "NULL" : ("'" + escapedVersion + "'");
+    // SqlStringOrNull: a GM capture's empty prompt_version stays NULL, like
+    // a hand-authored row's.
+    std::string modelSql   = SqlStringOrNull(model);
+    std::string versionSql = SqlStringOrNull(promptVersion);
 
     // Review item 4: DirectExecute, not Execute. Both the near-duplicate
     // check above (AllRowsInBucket) and the generator loop's own under-quota

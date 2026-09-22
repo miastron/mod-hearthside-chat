@@ -5,6 +5,7 @@
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_identity_store.h" // review C13: Hs_LookupCardSnapshot for the carded verbal tic
+#include "hs_log.h"
 #include "hs_prune.h"
 #include "hs_proximity.h"
 #include "hs_queue.h" // §4.17: Hs_ResolveChannelForDelivery, HsReplyChannel::Channel's delivery pattern
@@ -14,6 +15,7 @@
 
 #include "Channel.h"    // §4.17 channel scripts: Channel::Say
 #include "DatabaseEnv.h"
+#include "Log.h"
 #include "QueryResult.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -155,6 +157,19 @@ namespace
                             /*pruneAboveSize=*/512);
     }
 
+    // A header with no turn rows. The generator writes a script's header and
+    // turns in one transaction (hs_generator.cpp), so this should only ever
+    // be a hand edit -- but the claim below picks the lowest unclaimed id, so
+    // leaving such a header unclaimed would hand it back to every later scan
+    // and stop the surface for good. Marking it consumed moves past it; the
+    // consumed-script sweep then deletes it like any other.
+    void RetireTurnlessScript(uint32_t scriptId)
+    {
+        CharacterDatabase.DirectExecute("UPDATE hside_script SET consumed_at = NOW() WHERE id = {}", scriptId);
+        LOG_WARN(kHsLog, "[HearthsideChat] Script {} has no turn rows; marked consumed so the reserve moves past it.",
+            scriptId);
+    }
+
     bool IsBotInActiveRun(uint64_t botGuid)
     {
         std::lock_guard<std::mutex> lock(g_RunsMutex);
@@ -203,11 +218,10 @@ namespace
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
         if (!turnResult)
         {
-            // Defensive: a header row with no turns should never exist.
             // Review C2: refund, because nothing was ever going to be
-            // spoken here -- no listener experiences this as silence, and
-            // the script is left unclaimed for the next scan either way.
+            // spoken here -- no listener experiences this as silence.
             Hs_AmbientBucketRefund();
+            RetireTurnlessScript(scriptId);
             return;
         }
 
@@ -428,9 +442,7 @@ namespace
     // has no equivalent for.
     void ClaimAndScheduleChannel(HsChannelKind kind, Player* bot0, Player* bot1)
     {
-        std::string channelColumn = std::string(Hs_ChannelKindName(kind));
-        std::transform(channelColumn.begin(), channelColumn.end(), channelColumn.begin(),
-            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::string channelColumn = Hs_ChannelColumnName(kind);
 
         QueryResult idResult = CharacterDatabase.Query(
             "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel = '{}' ORDER BY id LIMIT 1",
@@ -452,6 +464,7 @@ namespace
         if (!turnResult)
         {
             Hs_AmbientBucketRefund(); // review C2, as ClaimAndSchedule above
+            RetireTurnlessScript(scriptId);
             return;
         }
 
@@ -639,7 +652,7 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
     if (!g_HsEnable)
         return;
 
-    if (HsTierAllows(HsParseTier(g_HsMaxTierBotToBot), HsTier::Corpus)) // corpus-only in v1
+    if (HsTierAllows(g_HsMaxTierBotToBot, HsTier::Corpus)) // corpus-only in v1
     {
         g_ScanAccumulatorMs += diff;
         if (g_ScanAccumulatorMs >= kScanIntervalMs)

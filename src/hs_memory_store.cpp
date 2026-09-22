@@ -2,12 +2,15 @@
 #include "hs_bot.h"
 #include "hs_memory.h"
 #include "hs_locale.h"
+#include "hs_queue.h" // Hs_DeferToWorldThread
 
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "Guild.h"
+#include "GuildMgr.h"
 #include "Group.h"
 #include "GroupReference.h"
+#include "ObjectAccessor.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotMgr.h"
@@ -138,52 +141,94 @@ void Hs_DropMemoryRowsForBot(uint64_t botGuid)
     CharacterDatabase.Execute("DELETE FROM hside_memory WHERE bot_guid = {}", botGuid);
 }
 
+// Both hooks below can fire on a map-update thread -- a death out of
+// Unit::Kill, a guild join out of a bot's own AI accepting an invite -- and
+// what they do next is two to four synchronous round trips on
+// CharacterDatabase plus a read of group or guild members who may be on
+// other maps. So each captures GUIDs and runs on the world thread through
+// Hs_DeferToWorldThread (hs_queue.h), the same shape hs_event.cpp's and
+// hs_opener.cpp's hooks take.
+namespace
+{
+    void RecordDiedTogether(Player* player)
+    {
+        Group* group = player->GetGroup();
+        if (!group)
+            return;
+
+        bool    diedIsBot = Hs_IsBot(player);
+        Player* other      = nullptr;
+        for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+        {
+            Player* member = itr->GetSource();
+            if (!member || member == player || !member->IsInWorld())
+                continue;
+            // "We went down together" has to be true of both sides. This hook
+            // fires once per death, so the other half of the pair must already be
+            // dead for the beat to be a fact rather than a claim the player
+            // watched not happen (§4.13): a bot that pulls too much and dies
+            // while its human groupmate is standing over the corpse must not
+            // record a shared death. hs_event.cpp's wipe detection applies the
+            // same IsAlive() test for the same reason. The effect is that the
+            // beat fires on the *second* death of a pair, which is the correct
+            // semantics; Hs_RecordMemoryEvent's 30-minute dedup window already
+            // stops a full wipe writing one row per corpse -- and, now that the
+            // test runs after the tick's map updates rather than inside one,
+            // stops the two deaths of a same-tick pair both recording it.
+            if (member->IsAlive())
+                continue;
+            if (Hs_IsBot(member) != diedIsBot)
+            {
+                other = member;
+                break;
+            }
+        }
+        if (!other)
+            return;
+
+        Player* bot        = diedIsBot ? player : other;
+        Player* realPlayer = diedIsBot ? other : player;
+
+        AreaTableEntry const* entry = sAreaTableStore.LookupEntry(player->GetZoneId());
+        std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
+        std::string zone = zoneName.empty() ? "the field" : zoneName;
+
+        Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), realPlayer->GetGUID().GetRawValue(),
+                              kHsMemoryEventDiedTogether, Hs_BuildDiedTogetherText(zone));
+    }
+
+    void RecordJoinedSameGuild(Guild* guild, Player* player)
+    {
+        bool    joinerIsBot = Hs_IsBot(player);
+        Player* other        = nullptr;
+        auto findOtherSide = [&](Player* member)
+        {
+            if (!other && member && member->IsInWorld() && Hs_IsBot(member) != joinerIsBot)
+                other = member;
+        };
+        guild->BroadcastWorker(findOtherSide, player);
+        if (!other)
+            return;
+
+        Player* bot        = joinerIsBot ? player : other;
+        Player* realPlayer = joinerIsBot ? other : player;
+
+        Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), realPlayer->GetGUID().GetRawValue(),
+                              kHsMemoryEventJoinedSameGuild, Hs_BuildJoinedSameGuildText(guild->GetName()));
+    }
+}
+
 void HsMemoryDeathHandler::OnPlayerJustDied(Player* player)
 {
-    if (!player || !player->IsInWorld())
+    if (!player || !player->IsInWorld() || !player->GetGroup())
         return;
 
-    Group* group = player->GetGroup();
-    if (!group)
-        return;
-
-    bool    diedIsBot = Hs_IsBot(player);
-    Player* other      = nullptr;
-    for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
+    ObjectGuid guid = player->GetGUID();
+    Hs_DeferToWorldThread([guid]()
     {
-        Player* member = itr->GetSource();
-        if (!member || member == player || !member->IsInWorld())
-            continue;
-        // "We went down together" has to be true of both sides. This hook
-        // fires once per death, so the other half of the pair must already be
-        // dead for the beat to be a fact rather than a claim the player
-        // watched not happen (§4.13): a bot that pulls too much and dies
-        // while its human groupmate is standing over the corpse must not
-        // record a shared death. hs_event.cpp's wipe detection applies the
-        // same IsAlive() test for the same reason. The effect is that the
-        // beat fires on the *second* death of a pair, which is the correct
-        // semantics; Hs_RecordMemoryEvent's 30-minute dedup window already
-        // stops a full wipe writing one row per corpse.
-        if (member->IsAlive())
-            continue;
-        if (Hs_IsBot(member) != diedIsBot)
-        {
-            other = member;
-            break;
-        }
-    }
-    if (!other)
-        return;
-
-    Player* bot        = diedIsBot ? player : other;
-    Player* realPlayer = diedIsBot ? other : player;
-
-    AreaTableEntry const* entry = sAreaTableStore.LookupEntry(player->GetZoneId());
-    std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
-    std::string zone = zoneName.empty() ? "the field" : zoneName;
-
-    Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), realPlayer->GetGUID().GetRawValue(),
-                          kHsMemoryEventDiedTogether, Hs_BuildDiedTogetherText(zone));
+        if (Player* died = Hs_FindInWorld(guid))
+            RecordDiedTogether(died);
+    });
 }
 
 void HsMemoryGuildHandler::OnAddMember(Guild* guild, Player* player, uint8& /*plRank*/)
@@ -191,20 +236,13 @@ void HsMemoryGuildHandler::OnAddMember(Guild* guild, Player* player, uint8& /*pl
     if (!guild || !player || !player->IsInWorld())
         return;
 
-    bool    joinerIsBot = Hs_IsBot(player);
-    Player* other        = nullptr;
-    auto findOtherSide = [&](Player* member)
+    uint32     guildId = guild->GetId();
+    ObjectGuid guid    = player->GetGUID();
+    Hs_DeferToWorldThread([guildId, guid]()
     {
-        if (!other && member && member->IsInWorld() && Hs_IsBot(member) != joinerIsBot)
-            other = member;
-    };
-    guild->BroadcastWorker(findOtherSide, player);
-    if (!other)
-        return;
-
-    Player* bot        = joinerIsBot ? player : other;
-    Player* realPlayer = joinerIsBot ? other : player;
-
-    Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), realPlayer->GetGUID().GetRawValue(),
-                          kHsMemoryEventJoinedSameGuild, Hs_BuildJoinedSameGuildText(guild->GetName()));
+        Guild*  live   = sGuildMgr->GetGuildById(guildId);
+        Player* joiner = Hs_FindInWorld(guid);
+        if (live && joiner)
+            RecordJoinedSameGuild(live, joiner);
+    });
 }

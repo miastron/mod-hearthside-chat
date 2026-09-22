@@ -175,13 +175,13 @@ uint32_t g_HsDistractedMinDelaySeconds = 25;
 uint32_t g_HsDistractedMaxDelaySeconds = 60;
 uint32_t g_HsDistractedCooldownSeconds = 600;
 
-std::string g_HsMaxTierDirectReply = "inference";
-std::string g_HsMaxTierAmbient     = "corpus";
-std::string g_HsMaxTierOpeners     = "corpus";
-std::string g_HsMaxTierBotToBot    = "corpus";
-std::string g_HsMaxTierReflex      = "reflex";
-std::string g_HsMaxTierEngagementFollowUp = "off";
-std::string g_HsMaxTierEvents             = "inference";
+HsTier g_HsMaxTierDirectReply = HsTier::Inference;
+HsTier g_HsMaxTierAmbient     = HsTier::Corpus;
+HsTier g_HsMaxTierOpeners     = HsTier::Corpus;
+HsTier g_HsMaxTierBotToBot    = HsTier::Corpus;
+HsTier g_HsMaxTierReflex      = HsTier::Reflex;
+HsTier g_HsMaxTierEngagementFollowUp = HsTier::Off;
+HsTier g_HsMaxTierEvents             = HsTier::Inference;
 
 // One event roughly every four seconds sustained, with room for a wipe to
 // spend four at once. Starting guesses shaped against the reply bucket's
@@ -385,13 +385,13 @@ void Hs_LoadHearthsideChatConfig()
         g_HsDistractedMaxDelaySeconds = g_HsDistractedMinDelaySeconds;
     }
 
-    g_HsMaxTierDirectReply = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.DirectReply", "inference");
-    g_HsMaxTierAmbient     = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Ambient", "corpus");
-    g_HsMaxTierOpeners     = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Openers", "corpus");
-    g_HsMaxTierBotToBot    = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.BotToBot", "corpus");
-    g_HsMaxTierReflex      = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Reflex", "reflex");
-    g_HsMaxTierEngagementFollowUp = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.EngagementFollowUp", "off");
-    g_HsMaxTierEvents             = sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Events", "inference");
+    g_HsMaxTierDirectReply = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.DirectReply", "inference"));
+    g_HsMaxTierAmbient     = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Ambient", "corpus"));
+    g_HsMaxTierOpeners     = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Openers", "corpus"));
+    g_HsMaxTierBotToBot    = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.BotToBot", "corpus"));
+    g_HsMaxTierReflex      = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Reflex", "reflex"));
+    g_HsMaxTierEngagementFollowUp = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.EngagementFollowUp", "off"));
+    g_HsMaxTierEvents             = HsParseTier(sConfigMgr->GetOption<std::string>("HearthsideChat.MaxTier.Events", "inference"));
 
     g_HsEventBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.RepliesPerMinute", 15);
     g_HsEventBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.BurstCapacity", 4);

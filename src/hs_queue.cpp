@@ -8,18 +8,22 @@
 #include "hs_identity.h"
 #include "hs_identity_store.h"
 #include "hs_llm.h"
+#include "hs_locale.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_prune.h"
 #include "hs_rag.h"
+#include "hs_rpgstate.h"
 #include "hs_style.h"
 
 #include "Channel.h"          // §4.17 channel delivery: Channel::Say
 #include "ChannelMgr.h"       // §4.17 channel delivery: ChannelMgr::forTeam/GetChannel
 #include "DBCStores.h"        // §4.17 channel delivery: sChatChannelsStore (zone-qualified channel name)
 #include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
+#include "Group.h"            // Hs_MakeReplyRequest: topic-gate group facts
 #include "Language.h"         // §4.17 channel delivery: LANG_CHANNEL_CITY
 #include "Log.h"
+#include "Map.h"              // Hs_MakeReplyRequest: topic-gate instance facts
 #include "ObjectMgr.h"        // §4.17 channel delivery: GetAcoreStringForDBCLocale
 #include "Player.h"
 #include "PlayerbotAI.h"      // also mod-playerbots' ChatChannelId enum, reused for §4.17's DBC id mapping
@@ -84,7 +88,11 @@ namespace
         switch (status)
         {
             case RPG_GO_GRIND:      return "Right now you're out grinding mobs.";
-            case RPG_GO_CAMP:       return "Right now you're camping a spot, waiting for something to spawn.";
+            // A "camp" is one of mod-playerbots' travel hubs -- a town or
+            // outpost with NPCs (NewRpgBaseAction::SelectRandomCampPos) --
+            // and this state is the run *to* it: it flips to RPG_WANDER_NPC
+            // on arrival (hs_rpgstate.h).
+            case RPG_GO_CAMP:       return "Right now you're on your way to a nearby town.";
             case RPG_DO_QUEST:      return "Right now you're in the middle of a quest.";
             case RPG_TRAVEL_FLIGHT: return "Right now you're traveling.";
             case RPG_REST:          return "Right now you're taking a break in town.";
@@ -149,27 +157,13 @@ namespace
         return kHsScoreWeightSay;
     }
 
+    // What the worker pops: the caller's request plus the two things only
+    // admission knows.
     struct HsQueuedRequest
     {
-        uint64_t     botGuid;
-        std::string  botName;     // style pass: protected from typo injection
-        uint64_t     senderGuid;
-        std::string  senderName;  // style pass: protected from typo injection
-        HsReplyChannel channel;
-        std::string  prompt;
+        HsReplyRequest    request;
         Clock::time_point enqueuedAt;
-        bool         isProbe;
-        bool         inCombat;    // style pass: combat `care` offset
-        uint8_t      botLevel;    // archetype eligibility filter (hs_archetype.h)
-        NewRpgStatus rpgStatus;   // live activity fact, folded into personaLine below
-    bool         botSettled;  // Hs_IsBotSettled at enqueue; gates the distracted reply only
-        HsTopicGateContext topicGate; // §4.13 gear/group/instance/gold/zone facts, folded into personaLine below
-        bool         isFollowUp;  // self-initiated engagement follow-up (hs_engagement.h): no score, no history write
-        bool         isEvent;     // event reaction (hs_event.h): as isFollowUp, plus no first-meeting record
-        bool         triggerIsStateLine = false; // prompt is a synthetic state line, not an utterance (hs_queue.h)
-        HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
-        uint64_t     chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop
-        uint32_t     chainSeq     = 0; // the scope generation this hop was issued under
+        bool              isProbe = false;
     };
 
     // deliverAt lets one worker thread queue more than one chat line with
@@ -190,13 +184,13 @@ namespace
         HsChannelKind channelKind = HsChannelKind::Trade; // meaningful only when channel == HsReplyChannel::Channel (§4.17)
         uint64_t    chainScopeId = 0; // bot-to-bot chain hop (hs_botchain.h); 0 = not a hop, which is every other producer
         uint32_t    chainSeq     = 0; // scope generation at issue time; a newer generation means a player took the floor, drop
-        // Whether this line may seed the next hop of a bot-to-bot chain.
-        // False for the two secondary lines a single reply can also queue --
-        // the distracted "sorry, was afk" filler and the `*correction`
-        // addendum. Both are flavor attached to the primary reply, and
-        // neither is something another bot should be answering: a hop
-        // triggered by a bare "*healer" fragment has no conversation in it.
-        bool        seedsChain = true;
+        // The line itself, as opposed to the two secondary lines a single
+        // reply can also queue -- the distracted "sorry, was afk" filler and
+        // the `*correction` addendum. Both are flavor attached to the primary
+        // reply, so neither may seed the next hop of a bot-to-bot chain (a
+        // hop triggered by a bare "*healer" fragment has no conversation in
+        // it) or be echoed into the bot's next prompt as something it said.
+        bool        isPrimaryLine = true;
     };
 
     // ---- work queue: world thread pushes, the one worker thread pops ----
@@ -209,6 +203,15 @@ namespace
     // ---- delivery queue: worker thread pushes, world thread pops (Hs_DeliverPending) ----
     std::mutex                     g_DeliveryMutex;
     std::deque<HsPendingReply>     g_DeliveryQueue;
+
+    // ---- work deferred from a map-update thread (Hs_DeferToWorldThread) ----
+    // The cap only bounds a stalled world thread: the queue is drained every
+    // tick, and every producer applies its cheap self-only tests before
+    // queuing -- the busiest, a creature kill, only for an eligible bot in a
+    // group while openers are on.
+    constexpr size_t                   kMaxDeferredWork = 1024;
+    std::mutex                         g_DeferredMutex;
+    std::vector<std::function<void()>> g_DeferredWork;
 
     // ---- one token bucket, four instances (review item 21) ----
     //
@@ -623,7 +626,7 @@ namespace
     {
         for (;;)
         {
-            HsQueuedRequest req;
+            HsQueuedRequest job;
             {
                 std::unique_lock<std::mutex> lock(g_QueueMutex);
                 g_QueueCv.wait(lock, [] { return g_StopWorker || !g_Queue.empty(); });
@@ -640,15 +643,16 @@ namespace
                 // CharacterDatabase during core shutdown.
                 if (g_StopWorker)
                     return;
-                req = std::move(g_Queue.front());
+                job = std::move(g_Queue.front());
                 g_Queue.pop_front();
             }
+            HsReplyRequest const& req = job.request;
 
-            auto ageSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - req.enqueuedAt).count();
+            auto ageSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - job.enqueuedAt).count();
             if (ageSec > static_cast<int64_t>(g_HsQueueTTLSeconds))
             {
                 RecordTtlOutcome(/*dropped=*/true);
-                if (req.isProbe)
+                if (job.isProbe)
                     g_ProbeInFlight.store(false);
                 if (g_HsDebugEnabled)
                     LOG_INFO(kHsLogChat, "[HearthsideChat] Dropping stale request for bot {} (age {}s > TTL {}s).",
@@ -672,12 +676,16 @@ namespace
             // concat for the majority of bots with no active card).
             HsCardSnapshot cardSnapshot = Hs_LookupCardSnapshot(req.botGuid);
 
-            // Ring, derived the same way hs_identity.h's table defines it
-            // (card_active -> 3, else has memory rows -> 2, else -> 1).
-            // Feeds only the §4.19 prompt-length-by-ring metric below; the
-            // prompt itself doesn't change shape by ring.
-            uint8_t ring = cardSnapshot.active ? 3
-                : (Hs_HasMetBefore(req.botGuid, req.senderGuid) ? 2 : 1);
+            // One query, two consumers. Ring is derived the same way
+            // hs_identity.h's table defines it (card_active -> 3, else has
+            // memory rows -> 2, else -> 1) and feeds only the §4.19
+            // prompt-length-by-ring metric below; the prompt itself doesn't
+            // change shape by ring. The same fact then decides whether the
+            // first-meeting record further down needs its own check at all:
+            // a pair with any memory row already has its first_meeting row,
+            // because Hs_RecordMemoryEvent writes that one first.
+            bool metBefore = Hs_HasMetBefore(req.botGuid, req.senderGuid);
+            uint8_t ring = cardSnapshot.active ? 3 : (metBefore ? 2 : 1);
 
             std::string personaLine = Hs_ArchetypePromptLine(archetype);
             if (cardSnapshot.active && !cardSnapshot.voiceBlock.empty())
@@ -820,8 +828,13 @@ namespace
             HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, modelTrigger);
             g_ReactiveWorkerBusy.store(false);
 
-            RecordOutcome(result.success);
-            if (req.isProbe)
+            // The breaker is a *backend-down* signal, so it hears whether the
+            // backend answered, not whether the answer was usable. An HTTP 200
+            // carrying an empty or malformed completion is a reply the model
+            // chose not to make: counting it as a failure let three of them in
+            // a row silence the whole tier against a healthy server.
+            RecordOutcome(Hs_LLMBackendAnswered(result));
+            if (job.isProbe)
                 g_ProbeInFlight.store(false);
 
             // §4.19: latency and prompt length are meaningful on every
@@ -931,7 +944,7 @@ namespace
             // group), and "met" between two bots is not a fact about any
             // player. An engagement follow-up still records it: its sender
             // is by construction the real player it is following up with.
-            if (!req.isEvent)
+            if (!req.isEvent && !metBefore)
                 Hs_EnsureFirstMeetingRecorded(req.botGuid, req.senderGuid);
 
             {
@@ -949,7 +962,7 @@ namespace
             // reply without ever shortening what the LLM call itself cost.
             // A fast backend that would otherwise deliver same-tick still
             // gets the full target delay.
-            int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - req.enqueuedAt).count();
+            int64_t elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - job.enqueuedAt).count();
 
             // Hoisted out of the block below because the distracted path
             // needs the *full* target, not the residual: once the bot has
@@ -992,14 +1005,6 @@ namespace
             // here, so nothing has to be threaded through HsQueuedRequest.
             std::string       distractedFiller;
             Clock::time_point distractedFillerAt = now;
-            // Gated on the bot's own live activity, added 2026-09-20. The
-            // mechanic shipped rolling on chance alone, so a bot could
-            // apologise for being away while its AI was visibly questing or
-            // running somewhere -- observed on the realm, and the exact
-            // behaviour that had been ruled out when this was designed.
-            // req.rpgStatus is captured on the world thread at enqueue
-            // (Hs_EnqueueReply), so the worker can read it without touching
-            // a Player*.
             // Settled-state gate, added 2026-09-20. The mechanic shipped
             // rolling on chance alone, so a bot could apologise for being away
             // while its own AI was visibly questing or running somewhere --
@@ -1074,11 +1079,11 @@ namespace
                 if (!distractedFiller.empty())
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, distractedFiller,
                                                  distractedFillerAt, req.isFollowUp, req.channelKind,
-                                                 req.chainScopeId, req.chainSeq, /*seedsChain=*/false });
+                                                 req.chainScopeId, req.chainSeq, /*isPrimaryLine=*/false });
 
                 g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt,
                                              req.isFollowUp, req.channelKind, req.chainScopeId, req.chainSeq,
-                                             /*seedsChain=*/true });
+                                             /*isPrimaryLine=*/true });
 
                 // Self-correction follow-up: only eligible when a typo
                 // actually landed in this message. The `*` prefix is added
@@ -1094,7 +1099,7 @@ namespace
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, followUp,
                                                  deliverAt + std::chrono::seconds(delaySec), req.isFollowUp,
                                                  req.channelKind, req.chainScopeId, req.chainSeq,
-                                                 /*seedsChain=*/false });
+                                                 /*isPrimaryLine=*/false });
                 }
             }
         }
@@ -1133,13 +1138,92 @@ void Hs_QueueShutdown()
     // of the whole queue's worth.
 }
 
-bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t senderGuid,
-                    const std::string& senderName, HsReplyChannel channel, const std::string& userPrompt,
-                    bool inCombat, uint8_t botLevel, NewRpgStatus rpgStatus,
-                    const HsTopicGateContext& topicGate, bool isFollowUp, bool isEvent,
-                    HsChannelKind channelKind, uint64_t chainScopeId, uint32_t chainSeq,
-                    bool triggerIsStateLine, bool botSettled)
+HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt)
 {
+    HsReplyRequest req;
+    req.botGuid    = bot->GetGUID().GetRawValue();
+    req.botName    = bot->GetName();
+    req.senderGuid = sender->GetGUID().GetRawValue();
+    req.senderName = sender->GetName();
+    req.channel    = channel;
+    req.prompt     = prompt;
+
+    req.inCombat = bot->IsInCombat();
+    req.botLevel = bot->GetLevel();
+    if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot))
+        req.rpgStatus = botAI->rpgInfo.GetStatus();
+    req.botSettled = Hs_IsBotSettled(bot);
+
+    // §4.13's topic-gate facts: gear, group, instance, gold, zone. As
+    // volatile as combat, so read fresh per request. hs_topic_gate.h stays
+    // free of AzerothCore headers for its standalone harness, which is why
+    // the Player*-reading half lives here rather than there.
+    HsTopicGateContext& gate = req.topicGate;
+    gate.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
+    if (Group* group = bot->GetGroup())
+    {
+        gate.inGroup       = true;
+        gate.isGroupLeader = group->IsLeader(bot->GetGUID());
+    }
+    if (Map* map = bot->GetMap())
+    {
+        gate.inInstance = map->IsDungeon() || map->IsRaid();
+        if (gate.inInstance)
+            gate.instanceName = map->GetMapName();
+    }
+    gate.goldCopper = bot->GetMoney();
+    if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
+    {
+        std::string name = Hs_LocalizedAreaName(entry); // review H1
+        if (!name.empty())
+            gate.zoneName = name;
+    }
+
+    return req;
+}
+
+bool Hs_DeferToWorldThread(std::function<void()> work)
+{
+    {
+        std::lock_guard<std::mutex> lock(g_DeferredMutex);
+        if (g_DeferredWork.size() < kMaxDeferredWork)
+        {
+            g_DeferredWork.push_back(std::move(work));
+            return true;
+        }
+    }
+    if (g_HsDebugEnabled)
+        LOG_INFO(kHsLog, "[HearthsideChat] Deferred-work backlog at its cap ({}); dropping a hook's work.",
+            kMaxDeferredWork);
+    return false;
+}
+
+void Hs_RunDeferredWork()
+{
+    // Swapped out under the lock and run outside it: the work reaches
+    // Hs_TryEnqueue and the other subsystems' own locks, and anything it
+    // defers in turn lands in the next tick's batch rather than this one.
+    std::vector<std::function<void()>> batch;
+    {
+        std::lock_guard<std::mutex> lock(g_DeferredMutex);
+        if (g_DeferredWork.empty())
+            return;
+        batch.swap(g_DeferredWork);
+    }
+    for (auto& work : batch)
+        work();
+}
+
+Player* Hs_FindInWorld(ObjectGuid guid)
+{
+    Player* player = ObjectAccessor::FindPlayer(guid);
+    return (player && player->IsInWorld()) ? player : nullptr;
+}
+
+bool Hs_TryEnqueue(HsReplyRequest request)
+{
+    uint64_t const botGuid = request.botGuid;
+
     // 1. Token bucket. Taken atomically (review B7) and refunded on every
     // later bail-out, so the bucket can never be driven negative by two
     // concurrent callers passing the same peek.
@@ -1209,27 +1293,11 @@ bool Hs_TryEnqueue(uint64_t botGuid, const std::string& botName, uint64_t sender
         queueFull = (g_Queue.size() >= g_HsQueueMaxDepth);
         if (!queueFull)
         {
-            HsQueuedRequest req;
-            req.botGuid    = botGuid;
-            req.botName    = botName;
-            req.senderGuid = senderGuid;
-            req.senderName = senderName;
-            req.channel    = channel;
-            req.prompt     = userPrompt;
-            req.enqueuedAt = Clock::now();
-            req.isProbe    = isProbe;
-            req.inCombat   = inCombat;
-            req.botLevel   = botLevel;
-            req.rpgStatus  = rpgStatus;
-            req.botSettled = botSettled;
-            req.topicGate  = topicGate;
-            req.isFollowUp = isFollowUp;
-            req.isEvent    = isEvent;
-            req.triggerIsStateLine = triggerIsStateLine;
-            req.channelKind  = channelKind;
-            req.chainScopeId = chainScopeId;
-            req.chainSeq     = chainSeq;
-            g_Queue.push_back(std::move(req));
+            HsQueuedRequest job;
+            job.request    = std::move(request);
+            job.enqueuedAt = Clock::now();
+            job.isProbe    = isProbe;
+            g_Queue.push_back(std::move(job));
         }
     }
 
@@ -1825,8 +1893,10 @@ void Hs_DeliverPending()
 
         // Feeds Hs_RecentUtteranceContext for this bot's next reactive
         // reply. Say/Channel only -- see g_RecentUtterances' comment for
-        // why Whisper/Party/Raid/Guild stay out of this shared pool.
-        if (reply.channel == HsReplyChannel::Say || reply.channel == HsReplyChannel::Channel)
+        // why Whisper/Party/Raid/Guild stay out of this shared pool -- and
+        // the primary line only (hs_queue.h's Hs_RecordBotUtterance).
+        if (reply.isPrimaryLine &&
+            (reply.channel == HsReplyChannel::Say || reply.channel == HsReplyChannel::Channel))
             Hs_RecordBotUtterance(bot->GetGUID().GetRawValue(), reply.text);
 
         if (g_HsDebugEnabled)
@@ -1853,7 +1923,7 @@ void Hs_DeliverPending()
         // tiers that don't chain. Safe to call from inside this loop:
         // g_DeliveryMutex was released before it, and the hop this may
         // enqueue lands on the *work* queue, never back on this one.
-        if (reply.seedsChain)
+        if (reply.isPrimaryLine)
             Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0);
     }
 }

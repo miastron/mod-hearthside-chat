@@ -35,6 +35,11 @@ constexpr size_t kHsChannelKindCount = 6;
 // so config parsing, logging, and this lookup all agree on one spelling.
 const char* Hs_ChannelKindName(HsChannelKind kind);
 
+// The same name folded to lower case: the spelling hside_script.channel and
+// hside_corpus_category.channel store ("trade", "general"). Three call sites
+// used to lowercase Hs_ChannelKindName by hand.
+std::string Hs_ChannelColumnName(HsChannelKind kind);
+
 struct HsChannelPolicy
 {
     HsTier   maxTier       = HsTier::Off;

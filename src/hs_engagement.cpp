@@ -3,17 +3,9 @@
 #include "hs_opener.h"
 #include "hs_queue.h"
 #include "hs_tier.h"
-#include "hs_topic_gate.h"
-#include "hs_locale.h"
 
-#include "DBCStores.h"
-#include "Group.h"
-#include "Map.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
-#include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus
-#include "PlayerbotMgr.h"
 #include "Random.h"
 
 #include <atomic>
@@ -143,48 +135,13 @@ namespace
         if (urand(0, 99) >= static_cast<uint32_t>(chancePercent))
             return;
 
-        uint64_t botGuid    = candidate.botGuid;
-        uint64_t senderGuid = candidate.senderGuid;
-        bool     inCombat   = bot->IsInCombat();
-        uint8_t  botLevel   = bot->GetLevel();
-
-        NewRpgStatus rpgStatus = RPG_IDLE;
-        if (PlayerbotAI* botAI = PlayerbotsMgr::instance().GetPlayerbotAI(bot))
-            rpgStatus = botAI->rpgInfo.GetStatus();
-
-        // §4.13's remaining topic-gate facts, same read as
-        // hs_handler.cpp's TryDispatch, duplicated here rather than shared
-        // since inCombat/botLevel/rpgStatus above already follow that
-        // per-call-site pattern.
-        HsTopicGateContext topicGate;
-        topicGate.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
-        if (Group* group = bot->GetGroup())
-        {
-            topicGate.inGroup       = true;
-            topicGate.isGroupLeader = group->IsLeader(bot->GetGUID());
-        }
-        if (Map* map = bot->GetMap())
-        {
-            topicGate.inInstance = map->IsDungeon() || map->IsRaid();
-            if (topicGate.inInstance)
-                topicGate.instanceName = map->GetMapName();
-        }
-        topicGate.goldCopper = bot->GetMoney();
-        if (AreaTableEntry const* entry = sAreaTableStore.LookupEntry(bot->GetZoneId()))
-        {
-            std::string zoneName = Hs_LocalizedAreaName(entry); // review H1
-            if (!zoneName.empty())
-                topicGate.zoneName = zoneName;
-        }
-
-        bool admitted = Hs_TryEnqueue(botGuid, bot->GetName(), senderGuid, sender->GetName(),
-            candidate.isWhisper ? HsReplyChannel::Whisper : HsReplyChannel::Say,
-            kEngagementFollowUpTrigger, inCombat, botLevel, rpgStatus, topicGate,
-            /*isFollowUp=*/true);
-        if (!admitted)
+        HsReplyRequest request = Hs_MakeReplyRequest(bot, sender,
+            candidate.isWhisper ? HsReplyChannel::Whisper : HsReplyChannel::Say, kEngagementFollowUpTrigger);
+        request.isFollowUp = true;
+        if (!Hs_TryEnqueue(std::move(request)))
             return; // same bucket/cooldown/breaker/queue-depth gates as any reply: silence, not a retry
 
-        MarkFollowUpFired(botGuid, senderGuid);
+        MarkFollowUpFired(candidate.botGuid, candidate.senderGuid);
         g_EngagementFollowUpsFiredThisSession.fetch_add(1);
     }
 
@@ -197,7 +154,7 @@ namespace
         if (candidates.empty())
             return;
 
-        HsTier ceiling = HsParseTier(g_HsMaxTierEngagementFollowUp);
+        HsTier ceiling = g_HsMaxTierEngagementFollowUp;
         if (!HsTierAllows(ceiling, HsTier::Inference))
             return;
 

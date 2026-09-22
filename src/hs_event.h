@@ -18,6 +18,12 @@
 // AzerothCore-facing half that turns live Player*s into that function's
 // inputs and dispatches the result.
 //
+// None of the hooks does that work where it fires. They run on map-update
+// threads, so each records GUIDs and strings and the gathering happens on
+// the world thread: deaths through their own drain (the killer's name
+// arrives on a second hook), everything else through Hs_DeferToWorldThread
+// (hs_queue.h). A new hook here should do the same.
+//
 // Three properties worth knowing before adding a hook here:
 //
 // * **The combat gate does not apply.** g_HsDisableRepliesInCombat skips

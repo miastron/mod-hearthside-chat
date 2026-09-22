@@ -137,30 +137,50 @@ flowchart TD
     CEIL -->|inference| B{Token bucket +<br/>per-bot cooldown}
     B -->|fail| S
 
-    B -->|pass| RING[TIER 2 — resolve ring<br/>single per-bot lookup]
-    RING -->|Ring 1 stranger| P1[archetype line<br/>cap 25]
-    RING -->|Ring 2 known| P2[archetype + familiarity<br/>0 extra tokens, cap 40]
-    RING -->|Ring 3 carded| P3[voice block + familiarity<br/>cap 60]
+    B -->|pass| P[TIER 2 — archetype tag<br/>+ card voice block if carded<br/>token cap: archetype's verbosity_cap,<br/>never above LLM.MaxTokens]
 
-    P1 --> CTX[append context layers<br/>topic gate → RAG →<br/>recent utterances → experience]
-    P2 --> CTX
-    P3 --> CTX
+    P --> CTX[append context layers<br/>rpg status → topic gate → RAG →<br/>recent utterances → experience]
     CTX --> Q[bounded queue, 15s TTL]
     Q --> W[worker -> llama.cpp]
     W --> ST[style post-processor:<br/>caps / punct / abbrev<br/>+ strip LLM tells]
     ST --> TD[typing delay<br/>persona profile]
     TD --> D
 
-    PR[score + promotion check<br/>async, off critical path] -.-> RING
+    PR[score + promotion check<br/>async, off critical path] -.-> P
     D -.->|player utterances only| PR
 
     HK[game hooks: quest / loot / money /<br/>zone / skill / ding / death] -.->|record only,<br/>never speech| EXP[(experience ring<br/>in memory)]
     EXP -.-> CTX
 ```
 
-The promotion check never runs in the request path, and can trigger idle-time card generation. The
-experience ring is written by hooks on the world thread and read by the worker thread; it is drawn
-dotted because nothing on that path ever produces speech on its own.
+The promotion check never runs in the request path, and can trigger idle-time card generation. A
+bot's ring (stranger, known, carded) changes what the prompt *contains* -- a carded bot's voice block
+-- but not the token cap, which is the archetype's alone. The experience ring is written by hooks on
+the map-update threads, under its own lock, and read by the worker thread; it is drawn dotted
+because nothing on that path ever produces speech on its own.
+
+## Threads
+
+Four kinds of thread touch this module, and which one a piece of code runs on decides what it may
+touch:
+
+- **The world thread** runs the chat hooks (chat opcodes are `PROCESS_THREADUNSAFE`), every
+  `WorldScript::OnUpdate` scan, delivery, and the GM commands. It is the only thread that may touch
+  a `Player*`, `PlayerbotAI*` or mod-playerbots' own containers freely.
+- **Map-update threads** (`MapUpdate.Threads`, 8 on the test realm) run most `PlayerScript`,
+  `GroupScript` and `GuildScript` hooks, because the game code behind them -- `Unit::Kill`,
+  `Player::Update`, encounter credit, a bot's AI accepting an invite -- runs inside `Map::Update`,
+  several maps at once. A hook here reads only its own arguments, records GUIDs and strings, and
+  hands the rest to `Hs_DeferToWorldThread` (`hs_queue.h`); deaths use their own drain in
+  `hs_event.cpp`. The ambient-experience hooks are the exception: they touch nothing but their own
+  player and a locked ring, so they record inline.
+- **The reactive worker** (one thread, `hs_queue.cpp`) and **the generator** (`hs_generator.cpp`)
+  make the LLM calls and their own database reads. Neither touches a game object: everything the
+  worker needs from a `Player*` is sampled into the request on the world thread
+  (`Hs_MakeReplyRequest`).
+- **The HTTP control server** (`hs_http_server.cpp`) answers from its own pool. Anything it needs
+  that only the world thread may read, such as whether a GUID is a bot, it asks for through the same
+  deferral and waits, bounded, for the answer.
 
 ## Identity rings
 

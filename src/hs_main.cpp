@@ -2,6 +2,7 @@
 #include "hs_archetype_store.h"
 #include "hs_bridge.h"
 #include "hs_config.h"
+#include "hs_corpus.h"
 #include "hs_engagement.h"
 #include "hs_event.h"
 #include "hs_event_affinity_store.h"
@@ -249,12 +250,17 @@ namespace
     };
 
     // Corpus eviction: exposure-first over-quota trimming, then the
-    // age-based unused-row sweep. Its own WorldScript rather than folded
-    // into the identity one above (corpus and identity are unrelated
-    // subsystems that happen to share a once-daily cadence). Runs
-    // unconditionally (not gated on g_HsGeneratorEnabled), since a bucket
-    // can go over quota via `.hearthside capture` or a lowered
-    // RowsPerBucket even while generation itself is off.
+    // age-based unused-row sweep, then played scripts past their retention.
+    // Its own WorldScript rather than folded into the identity one above
+    // (corpus and identity are unrelated subsystems that happen to share a
+    // once-daily cadence). Runs unconditionally (not gated on
+    // g_HsGeneratorEnabled), since a bucket can go over quota via
+    // `.hearthside capture` or a lowered RowsPerBucket even while generation
+    // itself is off.
+    //
+    // Also owns hside_corpus_category's load: the in-memory category table
+    // every corpus pick and the generator read (hs_corpus.h), with the same
+    // startup-plus-`.reload config` lifecycle as the archetype table above.
     constexpr uint32_t kCorpusEvictionIntervalMs = 86400000;
 
     class HsCorpusLifecycleWorldScript : public WorldScript
@@ -263,8 +269,14 @@ namespace
         HsCorpusLifecycleWorldScript() : WorldScript("HsCorpusLifecycleWorldScript") {}
         void OnStartup() override
         {
+            Hs_LoadCorpusCategoriesFromDb();
             // Review B4, as HsIdentityLifecycleWorldScript above.
             _msSinceEviction = SweepBacklogMs(kSweepCorpusEviction, kCorpusEvictionIntervalMs);
+        }
+        void OnAfterConfigLoad(bool reload) override
+        {
+            if (reload)
+                Hs_LoadCorpusCategoriesFromDb();
         }
         void OnUpdate(uint32 diff) override
         {
@@ -274,6 +286,7 @@ namespace
             _msSinceEviction = 0;
             Hs_RunEvictionSweep();
             Hs_RunUnusedRowEvictionSweep();
+            Hs_RunConsumedScriptSweep();
             StampSweepRun(kSweepCorpusEviction);
         }
 
@@ -382,10 +395,15 @@ void Addmod_hearthside_chatScripts()
     // mutex-guarded map), but keeping them adjacent keeps the pairing
     // visible to whoever reads this list next.
     new HsAmbientScanWorldScript();
+    // Ahead of the queue and generator lifecycles: its OnStartup loads the
+    // corpus category table, and the generator thread started just below
+    // enumerates its buckets from that table on its first cycle. Loading
+    // after it would hand that cycle an empty table and a quota-satisfied
+    // backoff.
+    new HsCorpusLifecycleWorldScript();
     new HsQueueLifecycleWorldScript();
     new HsGeneratorLifecycleWorldScript();
     new HsIdentityLifecycleWorldScript();
-    new HsCorpusLifecycleWorldScript();
     new HsHttpServerWorldScript();
     new HsMetricsWorldScript();
 }

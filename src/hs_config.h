@@ -2,6 +2,7 @@
 #define MOD_HS_CONFIG_H
 
 #include "ScriptMgr.h"
+#include "hs_tier.h"
 #include <cstdint>
 #include <string>
 
@@ -81,7 +82,7 @@ HsLLMStrings       Hs_LLMStringsSnapshot();
 HsGeneratorStrings Hs_GeneratorStringsSnapshot();
 
 // Copy one string global under the config lock. Call as
-// Hs_ConfigString(g_HsMaxTierAmbient). World-thread callers do not need it
+// Hs_ConfigString(g_HsLLMUrl). World-thread callers do not need it
 // (they are the writer), but it is harmless there.
 std::string Hs_ConfigString(const std::string& configGlobal);
 
@@ -215,12 +216,17 @@ extern uint32_t g_HsDistractedCooldownSeconds;
 // unaffected by this key either way: hs_generator.cpp gates the reserve on
 // Generator.Enable alone, so the GPU keeps filling it during idle at any
 // BotToBot setting.
+//
+// Held parsed, as HsTier, rather than as the config strings: every surface
+// used to re-parse its key on each message, and a plain enum is also a
+// scalar, safe to read from any thread under this file's cross-thread rule.
+// HsTierName (hs_tier.h) gives back the config spelling for display.
 // --------------------------------------------
-extern std::string g_HsMaxTierDirectReply;
-extern std::string g_HsMaxTierAmbient;
-extern std::string g_HsMaxTierOpeners;
-extern std::string g_HsMaxTierBotToBot;
-extern std::string g_HsMaxTierReflex;
+extern HsTier g_HsMaxTierDirectReply;
+extern HsTier g_HsMaxTierAmbient;
+extern HsTier g_HsMaxTierOpeners;
+extern HsTier g_HsMaxTierBotToBot;
+extern HsTier g_HsMaxTierReflex;
 
 // --------------------------------------------
 // Ambient (hs_ambient.h). Ambient has no natural rate limiter: every other
@@ -290,7 +296,7 @@ extern uint32_t g_HsScriptProximityFireChancePercent;
 // nothing telling the operator that's what happened. Defaults "off", not
 // "corpus" like Openers/BotToBot: autonomous, GPU-doubling behavior that
 // should be an explicit opt-in.
-extern std::string g_HsMaxTierEngagementFollowUp;
+extern HsTier g_HsMaxTierEngagementFollowUp;
 
 // Gates the event-trigger surface (hs_event.h): bots reacting to deaths,
 // dings, killing blows, rolls and duels. Its own key rather than reusing
@@ -302,7 +308,7 @@ extern std::string g_HsMaxTierEngagementFollowUp;
 // below that is silence, not a downgrade. Defaults "inference": unlike the
 // engagement follow-up, an event reaction only fires on something that
 // actually happened, and is bounded further by its own token budget below.
-extern std::string g_HsMaxTierEvents;
+extern HsTier g_HsMaxTierEvents;
 
 // The event surface's own token budget (hs_queue.h's Hs_EventBucketTake),
 // separate from Bucket.RepliesPerMinute so a busy dungeon's stream of

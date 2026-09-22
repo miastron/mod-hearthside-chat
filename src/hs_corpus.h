@@ -5,9 +5,39 @@
 #include "hs_levelband.h" // Hs_LevelBandFor, kept reachable through this header
 
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <vector>
 
 class Player;
+
+// One hside_corpus_category row. The table is a dozen-odd rows of
+// configuration that every corpus, opener, channel and party/raid pick used
+// to re-read from the database on the world thread; it is now loaded into
+// memory at startup and on `.reload config`, the same lifecycle as
+// hside_archetype, and read from there by those selectors and by the
+// generator.
+struct HsCorpusCategory
+{
+    std::string name;
+    std::string tagAxis;             // none | class | level_band | faction | zone
+    std::string channel;             // "" (the /say + direct-reply set) | trade | general | party | raid
+    bool        cardGated = false;   // rows may use the card-only placeholders
+    bool        isOpener  = false;   // fired only by an hs_opener.cpp trigger
+};
+
+// Replaces the in-memory table from hside_corpus_category. World thread.
+void Hs_LoadCorpusCategoriesFromDb();
+
+// The loaded table, as an immutable snapshot a reload replaces rather than
+// edits, so a caller on any thread may hold it for as long as it likes.
+// Empty (never null) before the first load.
+std::shared_ptr<const std::vector<HsCorpusCategory>> Hs_CorpusCategories();
+
+// One category by name, case-insensitively like the column's collation
+// (`.hearthside capture <bot> <category>` passes a GM's typing through).
+// False when there is no such category.
+bool Hs_FindCorpusCategory(const std::string& name, HsCorpusCategory& out);
 
 // When a surface's MaxTier ceiling permits corpus but not inference, this
 // answers instead of falling straight to silence. Weighted anti-repeat pick

@@ -29,6 +29,17 @@ struct HsLLMResult
                                // regardless of outcome since the prompt was still built and sent
 };
 
+// Did the backend answer at all? True for any HTTP 200, including one whose
+// completion came back empty or malformed (success false, ParseError): the
+// model said nothing usable, but the server is up. The consumers that must
+// not confuse "down" with "said nothing" -- the reactive tier's circuit
+// breaker (hs_queue.cpp) and the generator's backoff and card parking
+// (hs_generator.cpp) -- ask this rather than `success`.
+inline bool Hs_LLMBackendAnswered(const HsLLMResult& result)
+{
+    return result.httpStatus == 200;
+}
+
 // Endpoint configuration for one LLM call. Populated from HearthsideChat.LLM.*
 // config keys (see hs_config.h). The reactive path and the idle-time
 // generator each get their own HsLLMConfig, so this struct carries

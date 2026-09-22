@@ -55,10 +55,10 @@
 // relevance 11.0 that runs every non-combat tick). Including it would admit
 // exactly the mid-run chatter this gate exists to stop, and AND-ing
 // isMoving() onto it would leave it contributing nothing but a dead branch.
-// Note hs_queue.cpp's RpgStatusHint describes RPG_GO_CAMP to the model as
-// "camping a spot, waiting for something to spawn": that string is
-// misleading for the same reason, but it only colors a prompt, so it is left
-// alone here rather than changed as a drive-by.
+// (hs_queue.cpp's RpgStatusHint used to describe RPG_GO_CAMP to the model as
+// "camping a spot, waiting for something to spawn", wrong for the same
+// reason; since 2026-09-22 it says the bot is on its way to a nearby town,
+// which is what SelectRandomCampPos's travel hubs are.)
 //
 // Everything else: RPG_GO_GRIND, RPG_DO_QUEST, RPG_TRAVEL_FLIGHT,
 // RPG_OUTDOOR_PVP, RPG_WANDER_RANDOM (milling at a grind spot, i.e. a bot
