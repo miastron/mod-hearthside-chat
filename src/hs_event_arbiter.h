@@ -62,9 +62,32 @@ enum class HsEventType : uint8_t
     OpenerRez,
     OpenerDungeonComplete,
     OpenerProximity,
+
+    // Added 2026-09-23, in one pass with the fine-tune rows that teach each
+    // of them in both of its shapes -- the reaction and the reply to a player
+    // who mentions it afterwards (Hs_RecentEventContext, hs_event.h) -- so
+    // the vocabulary grows once per retrain instead of once per event.
+    // Appended rather than grouped with their relatives above: the names and
+    // bias tables are indexed by value, and hside_event_affinity rows key on
+    // the names, so nothing that shipped moves.
+    GroupJoined,           // the bot has just joined a real player's group
+    BossKilled,            // the bot's group has just killed a dungeon or raid boss
+    Resurrected,           // a real player has just resurrected the bot
+    TradeOpened,           // a real player has just opened a trade with the bot
+    TradeCompleted,        // a trade between the bot and a real player went through
+    GuildLogin,            // a real player in the bot's guild has just logged in
+    GuildJoined,           // a real player has just joined the bot's guild
+    GuildLeft,             // a real player has just left, or been removed from, the bot's guild
+    GuildLevelUp,          // a real player in the bot's guild has just dinged
+    AchievementSelf,       // the bot itself has just earned an achievement
+    AchievementGuild,      // a real player in the bot's guild has just earned one
+    BattlegroundWon,       // the bot's side has just won a battleground
+    BattlegroundLost,      // the bot's side has just lost one
+    ArenaWon,              // the bot's team has just won an arena match
+    ArenaLost,             // the bot's team has just lost one
 };
 
-constexpr size_t kHsEventTypeCount = 16;
+constexpr size_t kHsEventTypeCount = 31;
 
 // Stable uppercase key, e.g. "DEATH_IN_GROUP". This is the string written
 // into hside_event_affinity.event_type and the trigger vocabulary the

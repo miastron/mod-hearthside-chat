@@ -7,20 +7,30 @@
 #include "hs_queue.h"
 #include "hs_tier.h"
 #include "hs_locale.h"
+#include "hs_prune.h"
 
+#include "Battleground.h"
 #include "Creature.h"
 #include "Group.h"
 #include "GroupReference.h"
+#include "GroupMgr.h"
+#include "Guild.h"
+#include "GuildMgr.h"
 #include "Item.h"
 #include "ItemTemplate.h"
+#include "Map.h"
+#include "ObjectMgr.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "SharedDefines.h"
 
+#include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -121,13 +131,73 @@ namespace
     // trigger per-actor is what lets a duel end arbitrate once over
     // {winner, loser} and still say the right thing to whichever side wins
     // the draw (Claude/archive/PLAN-ARBITER.md §2).
+    //
+    // `counterpart` is the other person in it, when there is one: the duel
+    // opponent, the groupmate who died, the player who rezzed this bot. It
+    // becomes the reaction's sender (so a duel-start line is no longer logged
+    // as the bot talking to itself) and it is who the follow-up context
+    // recognises as "the one talking to you now" (Hs_RecentEventContext).
     struct HsEventActor
     {
         Player*            bot;
         HsEventInvolvement involvement;
         HsEventType        affinityType;
         std::string        trigger;
+        Player*            counterpart = nullptr;
     };
+
+    // ---- What just happened, for the replies that come after it -----------
+    //
+    // Until 2026-09-23 an event reached exactly one prompt: the reaction's,
+    // if the arbiter picked this bot to make one. A player who then talked to
+    // the bot about it ("loser", "gz", "ty for the rez") was answered by a bot
+    // with no idea anything had happened -- the duel outcome's only other
+    // route into a reply was the experience block, framed as background not
+    // to be brought up, and measured doing nothing for exactly this case
+    // (Tests/post_event_probe.py). So every actor of every event gets the
+    // same state line its reaction would have carried, kept for a short
+    // window and appended to its replies by hs_queue.cpp's WorkerLoop, in the
+    // slot the event reaction itself uses.
+    //
+    // Recorded for every eligible actor, before the ceiling, budget and
+    // audience gates and regardless of who the arbiter picks: a duel end is
+    // silent three times in four by design, and that silence is exactly when
+    // the follow-up matters most. One entry per bot, newest wins -- a duel's
+    // end replaces its start.
+    struct HsRecentEvent
+    {
+        std::string                           line;
+        uint64_t                              counterpartGuid = 0;
+        std::string                           counterpartName;
+        std::chrono::steady_clock::time_point at;
+    };
+
+    // Two minutes: long enough to cover "gg" typed after a duel or a "wb"
+    // after a login, short enough that "has just" is still true. A starting
+    // judgement, same status as the bias table.
+    constexpr int64_t kRecentEventWindowSeconds  = 120;
+    constexpr size_t  kRecentEventPruneThreshold = 512;
+
+    std::mutex                                  g_RecentEventMutex;
+    std::unordered_map<uint64_t, HsRecentEvent> g_RecentEvents;
+
+    void NoteRecentEvent(Player* bot, std::string const& line, Player* counterpart)
+    {
+        HsRecentEvent entry;
+        entry.line = line;
+        if (counterpart && counterpart != bot)
+        {
+            entry.counterpartGuid = counterpart->GetGUID().GetRawValue();
+            entry.counterpartName = counterpart->GetName();
+        }
+        auto const now = std::chrono::steady_clock::now();
+        entry.at = now;
+
+        std::lock_guard<std::mutex> lock(g_RecentEventMutex);
+        g_RecentEvents[bot->GetGUID().GetRawValue()] = std::move(entry);
+        HsPrune::PruneStale(g_RecentEvents, now, kRecentEventWindowSeconds * 4, kRecentEventPruneThreshold,
+                            [](HsRecentEvent const& e) { return e.at; });
+    }
 
     bool EligibleBot(Player* bot)
     {
@@ -162,6 +232,12 @@ namespace
         if (!g_HsEnable || !origin || !origin->IsInWorld() || actors.empty())
             return;
 
+        // The follow-up fact first, for everyone it happened to, whatever the
+        // gates below decide about a reaction (see HsRecentEvent above).
+        for (auto const& actor : actors)
+            if (EligibleBot(actor.bot))
+                NoteRecentEvent(actor.bot, actor.trigger, actor.counterpart);
+
         // A ceiling is permission, not budget. Events have no corpus
         // fallback: a canned line reacting to a specific death or roll
         // would have to be generic enough to be wrong most of the time, so
@@ -191,8 +267,10 @@ namespace
 
         std::vector<HsEventCandidate> candidates;
         std::vector<Player*>          bots;
+        std::vector<Player*>          counterparts;
         candidates.reserve(actors.size());
         bots.reserve(actors.size());
+        counterparts.reserve(actors.size());
 
         for (auto const& actor : actors)
         {
@@ -215,6 +293,7 @@ namespace
 
             candidates.push_back(std::move(candidate));
             bots.push_back(actor.bot);
+            counterparts.push_back(actor.counterpart);
         }
 
         if (candidates.empty())
@@ -234,7 +313,13 @@ namespace
         {
             Player* bot = bots[index];
 
-            HsReplyRequest request = Hs_MakeReplyRequest(bot, origin, channel, candidates[index].trigger);
+            // The other person in the event where there is one, so the
+            // request (and hside_chat_log) names who the line is aimed at
+            // rather than the origin, which for a duel or a solo death is the
+            // bot itself.
+            Player* sender = (counterparts[index] && counterparts[index]->IsInWorld()) ? counterparts[index] : origin;
+
+            HsReplyRequest request = Hs_MakeReplyRequest(bot, sender, channel, candidates[index].trigger);
             request.isEvent            = true;
             request.triggerIsStateLine = true;
 
@@ -303,7 +388,11 @@ namespace
         for (auto const& itr : ObjectAccessor::GetPlayers())
         {
             Player* candidate = itr.second;
-            if (!candidate || candidate == origin || !candidate->IsInWorld())
+            // The origin counts when it is a real player: until 2026-09-23 it
+            // was skipped, which was harmless while origins were bots (a solo
+            // death, a killing blow) and silenced every event whose origin is
+            // the person the bot answers (a rez, a trade, a duel player1).
+            if (!candidate || !candidate->IsInWorld())
                 continue;
             // An excluded bot is not a real player: the same three-way
             // distinction hs_ambient.cpp's scan documents. Hs_IsBot alone
@@ -409,7 +498,7 @@ namespace
                 Player* member = itr->GetSource();
                 if (!member || member == player || !EligibleBot(member))
                     continue;
-                actors.push_back({ member, HsEventInvolvement::Affected, HsEventType::DeathGroupPlayer, trigger });
+                actors.push_back({ member, HsEventInvolvement::Affected, HsEventType::DeathGroupPlayer, trigger, player });
             }
             FireEvent(HsEventType::DeathGroupPlayer, player, actors, GroupChannelFor(group));
             return;
@@ -525,12 +614,299 @@ void HsEventDeathDrainWorldScript::OnUpdate(uint32 /*diff*/)
 // tick.
 namespace
 {
-    // Ceiling and budget, both scalars or locked, so safe from any thread:
-    // a stream of dings or kills costs a queue entry only when a reaction
-    // could still happen. FireEvent checks both again for real.
-    bool EventCouldFire()
+    // There used to be an EventCouldFire() here -- ceiling and budget, tested
+    // before a hook deferred anything, so a stream of dings cost nothing once
+    // the bucket was empty. Since 2026-09-23 every event also leaves its
+    // follow-up fact (HsRecentEvent, above), which needs neither, so the hooks
+    // below defer whenever the module is enabled and FireEvent alone decides
+    // whether a reaction follows.
+
+    // Guild-scoped events (2026-09-23): every online eligible bot in the
+    // guild is a witness and the reaction goes to guild chat. `subject` is the
+    // real player it is about, and the origin. Guild chat is its own audience,
+    // so the gate is only whether any real member will read it: the subject,
+    // while still a member (a login, a join, a ding), or anyone else online.
+    //
+    // Real players only, at every call site: bots log in, level and earn
+    // achievements all day, and a guild of them greeting each other would be
+    // the busiest channel on the realm.
+    void FireGuildEvent(HsEventType type, Player* subject, uint32 guildId, std::string const& trigger,
+                        bool subjectHears, std::vector<Player*> const& exclude = {})
     {
-        return HsTierAllows(g_HsMaxTierEvents, HsTier::Inference) && !Hs_EventBucketExhausted();
+        Guild* guild = guildId ? sGuildMgr->GetGuildById(guildId) : nullptr;
+        if (!guild || !subject)
+            return;
+
+        std::vector<HsEventActor> actors;
+        bool audience = subjectHears;
+        auto collect = [&](Player* member)
+        {
+            if (!member || !member->IsInWorld())
+                return;
+            if (!Hs_IsBot(member))
+            {
+                audience = true;
+                return;
+            }
+            if (!EligibleBot(member) || std::find(exclude.begin(), exclude.end(), member) != exclude.end())
+                return;
+            actors.push_back({ member, HsEventInvolvement::Witness, type, trigger, subject });
+        };
+        guild->BroadcastWorker(collect, subject);
+
+        if (audience && !actors.empty())
+            FireEvent(type, subject, actors, HsReplyChannel::Guild);
+    }
+
+    // The bot has just joined a group a real player leads -- the player
+    // invited it. The other direction (a player joining a bot's group) stays
+    // hs_opener.cpp's corpus opener; this one replaces that opener's
+    // bot-joins half (GreetNewMember), so the moment gets one line, not two.
+    void FireGroupJoined(Group* group, Player* bot)
+    {
+        if (!EligibleBot(bot))
+            return;
+        Player* leader = Hs_FindInWorld(group->GetLeaderGUID());
+        if (!leader || leader == bot || Hs_IsBot(leader))
+            return;
+
+        std::vector<HsEventActor> actors;
+        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::GroupJoined,
+            "You have just joined " + std::string(leader->GetName()) + "'s group.", leader });
+        FireEvent(HsEventType::GroupJoined, leader, actors, GroupChannelFor(group));
+    }
+
+    // A boss down. Every bot in the instance is Affected; the origin is a
+    // real player there, who is also the audience. On a dungeon's last boss
+    // `react` is false: hs_opener.cpp's dungeon-complete opener already
+    // speaks for that moment, so this only leaves the follow-up fact.
+    void FireBossKilled(std::vector<ObjectGuid> const& botGuids, Player* player, std::string const& bossName, bool react)
+    {
+        std::string trigger = "Your group has just killed " + bossName + ".";
+        std::vector<HsEventActor> actors;
+        Group* group = nullptr;
+        for (ObjectGuid const& guid : botGuids)
+        {
+            Player* bot = Hs_FindInWorld(guid);
+            if (!bot || !EligibleBot(bot) || !bot->GetGroup())
+                continue;
+            if (!group)
+                group = bot->GetGroup();
+            actors.push_back({ bot, HsEventInvolvement::Affected, HsEventType::BossKilled, trigger });
+        }
+        if (actors.empty())
+            return;
+
+        if (!react)
+        {
+            for (auto const& actor : actors)
+                NoteRecentEvent(actor.bot, actor.trigger, nullptr);
+            return;
+        }
+        FireEvent(HsEventType::BossKilled, player, actors, GroupChannelFor(group));
+    }
+
+    // A real player has just brought this bot back. Group channel when the
+    // two are grouped, /say otherwise (a rez is cast from 30 yards, so the
+    // rezzer is always in range to read it).
+    void FireResurrected(Player* bot, Player* rezzer)
+    {
+        if (!EligibleBot(bot))
+            return;
+        std::vector<HsEventActor> actors;
+        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::Resurrected,
+            std::string(rezzer->GetName()) + " has just resurrected you.", rezzer });
+
+        Group* group = bot->GetGroup();
+        bool together = group && group == rezzer->GetGroup();
+        FireEvent(HsEventType::Resurrected, rezzer, actors, together ? GroupChannelFor(group) : HsReplyChannel::Say);
+    }
+
+    void FireTradeOpened(Player* bot, Player* player)
+    {
+        if (!EligibleBot(bot))
+            return;
+        std::vector<HsEventActor> actors;
+        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::TradeOpened,
+            std::string(player->GetName()) + " has just opened a trade with you.", player });
+        FireEvent(HsEventType::TradeOpened, player, actors, HsReplyChannel::Say);
+    }
+
+    // ---- Trade completion ---------------------------------------------------
+    // AzerothCore has no "trade went through" hook. What it does have is the
+    // two things a completed trade does while both sides' TradeData are still
+    // attached (WorldSession::HandleAcceptTradeOpcode, TradeHandler.cpp):
+    // moveItems -> Player::MoveItemToInventory -> OnPlayerAfterMoveItemToInventory
+    // for each item, then Player::ModifyMoney -> OnPlayerMoneyChanged for the
+    // gold, all before `m_trade` is deleted. So each of those calls, seen on a
+    // player with trade data and a trader, is one piece of one trade. Read
+    // from the core source 2026-09-23, not yet seen firing on the realm.
+    //
+    // They arrive as up to seven separate calls in one call stack, so the
+    // pieces are collected per bot and the first one defers a single flush:
+    // by the time the world thread runs it, the trade has finished.
+    //
+    // Item names only, no counts: an item that merges into an existing stack
+    // reaches the hook as the merged stack (TradeHandler.cpp says as much), so
+    // the count there is the bot's bag, not what was traded.
+    struct HsPendingTrade
+    {
+        ObjectGuid               player;
+        std::vector<std::string> toBot;
+        std::vector<std::string> fromBot;
+        uint32                   copperToBot   = 0;
+        uint32                   copperFromBot = 0;
+    };
+
+    std::mutex                                   g_PendingTradeMutex;
+    std::unordered_map<uint64_t, HsPendingTrade> g_PendingTrades;
+
+    std::string MoneyText(uint32 copper)
+    {
+        if (copper >= 10000)
+            return std::to_string(copper / 10000) + " gold";
+        if (copper >= 100)
+            return std::to_string(copper / 100) + " silver";
+        return std::to_string(copper) + " copper";
+    }
+
+    // "a", "a and b", "a, b and c".
+    std::string JoinThings(std::vector<std::string> const& things)
+    {
+        std::string out;
+        for (size_t i = 0; i < things.size(); ++i)
+        {
+            if (i > 0)
+                out += (i + 1 == things.size()) ? " and " : ", ";
+            out += things[i];
+        }
+        return out;
+    }
+
+    void FlushTrade(ObjectGuid botGuid)
+    {
+        HsPendingTrade trade;
+        {
+            std::lock_guard<std::mutex> lock(g_PendingTradeMutex);
+            auto it = g_PendingTrades.find(botGuid.GetRawValue());
+            if (it == g_PendingTrades.end())
+                return;
+            trade = std::move(it->second);
+            g_PendingTrades.erase(it);
+        }
+
+        Player* bot    = Hs_FindInWorld(botGuid);
+        Player* player = Hs_FindInWorld(trade.player);
+        if (!bot || !player || !EligibleBot(bot))
+            return;
+
+        // What the bot received decides the line when both sides gave
+        // something: a player buying from a bot paid it, and "given you 5
+        // gold" is the half the bot has an opinion about.
+        std::vector<std::string> received = trade.toBot;
+        if (trade.copperToBot)
+            received.push_back(MoneyText(trade.copperToBot));
+        std::vector<std::string> gave = trade.fromBot;
+        if (trade.copperFromBot)
+            gave.push_back(MoneyText(trade.copperFromBot));
+
+        std::string trigger;
+        if (!received.empty())
+            trigger = std::string(player->GetName()) + " has just given you " + JoinThings(received) + ".";
+        else if (!gave.empty())
+            trigger = "You have just given " + std::string(player->GetName()) + " " + JoinThings(gave) + ".";
+        else
+            return;
+
+        std::vector<HsEventActor> actors;
+        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::TradeCompleted, trigger, player });
+        FireEvent(HsEventType::TradeCompleted, player, actors, HsReplyChannel::Say);
+    }
+
+    // One piece of a trade, seen from the side that just received it. Only a
+    // bot-and-real-player trade counts, in either direction. Called from map
+    // and world threads alike, so it reads nothing but the two players' own
+    // GUIDs and bot-ness before handing off.
+    void NoteTradePiece(Player* receiver, std::string const& itemName, uint32 copper)
+    {
+        Player* giver = receiver ? receiver->GetTrader() : nullptr;
+        if (!giver)
+            return;
+        bool toBot = Hs_IsBot(receiver);
+        Player* bot   = toBot ? receiver : giver;
+        Player* human = toBot ? giver : receiver;
+        if (!Hs_IsBot(bot) || Hs_IsBot(human))
+            return;
+
+        ObjectGuid botGuid = bot->GetGUID();
+        bool first = false;
+        {
+            std::lock_guard<std::mutex> lock(g_PendingTradeMutex);
+            auto [it, inserted] = g_PendingTrades.try_emplace(botGuid.GetRawValue());
+            HsPendingTrade& trade = it->second;
+            first = inserted;
+            trade.player = human->GetGUID();
+            std::vector<std::string>& things = toBot ? trade.toBot : trade.fromBot;
+            if (!itemName.empty() && std::find(things.begin(), things.end(), itemName) == things.end())
+                things.push_back(itemName);
+            (toBot ? trade.copperToBot : trade.copperFromBot) += copper;
+        }
+        if (first)
+            Hs_DeferToWorldThread([botGuid]() { FlushTrade(botGuid); });
+    }
+
+    // The bot's own achievement: guild chat when it is in a guild a real
+    // player can read (the guild already sees the toast), its group when
+    // grouped, /say otherwise.
+    void FireAchievementSelf(Player* bot, std::string const& name)
+    {
+        if (!EligibleBot(bot))
+            return;
+        std::vector<HsEventActor> actors;
+        actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::AchievementSelf,
+            "You have just earned the achievement " + name + "." });
+
+        HsReplyChannel channel = HsReplyChannel::Say;
+        bool guildAudience = false;
+        if (Guild* guild = bot->GetGuildId() ? sGuildMgr->GetGuildById(bot->GetGuildId()) : nullptr)
+        {
+            auto anyReal = [&guildAudience](Player* member)
+            {
+                if (member && member->IsInWorld() && !Hs_IsBot(member))
+                    guildAudience = true;
+            };
+            guild->BroadcastWorker(anyReal, bot);
+        }
+        if (guildAudience)
+            channel = HsReplyChannel::Guild;
+        else if (Group* group = bot->GetGroup())
+            channel = GroupChannelFor(group);
+        FireEvent(HsEventType::AchievementSelf, bot, actors, channel);
+    }
+
+    // One side of a finished battleground or arena match. `realPlayer` is a
+    // real player on that side, the origin and the audience; a side with no
+    // real player is never passed in, since nobody who could read the line
+    // is there to read it.
+    void FireMatchEnd(std::vector<ObjectGuid> const& botGuids, Player* realPlayer, bool won, bool isArena,
+                      std::string const& trigger)
+    {
+        HsEventType type = isArena ? (won ? HsEventType::ArenaWon : HsEventType::ArenaLost)
+                                   : (won ? HsEventType::BattlegroundWon : HsEventType::BattlegroundLost);
+        std::vector<HsEventActor> actors;
+        Group* group = nullptr;
+        for (ObjectGuid const& guid : botGuids)
+        {
+            Player* bot = Hs_FindInWorld(guid);
+            if (!bot || !EligibleBot(bot))
+                continue;
+            if (!group)
+                group = bot->GetGroup();
+            actors.push_back({ bot, HsEventInvolvement::Affected, type, trigger });
+        }
+        if (actors.empty())
+            return;
+        FireEvent(type, realPlayer, actors, group ? GroupChannelFor(group) : HsReplyChannel::Say);
     }
 
     void FireLevelUp(Player* player, uint8 newLevel)
@@ -558,7 +934,7 @@ namespace
                 Player* member = itr->GetSource();
                 if (!member || member == player || !EligibleBot(member))
                     continue;
-                actors.push_back({ member, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
+                actors.push_back({ member, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger, player });
             }
         }
         else
@@ -567,16 +943,15 @@ namespace
             // called at the bottom of this function -- so this scan (a realm
             // walk with a distance check per candidate, NearbyBots above) ran
             // in full and had its result discarded every time the bucket was
-            // already empty. Returning rather than skipping just the scan:
-            // with no budget FireEvent would drop the event regardless of
-            // which actors were collected.
-            if (Hs_EventBucketExhausted())
-                return;
-
+            // already empty. It still skips the scan then, but only for a bot's
+            // ding: the witnesses of a real player's ding also get the
+            // follow-up fact, for the "ding!" that player is about to type.
+            //
             // World-scoped: a ding in the open is worth a "gz" from whoever is
             // standing there, real player present or not.
-            for (Player* nearby : NearbyBots(player, nullptr))
-                actors.push_back({ nearby, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger });
+            if (!Hs_EventBucketExhausted() || !Hs_IsBot(player))
+                for (Player* nearby : NearbyBots(player, nullptr))
+                    actors.push_back({ nearby, HsEventInvolvement::Witness, HsEventType::LevelUpGroup, witnessTrigger, player });
         }
 
         // LEVEL_UP_SELF drives the reply count when the bot itself dinged, since
@@ -586,6 +961,20 @@ namespace
             ? HsEventType::LevelUpSelf : HsEventType::LevelUpGroup;
 
         FireEvent(primary, player, actors, group ? GroupChannelFor(group) : HsReplyChannel::Say);
+
+        // And the guild, for a real player's ding: guild chat is where a "gz"
+        // for someone who is not standing next to you happens. A separate
+        // event with its own token and its own channel; bots that already had
+        // the group or /say trigger above are left out so none gets both.
+        if (!Hs_IsBot(player) && player->GetGuildId())
+        {
+            std::vector<Player*> already;
+            for (auto const& actor : actors)
+                already.push_back(actor.bot);
+            FireGuildEvent(HsEventType::GuildLevelUp, player, player->GetGuildId(),
+                std::string(player->GetName()) + ", in your guild, has just reached level " + levelText + ".",
+                /*subjectHears=*/true, already);
+        }
     }
 
     void FirePvpKill(Player* killer, std::string const& killedName)
@@ -626,7 +1015,7 @@ namespace
             Player* loser = Hs_FindInWorld(rollerGuid);
             if (!loser || !EligibleBot(loser))
                 continue;
-            actors.push_back({ loser, HsEventInvolvement::Affected, HsEventType::RollLost, lostTrigger });
+            actors.push_back({ loser, HsEventInvolvement::Affected, HsEventType::RollLost, lostTrigger, player });
         }
 
         HsEventType primary = EligibleBot(player) ? HsEventType::RollWon : HsEventType::RollLost;
@@ -641,7 +1030,7 @@ namespace
             if (!EligibleBot(bot))
                 return;
             actors.push_back({ bot, HsEventInvolvement::Subject, HsEventType::DuelStart,
-                "A duel between you and " + std::string(opponent->GetName()) + " is starting." });
+                "A duel between you and " + std::string(opponent->GetName()) + " is starting.", opponent });
         };
         addSide(player1, player2);
         addSide(player2, player1);
@@ -663,12 +1052,12 @@ namespace
         if (EligibleBot(winner))
         {
             actors.push_back({ winner, HsEventInvolvement::Subject, HsEventType::DuelWon,
-                "You have just won a duel against " + std::string(loser->GetName()) + "." });
+                "You have just won a duel against " + std::string(loser->GetName()) + ".", loser });
         }
         if (EligibleBot(loser))
         {
             actors.push_back({ loser, HsEventInvolvement::Subject, HsEventType::DuelLost,
-                "You have just lost a duel to " + std::string(winner->GetName()) + "." });
+                "You have just lost a duel to " + std::string(winner->GetName()) + ".", winner });
         }
 
         // DUEL_WON supplies the count bias for the combined pass; both duel
@@ -703,9 +1092,6 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
         return;
     }
 
-    if (!EventCouldFire())
-        return;
-
     // newLevel is captured, not re-read at dispatch: a quest turn-in worth
     // two levels fires this hook twice, and each ding says its own number.
     ObjectGuid guid = player->GetGUID();
@@ -731,7 +1117,7 @@ void HsEventPvpKillHandler::OnPlayerPVPKill(Player* killer, Player* killed)
     if (killer->GetGUID() == killed->GetGUID())
         return;
 
-    if (!Hs_IsBot(killer) || !EventCouldFire())
+    if (!Hs_IsBot(killer))
         return;
 
     // The victim's name, captured now: the killing blow is the moment it is
@@ -758,7 +1144,7 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
     if (proto->Quality < ITEM_QUALITY_RARE)
         return;
 
-    if (!player->GetGroup() || !EventCouldFire())
+    if (!player->GetGroup())
         return;
 
     std::string itemName = Hs_LocalizedItemName(proto); // review H1
@@ -793,7 +1179,7 @@ void HsEventRollHandler::OnPlayerGroupRollRewardItem(Player* player, Item* item,
 
 void HsEventDuelHandler::OnPlayerDuelStart(Player* player1, Player* player2)
 {
-    if (!g_HsEnable || !player1 || !player2 || !EventCouldFire())
+    if (!g_HsEnable || !player1 || !player2)
         return;
 
     ObjectGuid guid1 = player1->GetGUID();
@@ -813,8 +1199,6 @@ void HsEventDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelComp
         return;
     if (type == DUEL_INTERRUPTED)
         return; // nobody won; there is no outcome to react to
-    if (!EventCouldFire())
-        return;
 
     ObjectGuid winnerGuid = winner->GetGUID();
     ObjectGuid loserGuid  = loser->GetGUID();
@@ -825,6 +1209,314 @@ void HsEventDuelHandler::OnPlayerDuelEnd(Player* winner, Player* loser, DuelComp
         if (won && lost)
             FireDuelEnd(won, lost);
     });
+}
+
+// ---- The 2026-09-23 hooks: same shape as the five above ---------------------
+
+void HsEventGroupJoinHandler::OnAddMember(Group* group, ObjectGuid guid)
+{
+    if (!g_HsEnable || !group)
+        return;
+
+    // By GUID, as hs_opener.cpp's handler for the same hook does: the group
+    // can be disbanded before the world thread gets here.
+    ObjectGuid::LowType groupId = group->GetGUID().GetCounter();
+    Hs_DeferToWorldThread([groupId, guid]()
+    {
+        Group*  live = sGroupMgr->GetGroupByGUID(groupId);
+        Player* bot  = Hs_FindInWorld(guid);
+        if (live && bot && Hs_IsBot(bot))
+            FireGroupJoined(live, bot);
+    });
+}
+
+void HsEventEncounterHandler::OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32_t creditEntry,
+                                                            Unit* /*source*/, Difficulty /*difficultyFixed*/,
+                                                            DungeonEncounterList const* encounters,
+                                                            uint32_t dungeonCompleted, bool updated)
+{
+    // `updated` is Map::UpdateEncounterState's "this credit newly completed
+    // an encounter" (the instance's completed mask changed): the hook itself
+    // also fires for credits that match nothing, and again for a boss that
+    // was already down. An instance with no InstanceScript never sets it and
+    // so never fires this -- accepted, since those are the instances with no
+    // encounter bookkeeping to trust anyway.
+    if (!g_HsEnable || !map || !encounters || !updated)
+        return;
+
+    std::string bossName;
+    for (DungeonEncounter const* encounter : *encounters)
+    {
+        if (encounter && encounter->creditType == type && encounter->creditEntry == creditEntry)
+        {
+            bossName = Hs_LocalizedEncounterName(encounter->dbcEntry);
+            break;
+        }
+    }
+    if (bossName.empty())
+        return;
+
+    // The instance's own player list, walked on the thread updating this map
+    // (the same thing hs_opener.cpp's dungeon-complete handler does here).
+    std::vector<ObjectGuid> botGuids;
+    ObjectGuid              playerGuid;
+    Map::PlayerList const& players = map->GetPlayers();
+    for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+    {
+        Player* member = itr->GetSource();
+        if (!member || !member->IsInWorld())
+            continue;
+        if (Hs_IsBot(member))
+            botGuids.push_back(member->GetGUID());
+        else if (!playerGuid)
+            playerGuid = member->GetGUID();
+    }
+    if (botGuids.empty() || !playerGuid)
+        return;
+
+    bool react = (dungeonCompleted == 0);
+    Hs_DeferToWorldThread([botGuids, playerGuid, bossName, react]()
+    {
+        if (Player* player = Hs_FindInWorld(playerGuid))
+            FireBossKilled(botGuids, player, bossName, react);
+    });
+}
+
+Player* Hs_RealPlayerResurrecting(Player* bot)
+{
+    // Player keeps the rezzer's GUID private (m_resurrectGUID) and exposes
+    // only isResurrectRequestedBy(guid), so the real players on the bot's map
+    // are asked one by one. Set by the resurrect spell effect
+    // (SpellEffects.cpp) and still set when the bot accepts, since only dying
+    // clears it; a spirit healer or graveyard rez sets nothing, and reads as
+    // no rezzer at all.
+    if (!bot || !bot->isResurrectRequested())
+        return nullptr;
+    Map* map = bot->GetMap();
+    if (!map)
+        return nullptr;
+    Map::PlayerList const& players = map->GetPlayers();
+    for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
+    {
+        Player* candidate = itr->GetSource();
+        if (candidate && candidate != bot && candidate->IsInWorld() && !Hs_IsBot(candidate)
+            && bot->isResurrectRequestedBy(candidate->GetGUID()))
+            return candidate;
+    }
+    return nullptr;
+}
+
+void HsEventResurrectHandler::OnPlayerResurrect(Player* player, float /*restorePercent*/, bool& /*applySickness*/)
+{
+    if (!g_HsEnable || !player || !Hs_IsBot(player))
+        return;
+
+    Player* rezzer = Hs_RealPlayerResurrecting(player);
+    if (!rezzer)
+        return;
+
+    ObjectGuid botGuid    = player->GetGUID();
+    ObjectGuid rezzerGuid = rezzer->GetGUID();
+    Hs_DeferToWorldThread([botGuid, rezzerGuid]()
+    {
+        Player* bot  = Hs_FindInWorld(botGuid);
+        Player* live = Hs_FindInWorld(rezzerGuid);
+        if (bot && live)
+            FireResurrected(bot, live);
+    });
+}
+
+bool HsEventTradeHandler::OnPlayerCanInitTrade(Player* player, Player* target)
+{
+    // A real player opening a trade with a bot. Never vetoes: this is an
+    // observer on a permission hook.
+    if (g_HsEnable && player && target && !Hs_IsBot(player) && Hs_IsBot(target))
+    {
+        ObjectGuid botGuid    = target->GetGUID();
+        ObjectGuid playerGuid = player->GetGUID();
+        Hs_DeferToWorldThread([botGuid, playerGuid]()
+        {
+            Player* bot  = Hs_FindInWorld(botGuid);
+            Player* live = Hs_FindInWorld(playerGuid);
+            if (bot && live)
+                FireTradeOpened(bot, live);
+        });
+    }
+    return true;
+}
+
+void HsEventTradeHandler::OnPlayerMoneyChanged(Player* player, int32& amount)
+{
+    // Positive for the side receiving. Everything else that moves money
+    // (loot, vendors, repairs) happens with no trade attached and stops here.
+    if (!g_HsEnable || !player || amount <= 0 || !player->GetTradeData())
+        return;
+    NoteTradePiece(player, "", static_cast<uint32>(amount));
+}
+
+void HsEventTradeHandler::OnPlayerAfterMoveItemToInventory(Player* player, Item* item, bool /*update*/)
+{
+    if (!g_HsEnable || !player || !item || !player->GetTradeData())
+        return;
+    NoteTradePiece(player, Hs_LocalizedItemName(item->GetTemplate()), 0);
+}
+
+void HsEventLoginHandler::OnPlayerLogin(Player* player)
+{
+    if (!g_HsEnable || !player || Hs_IsBot(player) || !player->GetGuildId())
+        return;
+
+    ObjectGuid guid    = player->GetGUID();
+    uint32     guildId = player->GetGuildId();
+    Hs_DeferToWorldThread([guid, guildId]()
+    {
+        if (Player* live = Hs_FindInWorld(guid))
+            FireGuildEvent(HsEventType::GuildLogin, live, guildId,
+                std::string(live->GetName()) + ", in your guild, has just logged in.", /*subjectHears=*/true);
+    });
+}
+
+void HsEventAchievementHandler::OnPlayerAchievementComplete(Player* player, AchievementEntry const* achievement)
+{
+    if (!g_HsEnable || !player || !achievement)
+        return;
+    // Statistics are counters that "complete" as they tick; they are not
+    // something anyone congratulates.
+    if (achievement->flags & ACHIEVEMENT_FLAG_COUNTER)
+        return;
+    std::string name = Hs_LocalizedAchievementName(achievement);
+    if (name.empty())
+        return;
+
+    bool       isBot   = Hs_IsBot(player);
+    uint32     guildId = player->GetGuildId();
+    if (!isBot && !guildId)
+        return;
+
+    ObjectGuid guid = player->GetGUID();
+    Hs_DeferToWorldThread([guid, guildId, isBot, name]()
+    {
+        Player* live = Hs_FindInWorld(guid);
+        if (!live)
+            return;
+        if (isBot)
+            FireAchievementSelf(live, name);
+        else
+            FireGuildEvent(HsEventType::AchievementGuild, live, guildId,
+                std::string(live->GetName()) + ", in your guild, has just earned the achievement " + name + ".",
+                /*subjectHears=*/true);
+    });
+}
+
+void HsEventGuildHandler::OnAddMember(Guild* guild, Player* player, uint8& /*plRank*/)
+{
+    // `player` is null when the member was added offline (Guild::AddMember).
+    if (!g_HsEnable || !guild || !player || Hs_IsBot(player))
+        return;
+
+    uint32     guildId = guild->GetId();
+    ObjectGuid guid    = player->GetGUID();
+    Hs_DeferToWorldThread([guildId, guid]()
+    {
+        if (Player* live = Hs_FindInWorld(guid))
+            FireGuildEvent(HsEventType::GuildJoined, live, guildId,
+                std::string(live->GetName()) + " has just joined your guild.", /*subjectHears=*/true);
+    });
+}
+
+void HsEventGuildHandler::OnRemoveMember(Guild* guild, Player* player, bool isDisbanding, bool isKicked)
+{
+    if (!g_HsEnable || !guild || !player || isDisbanding || Hs_IsBot(player))
+        return;
+
+    // Called before the member is actually removed (Guild::DeleteMember);
+    // by the time the world thread runs this the player is out of guild
+    // chat, so someone else has to be there to read it.
+    uint32     guildId = guild->GetId();
+    ObjectGuid guid    = player->GetGUID();
+    Hs_DeferToWorldThread([guildId, guid, isKicked]()
+    {
+        Player* live = Hs_FindInWorld(guid);
+        if (!live)
+            return;
+        std::string name = live->GetName();
+        FireGuildEvent(HsEventType::GuildLeft, live, guildId,
+            isKicked ? name + " has just been removed from your guild." : name + " has just left your guild.",
+            /*subjectHears=*/false);
+    });
+}
+
+void HsEventBattlegroundHandler::OnBattlegroundEnd(Battleground* bg, TeamId winnerTeamId)
+{
+    if (!g_HsEnable || !bg || winnerTeamId == TEAM_NEUTRAL)
+        return; // a draw has no side to be on
+
+    // Both sides at once, read off the battleground's own player map on the
+    // thread ending it; one real player per side becomes that side's origin.
+    // Arena::EndBattleground ends in Battleground::EndBattleground, so arenas
+    // arrive here too.
+    std::vector<ObjectGuid> bots[2];
+    ObjectGuid              realPlayer[2];
+    for (auto const& [guid, player] : bg->GetPlayers())
+    {
+        if (!player)
+            continue;
+        int side = (player->GetBgTeamId() == winnerTeamId) ? 0 : 1;
+        if (Hs_IsBot(player))
+            bots[side].push_back(guid);
+        else if (!realPlayer[side])
+            realPlayer[side] = guid;
+    }
+
+    bool        isArena = bg->isArena();
+    std::string wonLine, lostLine;
+    if (isArena)
+    {
+        std::string size = std::to_string(bg->GetArenaType());
+        wonLine  = "Your team has just won a " + size + "v" + size + " arena match.";
+        lostLine = "Your team has just lost a " + size + "v" + size + " arena match.";
+    }
+    else
+    {
+        wonLine  = "Your side has just won " + bg->GetName() + ".";
+        lostLine = "Your side has just lost " + bg->GetName() + ".";
+    }
+
+    for (int side = 0; side < 2; ++side)
+    {
+        if (bots[side].empty() || !realPlayer[side])
+            continue;
+        bool               won     = (side == 0);
+        std::string        trigger = won ? wonLine : lostLine;
+        std::vector<ObjectGuid> sideBots = bots[side];
+        ObjectGuid         origin  = realPlayer[side];
+        Hs_DeferToWorldThread([sideBots, origin, won, isArena, trigger]()
+        {
+            if (Player* live = Hs_FindInWorld(origin))
+                FireMatchEnd(sideBots, live, won, isArena, trigger);
+        });
+    }
+}
+
+std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid)
+{
+    std::lock_guard<std::mutex> lock(g_RecentEventMutex);
+    auto it = g_RecentEvents.find(botGuid);
+    if (it == g_RecentEvents.end())
+        return "";
+
+    HsRecentEvent const& recent = it->second;
+    auto age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - recent.at).count();
+    if (age > kRecentEventWindowSeconds)
+        return "";
+
+    // The model is never told who is speaking to it, so a winner's "loser"
+    // and a bystander's read the same. When they are the other person in the
+    // event, it says so.
+    std::string out = recent.line;
+    if (senderGuid && senderGuid == recent.counterpartGuid && !recent.counterpartName.empty())
+        out += "\nThe one talking to you now is " + recent.counterpartName + ".";
+    return out;
 }
 
 uint32_t Hs_EventsFiredThisSession()

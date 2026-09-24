@@ -3,6 +3,7 @@
 
 #include "ScriptMgr.h"
 #include <cstdint>
+#include <string>
 
 // Event triggers: bots reacting to things that *happen* rather than to
 // things people say (Claude/archive/PLAN-ARBITER.md). Until this landed, the only
@@ -161,6 +162,129 @@ public:
     void OnPlayerDuelStart(Player* player1, Player* player2) override;
     void OnPlayerDuelEnd(Player* winner, Player* loser, DuelCompleteType type) override;
 };
+
+// ---- 2026-09-23: fifteen more event types, one retrain ----------------------
+//
+// Added together, with the fine-tune rows for every one of them, so the
+// vocabulary grows once per training run rather than once per event
+// (HsEventType in hs_event_arbiter.h has the list). Every trigger string
+// below is frozen the same way the older ones are: the dataset copies them
+// verbatim (Claude/finetune/matrix/event.txt), and a reworded trigger is a
+// prompt the model was never trained on.
+//
+// The social ones -- a guild login, a new guild member, a guildmate's ding or
+// achievement -- are real players only; see FireGuildEvent in hs_event.cpp.
+
+// The bot has just joined a group a real player leads: "You have just joined
+// Themaster's group." Replaces the bot-joins half of hs_opener.cpp's
+// opener_group_formed, which now stands aside for it.
+class HsEventGroupJoinHandler : public GroupScript
+{
+public:
+    HsEventGroupJoinHandler() : GroupScript("HsEventGroupJoinHandler", { GROUPHOOK_ON_ADD_MEMBER }) {}
+    void OnAddMember(Group* group, ObjectGuid guid) override;
+};
+
+// A dungeon or raid boss down: "Your group has just killed Edwin VanCleef."
+// Read off the encounter credit rather than the creature kill, because that
+// is what knows an encounter was newly completed and what names it (a boss
+// credited by spell has no dying creature). On the last boss the
+// dungeon-complete opener speaks and this only records the follow-up fact.
+class HsEventEncounterHandler : public GlobalScript
+{
+public:
+    HsEventEncounterHandler() : GlobalScript("HsEventEncounterHandler", { GLOBALHOOK_ON_AFTER_UPDATE_ENCOUNTER_STATE }) {}
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32_t creditEntry, Unit* source,
+                                     Difficulty difficultyFixed, DungeonEncounterList const* encounters,
+                                     uint32_t dungeonCompleted, bool updated) override;
+};
+
+// A real player has just resurrected the bot: "Themaster has just resurrected
+// you." OnPlayerResurrect carries no caster; Hs_RealPlayerResurrecting below
+// recovers it. Replaces hs_opener.cpp's opener_rez whenever it finds one.
+class HsEventResurrectHandler : public PlayerScript
+{
+public:
+    HsEventResurrectHandler() : PlayerScript("HsEventResurrectHandler", { PLAYERHOOK_ON_PLAYER_RESURRECT }) {}
+    void OnPlayerResurrect(Player* player, float restorePercent, bool& applySickness) override;
+};
+
+// Trades between a bot and a real player: the window opening ("Themaster has
+// just opened a trade with you.") and the trade going through ("Themaster
+// has just given you 5 gold." / "You have just given Themaster Linen
+// Cloth."). There is no trade-complete hook; see the "Trade completion"
+// block in hs_event.cpp for how the two hooks below stand in for one.
+class HsEventTradeHandler : public PlayerScript
+{
+public:
+    HsEventTradeHandler() : PlayerScript("HsEventTradeHandler", {
+        PLAYERHOOK_CAN_INIT_TRADE,
+        PLAYERHOOK_ON_MONEY_CHANGED,
+        PLAYERHOOK_ON_AFTER_MOVE_ITEM_TO_INVENTORY,
+    }) {}
+
+    bool OnPlayerCanInitTrade(Player* player, Player* target) override;
+    void OnPlayerMoneyChanged(Player* player, int32& amount) override;
+    void OnPlayerAfterMoveItemToInventory(Player* player, Item* item, bool update) override;
+};
+
+// A real player in the bot's guild logging in: "Themaster, in your guild, has
+// just logged in."
+class HsEventLoginHandler : public PlayerScript
+{
+public:
+    HsEventLoginHandler() : PlayerScript("HsEventLoginHandler", { PLAYERHOOK_ON_LOGIN }) {}
+    void OnPlayerLogin(Player* player) override;
+};
+
+// Achievements: a real guildmate's ("Themaster, in your guild, has just
+// earned the achievement X.") and the bot's own ("You have just earned the
+// achievement X."). Statistics (ACHIEVEMENT_FLAG_COUNTER) are skipped.
+class HsEventAchievementHandler : public PlayerScript
+{
+public:
+    HsEventAchievementHandler() : PlayerScript("HsEventAchievementHandler", { PLAYERHOOK_ON_ACHI_COMPLETE }) {}
+    void OnPlayerAchievementComplete(Player* player, AchievementEntry const* achievement) override;
+};
+
+// A real player joining, leaving, or being removed from the bot's guild.
+class HsEventGuildHandler : public GuildScript
+{
+public:
+    HsEventGuildHandler() : GuildScript("HsEventGuildHandler", {
+        GUILDHOOK_ON_ADD_MEMBER,
+        GUILDHOOK_ON_REMOVE_MEMBER,
+    }) {}
+
+    void OnAddMember(Guild* guild, Player* player, uint8& plRank) override;
+    void OnRemoveMember(Guild* guild, Player* player, bool isDisbanding, bool isKicked) override;
+};
+
+// Battleground and arena results, per side: "Your side has just won Warsong
+// Gulch." / "Your team has just lost a 2v2 arena match." Only a side with a
+// real player on it gets anything.
+class HsEventBattlegroundHandler : public AllBattlegroundScript
+{
+public:
+    HsEventBattlegroundHandler() : AllBattlegroundScript("HsEventBattlegroundHandler", { ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_END }) {}
+    void OnBattlegroundEnd(Battleground* bg, TeamId winnerTeamId) override;
+};
+
+// The real player whose resurrect spell this bot is accepting, or nullptr (a
+// spirit healer, a soulstone, a bot priest). Call from the resurrect hook
+// itself, on the bot's map thread: it walks that map's player list. Shared
+// with hs_opener.cpp so its opener_rez can stand aside when this event covers
+// the moment.
+Player* Hs_RealPlayerResurrecting(Player* bot);
+
+// The follow-up half of every event: the state line of the most recent event
+// this bot was part of, if it is at most two minutes old, for any reply it
+// makes that is not itself an event reaction -- plus "The one talking to you
+// now is X." when `senderGuid` is the other person in that event. "" when
+// there is none. hs_queue.cpp's WorkerLoop appends it last in the system
+// turn, the slot an event reaction's own state line takes. Safe from any
+// thread (the reactive worker reads it while hooks write it).
+std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid);
 
 // Read-only status for the `.hearthside status` GM command, the same
 // visibility problem hs_opener.h's counter solves, for the same reason:

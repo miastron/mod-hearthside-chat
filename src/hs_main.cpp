@@ -385,6 +385,17 @@ void Addmod_hearthside_chatScripts()
     new HsEventPvpKillHandler();
     new HsEventRollHandler();
     new HsEventDuelHandler();
+    // 2026-09-23's event types (hs_event.h). The group-join and resurrect
+    // handlers share their hooks with hs_opener.cpp's; each opener checks
+    // whether the event covers its moment and stands aside if so.
+    new HsEventGroupJoinHandler();
+    new HsEventEncounterHandler();
+    new HsEventResurrectHandler();
+    new HsEventTradeHandler();
+    new HsEventLoginHandler();
+    new HsEventAchievementHandler();
+    new HsEventGuildHandler();
+    new HsEventBattlegroundHandler();
     new HsScriptRunnerWorldScript();
     new HsEngagementScanWorldScript();
     // Registered after the script runner deliberately: both scan on the same

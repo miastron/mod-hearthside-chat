@@ -84,3 +84,25 @@ std::string Hs_LocalizedSkillName(uint32_t skillId)
         name = entry->name[LOCALE_enUS];
     return (name && *name) ? std::string(name) : std::string();
 }
+
+std::string Hs_LocalizedAchievementName(AchievementEntry const* entry)
+{
+    if (!entry)
+        return "";
+
+    char const* name = entry->name[DbcLocale()];
+    if (!name || !*name)
+        name = entry->name[LOCALE_enUS];
+    return (name && *name) ? std::string(name) : std::string();
+}
+
+std::string Hs_LocalizedEncounterName(DungeonEncounterEntry const* entry)
+{
+    if (!entry)
+        return "";
+
+    char const* name = entry->encounterName[DbcLocale()];
+    if (!name || !*name)
+        name = entry->encounterName[LOCALE_enUS];
+    return (name && *name) ? std::string(name) : std::string();
+}

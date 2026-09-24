@@ -4,7 +4,9 @@
 #include <cstdint>
 #include <string>
 
+struct AchievementEntry;
 struct AreaTableEntry;
+struct DungeonEncounterEntry;
 struct ItemTemplate;
 class SpellInfo;
 class Quest;
@@ -54,5 +56,15 @@ std::string Hs_LocalizedQuestTitle(Quest const* quest);
 // caller should be the one indexing a DBC name array. Returns "" for an
 // unknown id.
 std::string Hs_LocalizedSkillName(uint32_t skillId);
+
+// Achievement title from Achievement.dbc, for hs_event.cpp's achievement
+// events. Null-safe.
+std::string Hs_LocalizedAchievementName(AchievementEntry const* entry);
+
+// Boss/encounter name from DungeonEncounter.dbc ("Edwin VanCleef", "The Four
+// Horsemen"), for hs_event.cpp's boss-kill event. Read from the encounter
+// rather than from the creature that died because an encounter credited by
+// spell has no dying creature to name. Null-safe.
+std::string Hs_LocalizedEncounterName(DungeonEncounterEntry const* entry);
 
 #endif // MOD_HS_LOCALE_H

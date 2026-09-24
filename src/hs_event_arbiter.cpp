@@ -27,6 +27,21 @@ namespace
         "OPENER_REZ",
         "OPENER_DUNGEON_COMPLETE",
         "OPENER_PROXIMITY",
+        "GROUP_JOINED",
+        "BOSS_KILLED",
+        "RESURRECTED",
+        "TRADE_OPENED",
+        "TRADE_COMPLETED",
+        "GUILD_LOGIN",
+        "GUILD_JOINED",
+        "GUILD_LEFT",
+        "GUILD_LEVEL_UP",
+        "ACHIEVEMENT_SELF",
+        "ACHIEVEMENT_GUILD",
+        "BATTLEGROUND_WON",
+        "BATTLEGROUND_LOST",
+        "ARENA_WON",
+        "ARENA_LOST",
     };
 
     // { chance of nobody, chance of exactly one }; the remainder is the
@@ -52,6 +67,24 @@ namespace
         { 55, 45 }, // OPENER_REZ
         { 45, 50 }, // OPENER_DUNGEON_COMPLETE
         { 65, 35 }, // OPENER_PROXIMITY
+        // 2026-09-23. The social ones (a greeting, a welcome, a gz, a ty) are
+        // the replies a player notices *missing*, so they lean toward
+        // speaking; the rest keep the backdrop default of mostly silence.
+        { 30, 65 }, // GROUP_JOINED            : you just joined their group, you say hey
+        { 55, 40 }, // BOSS_KILLED
+        { 25, 70 }, // RESURRECTED             : a ty is expected
+        { 70, 30 }, // TRADE_OPENED            : the trade window is the conversation
+        { 40, 58 }, // TRADE_COMPLETED         : ty
+        { 35, 50 }, // GUILD_LOGIN             : hi / wb, sometimes from two people
+        { 20, 55 }, // GUILD_JOINED            : welcome, often from more than one
+        { 70, 28 }, // GUILD_LEFT
+        { 35, 50 }, // GUILD_LEVEL_UP          : gz
+        { 75, 25 }, // ACHIEVEMENT_SELF        : the guild already sees the toast
+        { 35, 50 }, // ACHIEVEMENT_GUILD       : gz
+        { 55, 38 }, // BATTLEGROUND_WON
+        { 60, 35 }, // BATTLEGROUND_LOST
+        { 55, 40 }, // ARENA_WON
+        { 60, 37 }, // ARENA_LOST
     };
 
     // Involvement multipliers on the shared three-level scale. Wide enough

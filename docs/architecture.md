@@ -37,7 +37,8 @@ the wrong thing here:
   **engagement follow-ups** (`hs_engagement.*`, `MaxTier.EngagementFollowUp`) — a bot continuing a
   conversation on its own initiative after answering a player once, fire-chance decaying per chain
   depth; **event reactions** (`hs_event*.*`, `MaxTier.Events`) — a bot reacting to something that
-  *happened* (a death, a ding, a duel) rather than something said, arbitrated by involvement and
+  *happened* (a death, a ding, a duel, a rez, a trade, a guildmate logging in, a battleground
+  result; 27 kinds in `HsEventType`) rather than something said, arbitrated by involvement and
   per-archetype affinity, own token bucket; and **live bot-to-bot chains** (`hs_botchain.*`,
   `MaxTier.BotToBot = inference`) — one bot's delivered line seeding another's reply on party, raid,
   or the General channel, depth-capped and decayed per hop.
@@ -77,10 +78,21 @@ zone label, a generator bucket), since it skips the threshold entirely. A third,
 `Hs_RagContextRandom`, exists for callers with nothing to look anything up *with* — the generator's
 untagged buckets and a script's first turn. See [`data/rag/README.md`](../data/rag/README.md).
 
+**What just happened is its own slot, after all of them.** An event's state line ("You have just
+lost a duel to X.") used to reach exactly one prompt: the reaction's, when the arbiter picked that
+bot. Since 2026-09-23 every actor of every event keeps that line for two minutes
+(`Hs_RecentEventContext`, `hs_event.h`), and any reply the bot makes in that window ends with it,
+plus "The one talking to you now is X." when the speaker is the other person in the event. The
+reaction and the follow-up therefore see the same line in the same place. Unlike the experience
+block, it is the subject when a player raises it — "loser" after a duel, "gz" after a ding — and
+the fine-tune carries rows for both that and the reply that ignores it
+(`Claude/finetune/matrix/followup.txt`, `add_context_layers.py`).
+
 Everything above is concatenated into one `personaLine` in `hs_queue.cpp`'s `WorkerLoop`, alongside
 the archetype line, the card voice block and the recent-utterance echo. Order matters: the
-experience block is appended **last**, because it is the only segment that changes as a bot plays,
-so keeping it at the end leaves the whole prefix above it reusable by the backend's prompt cache.
+experience block comes after the rest, because it changes as a bot plays, and the event line (a
+reaction's own, or a follow-up's) comes **last**, because it changes fastest; keeping the volatile
+segments at the end leaves the whole prefix above them reusable by the backend's prompt cache.
 
 ## The arbiter
 

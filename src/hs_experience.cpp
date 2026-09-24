@@ -144,8 +144,8 @@ std::string Hs_ExperienceLine(const std::vector<HsExperienceEntry>& entries, int
     // See the header: the framing carries as much weight as the contents.
     // A bare list invites a small model to read it back.
     const std::string prefix =
-        "Background on what you have been up to lately. This is true of you, but it is not "
-        "what you are talking about and you should not announce it: you ";
+        "Background on what you have been up to lately. Don't bring it up yourself, but it's "
+        "true if someone asks: you ";
 
     std::string line;
     uint32_t    used = 0;

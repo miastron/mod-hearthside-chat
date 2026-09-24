@@ -4,6 +4,7 @@
 #include "hs_botchain.h"
 #include "hs_config.h"
 #include "hs_engagement.h"
+#include "hs_event.h"
 #include "hs_experience.h"
 #include "hs_identity.h"
 #include "hs_identity_store.h"
@@ -327,6 +328,11 @@ namespace
     std::mutex                                        g_CooldownMutex;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastEnqueueAt;
     std::unordered_map<uint64_t, Clock::time_point>   g_LastReplyAt;
+    // An event reaction's own stamp, kept apart from g_LastEnqueueAt so it
+    // holds back the next *event* without holding back a real player's reply
+    // to it: 2026-09-23 on the realm, a bot's duel-start line consumed the
+    // cooldown and the player's message to it seconds later was dropped.
+    std::unordered_map<uint64_t, Clock::time_point>   g_LastEventEnqueueAt;
 
     // ---- distracted-reply cooldown ----
     // Its own mutex rather than sharing g_CooldownMutex: that one is taken on
@@ -800,6 +806,19 @@ namespace
             if (req.triggerIsStateLine)
                 personaLine += "\n" + req.prompt;
 
+            // Everything else gets the same slot for the most recent event
+            // this bot was part of, while it is fresh: the reply to "loser"
+            // after a duel, "gz" after a ding, "ty" after a rez. Same line the
+            // reaction carried, plus who is talking when it is the other
+            // person in it (Hs_RecentEventContext, hs_event.h). Last for the
+            // same prompt-cache reason as the event line above.
+            if (!req.triggerIsStateLine)
+            {
+                std::string recentEvent = Hs_RecentEventContext(req.botGuid, req.senderGuid);
+                if (!recentEvent.empty())
+                    personaLine += "\n" + recentEvent;
+            }
+
             // One snapshot per request instead of six reads of the live
             // globals. This is the worker thread; `.reload config` reassigns
             // those strings from the world thread, and the systemPrompt below
@@ -1224,27 +1243,45 @@ bool Hs_TryEnqueue(HsReplyRequest request)
 {
     uint64_t const botGuid = request.botGuid;
 
+    bool const isEvent = request.isEvent;
+
+    // Which gate said no, for the debug log: every caller logs only that the
+    // enqueue was rejected, and "rejected" alone could not tell a cooldown
+    // from an empty bucket from an open breaker (2026-09-23).
+    auto refused = [&request](char const* gate)
+    {
+        if (g_HsDebugEnabled)
+            LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue refused for bot {} ({}): {}.",
+                request.botName, request.isEvent ? "event" : "reply", gate);
+    };
+
     // 1. Token bucket. Taken atomically (review B7) and refunded on every
     // later bail-out, so the bucket can never be driven negative by two
     // concurrent callers passing the same peek.
     if (!TryTakeBucketToken())
     {
         RecordBucketAttempt(/*denied=*/true);
+        refused("reply token bucket empty");
         return false;
     }
 
-    // 2. Per-bot cooldown.
+    // 2. Per-bot cooldown. A reply is held back only by the last reply; an
+    // event by the last reply or the last event (g_LastEventEnqueueAt).
     {
         std::lock_guard<std::mutex> lock(g_CooldownMutex);
-        auto it = g_LastEnqueueAt.find(botGuid);
-        if (it != g_LastEnqueueAt.end())
+        Clock::time_point const now = Clock::now();
+        auto coolingDown = [&now](std::unordered_map<uint64_t, Clock::time_point> const& stamps, uint64_t guid)
         {
-            auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - it->second).count();
-            if (elapsedSec < static_cast<int64_t>(g_HsBotCooldownSeconds))
-            {
-                RefundBucketToken();
-                return false;
-            }
+            auto it = stamps.find(guid);
+            return it != stamps.end() &&
+                std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count() <
+                    static_cast<int64_t>(g_HsBotCooldownSeconds);
+        };
+        if (coolingDown(g_LastEnqueueAt, botGuid) || (isEvent && coolingDown(g_LastEventEnqueueAt, botGuid)))
+        {
+            RefundBucketToken();
+            refused("per-bot cooldown");
+            return false;
         }
     }
 
@@ -1268,11 +1305,13 @@ bool Hs_TryEnqueue(HsReplyRequest request)
         if (!intervalElapsed)
         {
             RefundBucketToken();
+            refused("circuit breaker open");
             return false;
         }
         if (g_ProbeInFlight.exchange(true))
         {
             RefundBucketToken();
+            refused("circuit breaker open, probe already in flight");
             return false; // another probe already claimed this interval
         }
 
@@ -1337,8 +1376,9 @@ bool Hs_TryEnqueue(HsReplyRequest request)
     {
         std::lock_guard<std::mutex> lock(g_CooldownMutex);
         Clock::time_point now = Clock::now();
-        g_LastEnqueueAt[botGuid] = now;
-        HsPrune::PruneStale(g_LastEnqueueAt, now, kCooldownStaleSeconds, kCooldownPruneThreshold);
+        auto& stamps = isEvent ? g_LastEventEnqueueAt : g_LastEnqueueAt;
+        stamps[botGuid] = now;
+        HsPrune::PruneStale(stamps, now, kCooldownStaleSeconds, kCooldownPruneThreshold);
     }
 
     return true;

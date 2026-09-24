@@ -4,6 +4,7 @@
 #include "hs_bot.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
+#include "hs_event.h"
 #include "hs_identity.h"
 #include "hs_identity_store.h"
 #include "hs_memory.h"
@@ -292,6 +293,18 @@ namespace
         Hs_RecordMemoryEvent(bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(),
                               kHsMemoryEventGroupedInZone, Hs_BuildGroupedInZoneText(zone));
 
+        // A bot joining a group a real player leads is hs_event.cpp's
+        // GROUP_JOINED since 2026-09-23 ("You have just joined X's group."):
+        // a generated line naming the inviter, where this would be a second,
+        // canned one for the same moment. Only while events may speak at all,
+        // so an operator who turns events off keeps the opener.
+        if (newIsBot && HsTierAllows(g_HsMaxTierEvents, HsTier::Inference))
+        {
+            Player* leader = Hs_FindInWorld(group->GetLeaderGUID());
+            if (leader && leader != newMember && !Hs_IsBot(leader))
+                return;
+        }
+
         // Party/raid, not /say: see FireOpener's `channel` note. Decided off
         // the group itself, re-resolved by GUID for this call, rather than
         // bot->GetGroup(), which is not guaranteed to be wired up yet at
@@ -353,6 +366,13 @@ void HsOpenerResurrectHandler::OnPlayerResurrect(Player* player, float /*restore
     if (!player || !player->GetGroup() || !HsTierAllows(g_HsMaxTierOpeners, HsTier::Corpus))
         return;
     if (!Hs_IsEligibleBot(player)) // ExcludeNames: never the speaker
+        return;
+
+    // A rez a real player cast is hs_event.cpp's RESURRECTED since 2026-09-23
+    // ("X has just resurrected you."), which names the rezzer this hook
+    // cannot. The opener keeps every other rez in a group: a spirit healer,
+    // a soulstone, a bot priest.
+    if (HsTierAllows(g_HsMaxTierEvents, HsTier::Inference) && Hs_RealPlayerResurrecting(player))
         return;
 
     ObjectGuid guid = player->GetGUID();

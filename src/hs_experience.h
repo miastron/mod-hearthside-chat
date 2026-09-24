@@ -147,7 +147,10 @@ void Hs_RecordExperience(uint64_t botGuid, HsExperienceKind kind, const std::str
 // summarise it" because the reply-side phrasing invited the model to
 // announce what it had been handed. A small model given a list of things it
 // just did will read the list back unless told plainly that the list is not
-// the subject.
+// the subject. The 2026-09-23 wording keeps that half ("don't bring it up
+// yourself") and drops the half that also stopped a bot answering when a
+// player asked about it; the fine-tune carries rows for both (see
+// Claude/finetune/add_context_layers.py).
 std::string Hs_ExperienceLine(const std::vector<HsExperienceEntry>& entries, int64_t now,
                               uint32_t maxEntries, uint32_t maxChars, uint32_t windowSeconds);
 
