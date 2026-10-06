@@ -26,17 +26,20 @@ std::string g_HsLLMTemplate = "llama3";
 // A "player, not character" frame, avoids the terse "Hmph."-collapse
 // failure mode seen with an in-fiction frame.
 //
-// This default is byte-identical to the system turn's first line in all 2129
-// rows of Claude/finetune/dataset_pilot_v2.jsonl, and that is the reason to
-// leave it alone: the module targets a model tuned on that dataset, so
-// changing the wording here puts every request into a shape the tune has
-// never seen. (Claude/finetune/_FORMAT.md quotes a different, shorter
-// preamble -- the doc is stale, the dataset is not.) The archetype tag is
-// appended as line 2 by hs_llm.cpp, not spelled out here.
+// This default is byte-identical to the system turn's first line in every
+// row of Claude/finetune/dataset_pilot_v2.jsonl, and that is the reason to
+// change it only together with a retrain: the module targets a model tuned
+// on that dataset, so a different wording here puts every request into a
+// shape the tune has never seen. The archetype tag is appended as line 2 by
+// hs_llm.cpp, not spelled out here.
+//
+// 2026-10-06: dropped "If you don't know something specific, deflect vaguely
+// instead of making it up." It taught hedging, and real players state things
+// flatly. Factual accuracy comes from the RAG block and the grounded tier,
+// not from asking a 1B model to be vague.
 std::string g_HsLLMSystemPrompt =
     "You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. "
-    "No roleplay, no asterisks, no mention of being an AI or a game. If you don't know "
-    "something specific, deflect vaguely instead of making it up.";
+    "No roleplay, no asterisks, no mention of being an AI or a game.";
 
 // Four lines (2 trigger/reply pairs) per bot-player pair by default;
 // live-tunable without a rebuild.
@@ -267,7 +270,7 @@ uint32_t g_HsRagGeneratorMaxChars = 900;
 
 bool     g_HsExperienceEnable         = true;
 uint32_t g_HsExperienceMaxEntries     = 4;
-uint32_t g_HsExperienceMaxChars       = 300;
+uint32_t g_HsExperienceMaxChars       = 200;
 uint32_t g_HsExperienceWindowSeconds  = 1800;
 uint32_t g_HsExperienceLootMinQuality = 3;       // ITEM_QUALITY_RARE
 uint32_t g_HsExperienceMoneyMinCopper = 100000;  // 10 gold
@@ -508,7 +511,7 @@ void Hs_LoadHearthsideChatConfig()
 
     g_HsExperienceEnable         = sConfigMgr->GetOption<bool>("HearthsideChat.Experience.Enable", true);
     g_HsExperienceMaxEntries     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MaxEntries", 4);
-    g_HsExperienceMaxChars       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MaxChars", 300);
+    g_HsExperienceMaxChars       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MaxChars", 200);
     g_HsExperienceWindowSeconds  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.WindowSeconds", 1800);
     g_HsExperienceLootMinQuality = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.LootMinQuality", 3);
     g_HsExperienceMoneyMinCopper = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MoneyMinCopper", 100000);

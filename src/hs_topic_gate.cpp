@@ -2,35 +2,37 @@
 
 namespace
 {
-    // Player::GetMoney() is copper; 1g = 100s = 10000c. Silver-only precision
-    // matches how a player would actually describe their own purse: nobody
-    // states copper in chat.
-    constexpr uint32_t kCopperPerSilver = 100;
-    constexpr uint32_t kCopperPerGold   = 10000;
+    // Player::GetMoney() is copper; 1g = 10000c. Whole gold only: silver
+    // changed on nearly every loot pickup, and any change here invalidates
+    // the backend's prompt cache for everything after this line.
+    constexpr uint32_t kCopperPerGold = 10000;
 }
 
+// Terse on purpose (2026-10-05): this line is prefilled on every reply and
+// differs per bot, so it is never served from the prompt cache. The full
+// sentences it replaced cost 47 tokens; this costs ~26 with the same facts,
+// negatives included. Change it only together with
+// Claude/finetune/add_context_layers.py's topic_gate_line.
 std::string Hs_TopicGateLine(const HsTopicGateContext& ctx)
 {
-    std::string line = "Your current average item level is " + std::to_string(ctx.avgItemLevel) + ".";
+    std::string line = "Item level " + std::to_string(ctx.avgItemLevel) + ".";
 
     if (!ctx.inGroup)
-        line += " You are not currently in a group.";
+        line += " Not in a group.";
     else if (ctx.isGroupLeader)
-        line += " You are the leader of your current group.";
+        line += " Leading a group.";
     else
-        line += " You are in a group right now, but you are not its leader.";
+        line += " In a group, not its leader.";
 
     if (ctx.inInstance && !ctx.instanceName.empty())
-        line += " You are currently inside " + ctx.instanceName + ".";
+        line += " Inside " + ctx.instanceName + ".";
     else
-        line += " You are not currently inside a dungeon or raid instance.";
+        line += " Not in a dungeon or raid.";
 
-    uint32_t gold   = ctx.goldCopper / kCopperPerGold;
-    uint32_t silver = (ctx.goldCopper / kCopperPerSilver) % kCopperPerSilver;
-    line += " You currently have " + std::to_string(gold) + " gold and " + std::to_string(silver) + " silver.";
+    line += " " + std::to_string(ctx.goldCopper / kCopperPerGold) + " gold.";
 
     if (!ctx.zoneName.empty())
-        line += " You are currently in " + ctx.zoneName + ".";
+        line += " In " + ctx.zoneName + ".";
 
     return line;
 }

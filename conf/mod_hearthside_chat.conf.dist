@@ -159,7 +159,7 @@ HearthsideChat.LLM.MaxTokens = 60
 #                  second line automatically. The fine-tuned model was
 #                  trained on this exact wording, so changing it moves every
 #                  request away from what the model has seen.
-HearthsideChat.LLM.SystemPrompt = You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. No roleplay, no asterisks, no mention of being an AI or a game. If you don't know something specific, deflect vaguely instead of making it up.
+HearthsideChat.LLM.SystemPrompt = You are a player in World of Warcraft, chatting in-game. Casual, brief, one short line. No roleplay, no asterisks, no mention of being an AI or a game.
 
 # HearthsideChat.LLM.HistoryTurns
 #     Description: How many previous back-and-forths with the same player a
@@ -1025,9 +1025,11 @@ HearthsideChat.Experience.MaxEntries = 4
 #                  dropped if they don't fit, rather than cut off
 #                  mid-sentence. This gets added to every AI reply for that
 #                  bot, so raise it only if your AI server has latency
-#                  headroom to spare.
-#     Default:     300
-HearthsideChat.Experience.MaxChars = 300
+#                  headroom to spare. Counts the short "Lately you" label
+#                  too; 200 holds as many entries as 300 did before that
+#                  label replaced a 113-character one (2026-10-05).
+#     Default:     200
+HearthsideChat.Experience.MaxChars = 200
 
 # HearthsideChat.Experience.WindowSeconds
 #     Description: How recent something has to be to actually get

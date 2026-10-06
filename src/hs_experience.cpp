@@ -141,11 +141,8 @@ std::string Hs_ExperienceLine(const std::vector<HsExperienceEntry>& entries, int
     if (entries.empty() || maxEntries == 0 || maxChars == 0)
         return "";
 
-    // See the header: the framing carries as much weight as the contents.
-    // A bare list invites a small model to read it back.
-    const std::string prefix =
-        "Background on what you have been up to lately. Don't bring it up yourself, but it's "
-        "true if someone asks: you ";
+    // See the header: a label, with the behaviour carried by training.
+    const std::string prefix = "Lately you ";
 
     std::string line;
     uint32_t    used = 0;

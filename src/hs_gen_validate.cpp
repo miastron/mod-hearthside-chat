@@ -27,13 +27,13 @@ namespace
         "%other_class", "%other_level", "%other_zone", "%other_guild",
     };
 
-    // Deliberately short and low-collision: WoW chat legitimately uses
-    // words like "cap" (level cap), and "based" would be too noisy to
-    // trust as a single token, so the list sticks to slang with little
-    // chance of colliding with ordinary WoW-flavor prose. Not exhaustive
-    // by design: this is a cheap regex-shaped gate, not a rule engine.
+    // Anachronisms only: slang a 2010 WotLK player would not have typed.
+    // Until 2026-10-06 this also rejected "lol", "lmao", "rofl", "ngl" and
+    // "rn" -- ordinary chat shorthand, and exactly the register the corpus
+    // and script tiers were missing. Short and low-collision by design: a
+    // cheap token gate, not a rule engine.
     const std::vector<std::string> kSlangTokens = {
-        "lol", "lmao", "rofl", "bruh", "bestie", "ngl", "sus", "bussin", "yeet", "rn",
+        "bruh", "bestie", "sus", "bussin", "yeet", "rizz", "slay", "fr",
     };
 
     const std::vector<std::string> kQuestionLeadWords = {
@@ -250,6 +250,11 @@ namespace
             return false;
 
         if (std::find(kReplyLeadWords.begin(), kReplyLeadWords.end(), tokens.front()) != kReplyLeadWords.end())
+            return true;
+        // "thats rough" is "that's rough" typed the way the 2026-10-06
+        // register pass now trains it: the contraction already carries the
+        // bare verb, so the lead word alone is enough.
+        if (tokens.front() == "thats" || tokens.front() == "thatll" || tokens.front() == "thatd")
             return true;
         if (std::find(kAnaphoricLeadWords.begin(), kAnaphoricLeadWords.end(), tokens.front()) != kAnaphoricLeadWords.end()
             && (tokens.size() == 1

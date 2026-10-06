@@ -142,15 +142,15 @@ void Hs_RecordExperience(uint64_t botGuid, HsExperienceKind kind, const std::str
 // recent first, capped at `maxEntries` and truncated to `maxChars` on an
 // entry boundary, same contract as Hs_RagContextLine.
 //
-// **Framed as background, not as material.** hs_rag.h learned this once
-// already: kHsRagGeneratorPrefix says "for detail only -- do not quote or
-// summarise it" because the reply-side phrasing invited the model to
-// announce what it had been handed. A small model given a list of things it
-// just did will read the list back unless told plainly that the list is not
-// the subject. The 2026-09-23 wording keeps that half ("don't bring it up
-// yourself") and drops the half that also stopped a bot answering when a
-// player asked about it; the fine-tune carries rows for both (see
-// Claude/finetune/add_context_layers.py).
+// **A bare label, not an instruction -- 2026-10-05.** This used to open with
+// 27 tokens of framing ("Background on what you have been up to lately.
+// Don't bring it up yourself, but it's true if someone asks: you ...") because
+// an untuned model reads a handed list back. The fine-tune now carries rows
+// for both halves of that behaviour (answer when asked, don't announce
+// otherwise), so the label only has to mark the block, and every token here
+// is prefilled on every reply the bot makes. Tests/post_event_probe.py's
+// announce rate is the check that the training, not the wording, holds the
+// line. Change it only together with Claude/finetune/add_context_layers.py.
 std::string Hs_ExperienceLine(const std::vector<HsExperienceEntry>& entries, int64_t now,
                               uint32_t maxEntries, uint32_t maxChars, uint32_t windowSeconds);
 
