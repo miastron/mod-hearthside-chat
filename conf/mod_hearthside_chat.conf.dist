@@ -179,6 +179,18 @@ HearthsideChat.LLM.HistoryTurns = 2
 #     Default:     0.0
 HearthsideChat.LLM.DryMultiplier = 0.0
 
+# HearthsideChat.LLM.Temperature
+#     Description: How adventurous the AI is when picking words for a reply.
+#                  Lower stays closer to what the message asked; higher is
+#                  more varied and more often off-topic. 1.0 was the old
+#                  fixed value, chosen for opener variety back when openers
+#                  were generated live; on the tuned 1B model it produced a
+#                  non-sequitur roughly every other whisper. 0.5 measured
+#                  clearly better (Tests/whisper_probe.py, 2026-10-07).
+#                  Replies only: the corpus generator keeps 1.0.
+#     Default:     0.5
+HearthsideChat.LLM.Temperature = 0.5
+
 # --------------------------------------------
 # REPLY GATING
 # --------------------------------------------
@@ -514,6 +526,15 @@ HearthsideChat.Events.Bucket.RepliesPerMinute = 15
 #                  is the classic case this covers. Also a kill switch at 0.
 #     Default:     4
 HearthsideChat.Events.Bucket.BurstCapacity = 4
+
+# HearthsideChat.Events.GuildLogin.StartupDelayMinutes
+#     Description: Minutes after worldserver start during which a guild
+#                  member logging in draws no greeting from the guild's bots.
+#                  A restart logs the whole bot population back in over the
+#                  first several minutes; this keeps guild chat from turning
+#                  into a wall of "wb" while that settles. 0 = no delay.
+#     Default:     15
+HearthsideChat.Events.GuildLogin.StartupDelayMinutes = 15
 
 # --------------------------------------------
 # UNPROMPTED SPEECH (AMBIENT, OPENERS, SCRIPTED SCENES)
@@ -1095,6 +1116,12 @@ HearthsideChat.Experience.SkillStep = 25
 #                  background work that uses your AI server's idle time
 #                  and writes to the database on its own, so it's an
 #                  opt-in rather than something that starts automatically.
+#                  The shipped corpus and scripts are hand-written and
+#                  enough on their own (scripts replay after two days). On
+#                  the 1B reply model, generated lines and scripts read
+#                  noticeably worse than the hand-written ones (test realm,
+#                  2026-10-07), so leave this off unless the generator
+#                  endpoint serves a stronger model.
 #     Default:     0 (false)
 HearthsideChat.Generator.Enable = 0
 

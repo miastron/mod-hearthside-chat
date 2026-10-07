@@ -418,15 +418,6 @@ namespace
         return text;
     }
 
-    // StripRoleLabel lived here until 2026-09-22: it deleted a turn label the
-    // model prefixed onto its own reply ("A: yeah"). That was measured on
-    // 2026-08-26 against a Qwen tune fed a Q:/A: few-shot frame, a shape
-    // hs_llm.cpp stopped sending on 2026-09-14. Re-measured against the live
-    // Llama 3.2 1B tune (Tests/live_reply_tells_probe.py, 960 replies across
-    // all twelve archetypes, both the trained and the live prompt shape): no
-    // reply opened with a label. A filter on output that no longer occurs is
-    // only a way for real text to get deleted.
-
     // Strips known LLM tells: dashes (em dash and "--"), leading "Ah,",
     // emoji, restating the question. All literal and mechanical.
     std::string StripLLMTells(const std::string& text)
@@ -558,6 +549,11 @@ namespace
         std::uniform_real_distribution<float> coin(0.0f, 1.0f);
         if (coin(rng) >= keepProbability)
             return s;
+        // Nobody types "yo." or "np." -- a careful typist's full stop shows
+        // on a sentence, not on a two-word answer (realm 2026-10-07, where
+        // the new greeting reflexes came out as "Yo." and "Winterspring.").
+        if (mark.empty() && std::count(s.begin(), s.end(), ' ') < 3)
+            return s;
         return s + (mark.empty() ? "." : mark);
     }
 
@@ -589,10 +585,13 @@ namespace
             return text;
 
         static const std::unordered_map<std::string, std::string> kAbbrev = {
+            // No for->4 / to,too->2 / before->b4 since 2026-10-07: text-message
+            // shorthand from another decade, and "nice 2 meet u" / "welcome 2
+            // talaesha" read as a parody of a gamer rather than one.
             { "you", "u" }, { "your", "ur" }, { "you're", "ur" }, { "are", "r" },
-            { "for", "4" }, { "to", "2" }, { "too", "2" }, { "thanks", "ty" },
+            { "thanks", "ty" },
             { "thank", "ty" }, { "with", "w/" }, { "ready", "rdy" }, { "please", "plz" },
-            { "okay", "k" }, { "ok", "k" }, { "because", "bc" }, { "before", "b4" },
+            { "okay", "k" }, { "ok", "k" }, { "because", "bc" },
             { "though", "tho" }, { "probably", "prob" },
         };
 

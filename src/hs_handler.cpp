@@ -80,7 +80,7 @@ namespace
     // MaxTier.Reflex ceiling, independent of MaxTier.DirectReply below --
     // an operator can turn off canned replies without touching the LLM
     // ceiling, or vice versa.
-    void TryReflex(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel,
+    void TryReflex(Player* bot, const std::string& senderName, const std::string& msg, HsReplyChannel channel,
                     uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel, bool& handled)
     {
         handled = false;
@@ -101,7 +101,7 @@ namespace
         // no cooldown/last-reply bump: tier 0 writes no identity state at
         // all.
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), match.text, styleCtx);
+        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, match.text, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
     }
 
@@ -120,7 +120,7 @@ namespace
     // off. A bot claiming a mount that isn't observably there would be a
     // state-contradicting claim, so it's simpler to let the normal path
     // handle that case than to special-case a "not mounted" reply here.
-    bool TryGrounded(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel,
+    bool TryGrounded(Player* bot, const std::string& senderName, const std::string& msg, HsReplyChannel channel,
                       uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
         if (!g_HsGroundedAnswersEnabled)
@@ -399,7 +399,7 @@ namespace
         // Same style pass and delivery path as TryReflex; both answer
         // without touching the GPU.
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), reply, styleCtx);
+        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, reply, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
     }
@@ -412,7 +412,7 @@ namespace
     // does the weighted anti-repeat pick and its own exposure bookkeeping;
     // this just applies the style pass and delivers, identically to the
     // two tiers above it.
-    bool TryCorpusFallback(Player* bot, Player* sender, HsReplyChannel channel,
+    bool TryCorpusFallback(Player* bot, const std::string& senderName, HsReplyChannel channel,
                             uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
     {
         // One card query for the whole function. The snapshot carries
@@ -448,7 +448,7 @@ namespace
         }
 
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
+        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, line, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
         return true;
     }
@@ -517,25 +517,25 @@ namespace
     // TryCorpusFallback rather than silence. Below corpus, or if the
     // corpus pick comes back empty, the request is simply not admitted --
     // silence.
-    void TryDispatch(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel)
+    void TryDispatch(Player* bot, uint64_t senderGuid, const std::string& senderName, const std::string& msg,
+                     HsReplyChannel channel)
     {
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
-        uint64_t senderGuid = sender->GetGUID().GetRawValue();
         bool     inCombat   = bot->IsInCombat(); // context modulates care downward in combat
         uint8_t  botLevel   = bot->GetLevel();   // corpus fallback's level-band tag
 
         bool reflexHandled = false;
-        TryReflex(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
+        TryReflex(bot, senderName, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
         if (reflexHandled)
             return;
 
-        if (TryGrounded(bot, sender, msg, channel, botGuid, senderGuid, inCombat, botLevel))
+        if (TryGrounded(bot, senderName, msg, channel, botGuid, senderGuid, inCombat, botLevel))
             return;
 
         if (!HsTierAllows(g_HsMaxTierDirectReply, HsTier::Inference))
         {
             if (HsTierAllows(g_HsMaxTierDirectReply, HsTier::Corpus))
-                TryCorpusFallback(bot, sender, channel, botGuid, senderGuid, inCombat, botLevel);
+                TryCorpusFallback(bot, senderName, channel, botGuid, senderGuid, inCombat, botLevel);
             return;
         }
 
@@ -543,9 +543,20 @@ namespace
         // here, not for the reflex/grounded/corpus tiers above: those never
         // reach the LLM prompt they feed. A plain direct reply sets none of
         // the request's kind flags.
-        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, sender, channel, msg)) && g_HsDebugEnabled)
+        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, senderGuid, senderName, channel, msg)) && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
+
+    void TryDispatch(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel)
+    {
+        TryDispatch(bot, sender->GetGUID().GetRawValue(), sender->GetName(), msg, channel);
+    }
+}
+
+void Hs_DispatchDirectReply(Player* bot, uint64_t senderGuid, const std::string& senderName,
+                            const std::string& msg, HsReplyChannel channel)
+{
+    TryDispatch(bot, senderGuid, senderName, msg, channel);
 }
 
 // LANG_ADDON is checked first in all five hooks below. An addon message is

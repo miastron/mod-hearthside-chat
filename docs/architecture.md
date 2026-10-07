@@ -15,16 +15,18 @@ the wrong thing here:
 ## The tiers
 
 - **Tier 0 — Reflex** (`hs_reflex.*`). A hardcoded pattern table for the highest-volume, lowest-value
-  inputs (`gz`, `ty`, `inv`, `sum`, `lol`, `wb`), plus the "are you a bot?" deflection and personal-probe
+  inputs (`gz`, `ty`, `inv`, `sum`, `lol`, `wb`, bare greetings/goodbyes, `thanks`, `what?`, gear
+  compliments), plus the "are you a bot?" deflection and personal-probe
   privacy deflection. No GPU, no identity writes, no state of any kind.
-- **Tier 1 — Corpus** (`hs_corpus.*`, `hs_opener.*`, `hs_script.*`, `hs_ambient.*`). Pre-generated lines
-  selected with zero runtime GPU work, filled by an idle-time background generator (`hs_generator.*`).
+- **Tier 1 — Corpus** (`hs_corpus.*`, `hs_opener.*`, `hs_script.*`, `hs_ambient.*`). Pre-written lines
+  selected with zero runtime GPU work: hand-written seed rows in `base/`, optionally topped up by an
+  idle-time background generator (`hs_generator.*`, ships off).
   Covers ambient "dead air" flavor on `/say`, in party/raid, and on the global channels
   (`hs_channel.*` owns per-channel policy), **openers** (short, question-shaped lines that fire on five
   shared-context triggers — group formed, joint kill, rez, dungeon complete, and prolonged proximity at
   a shared objective or flight master — and exist specifically to bootstrap reactive conversation), and
-  **scripted bot-to-bot conversations** (whole two-hander exchanges generated and audited ahead of
-  time, then replayed near a real player — never improvised live).
+  **scripted bot-to-bot conversations** (whole two-hander exchanges written ahead of time and
+  replayed near a real player — never improvised live).
 - **Grounded answers** (`hs_grounded.*`). A fourth branch alongside the tiers, not above or below
   them: for questions the realm's own database already answers (mount, level, zone, guild, activity,
   shared history with this player), look it up and fill a template. No GPU, no chance of invention.
@@ -39,7 +41,8 @@ the wrong thing here:
   depth; **event reactions** (`hs_event*.*`, `MaxTier.Events`) — a bot reacting to something that
   *happened* (a death, a ding, a duel, a rez, a trade, a guildmate logging in, a battleground
   result; 27 kinds in `HsEventType`) rather than something said, arbitrated by involvement and
-  per-archetype affinity, own token bucket; and **live bot-to-bot chains** (`hs_botchain.*`,
+  per-archetype affinity, own token bucket (a guildmate's login gets a canned greeting instead,
+  held off for `Events.GuildLogin.StartupDelayMinutes` after a restart); and **live bot-to-bot chains** (`hs_botchain.*`,
   `MaxTier.BotToBot = inference`) — one bot's delivered line seeding another's reply on party, raid,
   or the General channel, depth-capped and decayed per hop.
 

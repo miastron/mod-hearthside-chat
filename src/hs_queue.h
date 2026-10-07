@@ -117,6 +117,10 @@ struct HsReplyRequest
 // place the topic-gate facts, the rpg status and the settled test are read
 // for a reply -- four callers used to spell the same reads out by hand.
 HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt);
+// Same, for a sender known only by GUID and name: `.hearthside ask` from the
+// console speaks as a character that need not be online.
+HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::string& senderName,
+                                   HsReplyChannel channel, const std::string& prompt);
 
 // Attempts to admit one reactive-tier request. Applies, in order: the token
 // bucket, the per-bot cooldown, the circuit breaker (silently, except for

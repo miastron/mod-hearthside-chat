@@ -840,6 +840,7 @@ namespace
             // HearthsideChat.LLM.MaxTokens allows.
             cfg.maxTokens     = static_cast<int>(std::min(g_HsLLMMaxTokens, archetypeInfo.verbosityCap));
             cfg.dryMultiplier = g_HsLLMDryMultiplier;
+            cfg.temperature   = g_HsLLMTemperature;
 
             std::vector<HsHistoryTurn> history = HistorySnapshot(req.botGuid, req.senderGuid);
 
@@ -1159,11 +1160,17 @@ void Hs_QueueShutdown()
 
 HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt)
 {
+    return Hs_MakeReplyRequest(bot, sender->GetGUID().GetRawValue(), sender->GetName(), channel, prompt);
+}
+
+HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::string& senderName,
+                                   HsReplyChannel channel, const std::string& prompt)
+{
     HsReplyRequest req;
     req.botGuid    = bot->GetGUID().GetRawValue();
     req.botName    = bot->GetName();
-    req.senderGuid = sender->GetGUID().GetRawValue();
-    req.senderName = sender->GetName();
+    req.senderGuid = senderGuid;
+    req.senderName = senderName;
     req.channel    = channel;
     req.prompt     = prompt;
 
@@ -1896,7 +1903,14 @@ void Hs_DeliverPending()
             {
                 Player* sender = ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid));
                 if (!sender)
+                {
+                    // `.hearthside ask` from the console as an offline
+                    // character: the reply exists, it just has no recipient.
+                    if (g_HsDebugEnabled)
+                        LOG_INFO(kHsLogChat, "[HearthsideChat] Bot {} replied [whisper, recipient offline]: {}",
+                            bot->GetName(), reply.text);
                     continue;
+                }
                 botAI->Whisper(reply.text, sender->GetName());
                 break;
             }

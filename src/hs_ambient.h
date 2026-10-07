@@ -23,10 +23,9 @@
 // non-opener, non-channel corpus categories (chat_gripe_general,
 // chat_class_banter, chat_levelband_musing, chat_faction_banter,
 // chat_zone_musing) are documented in docs/architecture.md as ambient "dead
-// air" flavor, and the idle-time generator has been filling them on
-// Generator.Enable alone: but their only consumer was hs_handler.cpp's
-// direct-reply corpus fallback. The GPU was writing dead-air lines that could
-// only ever surface when a player talked to a bot first.
+// air" flavor, but their only consumer was hs_handler.cpp's direct-reply
+// corpus fallback, so they could only surface when a player talked to a bot
+// first.
 //
 // ---- Volume is the whole design ----
 //

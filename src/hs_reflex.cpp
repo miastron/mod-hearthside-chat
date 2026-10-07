@@ -63,6 +63,42 @@ namespace
             { "lol", { "lol", "haha", "right?" } },
             { "inv", { "can't inv rn, sry", "not able to inv atm", "sry, can't rn" } },
             { "sum", { "can't sum rn, sry", "no way to sum atm", "sry, can't help with that rn" } },
+            // Bare greetings and goodbyes, 2026-10-07. The tuned model had two
+            // "hi" rows in 2645 and answered one as if it were "how are you"
+            // and the next by announcing its archetype ("fine, lets get to the
+            // raid tonight, no chatting"). A player who whispers "hey" expects
+            // "hey" back, and anything said next goes to the model as usual.
+            { "hi",    { "hey", "hi", "yo", "o/", "heya" } },
+            { "hey",   { "hey", "hi", "yo", "o/", "sup" } },
+            { "hello", { "hey", "hi", "hello", "o/" } },
+            { "hiya",  { "hey", "hi", "o/" } },
+            { "heya",  { "hey", "heya", "o/" } },
+            { "yo",    { "yo", "sup", "hey" } },
+            { "o/",    { "o/", "hey", "yo" } },
+            { "sup",   { "not much, u?", "nm, u?", "not much", "hey, not much" } },
+            { "bye",   { "cya", "later", "bye", "take care" } },
+            { "cya",   { "cya", "later", "o/" } },
+            // Scored 0.72 and 0.39 of 2 from the model at temperature 0.5
+            // (Tests/whisper_probe.py, blind-judged, 2026-10-07): "thanks"
+            // drew "gz" from half the archetypes, and "what?" an answer to a
+            // question nobody asked.
+            { "thanks",    { "np", "yw", "no prob", "np!" } },
+            { "thx",       { "np", "yw", "no prob" } },
+            { "thank you", { "np", "yw", "no problem" } },
+            { "what",      { "nvm", "nvm lol", "nothing, nvm" } },
+            { "huh",       { "nvm", "nvm lol", "nothing" } },
+            // A compliment, not a question: these phrases also sit in
+            // hside_grounded_question's GEAR set, whose answers are written
+            // for "what are you wearing" ("just this Blade of Misfortune"),
+            // and reflex runs first.
+            { "nice gear",    { "ty", "thanks", "ty, took a while", "ty lol" } },
+            { "sweet gear",   { "ty", "thanks", "ty lol" } },
+            { "cool gear",    { "ty", "thanks", "ty lol" } },
+            { "sick gear",    { "ty", "thanks", "ty lol" } },
+            { "awesome gear", { "ty", "thanks", "ty lol" } },
+            { "nice armor",   { "ty", "thanks", "ty lol" } },
+            { "nice set",     { "ty", "thanks", "ty, took a while" } },
+            { "love that gear", { "ty", "thanks", "ty lol" } },
         };
         return table;
     }
@@ -206,7 +242,7 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
         }
     }
 
-    // ---- plain reflex vocabulary (gz/ty/inv/sum/lol/wb) ----
+    // ---- plain reflex vocabulary (gz/ty/inv/sum/lol/wb, greetings) ----
     std::string plainCore = CompressForPlainMatch(withPunct);
     for (const PlainEntry& entry : PlainTable())
     {

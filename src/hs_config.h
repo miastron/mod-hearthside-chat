@@ -100,6 +100,7 @@ extern std::string g_HsLLMTemplate;  // llama3 | chatml | mistral | gemma, only 
 extern std::string g_HsLLMSystemPrompt;
 extern uint32_t     g_HsLLMHistoryTurns;   // trigger/reply pairs kept per bot-player pair; 0 disables history
 extern float         g_HsLLMDryMultiplier;  // 0.0 leaves DRY off
+extern float         g_HsLLMTemperature;    // reactive replies only; the generator keeps 1.0
 
 // --------------------------------------------
 // Reply gating. /say, party/raid (subgroup-scoped for CHAT_MSG_PARTY), guild
@@ -318,6 +319,9 @@ extern HsTier g_HsMaxTierEvents;
 // narrating every corpse. Either key at 0 turns the surface off outright.
 extern uint32_t g_HsEventBucketRepliesPerMinute;
 extern uint32_t g_HsEventBucketBurstCapacity;
+// Guild-login greetings stay off for this long after worldserver start, while
+// the bot population is still logging in (HearthsideChat.Events.GuildLogin.StartupDelayMinutes).
+extern uint32_t g_HsGuildLoginStartupDelayMinutes;
 
 // --------------------------------------------
 // Live bot-to-bot chains (hs_botchain.h), active only while

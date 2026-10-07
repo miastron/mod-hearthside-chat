@@ -143,33 +143,10 @@ HsArchetype Hs_ArchetypeForBot(uint64_t botGuid)
     return HsArchetype::Casual; // unreachable if the loop above is correct
 }
 
-// The bare training tag, not a description of the archetype -- 2026-09-14.
-//
-// This module targets a model fine-tuned on Claude/finetune/*.jsonl, and the
-// runtime prompt's job is to be the shape that model was trained on, not to
-// explain anything to a general-purpose model. All 1949 archetype-tagged
-// training rows carry exactly "Archetype: <ENUM_NAME>" and nothing else, so
-// that is what ships.
-//
-// Until now this emitted the v1-era prose ("You mostly talk about: ...")
-// plus a profanity clause -- a form the tune has never once seen, which meant
-// the archetype fine-tune was not reaching players at all. Measured against
-// the live endpoint with Tests/opener_diversity.py's `live` and `trained`
-// frames, scored by Tests/score_voice_transfer.py (N=24/archetype, 576 calls):
-//
-//   prose (what this used to emit)  rank correlation of reply length
-//                                   against _FORMAT.md's R5 bands: -0.32,
-//                                   i.e. none. 1.9 words of spread across the
-//                                   whole roster -- one house voice. MENTOR
-//                                   sat at 0% inside its own 9-15 band.
-//   bare tag (what it emits now)    +0.96, 8.9 words of spread, MENTOR 58%
-//                                   in band, SOCIALITE 0% -> 75%.
-//
-// The profanity clause is gone for the same reason: profanity_level is
-// trained *through* the tag (_FORMAT.md R9 -- "the tag has to be worth
-// reading"), so restating it in prose is both off-shape and redundant. The
-// column stays the source of truth for the dataset; it is simply not
-// something the runtime prompt says out loud any more.
+// The bare training tag. Every archetype-tagged training row carries exactly
+// "Archetype: <ENUM_NAME>"; a prose description puts the prompt off the tune's
+// shape (2026-09-14: archetype length-band rho -0.32 with prose, +0.96 with
+// the bare tag). profanity_level is trained through the tag, never stated.
 std::string Hs_ArchetypePromptLine(HsArchetype a)
 {
     return std::string("Archetype: ") + Hs_ArchetypeInfoFor(a).enumName;

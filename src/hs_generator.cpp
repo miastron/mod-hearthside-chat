@@ -551,27 +551,15 @@ namespace
         // the part of the prompt that was in the trained shape wasn't.
         std::string body;
 
-        // The channel branch keeps its instruction prose. Unlike the rules
-        // below it carries a correctness constraint the gate cannot check
-        // (a broadcast line is replayed in every zone, so it may not name a
-        // place or say "here"), and the shape probe never exercised a
-        // channel bucket. Measure before removing it: Tests/generator_shape_probe.py
-        // with a channel bucket added, scored the same way.
+        // The channel branch keeps its instruction prose: a broadcast line is
+        // replayed in every zone, so it may not name a place or say "here",
+        // which the gate cannot check.
         if (!bucket.channel.empty())
             body += BroadcastChannelPromptIntro(bucket.channel);
 
-        // No instruction prose for the non-channel buckets. It used to spell
-        // out register, length, point of view, the no-markdown/no-emoji rules,
-        // the no-trend rule and the spell-words-out rule on every single
-        // generation call. Measured 2026-09-14 against the tuned checkpoint
-        // (Tests/generator_shape_probe.py, 120 candidates per shape, scored
-        // through this module's own Hs_EvaluateCandidate by
-        // Tests/score_generator_candidates.cpp): dropping all of it took
-        // acceptance from 107/120 to 112/120, left pre-abbreviated words at
-        // 0/120 either way, and left markdown/quote characters at 0. The tune
-        // already holds those rules -- _FORMAT.md R6/R13 trained them -- and
-        // the gate catches the two that matter anyway (references_trend,
-        // markdown_or_quote_chars).
+        // No instruction prose for the other buckets: the tune already holds
+        // those rules (dropping it raised gate acceptance 107 -> 112 of 120,
+        // 2026-09-14) and the gate catches the two that matter.
         //
         // What is NOT dropped is everything below: the per-call grounding the
         // weights cannot contain. Tags alone, with no RAG block and no
@@ -907,33 +895,13 @@ namespace
         std::string prevText = openingTrigger;
         std::vector<std::pair<uint8_t, std::string>> turns; // slot, text
 
-        // No history: every turn is generated from a fresh context with only
-        // the previous line as its trigger, which is the shape the LoRA was
-        // trained on. 2081 of the 2129 rows in dataset_pilot_v2.jsonl are a
-        // single system -> user -> assistant triple and the eval split has no
-        // multi-turn row at all, so replaying real prior turns here put the
-        // model out of distribution on every turn after the first.
-        //
-        // Measured against the live endpoint 2026-09-17
-        // (Tests/script_turn_collapse.py), 40 scripts x 6 turns: turn 0, the
-        // only turn whose prompt carried no history, produced 0 of 40
-        // collapsed lines, while turns 1-5 produced 28 of 200 (14%) reaching
-        // for one template -- "same zone, same time, same nothing", "same
-        // level, same class, same zone, same chat". Handed a conversation it
-        // was not trained on, structural mirroring of the previous speaker is
-        // the cheapest locally-coherent thing the model can emit.
-        //
-        // Not a sampler or prompt problem, both ruled out by measurement
-        // before this change: DRY at 0.8 made it worse (1.7% -> 4.6%), and two
-        // explicit anti-mirroring instructions moved it 7% -> 7% and 10%. The
-        // construction is nearly absent from the training data (4 rows of
-        // 2129), so it is not learned content being reproduced -- it is what
-        // out-of-distribution output looks like here.
-        //
-        // The cost is real: turns no longer see each other, so a script reads
-        // as several lines on a theme rather than a thread. Restoring the
-        // thread means teaching the shape, not sending it -- multi-turn rows
-        // in the dataset, then a retrain.
+        // No history: each turn is generated fresh with only the previous line
+        // as its trigger, the single-turn shape almost every training row has.
+        // Replaying prior turns put the model out of distribution and it
+        // mirrored the previous speaker ("same zone, same time, same nothing":
+        // 14% of later turns, 0% of first turns, 2026-09-17); DRY and
+        // anti-mirroring instructions did not help. The cost: turns no longer
+        // see each other. Restoring the thread needs multi-turn training rows.
         for (int i = 0; i < turnCount; ++i)
         {
             HsLLMResult result = GeneratorCallLLM(cfg, systemPrompt, ScriptTurnRagBlock(i == 0 ? "" : prevText),
@@ -1473,7 +1441,7 @@ uint32_t Hs_RunUnusedRowEvictionSweep()
 uint32_t Hs_RunConsumedScriptSweep()
 {
     QueryResult countResult = CharacterDatabase.Query(
-        "SELECT COUNT(*) FROM hside_script WHERE consumed_at < NOW() - INTERVAL {} DAY",
+        "SELECT COUNT(*) FROM hside_script WHERE generated_at IS NOT NULL AND consumed_at < NOW() - INTERVAL {} DAY",
         kHsConsumedScriptRetentionDays);
     uint32_t count = countResult ? (*countResult)[0].Get<uint32_t>() : 0;
 
@@ -1482,7 +1450,9 @@ uint32_t Hs_RunConsumedScriptSweep()
     // so it cannot disagree with the first about a script consumed right at
     // the boundary, and it also picks up turns orphaned any other way.
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-    trans->Append("DELETE FROM hside_script WHERE consumed_at < NOW() - INTERVAL {} DAY",
+    // Generated scripts only: a hand-authored one is re-armed, never spent
+    // (hs_script.cpp's RearmHandAuthoredScripts).
+    trans->Append("DELETE FROM hside_script WHERE generated_at IS NOT NULL AND consumed_at < NOW() - INTERVAL {} DAY",
         kHsConsumedScriptRetentionDays);
     trans->Append("DELETE t FROM hside_script_turn t LEFT JOIN hside_script s ON s.id = t.script_id "
                   "WHERE s.id IS NULL");

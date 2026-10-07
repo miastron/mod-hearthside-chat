@@ -1,7 +1,9 @@
 #ifndef MOD_HS_HANDLER_H
 #define MOD_HS_HANDLER_H
 
+#include "hs_queue.h"
 #include "ScriptMgr.h"
+#include <cstdint>
 #include <string>
 
 // Chat hooks. /say, party/raid, and guild all gather real-player-gated
@@ -42,5 +44,14 @@ public:
     HsDeliveryWorldScript() : WorldScript("HsDeliveryWorldScript") {}
     void OnUpdate(uint32_t diff) override;
 };
+
+// World thread only. Runs a direct-address line through the same tiers a real
+// chat hook does (reflex, grounded, corpus fallback, inference) without the
+// hook's own candidate selection, chance roll or interrupt handling. For
+// `.hearthside ask`: the sender is a GUID and a name, not a Player*, so it
+// may be an offline character, in which case the reply is generated and
+// logged to hside_chat_log but has nobody to be delivered to.
+void Hs_DispatchDirectReply(Player* bot, uint64_t senderGuid, const std::string& senderName,
+                            const std::string& msg, HsReplyChannel channel);
 
 #endif // MOD_HS_HANDLER_H

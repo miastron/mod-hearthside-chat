@@ -21,7 +21,8 @@ class Player;
 // of AzerothCore dependencies.
 
 // True if this player is driven by mod-playerbots rather than a human client.
-// Null-safe.
+// Also true for a bot whose PlayerbotAI is not attached yet (inside
+// OnPlayerLogin), by the same account test Hs_IsBotGuid uses. Null-safe.
 bool Hs_IsBot(Player* p);
 
 // True if this player is a bot that HearthsideChat.ExcludeNames does not keep

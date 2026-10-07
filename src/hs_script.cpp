@@ -193,10 +193,30 @@ namespace
     // function returns. It fires at most a couple of times a minute (30s
     // scan x a proximity chance roll), so the blocking write is not on any
     // hot path.
+    // Hand-authored scripts (generated_at NULL, base/hside_script_handwritten.sql)
+    // are a fixed set rather than a reserve the generator refills, so once
+    // every one has played they come back -- but only those last played more
+    // than two days ago, so nobody standing in one place hears a rerun.
+    // DirectExecute: the caller re-reads straight after (repo CLAUDE.md).
+    // `channelCondition` is a literal built from Hs_ChannelColumnName, never
+    // player input.
+    bool RearmHandAuthoredScripts(std::string const& channelCondition)
+    {
+        CharacterDatabase.DirectExecute(
+            "UPDATE hside_script SET consumed_at = NULL, consumed_by_zone = NULL, consumed_witness = NULL "
+            "WHERE generated_at IS NULL AND consumed_at < NOW() - INTERVAL 2 DAY AND " + channelCondition);
+        QueryResult left = CharacterDatabase.Query(
+            "SELECT 1 FROM hside_script WHERE consumed_at IS NULL AND " + channelCondition + " LIMIT 1");
+        return left != nullptr;
+    }
+
     void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
     {
         QueryResult idResult = CharacterDatabase.Query(
             "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL ORDER BY id LIMIT 1");
+        if (!idResult && RearmHandAuthoredScripts("channel IS NULL"))
+            idResult = CharacterDatabase.Query(
+                "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL ORDER BY RAND() LIMIT 1");
         if (!idResult)
             return; // reserve dry: running dry is the correct failure mode, not an error
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
@@ -447,6 +467,10 @@ namespace
         QueryResult idResult = CharacterDatabase.Query(
             "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel = '{}' ORDER BY id LIMIT 1",
             channelColumn);
+        if (!idResult && RearmHandAuthoredScripts("channel = '" + channelColumn + "'"))
+            idResult = CharacterDatabase.Query(
+                "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel = '{}' ORDER BY RAND() LIMIT 1",
+                channelColumn);
         if (!idResult)
             return; // reserve dry
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();

@@ -122,17 +122,9 @@ void Hs_ClearArchetypeOverride(uint64_t botGuid);
 HsArchetype Hs_ArchetypeForBot(uint64_t botGuid);
 
 // The archetype tag for the LLM prompt: "Archetype: <enumName>", and nothing
-// else. This module targets a model fine-tuned on Claude/finetune/*.jsonl,
-// and this is the exact form all 1949 archetype-tagged training rows use, so
-// the tag is what the tune keys off.
-//
-// It is not a description and must not become one again. Until 2026-09-14
-// this emitted prose ("You mostly talk about: <talksAbout>." plus a profanity
-// directive) -- a form the tune had never seen, which flattened every
-// archetype into one voice at runtime. Hs_ArchetypePromptLine's own comment
-// in hs_archetype.cpp carries the measurement; `talksAbout` and
-// `profanityLevel` remain the dataset's source of truth and simply are not
-// restated in the prompt.
+// else -- the exact form every archetype-tagged training row uses. Not a
+// description (see Hs_ArchetypePromptLine); `talksAbout` and `profanityLevel`
+// stay the dataset's source of truth and are not restated in the prompt.
 //
 // Byte-identical for every bot sharing the archetype (until the table is
 // reloaded). hs_llm.cpp appends it to the system turn as its second line,

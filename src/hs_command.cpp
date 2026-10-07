@@ -12,6 +12,7 @@
 #include "hs_experience.h"
 #include "hs_gen_validate.h"
 #include "hs_generator.h"
+#include "hs_handler.h"
 #include "hs_identity_store.h"
 #include "hs_memory_store.h"
 #include "hs_opener.h"
@@ -535,6 +536,40 @@ namespace
         return true;
     }
 
+
+    // A whisper to a bot as if `sender` had typed it, through the same tiers
+    // a real one takes (Hs_DispatchDirectReply). Lets the module be tested
+    // end to end with no client connected: the sender may be any character,
+    // online or not, and the reply lands in hside_chat_log (inference) or the
+    // debug log (every tier) either way.
+    bool HandleHearthsideAsk(ChatHandler* handler, std::string senderName, std::string botName, Tail text)
+    {
+        if (text.empty())
+        {
+            handler->PSendSysMessage("[HearthsideChat] Usage: .hearthside ask <sender> <bot> <text>");
+            return true;
+        }
+
+        Player* bot = ObjectAccessor::FindPlayerByName(botName);
+        if (!bot || !bot->IsInWorld() || !Hs_IsBot(bot))
+        {
+            handler->PSendSysMessage("[HearthsideChat] Bot '{}' not found, not online, or not a bot.", botName);
+            return true;
+        }
+
+        ObjectGuid senderGuid = sCharacterCache->GetCharacterGuidByName(senderName);
+        if (senderGuid.IsEmpty() || Hs_IsBotGuid(senderGuid.GetRawValue()))
+        {
+            handler->PSendSysMessage("[HearthsideChat] Sender '{}' not found or is a bot.", senderName);
+            return true;
+        }
+        if (CharacterCacheEntry const* entry = sCharacterCache->GetCharacterCacheByGuid(senderGuid))
+            senderName = entry->Name; // the stored capitalization, as a real hook would see it
+
+        Hs_DispatchDirectReply(bot, senderGuid.GetRawValue(), senderName, std::string(text), HsReplyChannel::Whisper);
+        handler->PSendSysMessage("[HearthsideChat] {} -> {}: {}", senderName, bot->GetName(), std::string(text));
+        return true;
+    }
 }
 
 HsCommandScript::HsCommandScript() : CommandScript("HsCommandScript") {}
@@ -555,6 +590,7 @@ ChatCommandTable HsCommandScript::GetCommands() const
         { "pin",        HandleHearthsidePin,       SEC_GAMEMASTER, Console::Yes },
         { "unpin",      HandleHearthsideUnpin,     SEC_GAMEMASTER, Console::Yes },
         { "evict-run",  HandleHearthsideEvictRun,  SEC_GAMEMASTER, Console::Yes },
+        { "ask",        HandleHearthsideAsk,       SEC_GAMEMASTER, Console::Yes },
     };
 
     static ChatCommandTable rootTable =

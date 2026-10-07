@@ -8,9 +8,11 @@
 #include "hs_tier.h"
 #include "hs_locale.h"
 #include "hs_prune.h"
+#include "hs_style.h"
 
 #include "Battleground.h"
 #include "Creature.h"
+#include "GameTime.h"
 #include "Group.h"
 #include "GroupReference.h"
 #include "GroupMgr.h"
@@ -23,11 +25,14 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "Random.h"
 #include "SharedDefines.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
+#include <iterator>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -227,6 +232,17 @@ namespace
     // Hs_TryEnqueue's isEvent flag suppresses the history append, the
     // interaction-score bump, and the first-meeting record, so an origin
     // that is itself a bot can never seed identity state.
+    std::string GuildLoginGreeting(std::string name)
+    {
+        std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
+        static const char* const kForms[] = { "hey %", "o/", "yo %", "hi %", "wb", "hey", "o/ %", "sup %", "wb %", "heya" };
+        std::string form = kForms[urand(0, std::size(kForms) - 1)];
+        size_t at = form.find('%');
+        if (at != std::string::npos)
+            form.replace(at, 1, name);
+        return form;
+    }
+
     void FireEvent(HsEventType primaryType, Player* origin, std::vector<HsEventActor>& actors, HsReplyChannel channel)
     {
         if (!g_HsEnable || !origin || !origin->IsInWorld() || actors.empty())
@@ -241,7 +257,8 @@ namespace
         // A ceiling is permission, not budget. Events have no corpus
         // fallback: a canned line reacting to a specific death or roll
         // would have to be generic enough to be wrong most of the time, so
-        // anything below inference is silence, not a downgrade.
+        // anything below inference is silence, not a downgrade. (A guild
+        // login is the one event a canned line fits; see below.)
         HsTier ceiling = g_HsMaxTierEvents;
         if (!HsTierAllows(ceiling, HsTier::Inference))
             return;
@@ -318,6 +335,21 @@ namespace
             // rather than the origin, which for a duel or a solo death is the
             // bot itself.
             Player* sender = (counterparts[index] && counterparts[index]->IsInWorld()) ? counterparts[index] : origin;
+
+            // A guildmate coming online gets what guild chat actually says to
+            // that: "o/", "hey <name>". The tuned model has no reaction rows
+            // for a login and answered it as a guild join ("welcome to the
+            // guild, finally", realm 2026-10-07); there is nothing a model
+            // adds to a greeting that a short list does not.
+            if (primaryType == HsEventType::GuildLogin)
+            {
+                std::string line = GuildLoginGreeting(sender->GetName());
+                HsStyleResult style = Hs_ApplyStyle(candidates[index].botGuid, bot->GetName(), sender->GetName(), line,
+                    Hs_BuildStyleContext(candidates[index].botGuid, bot->IsInCombat()));
+                Hs_DeliverReflexReply(candidates[index].botGuid, sender->GetGUID().GetRawValue(), channel, style.text);
+                g_EventsFiredThisSession.fetch_add(1);
+                continue;
+            }
 
             HsReplyRequest request = Hs_MakeReplyRequest(bot, sender, channel, candidates[index].trigger);
             request.isEvent            = true;
@@ -1364,6 +1396,8 @@ void HsEventTradeHandler::OnPlayerAfterMoveItemToInventory(Player* player, Item*
 void HsEventLoginHandler::OnPlayerLogin(Player* player)
 {
     if (!g_HsEnable || !player || Hs_IsBot(player) || !player->GetGuildId())
+        return;
+    if (GameTime::GetUptime().count() < static_cast<int64>(g_HsGuildLoginStartupDelayMinutes) * MINUTE)
         return;
 
     ObjectGuid guid    = player->GetGUID();

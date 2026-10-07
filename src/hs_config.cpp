@@ -45,6 +45,7 @@ std::string g_HsLLMSystemPrompt =
 // live-tunable without a rebuild.
 uint32_t g_HsLLMHistoryTurns  = 2;
 float     g_HsLLMDryMultiplier = 0.0f;
+float     g_HsLLMTemperature   = 0.5f;
 
 float    g_HsSayDistance             = 20.0f; // review C9: matches the OnStartup default and the .conf.dist value
 uint32_t  g_HsReplyChanceWhisper      = 100;
@@ -191,6 +192,7 @@ HsTier g_HsMaxTierEvents             = HsTier::Inference;
 // 90/min, not measurements.
 uint32_t g_HsEventBucketRepliesPerMinute = 15;
 uint32_t g_HsEventBucketBurstCapacity    = 4;
+uint32_t g_HsGuildLoginStartupDelayMinutes = 15;
 
 // Deliberately under the event bucket's 15/min: this budget is shared by all
 // three unprompted-speech producers (ambient, openers, scripted scenes), and
@@ -345,6 +347,7 @@ void Hs_LoadHearthsideChatConfig()
     g_HsLLMSystemPrompt     = sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.SystemPrompt", g_HsLLMSystemPrompt);
     g_HsLLMHistoryTurns     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.LLM.HistoryTurns", 2);
     g_HsLLMDryMultiplier    = sConfigMgr->GetOption<float>("HearthsideChat.LLM.DryMultiplier", 0.0f);
+    g_HsLLMTemperature      = sConfigMgr->GetOption<float>("HearthsideChat.LLM.Temperature", 0.5f);
 
     g_HsSayDistance            = sConfigMgr->GetOption<float>("HearthsideChat.Say.Distance", 20.0f);
     g_HsReplyChanceWhisper     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.ReplyChance.Whisper", 100);
@@ -398,6 +401,7 @@ void Hs_LoadHearthsideChatConfig()
 
     g_HsEventBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.RepliesPerMinute", 15);
     g_HsEventBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.Bucket.BurstCapacity", 4);
+    g_HsGuildLoginStartupDelayMinutes = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Events.GuildLogin.StartupDelayMinutes", 15);
 
     g_HsAmbientBucketRepliesPerMinute = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.Bucket.RepliesPerMinute", 6);
     g_HsAmbientBucketBurstCapacity    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Ambient.Bucket.BurstCapacity", 2);

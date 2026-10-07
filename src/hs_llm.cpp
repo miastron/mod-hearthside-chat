@@ -65,16 +65,6 @@ namespace
         return s;
     }
 
-    // Fewshot() lived here until 2026-09-14. It taught register to a
-    // general-purpose instruct model in context; a model fine-tuned on
-    // Claude/finetune/*.jsonl has that register in its weights, and zero
-    // training rows contain a few-shot block, so sending nine pairs put
-    // every live request into a shape the tune had never seen. Removed
-    // with the archetype-tag fix -- see Hs_ArchetypePromptLine in
-    // hs_archetype.cpp for the measurement that motivated both. The nine
-    // pairs themselves are preserved in Tests/opener_diversity.py as
-    // LIVE_FEWSHOT, so the old shape stays reproducible for comparison.
-
     // ------------------------------------------------------------------
     // Chat-markup dialects for apiType=llamacpp's native /completion.
     //
@@ -425,10 +415,9 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
     json body;
     std::vector<std::pair<std::string, std::string>> headers;
 
-    // Sampler profile: min_p alone beat both Qwen's and Meta's recommended
-    // profiles on measured opener diversity. These must travel in the
-    // request body rather than rely on whatever the operator last typed on
-    // the llama-server command line.
+    // Sampler: min_p 0.05 with cfg.temperature (HearthsideChat.LLM.Temperature
+    // for replies). Sent in the request body so it never depends on the
+    // llama-server command line.
     if (isLlamaCpp)
     {
         url += "/completion";
@@ -460,9 +449,14 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         std::string prompt        = RenderPrompt(dialect, std::move(turns));
         json        stopSequences = StopSequencesFor(dialect);
 
+        // The exact bytes the model sees, for comparing a live prompt with
+        // the training shape. Debug level: enable with
+        // Logger.module.hearthside.llm=5 in worldserver.conf.
+        LOG_DEBUG(kHsLogLlm, "[HearthsideChat] Prompt: {}", json(prompt).dump());
+
         body["prompt"]       = prompt;
         body["n_predict"]    = cfg.maxTokens;
-        body["temperature"]  = 1.0;
+        body["temperature"]  = cfg.temperature;
         body["top_p"]        = 1.0;
         body["top_k"]        = 0;
         body["min_p"]        = 0.05;
@@ -506,7 +500,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["model"]    = cfg.model;
         body["messages"] = messages;
         body["stream"]   = false;
-        body["options"]  = { {"temperature", 1.0}, {"top_p", 1.0}, {"top_k", 0}, {"min_p", 0.05}, {"num_predict", cfg.maxTokens} };
+        body["options"]  = { {"temperature", cfg.temperature}, {"top_p", 1.0}, {"top_k", 0}, {"min_p", 0.05}, {"num_predict", cfg.maxTokens} };
 
         if (!cfg.apiKey.empty())
             headers.emplace_back("Authorization", "Bearer " + cfg.apiKey);
@@ -528,7 +522,7 @@ HsLLMResult Hs_CallLLM(const HsLLMConfig& cfg, const std::string& systemPrompt,
         body["model"]       = cfg.model;
         body["messages"]    = messages;
         body["max_tokens"]  = cfg.maxTokens;
-        body["temperature"] = 1.0;
+        body["temperature"] = cfg.temperature;
         body["top_p"]       = 1.0;
         body["stream"]      = false;
 

@@ -55,6 +55,7 @@ struct HsLLMConfig
     int         timeoutSec;
     int         maxTokens;    // output cap (a GPU budget, not a hard chop)
     float       dryMultiplier; // DRY penalty multiplier, 0.0f leaves DRY off (llamacpp only)
+    float       temperature = 1.0f; // sampling temperature; min_p 0.05 is fixed beside it
 
     // Which chat-markup dialect to hand-assemble for apiType=llamacpp's
     // native /completion (that endpoint bypasses llama.cpp's own template
@@ -99,9 +100,7 @@ struct HsHistoryTurn
 // shape every fine-tuning row uses ("Archetype: MENTOR" on the reply path,
 // "Mode: SMALLTALK"/"Mode: CORPUS_LINE" on the generator's -- the generator
 // passes its per-call layer here too). Pass an empty string for no second
-// line. Before 2026-09-14 this went as a separate system turn after a
-// few-shot block, a shape no training row contains; see hs_llm.cpp's
-// systemTurn comment.
+// line.
 // grammar is an optional GBNF grammar constraining what the sampler may
 // emit -- added 2026-09-14 for the card-fact fields whose answer must come
 // from a fixed vocabulary (hs_identity.h's HsCardFactAsk).
