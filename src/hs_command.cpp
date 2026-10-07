@@ -502,7 +502,7 @@ namespace
             for (Player* bot : bots)
             {
                 Channel* theirs = Hs_ResolveChannelForDelivery(bot, kind);
-                if (!theirs || !bot->IsInChannel(theirs))
+                if (!theirs || !Hs_PlayerIsOnChannel(bot, theirs))
                     continue; // resolves to an instance it never actually joined
                 ++byInstance[theirs->GetName()];
                 if (mine && theirs == mine)
@@ -517,7 +517,7 @@ namespace
             {
                 handler->PSendSysMessage("  {}: '{}' -- you are {}a member, {} bot(s) share it.",
                     Hs_ChannelKindName(kind), mine->GetName(),
-                    player->IsInChannel(mine) ? "" : "NOT ", sharedWithYou);
+                    Hs_PlayerIsOnChannel(player, mine) ? "" : "NOT ", sharedWithYou);
             }
 
             // Where the bots that aren't with you actually are. This is the

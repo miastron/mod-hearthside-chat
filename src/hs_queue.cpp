@@ -1705,12 +1705,9 @@ HsChannelScanPick Hs_PickChannelInstance(HsChannelKind kind, size_t minBots, boo
 
         // Self-resolved and self-tested (see Hs_ResolveChannelForDelivery's
         // comment in hs_queue.h): the channel is resolved from candidate's
-        // own zone, so Player::IsInChannel(Channel*)'s type-only comparison
-        // is sound here even though it cannot tell instances apart in
-        // general -- candidate holds at most one channel of this DBC type at
-        // a time, and it can only be the one just asked about for its zone.
+        // own zone, then membership of that exact instance is checked.
         Channel* channel = Hs_ResolveChannelForDelivery(candidate, kind);
-        if (!channel || !candidate->IsInChannel(channel))
+        if (!channel || !Hs_PlayerIsOnChannel(candidate, channel))
             continue;
 
         std::vector<Player*>& pool = botsByInstance[channel];
@@ -1743,9 +1740,9 @@ HsChannelScanPick Hs_PickChannelInstance(HsChannelKind kind, size_t minBots, boo
 
         if (requireRealPlayer)
         {
-            // Per-instance, not per-type: entry.first was resolved from a
-            // bot, so a bare Player::IsInChannel would accept a human
-            // standing in a different zone's same-type channel.
+            // Per-instance: entry.first was resolved from a bot, and a
+            // type-only test would accept a human standing in a different
+            // zone's same-type channel.
             bool heard = false;
             for (Player* player : realPlayers)
             {
@@ -1780,13 +1777,11 @@ bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel
     if (!player || !channel)
         return false;
 
-    // Half one: has this player joined *any* channel of this DBC type -- i.e.
-    // not `/leave`d it. Type-only, so it cannot tell one zone's General from
-    // another's; that is half two's job. Deliberately first: it is a walk of
-    // a list that holds a handful of entries, and it short-circuits the
-    // resolve below (a DBC lookup plus a ChannelMgr string match) for every
-    // player who has left the channel.
-    if (!player->IsInChannel(channel))
+    // Half one: is this player a member of this exact instance -- i.e. joined
+    // it and not `/leave`d it. Deliberately first: a hash lookup, and it
+    // short-circuits the resolve below (a DBC lookup plus a ChannelMgr string
+    // match) for every player who has left the channel.
+    if (!Hs_PlayerIsOnChannel(player, channel))
         return false;
 
     // Half two: does this player's *current zone* resolve to this exact
@@ -1794,6 +1789,33 @@ bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel
     // human, and a miss must not hand them a "not on channel" system message
     // just because a scan looked at their zone.
     return Hs_ResolveChannelForDelivery(player, kind, /*sendPacketOnMiss=*/false) == channel;
+}
+
+namespace
+{
+    // Channel::IsOn is private. An explicit instantiation may name a private
+    // member ([temp.explicit]), and the friend function it defines hands the
+    // member pointer back out. Defined in exactly one translation unit, here.
+    struct HsChannelIsOnTag
+    {
+        using type = bool (Channel::*)(ObjectGuid) const;
+        friend type HsGet(HsChannelIsOnTag);
+    };
+
+    template <typename Tag, typename Tag::type Member>
+    struct HsPrivateAccess
+    {
+        friend typename Tag::type HsGet(Tag) { return Member; }
+    };
+
+    template struct HsPrivateAccess<HsChannelIsOnTag, &Channel::IsOn>;
+}
+
+bool Hs_PlayerIsOnChannel(Player const* player, Channel const* channel)
+{
+    if (!player || !channel)
+        return false;
+    return (channel->*HsGet(HsChannelIsOnTag{}))(player->GetGUID());
 }
 
 void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)

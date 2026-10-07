@@ -510,12 +510,8 @@ namespace
     // instance for `kind` (Hs_ResolveChannelForDelivery, hs_queue.h: the
     // same zone-qualified resolution delivery uses, so "grouped by resolved
     // Channel*" is equivalent to "members of the same channel instance").
-    // Bot candidates are tested with Player::IsInChannel(Channel*) against a
-    // channel resolved from that same candidate -- sound despite its
-    // type-only comparison, since a candidate holds at most one channel of a
-    // given DBC type at a time (see hs_queue.h's Hs_ResolveChannelForDelivery
-    // comment for why that self-consistency argument doesn't extend to
-    // testing a *different* player against it). No proximity or combat
+    // Bot candidates are tested for membership of a channel resolved from
+    // that same candidate (Hs_PlayerIsOnChannel, hs_queue.h). No proximity or combat
     // check (§4.17's channel cast needn't be co-located). Only alive,
     // same team, and not already mid-script (either mechanism).
     //

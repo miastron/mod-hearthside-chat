@@ -390,11 +390,25 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
 // call once per candidate and which their own comments flag as by far the
 // most expensive test in the loop.
 //
+// 2026-10-07: Player::IsInChannel no longer exists. It was a playerbots-only
+// core patch, and the 2026-09-23 core merge (azerothcore-wotlk f1b18a2ea)
+// dropped it. Half one is now Hs_PlayerIsOnChannel below, which answers the
+// stricter question this comment wished for: membership of this exact
+// instance. Half two is kept as it was.
+//
 // Self-resolved call sites (hs_ambient.cpp, hs_script.cpp, hs_command.cpp)
 // deliberately do not route through this function: they need the resolved
 // Channel* itself to group by instance, and already spell out the same two
 // halves with a single resolve. Calling this there would resolve twice.
 bool Hs_IsInChannelInstance(Player* player, HsChannelKind kind, Channel* channel);
+
+// True if `player` is a member of this exact channel instance -- the core's
+// own Channel::IsOn, which is private. Reached through the standard
+// explicit-instantiation access idiom in hs_queue.cpp rather than a core
+// patch, so a future core merge cannot silently delete it the way it deleted
+// Player::IsInChannel; if Channel::IsOn is ever renamed the build breaks
+// loudly at that one line instead.
+bool Hs_PlayerIsOnChannel(Player const* player, Channel const* channel);
 
 // Why a channel scan found nothing. Every one of these is a silent `return`
 // at the call site, and an operator seeing no Trade or General traffic
