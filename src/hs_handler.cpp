@@ -41,6 +41,8 @@
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 
+#include <algorithm>
+#include <cctype>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -647,6 +649,18 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     if (urand(0, 99) >= g_HsReplyChanceWhisper)
         return true;
+
+    // mod-playerbots acts on a whisper that starts with "invite" from anyone
+    // (PlayerbotAI::IsAllowedCommand) and sends a group invite itself; a
+    // reply on top contradicted it ("i dont really do invites" beside the
+    // invite, realm 2026-10-07). A guild request is not that command's
+    // business, so it still gets an answer.
+    {
+        std::string lower = msg;
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+        if (lower.rfind("invite", 0) == 0 && lower.find("guild") == std::string::npos)
+            return true;
+    }
 
     TryDispatch(receiver, player, msg, HsReplyChannel::Whisper);
     return true;

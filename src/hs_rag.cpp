@@ -131,7 +131,11 @@ namespace
                 "prot", "ret", "resto", "disc", "sub", "demo", "bm", "mm",
                 "sv", "ele", "enh", "affli", "destro",
                 // measured collision: "down the street" -> Razorfen Downs
-                "down", "downs"
+                "down", "downs",
+                // measured on the realm 2026-10-07: "where you off to?" ->
+                // Gear Optimization ("off hand"), "just go north" -> Dire
+                // Maul ("dm north"); the other directions share the shape
+                "off", "north", "south", "east", "west"
             };
 
             std::unordered_set<std::string> out;

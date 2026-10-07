@@ -91,6 +91,15 @@ namespace
             { "afk",       { "k", "ok" } },
             { "gtg",       { "cya", "later", "o/" } },
             { "gn",        { "gn", "night", "cya" } },
+            // A random bot holds no guild rank that can invite, and the model
+            // agreed to anyway ("sure, just ask me", realm 2026-10-07).
+            { "can i join your guild",   { "cant ginv, not an officer", "no invite rights sry", "not an officer, cant inv u" } },
+            { "can i join ur guild",     { "cant ginv, not an officer", "no invite rights sry", "not an officer, cant inv u" } },
+            { "invite me to your guild", { "cant ginv, not an officer", "no invite rights sry", "not an officer, cant inv u" } },
+            { "invite me to ur guild",   { "cant ginv, not an officer", "no invite rights sry", "not an officer, cant inv u" } },
+            { "ginv",                    { "cant ginv, not an officer", "no invite rights sry" } },
+            { "ginv pls",                { "cant ginv, not an officer", "no invite rights sry" } },
+            { "guild invite",            { "cant ginv, not an officer", "no invite rights sry" } },
             { "huh",       { "nvm", "nvm lol", "nothing" } },
             // A compliment, not a question: these phrases also sit in
             // hside_grounded_question's GEAR set, whose answers are written
