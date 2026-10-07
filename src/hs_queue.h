@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 class Channel;
@@ -117,6 +118,11 @@ struct HsReplyRequest
 // place the topic-gate facts, the rpg status and the settled test are read
 // for a reply -- four callers used to spell the same reads out by hand.
 HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt);
+// The bot's primary professions with their skill values, in a fixed order;
+// WotLK allows at most two. Shared by the topic-gate facts and the grounded
+// "what professions" answer.
+std::vector<std::pair<std::string, uint32_t>> Hs_PrimaryProfessions(Player* bot);
+
 // Same, for a sender known only by GUID and name: `.hearthside ask` from the
 // console speaks as a character that need not be online.
 HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::string& senderName,

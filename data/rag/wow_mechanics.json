@@ -2,99 +2,99 @@
   {
     "id": "mechanic_reputation",
     "title": "Reputation System",
-    "content": "The reputation system in World of Warcraft tracks your standing with various factions throughout Azeroth. Reputation is gained through quests, killing enemies, and completing faction-specific tasks. Reputation levels range from Hated to Exalted, with each level unlocking better rewards. Many factions offer unique mounts, tabards, titles, and access to exclusive vendors. Managing reputation is important for endgame progression and accessing rare items.",
-    "keywords": ["reputation", "faction", "standing", "hated", "exalted", "rewards", "mounts", "titles", "quests", "killing enemies", "faction specific tasks", "levels", "unlocking", "unique", "tabards", "exclusive vendors", "managing", "endgame progression", "rare items"],
+    "content": "Reputation runs Hated, Hostile, Unfriendly, Neutral, Friendly, Honored, Revered, Exalted. From Neutral it takes 3,000 points to Friendly, 6,000 to Honored, 12,000 to Revered and 21,000 to Exalted, 42,000 in all. Each faction's quartermaster sells more as you climb, and humans gain 10% extra reputation.",
+    "keywords": ["reputation", "rep", "exalted", "revered", "standing", "faction standing"],
     "tags": ["mechanic", "reputation", "factions", "progression"]
   },
   {
     "id": "mechanic_auction_house",
     "title": "Auction House",
-    "content": "The Auction House is a player-driven marketplace where players can buy and sell items, materials, and equipment. Located in major cities, it allows players to post auctions with custom prices and durations. Players can search for specific items, place bids, or buyout items immediately. The Auction House is essential for obtaining rare materials, selling crafted goods, and managing the in-game economy. Understanding market prices and timing auctions properly is key to successful trading.",
-    "keywords": ["auction", "house", "marketplace", "buy", "sell", "bid", "buyout", "economy"],
+    "content": "Every faction capital has an Auction House, such as Stormwind's Trade District and Orgrimmar's Valley of Strength, and Booty Bay, Gadgetzan and Everlook have neutral ones shared by both factions; Dalaran and Shattrath have none. Auctions last 12, 24 or 48 hours, the deposit is lost if the item doesn't sell, and the house keeps 5% of a sale (15% at a neutral house).",
+    "keywords": ["auction house", "ah", "auction", "auctions", "auctioneer", "buyout", "neutral ah"],
     "tags": ["mechanic", "economy", "trading", "market"]
   },
   {
     "id": "mechanic_quests",
     "title": "Quest System",
-    "content": "Quests are the primary way players progress through World of Warcraft. Quests are obtained from NPCs and involve various objectives like killing enemies, gathering items, or exploring areas. Completing quests rewards experience, gold, items, and reputation. Quests are color-coded by difficulty: gray (too low level), green (easy), yellow (appropriate level), orange (challenging), and red (too high level). Quest chains tell stories and guide players through zones and storylines.",
-    "keywords": ["quests", "objectives", "experience", "gold", "rewards", "quest chains", "storylines", "npcs", "killing enemies", "gathering items", "exploring areas", "completing", "color coded", "difficulty", "gray", "green", "yellow", "orange", "red", "tell stories", "guide players", "zones"],
+    "content": "Quest givers show a yellow ! when they have a quest and a yellow ? when you can turn one in. A quest's level shows as a color: grey is too low to give much experience, green is easy, yellow is your level, orange is hard and red is well above you. The log holds 25 quests, and most can be shared with your party.",
+    "keywords": ["quest", "quests", "quest giver", "quest log", "turn in"],
     "tags": ["mechanic", "progression", "story", "objectives"]
   },
   {
     "id": "mechanic_talents",
     "title": "Talent System",
-    "content": "The talent system allows players to specialize their characters by spending talent points in three trees: one for each specialization. Talent points are earned every level starting from level 10. Each talent provides unique abilities, stat bonuses, or ability improvements. Players can respec (reset) their talents at class trainers for gold. Choosing the right talents is crucial for optimizing character performance in different content types like PvP, raiding, or solo play.",
-    "keywords": ["talents", "specialization", "talent points", "trees", "respec", "optimization", "characters", "spending", "earned every level", "level 10", "unique abilities", "stat bonuses", "ability improvements", "reset", "class trainers", "gold", "character performance", "content types", "pvp", "raiding", "solo play"],
+    "content": "Characters get one talent point per level from level 10, 71 by level 80, spent across their class's three trees. A class trainer resets talents for gold: 1 gold the first time, rising with each respec to a 50 gold cap and dropping back over time. Dual specialization at 40 lets you keep two builds.",
+    "keywords": ["talents", "talent", "talent points", "talent tree", "talent build", "respec", "reset talents"],
     "tags": ["mechanic", "character", "specialization", "progression"]
   },
   {
     "id": "mechanic_glyphs",
     "title": "Glyph System",
-    "content": "Glyphs are magical inscriptions that modify spell and ability effects. Players can learn glyph recipes from inscription or purchase them from vendors. Glyphs are applied to spellbooks and provide various effects like changing spell visuals, adding procs, or modifying cooldowns. Both major and minor glyphs are crafted by scribes and traded freely; major glyphs change how a combat ability behaves, while minor glyphs cover convenience and cosmetic effects. Glyphs allow players to customize their abilities and optimize for specific playstyles or content.",
-    "keywords": ["glyphs", "inscription", "spells", "abilities", "modification", "customization"],
+    "content": "Each character has three major and three minor glyph slots: one of each opens at level 15, another major at 30 and 80, and another minor at 50 and 70. Glyphs are made by scribes with Inscription and sold on the auction house, and putting a new glyph in a slot destroys the old one.",
+    "keywords": ["glyph", "glyphs", "major glyph", "minor glyph", "glyph slot", "glyph slots"],
     "tags": ["mechanic", "customization", "spells", "inscription"]
   },
   {
     "id": "mechanic_achievements",
     "title": "Achievement System",
-    "content": "Achievements are goals and accomplishments that players can complete for rewards. They range from simple tasks like reaching level 80 to complex feats like defeating raid bosses on heroic difficulty. Achievements are organized into categories and provide points, titles, mounts, and other rewards. Many achievements are part of larger meta-achievements. The achievement system encourages exploration, mastery, and trying different aspects of the game.",
-    "keywords": ["achievements", "goals", "accomplishments", "rewards", "titles", "mounts", "exploration"],
+    "content": "Press Y to open achievements; they belong to each character and award points, and some give titles, pets or mounts. For example World Explorer gives the title the Explorer, and Higher Learning, reading the books hidden in Dalaran, gives the Kirin Tor Familiar pet. Feats of Strength give no points.",
+    "keywords": ["achievement", "achievements", "achievement points", "cheevo", "cheevos", "feat of strength", "achievement title"],
     "tags": ["mechanic", "goals", "rewards", "progression"]
   },
   {
     "id": "mechanic_pvp",
     "title": "Player vs Player Combat",
-    "content": "Player vs Player (PvP) combat allows players to fight against other players. PvP can occur in the open world, battlegrounds, or arenas. Players gain honor points and ranking through victories. Honor is used to purchase PvP gear and weapons. Battlegrounds like Warsong Gulch and Arathi Basin offer structured PvP experiences. PvP requires different strategies than PvE, focusing on crowd control, burst damage, and survivability.",
-    "keywords": ["pvp", "player vs player", "battlegrounds", "honor", "ranking", "arenas", "combat", "fight against other players", "open world", "honor points", "victories", "purchase pvp gear", "weapons", "warsong gulch", "arathi basin", "structured", "strategies", "pve", "crowd control", "burst damage", "survivability"],
+    "content": "Players fight each other in battlegrounds, arenas, Wintergrasp and the open world. Killing enemy players who give honor and winning objectives earns Honor points, spent with PvP vendors on gear. On a PvP realm contested zones flag you automatically; on a PvE realm you flag yourself with /pvp.",
+    "keywords": ["pvp", "player vs player", "honorable kill", "hk", "pvp combat"],
     "tags": ["mechanic", "combat", "pvp", "battlegrounds"]
   },
   {
     "id": "mechanic_mounts",
     "title": "Mount System",
-    "content": "Mounts allow players to travel faster across Azeroth. Players learn riding skills from riding trainers and purchase mounts from vendors or earn them through achievements. Mounts come in various types: ground mounts, flying mounts, and aquatic mounts. Epic mounts are rare and prestigious. Mount speed increases with riding skill level. Some mounts have special abilities or appearances. Collecting mounts is a popular pastime for many players.",
-    "keywords": ["mounts", "riding", "travel", "ground", "flying", "aquatic", "epic"],
+    "content": "Riding is trained in steps: Apprentice (60% ground mounts) at level 20 for 4 gold, Journeyman (100% epic ground) at 40 for 50 gold, Expert (flying) at 60 for 250 gold, Artisan (epic flying) at 70 for 5,000 gold, and Cold Weather Flying, needed to fly in Northrend, at 77 for 1,000 gold. Mounts are bought separately from mount vendors.",
+    "keywords": ["mount", "mounts", "riding", "riding skill", "riding trainer", "apprentice riding", "journeyman riding", "expert riding", "artisan riding", "epic mount", "flying", "flying mount", "learn to fly"],
     "tags": ["mechanic", "travel", "collection", "mounts"]
   },
   {
     "id": "mechanic_pets",
     "title": "Pet System",
-    "content": "Pets are companions that follow players. Hunters tame wild beasts as permanent combat pets, while other classes summon class-specific pets (Warlock demons, the Mage Water Elemental, the Death Knight ghoul). Non-combat vanity pets are obtained separately through quests, vendors, and rare drops, and are purely cosmetic followers -- there is no battle system for them; that arrives only in Mists of Pandaria. Pets add personality and utility to characters.",
-    "keywords": ["pets", "companions", "hunters", "tame", "vanity pets", "cosmetic", "follow players", "wild beasts", "warlock demons", "water elemental", "ghoul", "personality", "utility"],
+    "content": "Hunters learn Tame Beast at level 10 and keep beasts as permanent combat pets; Beast Mastery hunters can also tame exotic beasts. Warlocks summon demons, Death Knights raise a ghoul and frost mages get a Water Elemental. Non-combat companion pets are purely cosmetic followers.",
+    "keywords": ["pet", "pets", "hunter pet", "tame", "tame beast", "demon pet", "warlock pet"],
     "tags": ["mechanic", "companions", "pets", "collection"]
   },
   {
     "id": "mechanic_guilds",
     "title": "Guild System",
-    "content": "Guilds are player organizations that provide social structure and benefits. Guild members can chat, share quests, and access guild banks. Guild leaders can promote members to different ranks with varying permissions, and control which ranks may withdraw from each guild bank tab. Guilds have no levels, perks, or reputation of their own in this expansion; a guild is a social roster with shared storage and a chat channel. Being in a guild provides a sense of community and shared goals.",
-    "keywords": ["guilds", "guild bank", "guild ranks", "guild leader", "guild permissions", "guild invite", "guild chat", "player organizations"],
+    "content": "To found a guild, buy a guild charter from a guild master in a capital and collect signatures from other players, then turn it in. The guild leader sets ranks and what each rank may do, including which guild bank tabs it can withdraw from. Guilds in Wrath have no levels or perks.",
+    "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions"],
     "tags": ["mechanic", "social", "guilds", "community"]
   },
   {
     "id": "mechanic_instances",
     "title": "Instance System",
-    "content": "Instances are separate areas of the game world that provide focused gameplay experiences. Dungeons are 5-player instances with quests and bosses. Raids are larger instances for coordinated groups. Instances have different difficulty levels and lockout timers. A player saved to a dungeon can reset it manually from the group portrait menu, but a raid lockout cannot be extended and simply expires on its weekly reset. Instances provide better loot and challenges than open world content. They require coordination and strategy to complete successfully.",
-    "keywords": ["instances", "dungeons", "raids", "lockout", "difficulty", "coordination"],
+    "content": "Dungeons are five-player and Wrath raids are 10 or 25. Heroic dungeon lockouts reset daily and raid lockouts weekly; a normal dungeon can be reset from your portrait menu, but you can enter at most five instances per hour.",
+    "keywords": ["instance", "instances", "lockout", "raid lockout", "raid id", "instance reset", "reset instance", "too many instances", "saved to"],
     "tags": ["mechanic", "instances", "group_content", "difficulty"]
   },
   {
     "id": "mechanic_world_events",
     "title": "World Events",
-    "content": "World Events are large-scale events that affect the entire game world. Examples include the Scourge Invasion, the Ahn'Qiraj War Effort, and seasonal events like Hallow's End or Brewfest. World Events involve special quests, bosses, and rewards. They bring players together for massive coordinated efforts. Participating in world events provides unique items, achievements, and experiences. These events create memorable moments in the game's history.",
-    "keywords": ["world events", "scourge invasion", "ahnqiraj", "seasonal", "hallows end", "brewfest", "large scale events", "affect entire game world", "ahn qiraj war effort", "special quests", "bosses", "rewards", "bring players together", "massive coordinated efforts", "participating", "unique items", "achievements", "experiences", "memorable moments", "game history"],
+    "content": "Yearly holidays, all on the in-game calendar: Lunar Festival (Feb 1-14), Love is in the Air (Feb 10-23), Children's Week (Apr 30-May 6), Midsummer Fire Festival (Jun 21-Jul 4), Brewfest (Sep 20-Oct 4), Hallow's End (Oct 18-31), Pilgrim's Bounty (Nov 21-27) and the Feast of Winter Veil (Dec 15-Jan 2).",
+    "keywords": ["world event", "world events", "holiday", "holidays", "seasonal event", "calendar", "event calendar"],
     "tags": ["mechanic", "events", "world", "seasonal"]
   },
   {
     "id": "mechanic_profession_specializations",
     "title": "Profession Specializations",
-    "content": "Many professions have specializations that provide unique recipes and abilities. Blacksmithing has Armorsmithing and Weaponsmithing. Leatherworking has Dragonscale, Elemental, and Tribal. Tailoring has Mooncloth, Shadoweave, and Spellfire. Engineering has Goblin and Gnomish. Alchemy has potions, elixirs, and transmutation. Choosing a specialization focuses your profession on specific types of items and unlocks exclusive recipes.",
-    "keywords": ["profession specializations", "blacksmithing", "leatherworking", "tailoring", "engineering", "alchemy", "unique recipes", "abilities", "armorsmithing", "weaponsmithing", "dragonscale", "elemental", "tribal", "mooncloth", "shadoweave", "spellfire", "goblin", "gnomish", "potions", "elixirs", "transmutation", "choosing", "focuses", "specific types", "exclusive recipes"],
+    "content": "Several crafts have a specialization with its own recipes: Blacksmithing has Armorsmith and Weaponsmith (then Axe, Mace or Sword), Leatherworking has Dragonscale, Elemental and Tribal, Tailoring has Mooncloth, Shadoweave and Spellfire, Engineering has Goblin and Gnomish, and Alchemy has Elixir, Potion and Transmutation Master.",
+    "keywords": ["profession specialization", "armorsmith", "weaponsmith", "goblin engineering", "gnomish engineering", "transmute master", "elixir master", "potion master", "mooncloth", "shadoweave", "spellfire", "dragonscale", "tribal leatherworking", "elemental leatherworking"],
     "tags": ["mechanic", "professions", "specializations", "crafting"]
   },
   {
     "id": "mechanic_currency",
     "title": "Currency Systems",
-    "content": "World of Warcraft has multiple currency systems beyond gold. Honor points buy PvP gear and arena points buy rated gear, while Emblems -- earned from heroic dungeons and raids -- buy PvE gear; the Emblem tier has advanced over Wrath from Heroism through Valor and Conquest to today's Emblem of Triumph and Emblem of Frost, and older Emblems can be traded down to a lower tier at a vendor rather than converting on their own. Various faction tokens exist for specific reputations. Managing multiple currencies is important for gearing up characters efficiently.",
-    "keywords": ["currency", "honor", "arena points", "emblem of triumph", "emblem of frost", "emblems", "gold", "pvp gear", "rated gear", "heroic gear", "tokens", "specific reputations", "raid gear", "managing", "gearing up", "efficiently"],
+    "content": "Besides gold, the currency tab tracks Honor and Arena Points for PvP gear, Emblems of Triumph and Frost for PvE gear, Stone Keeper's Shards from Wintergrasp for its vendors and heirlooms, and Champion's Seals from the Argent Tournament dailies. Honor caps at 75,000.",
+    "keywords": ["currency", "currencies", "badge", "badges", "stone keepers shard", "stone keepers shards", "champions seal", "champions seals", "arena points"],
     "tags": ["mechanic", "currency", "gearing", "progression"]
   }
 ]

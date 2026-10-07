@@ -1,5 +1,7 @@
 #include "hs_topic_gate.h"
 
+#include <cctype>
+
 namespace
 {
     // Player::GetMoney() is copper; 1g = 10000c. Whole gold only: silver
@@ -15,7 +17,29 @@ namespace
 // Claude/finetune/add_context_layers.py's topic_gate_line.
 std::string Hs_TopicGateLine(const HsTopicGateContext& ctx)
 {
-    std::string line = "Item level " + std::to_string(ctx.avgItemLevel) + ".";
+    std::string line;
+    if (ctx.level)
+    {
+        line = "Level " + std::to_string(ctx.level);
+        if (!ctx.raceName.empty())
+            line += " " + ctx.raceName;
+        if (!ctx.className.empty())
+            line += " " + ctx.className;
+        line += ".";
+        if (!ctx.guildName.empty())
+            line += " In the guild " + ctx.guildName + ".";
+        if (!ctx.professions.empty())
+        {
+            std::string p = ctx.professions;
+            p[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(p[0])));
+            line += " " + p + ".";
+        }
+        if (ctx.canRide)
+            line += " Has a mount.";
+        line += " ";
+    }
+
+    line += "Item level " + std::to_string(ctx.avgItemLevel) + ".";
 
     if (!ctx.inGroup)
         line += " Not in a group.";

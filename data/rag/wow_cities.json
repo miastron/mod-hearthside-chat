@@ -3,7 +3,7 @@
     "id": "city_rules_general",
     "title": "Capital Cities",
     "content": "Capital cities are safe hubs, not leveling ground. They contain no hostile mobs to kill and no quest grinding areas. Dueling is disabled inside city limits, so players who want to duel step outside the gates first. Every capital has a bank, auction house, mailbox, inn with an innkeeper for setting your hearthstone, flight master, stable master, guild master, barber shop, and the full set of class and profession trainers. Resting in a city accumulates rested experience faster than resting in the wild.",
-    "keywords": ["capital", "capital city", "city", "cities", "safe", "no mobs", "cannot duel", "dueling disabled", "duel", "hub", "rested experience", "barber shop", "city limits"],
+    "keywords": ["capital", "capital city", "city", "cities", "cannot duel", "dueling disabled", "duel", "rested experience", "barber shop"],
     "tags": ["city", "mechanics", "safe_zone"]
   },
   {

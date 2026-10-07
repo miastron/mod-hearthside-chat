@@ -10,8 +10,7 @@
       "harvest golem",
       "peoples militia",
       "deadmines entrance",
-      "moonbrook",
-      "farmland"
+      "moonbrook"
     ],
     "tags": [
       "zone",
@@ -30,9 +29,7 @@
       "stonewrought dam",
       "the loch",
       "ironbands excavation",
-      "farstrider lodge",
-      "troggs",
-      "dark iron dwarves"
+      "farstrider lodge"
     ],
     "tags": [
       "zone",
@@ -51,9 +48,7 @@
       "the sepulcher",
       "shadowfang keep entrance",
       "pyrewood village",
-      "worgen",
-      "ambermill",
-      "forsaken zone"
+      "ambermill"
     ],
     "tags": [
       "zone",
@@ -71,9 +66,7 @@
       "tranquillien",
       "dead scar",
       "quelthalas",
-      "zulaman entrance",
-      "blood elf leveling",
-      "scourge"
+      "zulaman entrance"
     ],
     "tags": [
       "zone",
@@ -93,8 +86,7 @@
       "blackrock orcs",
       "renders camp",
       "lake everstill",
-      "stonewatch",
-      "gnolls"
+      "stonewatch"
     ],
     "tags": [
       "zone",
@@ -115,7 +107,6 @@
       "raven hill cemetery",
       "morladim",
       "stalvan mistmantle",
-      "worgen",
       "twilight grove"
     ],
     "tags": [
@@ -135,8 +126,6 @@
       "tarren mill",
       "southshore",
       "durnholde keep",
-      "the syndicate",
-      "world pvp",
       "azurelode mine"
     ],
     "tags": [
@@ -154,9 +143,6 @@
     "keywords": [
       "wetlands",
       "menethil harbor",
-      "raptors",
-      "murlocs",
-      "crocolisk",
       "dun modr",
       "grim batol",
       "boat to theramore"
@@ -179,7 +165,6 @@
       "hammerfall",
       "stromgarde keep",
       "boulderfist ogres",
-      "the syndicate",
       "arathi basin"
     ],
     "tags": [
@@ -197,9 +182,6 @@
       "alterac mountains",
       "alterac",
       "ruins of alterac",
-      "the syndicate",
-      "yeti",
-      "ogres",
       "alterac valley entrance",
       "dalaran crater"
     ],
@@ -222,8 +204,6 @@
       "rebel camp",
       "nesingwary",
       "zulgurub entrance",
-      "jungle",
-      "world pvp",
       "bloodsail buccaneers"
     ],
     "tags": [
@@ -243,9 +223,6 @@
       "kargath",
       "uldaman entrance",
       "angor fortress",
-      "black dragonkin",
-      "dark iron",
-      "canyon",
       "lethlor ravine"
     ],
     "tags": [
@@ -265,9 +242,7 @@
       "sunken temple",
       "temple of atalhakkar",
       "misty valley",
-      "pool of tears",
-      "marsh",
-      "dragonkin"
+      "pool of tears"
     ],
     "tags": [
       "zone",
@@ -288,7 +263,6 @@
       "revantusk village",
       "vilebranch trolls",
       "witherbark",
-      "forest trolls",
       "jintha alor"
     ],
     "tags": [
@@ -306,11 +280,8 @@
       "searing gorge",
       "thorium point",
       "thorium brotherhood",
-      "dark iron dwarves",
       "the slag pit",
-      "blackrock depths approach",
-      "thorium mining",
-      "cauldrons"
+      "blackrock depths approach"
     ],
     "tags": [
       "zone",
@@ -330,8 +301,7 @@
       "dreadmaul hold",
       "outland entrance",
       "portal to outland",
-      "rise of the defiler",
-      "felhounds"
+      "rise of the defiler"
     ],
     "tags": [
       "zone",
@@ -351,9 +321,7 @@
       "flame crest",
       "blackrock mountain",
       "blackrock spire entrance",
-      "molten core entrance",
-      "black dragonkin",
-      "dark iron"
+      "molten core entrance"
     ],
     "tags": [
       "zone",
@@ -373,9 +341,7 @@
       "hearthglen",
       "caer darrow",
       "scholomance entrance",
-      "scarlet crusade",
-      "the bulwark",
-      "scourge"
+      "the bulwark"
     ],
     "tags": [
       "zone",
@@ -391,11 +357,8 @@
     "keywords": [
       "eastern plaguelands",
       "lights hope chapel",
-      "argent dawn",
       "stratholme entrance",
       "plaguewood",
-      "tyrs hand",
-      "scourge",
       "corins crossing"
     ],
     "tags": [
@@ -414,9 +377,7 @@
       "karazhan",
       "medivh",
       "medivhs tower",
-      "deadwind",
-      "ogres",
-      "no quests"
+      "deadwind"
     ],
     "tags": [
       "zone",
@@ -434,9 +395,7 @@
       "shattered sun offensive",
       "sunwell plateau",
       "magisters terrace",
-      "daily quests",
-      "sunwell",
-      "level 70 dailies"
+      "sunwell"
     ],
     "tags": [
       "zone",

@@ -2,106 +2,92 @@
   {
     "id": "npc_world_bosses",
     "title": "World Bosses",
-    "content": "World bosses are powerful creatures that spawn in the open world and can be attacked by any player. They drop valuable loot and provide challenging combat. Examples include Doom Lord Kazzak, a Burning Legion commander who roams Hellfire Peninsula in Outland, and Azuregos, a blue dragon in Azshara. World bosses require coordination and often drop epic items. They respawn on timers and are popular targets for guilds and groups.",
-    "keywords": ["world bosses", "lord kazzak", "azuregos", "doom lord kazzak", "loot", "coordination", "powerful creatures", "spawn in open world", "attacked by any player", "valuable loot", "challenging combat", "burning legion", "hellfire peninsula", "azshara", "blue dragon", "require coordination", "epic items", "respawn on timers", "popular targets", "guilds", "groups"],
+    "content": "World bosses spawn in the open world and anyone can attack them: Doom Lord Kazzak roams Hellfire Peninsula, Doomwalker walks Shadowmoon Valley, and Azuregos, a blue dragon, guards Azshara. They need a raid-sized group and respawn on long timers.",
+    "keywords": ["world boss", "world bosses", "kazzak", "doom lord kazzak", "azuregos", "doomwalker"],
     "tags": ["npcs", "bosses", "world", "loot"]
   },
   {
     "id": "npc_rare_elites",
     "title": "Rare Elite Creatures",
-    "content": "Rare elites are powerful monsters that spawn occasionally in the world. They drop rare items and achievements. Examples include The Bone Witch (Icecrown), Snarler (Feralas), or Krellack (Silithus). Rare elites often have unique abilities and require strategy to defeat. Many players hunt rares for achievements and valuable drops.",
-    "keywords": ["rare elites", "bone witch", "snarler", "krellack", "achievements", "drops", "powerful monsters", "spawn occasionally", "rare items", "icecrown", "feralas", "silithus", "unique abilities", "require strategy", "hunt rares", "valuable drops"],
+    "content": "Rare monsters show a silver dragon on their portrait and spawn rarely at fixed spots; elites have a gold dragon and need a group. Killing every Northrend rare earns the Frostbitten achievement, and the most hunted is the Time-Lost Proto-Drake in the Storm Peaks, which drops its own mount.",
+    "keywords": ["rare", "rares", "rare elite", "rare spawn", "elite", "elites", "silver dragon", "frostbitten", "time lost proto drake", "tlpd"],
     "tags": ["npcs", "rare", "elite", "achievements"]
-  },
-  {
-    "id": "npc_quest_givers",
-    "title": "Important Quest Givers",
-    "content": "Many NPCs provide crucial quests that advance storylines or provide rare rewards. Examples include Thrall (Orgrimmar), King Magni Bronzebeard (Ironforge), or Archmage Rhonin, leader of the Kirin Tor in Dalaran. Quest givers often have dialogue that provides lore and context. Some quest givers are part of larger quest chains that span multiple zones.",
-    "keywords": ["quest givers", "thrall", "king magni", "archmage rhonin", "lore", "storylines", "crucial quests", "advance storylines", "rare rewards", "orgrimmar", "ironforge", "dalaran", "dialogue", "provides lore", "context", "larger quest chains", "span multiple zones"],
-    "tags": ["npcs", "quests", "lore", "story"]
   },
   {
     "id": "npc_class_trainers",
     "title": "Class and Profession Trainers",
-    "content": "Class trainers teach new abilities and talents as players level up. Profession trainers teach crafting skills and recipes. Examples include Uthel'nay (mage trainer in Orgrimmar) or Fenthwick (rogue trainer in Ironforge's Forlorn Cavern). Trainers are essential for character progression. Some trainers require reputation or special access.",
-    "keywords": ["class trainers", "profession trainers", "uthelnay", "fenthwick", "abilities", "talents", "teach new abilities", "level up", "crafting skills", "recipes", "mage trainer", "orgrimmar", "rogue trainer", "ironforge", "essential", "character progression", "require reputation", "special access"],
+    "content": "Class trainers stand in the capitals and in each starting zone's main town, and teach new spells and ranks for gold, with new ones every two levels. Profession trainers are in the capitals too, and the Grand Master ranks for Northrend (skill 350 to 450) are taught in Dalaran. Class trainers also reset talents and sell dual spec at 40.",
+    "keywords": ["trainer", "trainers", "class trainer", "profession trainer", "training", "spell ranks", "grand master trainer"],
     "tags": ["npcs", "training", "progression", "skills"]
   },
   {
     "id": "npc_vendors",
     "title": "Special Vendors",
-    "content": "Special vendors sell unique items not available elsewhere. Examples include the Argent Dawn vendors (for Stratholme), the Thorium Brotherhood vendors (for Blackrock Depths), or the Darkmoon Faire vendors. Some vendors require reputation or special currencies. Finding and accessing special vendors is part of efficient gearing strategies.",
-    "keywords": ["special vendors", "argent dawn", "thorium brotherhood", "darkmoon faire", "reputation", "unique items", "not available elsewhere", "stratholme", "blackrock depths", "require reputation", "special currencies", "finding", "accessing", "efficient gearing", "strategies"],
+    "content": "Reputation quartermasters sell recipes, enchants and gear as your standing rises: the Kirin Tor's is Archmage Alvareaux in Dalaran, the Sons of Hodir's is Lillehoff at Dun Niffelem in the Storm Peaks, and the Wyrmrest Accord's is Cielstrasza at Wyrmrest Temple in Dragonblight.",
+    "keywords": ["quartermaster", "quartermasters", "rep vendor", "reputation vendor", "faction vendor", "special vendor"],
     "tags": ["npcs", "vendors", "items", "reputation"]
   },
   {
     "id": "npc_flight_masters",
     "title": "Flight Masters",
-    "content": "Flight masters provide fast travel between locations via gryphons (Alliance) or wyverns (Horde). Learning flight paths is essential for efficient travel. Flight masters are located in major cities and towns. Some flight paths require reputation or quests to unlock. The flight network connects all major zones and makes exploration much easier.",
-    "keywords": ["flight masters", "gryphons", "wyverns", "flight paths", "travel", "exploration", "fast travel", "alliance", "horde", "learning", "essential", "efficient travel", "major cities", "towns", "require reputation", "quests to unlock", "flight network", "connects all major zones", "makes exploration easier"],
+    "content": "Speak to a flight master once to learn that flight path; after that you can fly between any paths you know for a fee that grows with distance. Alliance ride gryphons and hippogryphs, Horde ride wyverns, bats and dragonhawks, and Northrend's flight masters serve both factions in places like Dalaran.",
+    "keywords": ["flight master", "flight masters", "flight path", "flight paths", "fp", "gryphon", "wyvern", "taxi"],
     "tags": ["npcs", "travel", "flight", "exploration"]
   },
   {
     "id": "npc_innkeepers",
     "title": "Innkeepers and Hearthstones",
-    "content": "Innkeepers allow players to set their hearthstone location and provide rest benefits. Hearthstones provide instant travel back to the set location with a cooldown. Rested experience builds at the same rate in any inn or capital city, so the choice of inn is about where it sits, not how fast it rests you. Some inns have special features like mailboxes or vendors. Managing hearthstone location is important for efficient gameplay.",
-    "keywords": ["innkeepers", "hearthstones", "rest", "travel", "cooldown", "mailbox"],
+    "content": "Speak to any innkeeper and make the inn your home to bind your Hearthstone there; the Hearthstone then brings you back to that inn on a 30-minute cooldown. Logging out in an inn or a capital builds rested experience, and innkeepers also sell food and drink.",
+    "keywords": ["innkeeper", "inn", "hearthstone", "hearth", "hs", "set hearth", "set my hearth", "bind hearth"],
     "tags": ["npcs", "travel", "rest", "hearthstone"]
   },
   {
     "id": "npc_banker",
     "title": "Bankers and Guild Banks",
-    "content": "Bankers provide access to personal bank storage. Guild banks provide shared storage for guild members. Bankers are located in major cities. Guild banks have tabs and permissions that can be managed by officers. Using banks effectively is essential for managing large amounts of items and materials.",
-    "keywords": ["bankers", "guild banks", "storage", "tabs", "permissions", "inventory", "personal bank storage", "shared storage", "guild members", "major cities", "managed by officers", "using banks effectively", "managing large amounts", "items", "materials"],
+    "content": "Bankers in every capital and in Dalaran hold your personal bank: 28 slots plus seven bag slots bought with gold. A guild bank, opened at a guild vault, has up to six tabs of 98 slots, bought with gold, and the guild leader sets who can withdraw from each.",
+    "keywords": ["bank", "banker", "bank slots", "bank bag", "bank space", "guild bank", "gbank", "guild vault"],
     "tags": ["npcs", "storage", "guild", "inventory"]
-  },
-  {
-    "id": "npc_auctioneers",
-    "title": "Auctioneers",
-    "content": "Auctioneers manage the auction house where players can buy and sell items. They are located in major cities. Auctioneers handle posting auctions, bidding, and collecting winnings. Understanding how to use the auction house effectively is crucial for the in-game economy. Different cities have different auction houses with varying activity levels.",
-    "keywords": ["auctioneers", "auction house", "buy", "sell", "bid", "economy", "manage", "players can buy and sell", "located in major cities", "posting auctions", "bidding", "collecting winnings", "understanding", "use effectively", "crucial", "in game economy", "different cities", "varying activity levels"],
-    "tags": ["npcs", "economy", "trading", "auction"]
   },
   {
     "id": "npc_stable_masters",
     "title": "Stable Masters",
     "content": "Stable masters hold a hunter's tamed beasts, letting one hunter keep several pets and swap between them. They do nothing for mounts, which live in the spellbook once learned. Stables are found in most towns and every capital. Swapping at a stable is how a hunter changes to a pet better suited to the fight ahead.",
-    "keywords": ["stable master", "stable", "hunter pet", "stabled pet", "swap pet"],
+    "keywords": ["stable master", "stable", "stabled pet", "swap pet", "stable slot", "stable slots"],
     "tags": ["npcs", "mounts", "pets", "storage"]
   },
   {
     "id": "npc_lore_figures",
     "title": "Important Lore Figures",
-    "content": "Many NPCs are important figures in Warcraft lore. Examples include Medivh (the Last Guardian), Illidan Stormrage, or Sylvanas Windrunner. These characters have rich backstories and often provide quests or dialogue that advances the game's narrative. Learning about lore figures enhances the gaming experience and understanding of the world.",
-    "keywords": ["lore figures", "medivh", "illidan", "sylvanas", "backstories", "narrative", "important figures", "warcraft lore", "last guardian", "illidan stormrage", "sylvanas windrunner", "rich backstories", "provide quests", "dialogue", "advances the game", "learning about", "enhances gaming experience", "understanding of the world"],
+    "content": "Wrath's story centers on Arthas Menethil, the Lich King, waiting on the Frozen Throne atop Icecrown Citadel. Along the way players face Malygos, the blue Dragon Aspect, in the Eye of Eternity and the Old God Yogg-Saron beneath Ulduar, while Tirion Fordring leads the Argent Crusade and Darion Mograine the Knights of the Ebon Blade.",
+    "keywords": ["lore", "lich king lore", "arthas", "tirion fordring", "darion mograine", "malygos lore", "yogg saron lore", "illidan", "sylvanas"],
     "tags": ["npcs", "lore", "story", "characters"]
   },
   {
     "id": "npc_faction_leaders",
     "title": "Faction Leaders",
-    "content": "Faction leaders guide their organizations and provide quests and reputation. Examples include Cairne Bloodhoof (Thunder Bluff), Tyrande Whisperwind (Darnassus), or Varian Wrynn (Stormwind). Faction leaders often have complex storylines and political motivations. Interacting with faction leaders helps players understand the geopolitical landscape of Azeroth.",
-    "keywords": ["faction leaders", "cairne bloodhoof", "tyrande whisperwind", "varian wrynn", "politics", "guide their organizations", "provide quests", "reputation", "thunder bluff", "darnassus", "stormwind", "complex storylines", "political motivations", "interacting with", "helps players understand", "geopolitical landscape", "azeroth"],
+    "content": "Alliance leaders: King Varian Wrynn in Stormwind, King Magni Bronzebeard in Ironforge, High Tinker Mekkatorque for the gnomes, Tyrande Whisperwind in Darnassus and Prophet Velen in the Exodar. Horde leaders: Warchief Thrall in Orgrimmar, Cairne Bloodhoof in Thunder Bluff, Sylvanas Windrunner in the Undercity, Lor'themar Theron in Silvermoon and Vol'jin of the Darkspear trolls.",
+    "keywords": ["faction leader", "faction leaders", "who leads", "who rules", "mekkatorque", "voljin", "lorthemar", "lor themar", "cairne", "varian"],
     "tags": ["npcs", "factions", "leaders", "politics"]
   },
   {
     "id": "npc_merchants",
     "title": "Specialized Merchants",
-    "content": "Specialized merchants sell specific types of goods. Weapon merchants, armorers, reagent vendors, poison vendors. Some merchants are only available in certain locations or require special access. Finding the right merchants is important for gearing up and obtaining necessary supplies. Different merchants offer different quality and selection of goods.",
-    "keywords": ["specialized merchants", "weapons", "armor", "reagents", "poisons", "supplies", "sell specific types", "weapon merchants", "armorers", "reagent vendors", "poison vendors", "certain locations", "require special access", "finding the right", "important for gearing up", "obtaining necessary", "different quality", "selection of goods"],
+    "content": "General goods vendors sell food, drink and bags, and reagent vendors carry class reagents. Rogues buy poisons from poison vendors and hunters buy arrows and bullets from ammo vendors. Armorers and weaponsmiths repair your gear, and any vendor buys your loot.",
+    "keywords": ["reagent vendor", "reagents", "poison vendor", "poisons", "ammo", "ammo vendor", "arrows", "bullets", "repair", "repairs", "general goods"],
     "tags": ["npcs", "merchants", "goods", "supplies"]
   },
   {
     "id": "npc_guards",
     "title": "City Guards and Sentries",
-    "content": "Guards protect cities and provide security. They attack hostile players and creatures. Guards have different levels and abilities based on the city. Some guards provide directions or information. Guards help maintain order in cities and make them safe for players. Different races have different guard appearances and behaviors.",
-    "keywords": ["city guards", "sentries", "security", "protection", "directions", "order", "protect cities", "attack hostile players", "creatures", "different levels", "abilities", "based on the city", "provide directions", "information", "maintain order", "safe for players", "different races", "guard appearances", "behaviors"],
+    "content": "Guards in capitals and towns attack enemy-faction players who are flagged and hostile creatures that wander in. Ask any guard for directions and it marks the nearest bank, inn, trainer, flight master or auction house on your minimap.",
+    "keywords": ["guard", "guards", "city guard", "ask a guard", "directions"],
     "tags": ["npcs", "guards", "security", "cities"]
   },
   {
     "id": "npc_transport",
     "title": "Transportation NPCs",
-    "content": "Various NPCs provide transportation services. Boat captains, zeppelin masters, portal trainers. Examples include the zeppelin between Orgrimmar and Undercity, or the boat from Booty Bay to Ratchet. Transportation NPCs make long-distance travel faster and more convenient. Some transportation requires tickets or has schedules.",
-    "keywords": ["transportation", "boat captains", "zeppelin masters", "portals", "tickets", "schedules", "provide transportation services", "portal trainers", "examples include", "zeppelins", "orgrimmar", "undercity", "boat", "booty bay", "ratchet", "long distance travel", "faster", "more convenient", "requires tickets", "has schedules"],
+    "content": "Boats and zeppelins are free. To Northrend, Alliance sail from Stormwind Harbor to Valiance Keep in Borean Tundra or from Menethil Harbor to Valgarde in Howling Fjord; Horde fly from Orgrimmar to Warsong Hold or from the Undercity to Vengeance Landing. The neutral Booty Bay-Ratchet boat links the old continents, and Shattrath has portals to your faction's capitals.",
+    "keywords": ["boat", "boats", "zeppelin", "zeppelins", "zep", "get to northrend", "go to northrend", "transport", "transportation"],
     "tags": ["npcs", "transport", "travel", "convenience"]
   }
 ]

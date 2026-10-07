@@ -3,6 +3,7 @@
 #include "hs_bot.h"
 #include "hs_botchain.h"
 #include "hs_config.h"
+#include "hs_corpus.h"        // Hs_ClassNameFor
 #include "hs_engagement.h"
 #include "hs_event.h"
 #include "hs_experience.h"
@@ -22,6 +23,8 @@
 #include "DBCStores.h"        // §4.17 channel delivery: sChatChannelsStore (zone-qualified channel name)
 #include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
 #include "Group.h"            // Hs_MakeReplyRequest: topic-gate group facts
+#include "Guild.h"            // Hs_MakeReplyRequest: guild name
+#include "GuildMgr.h"
 #include "Language.h"         // §4.17 channel delivery: LANG_CHANNEL_CITY
 #include "Log.h"
 #include "Map.h"              // Hs_MakeReplyRequest: topic-gate instance facts
@@ -843,6 +846,11 @@ namespace
             cfg.temperature   = g_HsLLMTemperature;
 
             std::vector<HsHistoryTurn> history = HistorySnapshot(req.botGuid, req.senderGuid);
+            // A follow-up is trained on exactly one prior exchange (solo/_engagement.txt), so
+            // it gets the last one only; two put it off shape and it filled with "what do u
+            // want" (realm 2026-10-07).
+            if (req.isFollowUp && history.size() > 1)
+                history.erase(history.begin(), history.end() - 1);
 
             g_ReactiveWorkerBusy.store(true);
             HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, modelTrigger);
@@ -1158,6 +1166,44 @@ void Hs_QueueShutdown()
     // of the whole queue's worth.
 }
 
+std::vector<std::pair<std::string, uint32_t>> Hs_PrimaryProfessions(Player* bot)
+{
+    static const std::pair<uint32_t, const char*> kProfessions[] = {
+        { SKILL_ALCHEMY, "alchemy" },       { SKILL_BLACKSMITHING, "blacksmithing" },
+        { SKILL_ENCHANTING, "enchanting" }, { SKILL_ENGINEERING, "engineering" },
+        { SKILL_HERBALISM, "herbalism" },   { SKILL_INSCRIPTION, "inscription" },
+        { SKILL_JEWELCRAFTING, "jewelcrafting" }, { SKILL_LEATHERWORKING, "leatherworking" },
+        { SKILL_MINING, "mining" },         { SKILL_SKINNING, "skinning" },
+        { SKILL_TAILORING, "tailoring" },
+    };
+    std::vector<std::pair<std::string, uint32_t>> out;
+    for (auto const& prof : kProfessions)
+        if (bot->HasSkill(prof.first))
+            out.emplace_back(prof.second, bot->GetSkillValue(prof.first));
+    return out;
+}
+
+namespace
+{
+    char const* RaceNameFor(uint8_t race)
+    {
+        switch (race)
+        {
+            case RACE_HUMAN:         return "human";
+            case RACE_ORC:           return "orc";
+            case RACE_DWARF:         return "dwarf";
+            case RACE_NIGHTELF:      return "night elf";
+            case RACE_UNDEAD_PLAYER: return "undead";
+            case RACE_TAUREN:        return "tauren";
+            case RACE_GNOME:         return "gnome";
+            case RACE_TROLL:         return "troll";
+            case RACE_BLOODELF:      return "blood elf";
+            case RACE_DRAENEI:       return "draenei";
+            default:                 return "";
+        }
+    }
+}
+
 HsReplyRequest Hs_MakeReplyRequest(Player* bot, Player* sender, HsReplyChannel channel, const std::string& prompt)
 {
     return Hs_MakeReplyRequest(bot, sender->GetGUID().GetRawValue(), sender->GetName(), channel, prompt);
@@ -1185,6 +1231,19 @@ HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::
     // free of AzerothCore headers for its standalone harness, which is why
     // the Player*-reading half lives here rather than there.
     HsTopicGateContext& gate = req.topicGate;
+    gate.level     = bot->GetLevel();
+    gate.raceName  = RaceNameFor(bot->getRace());
+    gate.className = Hs_ClassNameFor(bot->getClass());
+    if (uint32_t guildId = bot->GetGuildId())
+        if (Guild* guild = sGuildMgr->GetGuildById(guildId))
+            gate.guildName = guild->GetName();
+    for (auto const& prof : Hs_PrimaryProfessions(bot))
+    {
+        if (!gate.professions.empty())
+            gate.professions += " and ";
+        gate.professions += prof.first + " " + std::to_string(prof.second);
+    }
+    gate.canRide = bot->GetSkillValue(SKILL_RIDING) >= 75;
     gate.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
     if (Group* group = bot->GetGroup())
     {

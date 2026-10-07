@@ -3,14 +3,14 @@
     "id": "spec_arms_warrior",
     "title": "Arms Warrior",
     "content": "Arms is the two-handed warrior tree, built around Mortal Strike and the healing debuff it leaves. Overpower punishes a target that dodges and Rend bleeds it, while Sweeping Strikes spreads damage across a pack. Bladestorm is the deep talent: a channelled spin that hits everything nearby and cannot be interrupted by most crowd control.",
-    "keywords": ["arms warrior", "arms spec", "mortal strike", "bladestorm", "sweeping strikes", "overpower", "two handed warrior"],
+    "keywords": ["arms warrior", "mortal strike", "bladestorm", "sweeping strikes", "overpower", "two handed warrior"],
     "tags": ["spec", "warrior"]
   },
   {
     "id": "spec_fury_warrior",
     "title": "Fury Warrior",
     "content": "Fury dual-wields and runs on Bloodthirst and Whirlwind, spending rage about as fast as it builds. Titan's Grip is the tree's signature: it allows two-handed weapons in both hands at a hit penalty. Death Wish and Rampage push damage higher, the first by taking more of it.",
-    "keywords": ["fury warrior", "fury spec", "bloodthirst", "titans grip", "death wish", "rampage", "dual wield warrior"],
+    "keywords": ["fury warrior", "bloodthirst", "titans grip", "death wish", "rampage", "dual wield warrior"],
     "tags": ["spec", "warrior"]
   },
   {

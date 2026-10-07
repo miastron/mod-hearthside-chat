@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <string>
 
-// §4.13's topic gating for the reactive (LLM) tier: gear, group membership/
-// leadership, in-instance, gold, and zone. This file is what actually states
-// those facts at runtime; the other items PLAN.md §4.13 covers are handled
-// elsewhere (level by archetype eligibility, hs_archetype.h; combat by the
-// style pass's `care` offset, hs_style.h).
+// §4.13's topic gating for the reactive (LLM) tier: who the bot is (level,
+// race, class, guild, professions, riding), then gear, group, instance,
+// gold and zone. Without the first part "what lvl are u" or "what class are
+// you" reached the model with no true answer and it invented one, or read a
+// near-empty item level as being new to the game (realm 2026-10-07).
 //
 // Same technique used elsewhere in the module (hs_queue.cpp's
 // RpgStatusHint, hs_corpus.h's placeholders): state true facts, never an
@@ -33,6 +33,12 @@
 // through HsQueuedRequest to the worker thread untouched.
 struct HsTopicGateContext
 {
+    uint8_t     level        = 0;      // 0 = unknown: the identity part is left out
+    std::string raceName;              // lowercase, e.g. "night elf"
+    std::string className;             // lowercase, e.g. "death knight"
+    std::string guildName;             // empty = no guild (stated by omission, never as a negative)
+    std::string professions;           // e.g. "herbalism 120 and mining 95"; empty = none
+    bool        canRide      = false;  // riding skill >= 75
     uint32_t    avgItemLevel = 0;      // gear
     bool        inGroup      = false;  // group membership
     bool        isGroupLeader = false; // group leadership; meaningless if !inGroup
@@ -43,10 +49,10 @@ struct HsTopicGateContext
 };
 
 // Builds the fact line appended to personaLine (hs_queue.cpp's WorkerLoop),
-// after the archetype line and RPG status hint. Never empty: every field
-// in HsTopicGateContext always has a true value to state, positive or
-// negative (unlike RpgStatusHint, which omits a line for a status too
-// generic to be worth stating).
+// after the archetype line and RPG status hint. Never empty. The identity
+// facts lead because they change least (prompt-cache prefix); guild,
+// professions and riding are stated only when present, so the model is
+// never handed an invented negative.
 std::string Hs_TopicGateLine(const HsTopicGateContext& ctx);
 
 #endif // MOD_HS_TOPIC_GATE_H

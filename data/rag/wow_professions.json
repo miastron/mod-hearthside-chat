@@ -2,184 +2,169 @@
   {
     "id": "profession_alchemy",
     "title": "Alchemy Profession",
-    "content": "Alchemy is a primary profession in World of Warcraft that allows players to create potions, elixirs, flasks, and transmutation recipes. Key skills include creating healing potions, mana potions, combat elixirs, and guardian elixirs. Master Alchemists can create powerful flasks that provide major stat bonuses. Alchemy requires herbs gathered by Herbalism and is essential for raiding and PvP.",
-    "keywords": ["alchemy", "potions", "elixirs", "flasks", "herbs", "transmutation", "mana", "healing"],
-  "tags": ["profession", "crafting", "consumables", "raiding", "all classes"]
+    "content": "Alchemists turn herbs into potions, elixirs and flasks, so the profession pairs with Herbalism. Its Mixology perk makes the flasks and elixirs an alchemist knows stronger and longer-lasting on them, and transmutes turn materials into rarer ones, such as Titanium. Grand Master alchemy is taught in Dalaran.",
+    "keywords": ["alchemy", "alchemist", "alch", "transmute", "transmutes", "transmutation", "mixology"],
+    "tags": ["profession", "crafting", "consumables", "raiding", "all classes"]
   },
   {
     "id": "profession_blacksmithing",
     "title": "Blacksmithing Profession",
-    "content": "Blacksmithing is a primary profession focused on creating weapons, armor, and tools from metal ores. Blacksmiths can craft swords, axes, maces, plate armor, shields, and various tools. Specializations include Armorsmithing and Weaponsmithing. High-level blacksmiths create epic weapons and armor sets essential for end-game content.",
-    "keywords": ["blacksmithing", "weapons", "armor", "plate", "tools", "metal", "ore", "warrior", "paladin"],
+    "content": "Blacksmiths make plate and mail armor, weapons and the Eternal Belt Buckle from bars smelted out of ore, so it pairs with Mining. Trainers are in most capitals, the Grand Master rank (skill 350 to 450) is taught in Dalaran, and at 400 skill a blacksmith can add a socket to their own bracers and gloves.",
+    "keywords": ["blacksmithing", "blacksmith", "smithing", "socket bracer", "socket gloves", "plate crafting"],
     "tags": ["profession", "crafting", "weapons", "armor", "raiding", "warrior", "paladin"]
   },
   {
     "id": "profession_enchanting",
     "title": "Enchanting Profession",
-    "content": "Enchanting allows players to disenchant magical items to extract dusts, essences, and shards, then use these materials to create enchantments for weapons and armor. Popular enchants include spell power, attack power, critical strike, and stamina bonuses. Enchanting provides essential item enhancements for all classes and is highly profitable on the auction house.",
-  "keywords": ["enchanting", "disenchant", "dust", "essences", "shards", "enchants", "spell power"],
-  "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"]
+    "content": "Enchanters disenchant green and better items into dusts, essences and shards (Infinite Dust, Greater Cosmic Essence and Dream Shards in Northrend, Abyss Crystals from epics) and use them to enchant gear. It needs no gathering profession, and its perk is enchanting your own rings.",
+    "keywords": ["enchanting", "enchanter", "disenchant", "disenchanting", "dust", "infinite dust", "dream shard", "abyss crystal", "cosmic essence", "ring enchant"],
+    "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"]
   },
   {
     "id": "profession_engineering",
     "title": "Engineering Profession",
-    "content": "Engineering is a versatile profession that creates guns, explosives, mechanical devices, and various gadgets. Engineers can build scopes for ranged weapons, explosives for mining, repair bots, and flying machines. Specializations include Goblin and Gnomish engineering, each offering unique recipes. Engineering provides unique items not available through other professions.",
-  "keywords": ["engineering", "guns", "explosives", "gadgets", "scopes", "repair bots", "devices"],
-  "tags": ["profession", "crafting", "devices", "specialized", "all classes"]
+    "content": "Engineers build guns, scopes, explosives and gadgets from mined metal, so it pairs with Mining. Their perk is tinkers only engineers can use, like Hyperspeed Accelerators on gloves and Nitro Boosts on boots, plus the Wormhole Generator: Northrend and the Mekgineer's Chopper or Mechano-Hog motorcycle.",
+    "keywords": ["engineering", "engineer", "engi", "hyperspeed accelerators", "nitro boosts", "wormhole", "wormhole generator", "mechano hog", "mekgineers chopper", "scope", "scopes"],
+    "tags": ["profession", "crafting", "devices", "specialized", "all classes"]
   },
   {
     "id": "profession_herbalism",
     "title": "Herbalism Profession",
-    "content": "Herbalism is a gathering profession that allows players to collect herbs from the world for use in Alchemy and Inscription. Common herbs include Peacebloom, Silverleaf, Briarthorn, and more rare ones like Felweed and Netherbloom. Herbalists can find herb nodes while traveling and track them on the minimap. It's often paired with Alchemy for self-sufficiency.",
-    "keywords": ["herbalism", "herbs", "gathering", "peacebloom", "silverleaf", "briarthorn", "alchemy", "inscription"],
+    "content": "Herbalists gather herbs for Alchemy and Inscription, with Find Herbs showing nodes on the minimap. Northrend herbs include Goldclover, Tiger Lily, Adder's Tongue, Lichbloom, Icethorn and the rare Frost Lotus. The perk Lifeblood is a self-heal.",
+    "keywords": ["herbalism", "herbalist", "herb", "herbs", "herbing", "frost lotus", "lichbloom", "icethorn", "adders tongue", "goldclover", "lifeblood", "find herbs", "peacebloom", "silverleaf"],
     "tags": ["profession", "gathering", "materials", "alchemy", "inscription"]
   },
   {
     "id": "profession_inscription",
     "title": "Inscription Profession",
-    "content": "Inscription creates scrolls, glyphs, vellums, and off-hand books using pigments made from herbs. Inscribers can create glyphs that modify spell effects, research tomes for faster leveling, and Darkmoon cards for unique effects. It's a scribe profession that provides essential spell modifications and cosmetic items.",
-  "keywords": ["inscription", "glyphs", "scrolls", "pigments", "research", "darkmoon cards", "spells"],
-  "tags": ["profession", "crafting", "spell mods", "cosmetic", "all classes"]
+    "content": "Scribes mill herbs, five at a time, into pigments, turn those into inks, and make glyphs, off-hand books, Darkmoon Cards and vellums. Their perk is Master's Inscription shoulder enchants for themselves, and Grand Master Inscription is taught in Dalaran.",
+    "keywords": ["inscription", "scribe", "scribes", "milling", "mill herbs", "pigment", "pigments", "ink", "inks", "darkmoon card", "darkmoon cards", "vellum"],
+    "tags": ["profession", "crafting", "spell mods", "cosmetic", "all classes"]
   },
   {
     "id": "profession_jewelcrafting",
     "title": "Jewelcrafting Profession",
-    "content": "Jewelcrafting creates rings, necklaces, gems, and figurines using gems and metals. Jewelcrafters can cut gems to add socket bonuses, create epic jewelry with powerful stats, and craft trinkets. Unlike blacksmithing or tailoring it has no specializations to pick between, though jewelcrafters do get prismatic gems only they can wear. It's highly valuable for creating high-end gear and auction house profits.",
-    "keywords": ["jewelcrafting", "gems", "rings", "necklaces", "sockets", "jewelry", "trinkets"],
-  "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"]
+    "content": "Jewelcrafters prospect ore, five at a time, for raw gems, cut them, and make rings, necklaces and trinkets, so it pairs with Mining. Their perk is Dragon's Eye gems only they can socket, up to three. Timothy Jones in Dalaran gives a daily quest paying tokens for new designs.",
+    "keywords": ["jewelcrafting", "jewelcrafter", "jc", "prospect", "prospecting", "dragons eye", "dragons eyes", "cut gems"],
+    "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"]
   },
   {
     "id": "profession_leatherworking",
     "title": "Leatherworking Profession",
-    "content": "Leatherworking creates leather and mail armor, bags, and other leather goods using leather from skinning. Leatherworkers can craft armor sets, specialty bags, and drums. Specializations include Dragonscale, Elemental, and Tribal leatherworking, each with unique recipes. Essential for leather-wearing classes and provides good armor options.",
-    "keywords": ["leatherworking", "leather", "armor", "bags", "drums", "mail", "druid", "rogue", "hunter"],
-  "tags": ["profession", "crafting", "armor", "bags", "leather classes", "druid", "rogue", "hunter"]
+    "content": "Leatherworkers make leather and mail armor, armor kits, leg armors like Icescale Leg Armor, and drums from skinned leather, so it pairs with Skinning. Their perk is Fur Lining bracer enchants for themselves.",
+    "keywords": ["leatherworking", "leatherworker", "lw", "fur lining", "leg armor", "armor kit", "drums"],
+    "tags": ["profession", "crafting", "armor", "bags", "leather classes", "druid", "rogue", "hunter"]
   },
   {
     "id": "profession_mining",
     "title": "Mining Profession",
-    "content": "Mining is a gathering profession that collects ores and stones from mineral nodes for use in Blacksmithing, Engineering, and Jewelcrafting. Miners can find copper, tin, iron, gold, and rare ores like adamantite and fel iron. Mining provides essential materials for crafting professions, and Find Minerals puts every nearby node on the minimap as the miner travels.",
-    "keywords": ["mining", "ores", "stones", "copper", "iron", "gold", "adamantite", "blacksmithing", "engineering", "jewelcrafting"],
+    "content": "Miners gather ore and stone from mineral nodes, shown on the minimap with Find Minerals, and smelt it into bars at a forge for Blacksmithing, Engineering and Jewelcrafting. Northrend ores are Cobalt, Saronite and the rare Titanium, and the perk Toughness adds stamina.",
+    "keywords": ["mining", "miner", "ore", "ores", "smelting", "smelt", "cobalt", "saronite", "titanium", "toughness", "find minerals", "mining node"],
     "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"]
   },
   {
     "id": "profession_skinning",
     "title": "Skinning Profession",
-    "content": "Skinning allows players to skin the corpses of beasts, and some dragonkin, for leather and hides used in Leatherworking; humanoids drop cloth instead and cannot be skinned. Skinners can gather light leather, medium leather, heavy leather, and rare hides. It's often paired with Leatherworking for self-sufficiency and provides materials for armor crafting. Skinning is essential for leather-based professions.",
-  "keywords": ["skinning", "leather", "hides", "corpses", "light leather", "medium leather", "leatherworking"],
+    "content": "Skinners skin dead beasts, and some dragonkin, for leather and hides used in Leatherworking; humanoids drop cloth instead. Northrend gives Borean Leather and the rare Arctic Fur, and the perk Master of Anatomy adds critical strike rating.",
+    "keywords": ["skinning", "skinner", "hides", "borean leather", "arctic fur", "master of anatomy"],
     "tags": ["profession", "gathering", "materials", "leatherworking"]
   },
   {
     "id": "profession_tailoring",
     "title": "Tailoring Profession",
-    "content": "Tailoring creates cloth armor, bags, shirts, and other cloth goods from cloth looted off humanoid enemies. Tailors can craft robes, cloaks, bags, and specialty items. Specializations include Mooncloth, Shadoweave, and Spellfire tailoring, each with unique recipes. Essential for cloth-wearing classes like mages, priests, and warlocks.",
-    "keywords": ["tailoring", "cloth", "armor", "bags", "robes", "cloaks", "mage", "priest", "warlock"],
-  "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"]
+    "content": "Tailors sew cloth gear and bags from cloth looted off humanoids, like Frostweave Cloth in Northrend, and need no gathering profession. Their perk is cloak embroideries only they can use, Lightweave, Darkglow and Swordguard, and they make Moonshroud, Ebonweave and Spellweave cloth on a cooldown.",
+    "keywords": ["tailoring", "tailor", "frostweave bag", "embroidery", "lightweave", "darkglow", "swordguard", "moonshroud", "ebonweave", "spellweave"],
+    "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"]
   },
   {
     "id": "profession_cooking",
     "title": "Cooking Profession",
-    "content": "Cooking is a secondary profession that lets players prepare food that provides buffs and stat bonuses. Recipes range from basic breads and stews to powerful feasts that grant raid-wide bonuses. Cooking often uses ingredients gathered from fish and drops and is valuable for raiding and leveling. Some expansions add unique cooking buffs and world event recipes.",
-    "keywords": [
-      "cooking",
-      "food",
-      "recipes",
-      "feasts",
-      "buffs",
-      "stat bonuses",
-      "ingredients",
-      "consumables"
-    ],
-    "tags": [
-      "profession",
-      "secondary",
-      "consumables",
-      "buffs",
-      "raiding"
-    ]
+    "content": "Cooking is a secondary profession anyone can learn alongside two primaries. Food gives Well Fed buffs, and the Fish Feast feeds a whole raid. Many Northrend recipes are bought with Dalaran Cooking Awards from the cooking dailies of Katherine Lee or Awilo Lon'gomba in Dalaran.",
+    "keywords": ["cooking", "cook", "fish feast", "cooking recipe", "cooking recipes", "dalaran cooking award"],
+    "tags": ["profession", "secondary", "consumables", "buffs", "raiding"]
   },
   {
     "id": "profession_fishing",
     "title": "Fishing Profession",
-    "content": "Fishing is a secondary gathering profession that lets players catch fish and other items from water sources. Fish are used as ingredients for Cooking and some crafting recipes. Fishing can also yield rare items, reagents, and collectibles. Specialized lures, poles, and fishing skills improve catch rates and access to rare catches.",
-    "keywords": [
-      "fishing","fish","gathering","poles","lures","catches","ingredients","cooking"],
-    "tags": [
-      "profession",
-      "secondary",
-      "gathering",
-      "materials",
-      "consumables"
-    ]
+    "content": "Learn Fishing from a fishing trainer, buy a Fishing Pole, and cast in any open water; lures like Nightcrawlers add skill for ten minutes. Marcia Chase in Dalaran gives a daily fishing quest, and Stranglethorn Vale's Fishing Extravaganza runs on Sundays.",
+    "keywords": ["fishing", "fish", "fishing pole", "lure", "lures", "fishing skill", "fishing trainer", "fishing extravaganza", "kaluak fishing derby", "nightcrawlers"],
+    "tags": ["profession", "secondary", "gathering", "materials", "consumables"]
   },
   {
     "id": "profession_first_aid",
     "title": "First Aid Profession",
-    "content": "First Aid is a secondary profession every character can learn, used to craft bandages that heal over a short channel. A bandage can be applied in combat, but any damage taken interrupts it, and a bandaged target cannot be bandaged again until the Recently Bandaged debuff falls off. The current top-rank bandage, Dense Frostweave Bandage, needs 450 skill and Frostweave Cloth from Northrend cloth drops. It is especially valuable for classes without a reliable self-heal, and doesn't require reagents beyond the bandage itself.",
-    "keywords": ["first aid","bandages","healing","consumables","out of combat","survival"],
-    "tags": ["profession","secondary","consumables","healing","solo"]
+    "content": "First Aid is a secondary profession every character can learn, used to make bandages from cloth that heal over a short channel. Damage interrupts a bandage, and Recently Bandaged blocks another for a minute. The best one, Dense Frostweave Bandage, is learned from a manual at 450 skill.",
+    "keywords": ["first aid", "bandage", "bandages", "recently bandaged", "frostweave bandage"],
+    "tags": ["profession", "secondary", "consumables", "healing", "solo"]
   },
   {
     "id": "mage_professions_guide",
     "title": "Best Professions for Mages",
-    "content": "For mages, the best professions are typically Tailoring (for cloth armor and bags), Enchanting (for spell power enchants and disenchanting), and Alchemy (for mana potions and flasks). Tailoring allows mages to create their own gear and is essential for cloth wearers. Enchanting provides valuable spell power enchants for weapons and armor. Alchemy creates mana regeneration items crucial for spellcasters.",
-    "keywords": ["mage", "professions", "profession", "tailoring", "enchanting", "alchemy", "cloth", "spell power", "mana"],
+    "content": "For mages the useful perks are Tailoring's Lightweave Embroidery, a spell power proc on the cloak, and Enchanting's ring enchants, and Tailoring makes cloth gear a mage can wear. Jewelcrafting's Dragon's Eyes are another option.",
+    "keywords": ["mage professions", "professions for mage", "best professions for mage", "mage crafting", "mage tradeskills", "mage profession perks"],
     "tags": ["profession", "mage", "cloth classes", "spellcaster"]
   },
   {
     "id": "warrior_professions_guide",
     "title": "Best Professions for Warriors",
-    "content": "For warriors, the best professions are Blacksmithing (for plate armor and weapons), Mining (for ore materials), and Engineering (for utility items and repairs). Blacksmithing allows warriors to create their own plate armor and weapons. Mining provides the essential ores needed for blacksmithing. Engineering offers repair bots and other useful combat utilities.",
-    "keywords": ["warrior", "professions", "profession", "blacksmithing", "mining", "engineering", "plate", "armor", "weapons"],
+    "content": "For warriors, Blacksmithing adds sockets to bracers and gloves and makes plate, Jewelcrafting gives Dragon's Eyes, and Mining's Toughness adds stamina for tanks. Engineering's Hyperspeed Accelerators suit DPS warriors.",
+    "keywords": ["warrior professions", "professions for warrior", "best professions for warrior", "warrior crafting", "warrior tradeskills", "warrior profession perks"],
     "tags": ["profession", "warrior", "plate classes", "melee"]
   },
   {
     "id": "paladin_professions_guide",
     "title": "Best Professions for Paladins",
-    "content": "For paladins, the best professions are Blacksmithing (for plate armor), Mining (for materials), Enchanting (for holy and spell power enchants), and Jewelcrafting (for jewelry and trinkets). Blacksmithing enables paladins to create their own plate armor. Enchanting provides essential spell power and holy enchants. Jewelcrafting offers valuable jewelry with healing and spell power stats.",
-    "keywords": ["paladin", "professions", "profession", "blacksmithing", "mining", "enchanting", "jewelcrafting", "plate", "holy", "healing"],
+    "content": "For paladins, Blacksmithing adds sockets to bracers and gloves and makes plate, and Jewelcrafting gives Dragon's Eyes; holy paladins often add Enchanting for ring enchants or Inscription for shoulder inscriptions.",
+    "keywords": ["paladin professions", "professions for paladin", "best professions for paladin", "paladin crafting", "paladin tradeskills", "paladin profession perks"],
     "tags": ["profession", "paladin", "plate classes", "healer", "tank"]
   },
   {
     "id": "hunter_professions_guide",
     "title": "Best Professions for Hunters",
-    "content": "For hunters, the best professions are Leatherworking (for leather armor), Skinning (for leather materials), Engineering (for guns, scopes, and ammo), and Mining (for engineering materials). Leatherworking allows hunters to create their own leather armor. Engineering provides guns, scopes for better ranged damage, and repair bots. Skinning pairs perfectly with leatherworking for self-sufficiency.",
-    "keywords": ["hunter", "professions", "profession", "leatherworking", "skinning", "engineering", "guns", "scopes", "ammo", "ranged"],
+    "content": "For hunters, Engineering makes guns and scopes and gives Hyperspeed Accelerators, Leatherworking makes mail and Fur Lining, and Jewelcrafting gives Dragon's Eyes. Skinning pairs with Leatherworking.",
+    "keywords": ["hunter professions", "professions for hunter", "best professions for hunter", "hunter crafting", "hunter tradeskills", "hunter profession perks"],
     "tags": ["profession", "hunter", "leather classes", "ranged"]
   },
   {
     "id": "rogue_professions_guide",
     "title": "Best Professions for Rogues",
-    "content": "For rogues, the best professions are Leatherworking (for leather armor), Skinning (for materials), Engineering (for utility gadgets and escape devices), and Enchanting (for agility and critical strike enchants). Leatherworking enables rogues to create their own leather armor. Engineering provides useful gadgets, and rogues pick locks with their own class skill rather than a crafted tool. Enchanting offers agility and critical strike enhancements crucial for rogue damage.",
-    "keywords": ["rogue", "professions", "profession", "leatherworking", "skinning", "engineering", "enchanting", "agility", "critical strike", "stealth"],
+    "content": "For rogues, Leatherworking makes leather gear and gives Fur Lining, Engineering adds Hyperspeed Accelerators and gadgets, and Jewelcrafting gives Dragon's Eyes. Rogues open lockboxes themselves, so they need no key-making profession.",
+    "keywords": ["rogue professions", "professions for rogue", "best professions for rogue", "rogue crafting", "rogue tradeskills", "rogue profession perks"],
     "tags": ["profession", "rogue", "leather classes", "melee", "stealth"]
   },
   {
     "id": "priest_professions_guide",
     "title": "Best Professions for Priests",
-    "content": "For priests, the best professions are Tailoring (for cloth armor), Enchanting (for spell power and intellect enchants), Alchemy (for mana potions), and Inscription (for healing and spell modification glyphs). Tailoring allows priests to create their own cloth armor. Enchanting provides spell power enchants essential for healing and damage. Inscription offers glyphs that modify priest spells and abilities.",
-    "keywords": ["priest", "professions", "profession", "tailoring", "enchanting", "alchemy", "inscription", "healing", "cloth", "spell power"],
+    "content": "For priests, Tailoring makes cloth gear and gives Lightweave Embroidery, Enchanting gives ring enchants, and Inscription gives shoulder inscriptions and glyphs. Jewelcrafting gives Dragon's Eyes.",
+    "keywords": ["priest professions", "professions for priest", "best professions for priest", "priest crafting", "priest tradeskills", "priest profession perks"],
     "tags": ["profession", "priest", "cloth classes", "healer", "caster"]
   },
   {
     "id": "shaman_professions_guide",
     "title": "Best Professions for Shamans",
-    "content": "For shamans, the best professions are Leatherworking (for leather/mail armor), Skinning (for materials), Mining (for blacksmithing/engineering materials), and Enchanting (for spell power enchants). Leatherworking enables shamans to create their own leather or mail armor. Mining provides materials for crafting professions. Enchanting offers spell power enchants crucial for shaman elemental and healing spells.",
-    "keywords": ["shaman", "professions", "profession", "leatherworking", "skinning", "mining", "enchanting", "elemental", "healing", "enhancement"],
+    "content": "For shamans, Leatherworking makes mail and gives Fur Lining, Jewelcrafting gives Dragon's Eyes, and Enchanting gives ring enchants. Skinning or Mining pair with those for materials.",
+    "keywords": ["shaman professions", "professions for shaman", "best professions for shaman", "shaman crafting", "shaman tradeskills", "shaman profession perks"],
     "tags": ["profession", "shaman", "leather classes", "healer", "caster", "melee"]
   },
   {
     "id": "warlock_professions_guide",
     "title": "Best Professions for Warlocks",
-    "content": "For warlocks, the best professions are Tailoring (for cloth armor), Enchanting (for spell power enchants), Alchemy (for mana and health potions), and Jewelcrafting (for gems and trinkets; soulstones are a warlock spell, not a crafted item). Tailoring allows warlocks to create their own cloth armor. Enchanting provides spell power enchants for damage spells. Alchemy creates essential mana and health potions for warlock sustainability.",
-    "keywords": ["warlock", "professions", "profession", "tailoring", "enchanting", "alchemy", "jewelcrafting", "cloth", "spell power", "demonology"],
+    "content": "For warlocks, Tailoring makes cloth gear and gives Lightweave Embroidery, Enchanting gives ring enchants, and Jewelcrafting gives Dragon's Eyes. Soulstones and healthstones are warlock spells, not crafts.",
+    "keywords": ["warlock professions", "professions for warlock", "best professions for warlock", "warlock crafting", "warlock tradeskills", "warlock profession perks"],
     "tags": ["profession", "warlock", "cloth classes", "caster"]
   },
   {
     "id": "druid_professions_guide",
     "title": "Best Professions for Druids",
-    "content": "For druids, the best professions are Leatherworking (for leather armor), Skinning (for materials), Herbalism (for alchemy materials), and Alchemy (for consumables and potions). Leatherworking enables druids to create their own leather armor. Skinning pairs with leatherworking for self-sufficiency. Alchemy provides potions useful for druid healing and mana regeneration in various forms.",
-    "keywords": ["druid", "professions", "profession", "leatherworking", "skinning", "herbalism", "alchemy", "healing", "restoration", "balance"],
+    "content": "For druids, Leatherworking makes leather gear and gives Fur Lining, Jewelcrafting gives Dragon's Eyes, and Enchanting gives ring enchants. Herbalism also heals with Lifeblood.",
+    "keywords": ["druid professions", "professions for druid", "best professions for druid", "druid crafting", "druid tradeskills", "druid profession perks"],
     "tags": ["profession", "druid", "leather classes", "healer", "caster", "melee"]
+  },
+  {
+    "id": "profession_overview",
+    "title": "Professions",
+    "content": "Every character can learn two primary professions and all three secondary ones: Cooking, Fishing and First Aid. Gathering professions are Herbalism, Mining and Skinning; crafting ones are Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking and Tailoring. Skill ranks cap at 75, 150, 225, 300, 375 and 450, the last taught by Grand Master trainers in Dalaran.",
+    "keywords": ["profession", "professions", "prof", "profs", "primary profession", "secondary profession"],
+    "tags": ["profession", "overview"]
   }
 ]

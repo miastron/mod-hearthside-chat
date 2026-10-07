@@ -24,9 +24,19 @@ that history needs to be re-derived to author a new entry. `Tests/verify_rag_aga
 re-runs the checks that can be automated (city mechanics, zone level ranges) against
 `10.0.10.40` over SSH.
 
-**Known gap:** entries nobody has specifically fact-checked still carry the inherited files' overly
-broad keyword lists (see Rule 2 below). Tightening them would help, but do it with the test harness
-open — changing a keyword list changes which entry wins ties on unrelated queries.
+The inherited files' keyword lists (sentence fragments like "in the game", "form long", "hand") and
+their advice-article prose were replaced on 2026-10-07: keywords are now what a player would type,
+content is concrete 3.3.5a facts, and pure-advice or duplicate entries were deleted. Two things that
+pass learned, both measured with `Tests/rag_audit.py`:
+
+- **Every word in a keyword phrase becomes a handle.** `"off hand"` makes `hand` a handle, so "need a
+  hand?" retrieved *Gear Optimization*; `"lvl 80"` made `lvl` one. Put the word in prose instead, or
+  pick a phrase whose every word is safe.
+- **Prose shapes idf too.** Words common in content ("special", "using", "essential") weigh less;
+  stripping them out of the prose made the titles that still carry them ("Special Vendors",
+  "Essential Addons") score higher on chat containing those words, and made content words like
+  "still" or "most" corroborate small talk. Re-run the audit after a content rewrite, not only after a
+  keyword change.
 
 ## Instances and bosses are generated, not hand-written
 
@@ -239,6 +249,16 @@ specifically to catch a real question going quiet.
 Being listed costs an entry nothing when the query also carries a real handle: `"shadow priest"`
 (1.16), `"holy paladin"` (1.15), `"hows blood furnace"` (0.95) and `"is the blood queen hard"`
 (0.87) all resolve normally.
+
+## The chat gate (2026-10-08)
+
+On a player's message (`chatGate`, on by default; the generator passes false), a line that is not
+asking for information -- no `?`, no question opener, more than two words -- retrieves only a
+*named* entry (id prefix `zone_`, `city_`, `instance_`, `boss_`, `bg_`, `event_`), and only on a
+handle that names it: a term at most two entries carry, one of its multi-word keywords, or its
+whole title. "we killed it in one night" no longer retrieves Night Elf Race; "we're running dire
+maul tonight" still retrieves Dire Maul. `Tests/rag_audit.py` measures the effect over every
+player line in the fine-tune dataset (18% -> 3% retrieving, most of the old hits wrong).
 
 ## Why the scoring looks like this
 

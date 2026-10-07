@@ -2,106 +2,99 @@
   {
     "id": "item_tier_sets",
     "title": "Tier Sets",
-    "content": "Tier sets are high-level armor sets obtained from raid bosses. Each tier provides significant stat bonuses when multiple pieces are equipped. Tier 1 (Molten Core), Tier 2 (Blackwing Lair), and Tier 3 (the original 40-player Naxxramas) are the Classic-era sets; the Burning Crusade and Wrath raids continued the numbering with Tier 4 through Tier 10. Tier sets are highly sought after for their power and prestige, and many players collect complete sets for achievements and bragging rights.",
-    "keywords": ["tier sets", "raid armor", "set bonuses", "molten core", "blackwing lair", "ahn qiraj", "naxxramas", "burning crusade", "high level", "stat bonuses", "raid bosses", "power", "prestige", "achievements", "bragging rights", "collect", "complete sets"],
+    "content": "Each class's tier set gives a bonus at 2 and at 4 pieces worn. Wrath has Tier 7 from Naxxramas, Tier 8 from Ulduar, Tier 9 from Trial of the Crusader and Tier 10 from Icecrown Citadel. Tier 9 is bought with Emblems of Triumph and Tier 10 with Emblems of Frost, then upgraded with Marks of Sanctification from ICC bosses.",
+    "keywords": ["tier sets", "tier set", "tier", "t7", "t8", "t9", "t10", "set bonus", "tier bonus", "2pc", "4pc", "marks of sanctification", "tier token", "tier tokens"],
     "tags": ["items", "equipment", "raid", "tier"]
   },
   {
     "id": "item_legendary_weapons",
     "title": "Legendary Weapons",
-    "content": "Legendary weapons are the most powerful items in the game, requiring extensive quests and rare materials to obtain. Examples include Sulfuras, Hand of Ragnaros (assembled after defeating Ragnaros in Molten Core), Thunderfury, Blessed Blade of the Windseeker (pieced together through a Molten Core quest chain), and Atiesh, Greatstaff of the Guardian (a Naxxramas quest reward tied to the archmage Medivh's lore). These weapons have unique appearances, powerful stats, and often special abilities. Obtaining a legendary weapon is a major accomplishment that requires dedication and coordination with other players.",
-    "keywords": ["legendary weapons", "sulfuras", "thunderfury", "atiesh", "ragnaros", "thunderaan", "medivh", "quests", "rare materials", "unique appearances", "powerful stats", "special abilities", "accomplishment", "dedication", "coordination"],
+    "content": "Wrath's legendaries are Val'anyr, Hammer of Ancient Kings, a healer's mace built from 30 Fragments of Val'anyr from 25-player Ulduar, and Shadowmourne, a two-handed axe for warriors, paladins and death knights from a 25-player Icecrown Citadel quest chain. Older ones include Thunderfury, Sulfuras, the Warglaives of Azzinoth from Illidan and Thori'dal from the Sunwell.",
+    "keywords": ["legendary", "legendaries", "shadowmourne", "valanyr", "val anyr", "thunderfury", "sulfuras", "atiesh", "warglaives", "glaives", "thoridal"],
     "tags": ["items", "weapons", "legendary", "rare"]
   },
   {
     "id": "item_profession_tools",
     "title": "Profession Tools",
-    "content": "Some professions need a tool carried in the bags before their recipes work at all: blacksmiths and engineers need a Blacksmith Hammer, enchanters a runed rod matched to their skill, miners a Mining Pick, and skinners a Skinning Knife. Crafting never fails in this game, so a tool is a requirement rather than a bonus to success. Other crafts need no tool of their own but do need the character standing beside the right stationary object, such as an anvil or a forge. Having good tools is essential for professional crafters who want to create high-quality items.",
-    "keywords": ["profession tools", "crafting", "blacksmith hammer", "skinning knife", "mining pick", "runed rod", "anvil", "forge"],
+    "content": "Some professions need a tool in the bags before their recipes work: blacksmiths a Blacksmith Hammer, engineers an Arclight Spanner, enchanters a runed rod matched to their skill, miners a Mining Pick and skinners a Skinning Knife. Smithing and smelting also need you standing beside an anvil or a forge. Crafting never fails.",
+    "keywords": ["profession tool", "profession tools", "blacksmith hammer", "skinning knife", "mining pick", "runed rod", "arclight spanner", "anvil", "forge"],
     "tags": ["items", "professions", "tools", "crafting"]
   },
   {
     "id": "item_mounts_collection",
     "title": "Mount Collection",
-    "content": "World of Warcraft features hundreds of mounts with unique appearances and abilities. Rare mounts like the Ashes of Al'ar (Phoenix), Swift Zulian Tiger, or Deathcharger's Reins are highly prized. Some mounts are obtained through achievements, others through rare drops or expensive purchases. Mount collecting is a popular pastime. Epic flying mounts become available at level 70 with the appropriate riding skill.",
-    "keywords": ["mounts collection", "ashes of al ar", "swift zulian tiger", "deathchargers reins", "phoenix", "unique appearances", "abilities", "rare", "prized", "achievements", "rare drops", "expensive purchases", "pastime", "epic flying", "level 70", "riding skill"],
+    "content": "Famous rare mount drops include Invincible from the heroic 25-player Lich King, Mimiron's Head from Yogg-Saron on 25 with no Keepers, the Blue Proto-Drake from Skadi in heroic Utgarde Pinnacle, Ashes of Al'ar from Kael'thas and Deathcharger's Reins from Baron Rivendare in Stratholme. Owning 50 mounts earns the Albino Drake.",
+    "keywords": ["mount collection", "rare mount", "rare mounts", "invincible", "mimirons head", "ashes of alar", "deathcharger", "deathchargers reins", "blue proto drake", "albino drake", "mount drop", "50 mounts", "100 mounts"],
     "tags": ["items", "mounts", "collection", "rare"]
   },
   {
     "id": "item_enchants",
     "title": "Weapon and Armor Enchants",
-    "content": "Enchants add magical properties to weapons and armor. Enchanters can create enchant scrolls or apply enchants directly. Popular weapon enchants include Crusader, Fiery Weapon, and Soulfrost, and any class can carry any of them. Armor enchants provide stats like +strength, +agility, or +spell power. Enchanting requires materials and skill. Good enchants can significantly improve gear performance.",
-    "keywords": ["enchants", "enchanting", "weapons", "armor", "crusader", "fiery weapon", "soulfrost", "magical properties", "enchant scrolls", "apply enchants", "popular", "stats", "strength", "agility", "spell power", "materials", "skill", "improve gear", "performance"],
+    "content": "Enchanters apply enchants directly or onto a scribe's Armor or Weapon Vellum to make a tradeable scroll; ring enchants are for the enchanter only. Popular Wrath weapon enchants are Berserking and Mongoose for melee, Black Magic for casters and Accuracy for hit. Death knights use Runeforging instead, like Rune of the Fallen Crusader or Razorice, at a runeforge in Ebon Hold.",
+    "keywords": ["enchant", "enchants", "weapon enchant", "mongoose", "black magic", "enchant scroll", "vellum", "runeforge", "runeforging", "fallen crusader", "razorice", "crusader enchant"],
     "tags": ["items", "enchants", "enchanting", "improvement"]
   },
   {
     "id": "item_gems",
     "title": "Socketed Gems",
-    "content": "Many high-level items have sockets that can hold gems to provide stat bonuses. Gem colors match socket colors for bonuses: red gems carry strength, agility, and spell power, yellow gems carry intellect and ratings like crit, hit, and haste, blue gems carry stamina, spirit, and mana per five seconds, and meta gems provide special effects. Jewelcrafters create gems from minerals. Gemming properly is crucial for optimizing character stats. Different specs require different gem priorities.",
-    "keywords": ["gems", "sockets", "jewelcrafting", "red gems", "yellow gems", "blue gems", "meta gems", "stat bonuses", "socket colors", "strength", "crit", "intellect", "hit", "spirit", "mp5", "special effects", "minerals", "optimizing", "character stats", "specs", "priorities"],
+    "content": "Sockets are red, yellow, blue or meta. Red gems carry strength, agility, attack power or spell power; yellow carry crit, haste or hit; blue carry stamina, spirit or mana regen; orange, purple and green count as both colors. Matching every socket turns on the item's socket bonus, and a meta gem works only if you meet its color requirement.",
+    "keywords": ["gems", "gem", "sockets", "socket", "gemming", "meta gem", "socket bonus", "cardinal ruby", "kings amber", "majestic zircon", "red gem", "yellow gem", "blue gem", "prismatic"],
     "tags": ["items", "gems", "jewelcrafting", "optimization"]
   },
   {
     "id": "item_consumables",
     "title": "Consumable Items",
-    "content": "Consumables are items that provide temporary benefits when used. Food provides stat buffs, potions restore health/mana or provide temporary boosts, elixirs give longer-lasting buffs, flasks provide raid buffs. Alchemists and cooks create many consumables. Using proper consumables before encounters is essential for raid and dungeon performance. Some consumables are very rare and expensive.",
-    "keywords": ["consumables", "food", "potions", "elixirs", "flasks", "buffs", "temporary", "stat buffs", "restore health", "restore mana", "temporary boosts", "longer lasting", "raid buffs", "alchemists", "cooks", "encounters", "raid performance", "dungeon performance", "rare", "expensive"],
+    "content": "You can have one battle elixir and one guardian elixir active, or a flask, which counts as both and lasts an hour through death. Only one potion can be drunk per fight, such as a Runic Healing or Runic Mana Potion at 80, and a Well Fed food buff stacks with all of it.",
+    "keywords": ["consumables", "consumable", "potion", "potions", "pots", "elixir", "elixirs", "flask", "flasks", "food buff", "well fed", "runic healing potion", "runic mana potion"],
     "tags": ["items", "consumables", "buffs", "performance"]
   },
   {
     "id": "item_trade_goods",
     "title": "Trade Goods and Materials",
-    "content": "Trade goods are materials used in professions. Cloth from humanoids, ore from mining nodes, leather from beasts, herbs from gathering. These materials are bought and sold on the auction house. Prices fluctuate based on demand. Professional players make gold by farming and selling materials. Understanding market values is important for both crafting and trading professions.",
-    "keywords": ["trade goods", "materials", "cloth", "ore", "leather", "herbs", "auction house", "humanoids", "mining nodes", "beasts", "gathering", "bought and sold", "prices fluctuate", "demand", "professional players", "make gold", "farming", "selling", "market values", "crafting", "trading professions"],
+    "content": "Trade goods are crafting materials: cloth drops from humanoids (Frostweave in Northrend), leather comes from skinning beasts (Borean Leather), ore from mining (Cobalt, Saronite, Titanium) and herbs from herbalism. Eternals and Frozen Orbs go into high-end crafts. Gatherers make steady gold selling them on the auction house.",
+    "keywords": ["trade goods", "materials", "mats", "crafting materials", "frostweave", "frostweave cloth", "borean leather", "eternals", "eternal", "frozen orb", "make gold"],
     "tags": ["items", "materials", "trading", "economy"]
   },
   {
     "id": "item_keys",
     "title": "Dungeon and Raid Keys",
-    "content": "Keys are special items that allow access to locked areas or higher difficulty content. Examples include The Master's Key (Karazhan), the Reservoir Key (heroic mode for the Coilfang Reservoir dungeons), the Auchenai Key (heroic mode for the Auchindoun dungeons), and the Medallion of Karabor (entry to the Black Temple). Some keys are obtained through quests, others from rare drops. Keys often require attunement processes. Having the right keys is necessary for accessing certain content.",
-    "keywords": ["keys", "attunement", "karazhan", "coilfang reservoir", "auchindoun", "black temple", "heroic mode"],
+    "content": "Northrend heroic dungeons need no key, just level 80. Older keys in use include the Crescent Key from Dire Maul, which opens its locked doors, and the Shadowforge Key for the Shadowforge City gate in Blackrock Depths; rogues can pick many of these locks instead.",
+    "keywords": ["key", "keys", "attunement", "attuned", "crescent key", "shadowforge key", "heroic key", "dungeon key"],
     "tags": ["items", "keys", "access", "attunement"]
   },
   {
     "id": "item_containers",
     "title": "Special Containers",
-    "content": "Special containers hold unique items or provide access to rare rewards. Examples include the Cache of the Legion (a locked chest found in Tempest Keep: The Mechanar), the Bag of Fishing Treasures, or the Disgusting Oozeling (a companion pet found this way). Some containers are obtained from bosses, others from achievements or rare vendors. Opening containers provides excitement and potential valuable loot.",
-    "keywords": ["containers", "cache of the legion", "bag of fishing treasures", "disgusting oozeling", "loot", "unique items", "rare rewards", "mechanar", "tempest keep", "bosses", "achievements", "rare vendors", "excitement", "valuable loot", "collect", "contents"],
+    "content": "Locked boxes such as the Froststeel Lockbox drop from Northrend monsters and open with a rogue's Pick Lock or a blacksmith's skeleton key (the Titanium Skeleton Key is the highest). Rogues also pickpocket junkboxes from humanoids.",
+    "keywords": ["lockbox", "lockboxes", "locked box", "junkbox", "pick lock", "lockpicking", "skeleton key", "titanium skeleton key", "froststeel lockbox"],
     "tags": ["items", "containers", "loot", "collection"]
   },
   {
     "id": "item_tabards",
     "title": "Guild and Faction Tabards",
-    "content": "Tabards are cosmetic chest pieces that display guild or faction affiliation. Guild tabards show guild name and colors, faction tabards show allegiance to Horde/Alliance. Tabards are obtained through reputation grinds or purchases. Wearing tabards can affect gameplay in certain areas. Some tabards provide special abilities or are required for specific content.",
-    "keywords": ["tabards", "guild", "faction", "horde", "alliance", "cosmetic", "reputation"],
+    "content": "Tabards are cosmetic chest-overs. A guild designs its tabard at a guild tabard vendor, and members wear it to show the emblem. Faction tabards are sold by quartermasters; in Northrend the Argent Crusade, Kirin Tor, Knights of the Ebon Blade and Wyrmrest Accord tabards also send dungeon reputation to their faction at level 80.",
+    "keywords": ["tabard", "tabards", "guild tabard", "faction tabard"],
     "tags": ["items", "cosmetic", "guild", "faction"]
-  },
-  {
-    "id": "item_pvp_gear",
-    "title": "PvP Equipment",
-    "content": "PvP gear is specialized equipment for player vs player combat. Honor gear from battlegrounds, arena gear from rated matches. PvP sets provide resilience and PvP-specific stats. Weapons like the Grand Marshal's or High Warlord's sets are prestigious. PvP gear often has unique appearances. Players can mix PvP and PvE gear for hybrid builds.",
-    "keywords": ["pvp gear", "honor", "arena", "resilience", "grand marshal", "high warlord", "player vs player", "battlegrounds", "rated matches", "pvp sets", "pvp specific stats", "prestigious", "unique appearances", "hybrid builds"],
-    "tags": ["items", "pvp", "equipment", "combat"]
   },
   {
     "id": "item_quest_rewards",
     "title": "Quest Reward Items",
-    "content": "Many quests reward unique items that tell stories or provide character development. Examples include Quel'Serrar, forged at the end of a Dire Maul quest chain, and Thunderfury, finished by the quest Rise, Thunderfury! once its bindings drop in Molten Core. Quest rewards often have lore significance and unique appearances. Some quest items are essential for class stories. Collecting quest rewards helps players experience the game's narrative.",
-    "keywords": ["quest rewards", "ashbringer", "scarlet crusade", "lore", "narrative", "unique items", "character development", "stories", "lore significance", "unique appearances", "class stories", "collecting", "experience", "game narrative"],
+    "content": "Many quests let you choose one reward from a list; pick the piece for your armor type and spec, since the rest only sells to a vendor. Famous quest rewards include Quel'Serrar from a Dire Maul chain and, in Wrath, Quel'Delar, a level-80 sword chain started by the Battered Hilt that drops in the Frozen Halls dungeons.",
+    "keywords": ["quest reward", "quest rewards", "quel delar", "queldelar", "battered hilt", "quel serrar", "quelserrar"],
     "tags": ["items", "quests", "lore", "story"]
   },
   {
     "id": "item_cosmetic",
     "title": "Cosmetic Items",
     "content": "There is no wardrobe or appearance-change system yet -- an item's look is simply whatever is equipped, so cosmetic collecting mostly means non-combat companion pets, which follow a player around and do nothing else. Pets are earned from vendors, quest rewards, holiday events, and rare drops, and many players collect them purely for their own sake. Some weapon enchants add a visual glow or proc animation as a side effect of their stat bonus, which is the closest thing to a customizable weapon appearance available this expansion. Holiday events also hand out costume items, like Hallow's End's wand that temporarily transforms the user into a ghost, ninja, pirate, skeleton, or leper gnome.",
-    "keywords": ["cosmetic", "companion pets", "vanity pets", "appearance", "collection"],
+    "keywords": ["cosmetic", "companion pet", "companion pets", "vanity pet", "vanity pets", "minipet", "minipets", "costume", "transmog", "transmogrification", "appearance"],
     "tags": ["items", "cosmetic", "appearance", "collection"]
   },
   {
     "id": "item_relics",
     "title": "Relics and Artifacts",
-    "content": "Relics are special items that provide bonuses to certain classes. Librams for paladins, idols for druids, totems for shamans. Relics go in the ranged weapon slot, where these classes would otherwise carry nothing, and provide unique bonuses. Some relics are very rare and powerful. Relics often have lore connections to class stories. Obtaining powerful relics is a goal for many players.",
-    "keywords": ["relics", "artifacts", "librams", "idols", "totems", "offhand", "bonuses", "paladins", "druids", "shamans", "equipped", "unique bonuses", "rare", "powerful", "lore connections", "class stories", "obtaining", "goal"],
+    "content": "Paladins, druids, shamans and death knights carry a relic in the ranged slot instead of a ranged weapon: librams for paladins, idols for druids, totems for shamans and sigils for death knights. Each boosts specific class spells, so the right one depends on spec.",
+    "keywords": ["relic", "relics", "libram", "librams", "idol", "idols", "sigil", "sigils", "totem relic"],
     "tags": ["items", "relics", "class", "bonuses"]
   }
 ]

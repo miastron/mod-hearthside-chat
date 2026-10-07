@@ -454,7 +454,7 @@ namespace
         if (rag.empty())
         {
             rag = Hs_RagContextFor(bucket.tagValueLabel, 1, g_HsRagMinScore,
-                                   g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+                                   g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix, /*chatGate=*/false);
             how = "scored-fallback";
         }
 
@@ -816,7 +816,7 @@ namespace
             return "";
 
         std::string rag = Hs_RagContextFor(prevText, 1, g_HsRagMinScore,
-            g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix);
+            g_HsRagGeneratorMaxChars, kHsRagGeneratorPrefix, /*chatGate=*/false);
         if (rag.empty())
             return "";
 

@@ -107,7 +107,13 @@ size_t Hs_RagEntryCount();
 // a worker- or generator-thread caller racing a `.reload config` would be
 // reading freed memory, not stale data. Production callers use the two
 // one-shot accessors below, which never let the pointer escape the lock.
-std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore);
+//
+// `chatGate` (on for a player's message): a line that is not asking for
+// information retrieves only named entries (hs_rag.cpp's IsNamedEntry), so
+// small talk stops pulling in how-the-game-works paragraphs. The generator
+// passes false: its queries are its own statements and want grounding.
+std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore,
+                                     bool chatGate = true);
 
 // How many retrieval-bearing terms `query` actually carries: normalized,
 // stopword-dropped, stemmed -- exactly the terms the scorer would weigh.
@@ -153,7 +159,7 @@ std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxCha
 // Returns "" when nothing clears `minScore`, which is the common case and
 // degrades to "no reference block in the prompt".
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
-                             const std::string& prefix = kHsRagReplyPrefix);
+                             const std::string& prefix = kHsRagReplyPrefix, bool chatGate = true);
 
 // Direct lookup: no scoring, no threshold, no near-miss. Each key is matched
 // against entry ids first and then against normalized titles, and the first

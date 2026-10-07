@@ -135,7 +135,20 @@ namespace
                 // measured on the realm 2026-10-07: "where you off to?" ->
                 // Gear Optimization ("off hand"), "just go north" -> Dire
                 // Maul ("dm north"); the other directions share the shape
-                "off", "north", "south", "east", "west"
+                "off", "north", "south", "east", "west",
+                // measured 2026-10-08 over the fine-tune's 1,434 player lines
+                // (Tests/rag_audit.py): everyday words that are some entry's
+                // handle and retrieved it from small talk on their own
+                "guild", "group", "class", "game", "gold", "week", "keep", "lost",
+                "new", "great", "help", "fun", "time", "day", "first", "hard",
+                "more", "run", "name", "team", "fight", "plan", "around", "long",
+                "love", "watch", "outside", "improve", "practice", "swap",
+                "personal", "build", "world", "zone", "event", "season", "port",
+                "trial", "pit", "stable", "tips", "server", "community", "vendor",
+                "sell", "better", "expensive", "play", "tank", "healer", "heal",
+                "dps", "epic", "progression", "drop", "content", "learning", "mob",
+                "ok", "drag", "teach", "apply", "change", "strat", "character",
+                "general", "special", "trade", "duel"
             };
 
             std::unordered_set<std::string> out;
@@ -223,6 +236,10 @@ namespace
         // specificity bonus.
         std::vector<uint32_t> handleCount;
 
+        // How many entries carry each term as a handle. A statement may only
+        // retrieve on a handle few entries share (see RetrieveLocked).
+        std::unordered_map<std::string, uint32_t> handleDf;
+
         // Direct-address index for Hs_RagContextForKeys: entry id (verbatim)
         // and normalized title, both mapping to the entry's slot. Built here
         // rather than scanned per lookup because the keyed path is the one
@@ -287,6 +304,7 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
     idx.phrases.assign(rows.size(), {});
     idx.titleTerms.assign(rows.size(), {});
     idx.handleCount.assign(rows.size(), 0);
+    idx.handleDf.clear();
 
     std::unordered_map<std::string, uint32_t> docFreq;
 
@@ -326,7 +344,10 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
             // A term reaching keyword weight or better came from `keywords` or
             // the title, not from prose: those are the entry's handles.
             if (kv.second >= kWeightKeyword)
+            {
                 idx.handleCount[i]++;
+                idx.handleDf[kv.first]++;
+            }
         }
     }
 
@@ -352,7 +373,41 @@ namespace
 {
 // The scoring pass, minus the lock. Public entry points below acquire once
 // and call this; see TableMutex's note on why nothing here re-acquires.
-std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore)
+// Entries about a place or a proper noun: a zone, city, instance, boss,
+// battleground or world event. Everything else (classes, specs, systems,
+// professions, advice) explains how the game works, which helps a bot asked
+// about it and only derails one that is just chatting.
+constexpr uint32_t kStatementMaxHandleDf = 2;
+
+bool IsNamedEntry(const std::string& id)
+{
+    static const char* const kPrefixes[] = { "zone_", "city_", "instance_", "boss_", "bg_", "event_" };
+    for (const char* p : kPrefixes)
+        if (id.rfind(p, 0) == 0)
+            return true;
+    return false;
+}
+
+// A request for information: a question mark, or chat's unpunctuated
+// question openers ("how do i get to org"). Not "u ..." -- "u pick a
+// profession yet" asks about the bot, not for a paragraph on professions.
+bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery)
+{
+    if (rawQuery.find('?') != std::string::npos)
+        return true;
+    static const std::unordered_set<std::string> kOpeners = {
+        "how", "hows", "where", "wheres", "what", "whats", "which", "who", "whos", "when", "why",
+        "is", "are", "does", "do", "did", "can", "could", "should", "would", "will", "any",
+        "anyone", "anybody", "know", "best", "tips", "advice",
+    };
+    size_t end = normalizedQuery.find(' ');
+    if (kOpeners.count(normalizedQuery.substr(0, end)) > 0)
+        return true;
+    // A bare topic ("holy paladin", "dm north") is chat shorthand for a question.
+    return std::count(normalizedQuery.begin(), normalizedQuery.end(), ' ') < 2;
+}
+
+std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate)
 {
     std::vector<HsRagHit> hits;
 
@@ -361,6 +416,10 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         return hits;
 
     const std::string normalizedQuery = Normalize(query);
+
+    // A statement retrieves only named entries: "this tier has been fun"
+    // pulled Tier Sets, a group-death event Group and Raid Quests.
+    const bool asking = !chatGate || IsAsking(normalizedQuery, query);
 
     // Dedupe: a term repeated in the question should not count twice toward
     // either the numerator or the denominator.
@@ -391,6 +450,11 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
     // eligibility gate below; handleHits itself keeps driving specificity.
     std::unordered_map<uint32_t, uint32_t> unambiguousHandleHits;
 
+    // The subset a statement may retrieve on: unambiguous and carried by at
+    // most kStatementMaxHandleDf entries. "just bought my mount" retrieved
+    // The Battle for Mount Hyjal on "mount", a handle five entries share.
+    std::unordered_map<uint32_t, uint32_t> distinctiveHandleHits;
+
     for (const std::string& t : queryTerms)
     {
         auto post = idx.postings.find(t);
@@ -412,7 +476,12 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
                 handleHits[entryWeight.first]++;
 
                 if (!IsAmbiguousTerm(t))
+                {
                     unambiguousHandleHits[entryWeight.first]++;
+                    auto df = idx.handleDf.find(t);
+                    if (df != idx.handleDf.end() && df->second <= kStatementMaxHandleDf)
+                        distinctiveHandleHits[entryWeight.first]++;
+                }
             }
         }
     }
@@ -474,6 +543,14 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         if (namedMatches == 0 && handleMatches < 2)
             continue;
 
+        // A statement retrieves only a named entry, and only on a handle that
+        // names it: a rare single term, one of its multi-word keywords, or
+        // its whole title ("dire maul", "the lich king").
+        const bool namesIt = distinctiveHandleHits.count(kv.first) || phraseHits > 0
+                          || (titleMass > 0.0f && titleHit >= titleMass);
+        if (!asking && (!IsNamedEntry(idx.entries[kv.first].id) || !namesIt))
+            continue;
+
         if (score >= minScore)
             hits.push_back({ &idx.entries[kv.first], score });
     }
@@ -491,10 +568,10 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
 }
 } // namespace
 
-std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore)
+std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate)
 {
     std::shared_lock<std::shared_mutex> guard(TableMutex());
-    return RetrieveLocked(query, maxEntries, minScore);
+    return RetrieveLocked(query, maxEntries, minScore, chatGate);
 }
 
 size_t Hs_RagQueryTermCount(const std::string& query)
@@ -506,13 +583,13 @@ size_t Hs_RagQueryTermCount(const std::string& query)
 }
 
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
-                             const std::string& prefix)
+                             const std::string& prefix, bool chatGate)
 {
     std::shared_lock<std::shared_mutex> guard(TableMutex());
     // Hs_RagContextLine only reads through the hit pointers, which stay valid
     // for as long as this guard is held, so formatting inside the lock is
     // what keeps them from escaping it.
-    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore), maxChars, prefix);
+    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore, chatGate), maxChars, prefix);
 }
 
 std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,

@@ -2,162 +2,134 @@
   {
     "id": "general_leveling_guide",
     "title": "Leveling Strategies",
-    "content": "Efficient leveling involves questing in appropriate level zones, using rest bonuses, and grouping when possible. Follow zone storylines for better experience. Use flight paths to travel efficiently. Complete dungeons for bonus experience. Leveling speed depends on playstyle and available time. Some classes level faster than others due to mechanics.",
-    "keywords": ["leveling", "questing", "rest bonus", "grouping", "dungeons", "experience", "zone storylines", "flight paths", "travel", "bonus experience", "playstyle", "time", "classes", "mechanics", "efficient", "speed"],
+    "content": "Resting in an inn or a capital city builds rested experience, which doubles the experience from kills until it runs out. From level 15 the Dungeon Finder queues random dungeons, which pay well for leveling, and bind-to-account heirloom shoulders and chests add 10% experience each. The level cap is 80; Death Knights start at 55.",
+    "keywords": ["leveling", "level up", "lvling", "xp", "exp", "rested xp", "rested experience", "leveling fast", "heirloom", "heirlooms"],
     "tags": ["general", "leveling", "progression", "efficiency"]
   },
   {
     "id": "general_gold_making",
     "title": "Gold Making Methods",
-    "content": "Gold can be made through professions, auction house trading, farming rare mobs, completing quests, and running dungeons. Blacksmithing and enchanting are profitable. Understanding market demand is key. Some methods require significant time investment. Gold is used for mounts, repairs, and training.",
-    "keywords": ["gold making", "professions", "auction house", "farming", "trading", "market", "blacksmithing", "enchanting", "profitable", "demand", "time investment", "mounts", "repairs", "training", "rare mobs", "quests", "dungeons"],
+    "content": "Steady gold at 80 comes from daily quests, up to 25 a day, and from gathering: Saronite and Titanium ore, Frost Lotus and Lichbloom, and Frostweave Cloth always sell on the auction house. Crafters earn by selling glyphs, cut gems, flasks and enchanting materials like Infinite Dust.",
+    "keywords": ["gold making", "make gold", "farm gold", "gold farming", "earn gold", "making money", "money"],
     "tags": ["general", "economy", "gold", "professions"]
   },
   {
     "id": "general_ui_customization",
     "title": "Interface Customization",
-    "content": "The UI can be customized extensively. Move frames, change sizes, add custom addons. Key bindings improve efficiency. Action bars can be configured for different situations. Understanding the interface is crucial for effective play. Many players use custom UI setups for optimal performance.",
-    "keywords": ["ui customization", "frames", "addons", "key bindings", "action bars", "efficiency", "interface", "custom", "performance", "move frames", "change sizes", "configured", "effective play", "custom ui"],
+    "content": "Interface Options in the Escape menu can turn on four extra action bars beside the main one, and Key Bindings lets you put any spell on any key. /macro opens the macro window, with 36 general macros shared by the account and 18 more per character.",
+    "keywords": ["ui", "interface", "interface options", "action bars", "action bar", "key bindings", "keybinds", "keybind", "macro", "macros"],
     "tags": ["general", "interface", "customization", "addons"]
   },
   {
     "id": "general_addons",
     "title": "Essential Addons",
-    "content": "Popular addons include Deadly Boss Mods for raid encounters, QuestHelper for navigation, Gatherer for resource tracking, and Auctioneer for auction house management. Addons enhance gameplay but must be kept updated. Some addons provide quality of life improvements. Choosing the right addons depends on playstyle.",
-    "keywords": ["addons", "deadly boss mods", "questhelper", "gatherer", "auctioneer", "quality of life", "raid encounters", "navigation", "resource tracking", "auction house", "updated", "enhance gameplay", "playstyle"],
+    "content": "Popular 3.3.5 addons: Deadly Boss Mods or BigWigs for boss timers, Omen for threat, Recount or Skada for damage meters, QuestHelper or Carbonite for quest routes, Auctioneer or Auctionator for the auction house, Gatherer for herb and ore nodes, and Bartender4 for action bars. An addon has to be the 3.3.5 version (interface 30300); retail builds won't load.",
+    "keywords": ["addons", "addon", "dbm", "deadly boss mods", "bigwigs", "recount", "skada", "omen", "questhelper", "auctioneer", "auctionator", "gatherer", "bartender", "damage meter", "threat meter"],
     "tags": ["general", "addons", "tools", "enhancement"]
   },
   {
     "id": "general_server_population",
     "title": "Server Types and Population",
-    "content": "Servers have different populations and rulesets. PvP servers allow open world combat, PvE servers restrict PvP. High population servers have active economies, low population servers have empty cities. Server type affects gameplay experience. Choosing the right server is important for enjoyment.",
-    "keywords": ["server population", "pvp servers", "pve servers", "economy", "rulesets", "experience", "open world combat", "active economies", "empty cities", "gameplay", "enjoyment", "high population", "low population"],
+    "content": "On a PvP realm, entering a contested zone flags you for PvP automatically, so enemy players can attack you anywhere outside your own faction's zones and sanctuaries. On a PvE realm you can only be attacked once you flag yourself with /pvp or attack an enemy player; the flag wears off five minutes after you turn it off.",
+    "keywords": ["pvp server", "pve server", "pvp realm", "pve realm", "realm type", "server type", "pvp flag", "flagged", "pvp flagged"],
     "tags": ["general", "servers", "population", "rules"]
   },
   {
     "id": "general_character_creation",
     "title": "Character Creation Tips",
-    "content": "Choose race/class combinations that fit your playstyle. Some races provide better starting zones or racial abilities. Consider faction balance on your server. Think about long-term goals when creating characters. Server transfers allow changing servers later. Character names must be unique.",
-    "keywords": ["character creation", "race", "class", "playstyle", "starting zones", "racial abilities", "faction balance", "long term goals", "server transfer", "unique names", "combinations"],
+    "content": "Ten races are playable: Alliance humans, dwarves, gnomes, night elves and draenei; Horde orcs, trolls, tauren, undead and blood elves. Only night elves and tauren can be druids, shamans are orcs, trolls, tauren or draenei, and paladins are humans, dwarves, draenei or blood elves. A Death Knight unlocks once you have a level 55 character on the realm.",
+    "keywords": ["character creation", "new character", "make a character", "create a character", "reroll", "race and class", "which race", "what race", "race class combo"],
     "tags": ["general", "character", "creation", "planning"]
-  },
-  {
-    "id": "general_time_management",
-    "title": "In-Game Time Management",
-    "content": "World of Warcraft has a day/night cycle that affects gameplay. Some quests or events only occur at certain times. Daily quests reset daily. Raid lockouts reset weekly. Understanding game time helps with planning. Real-world time affects in-game events and resets.",
-    "keywords": ["time management", "day night cycle", "daily quests", "raid lockouts", "resets", "planning", "gameplay", "events", "real world time", "weekly", "understanding"],
-    "tags": ["general", "time", "planning", "resets"]
-  },
-  {
-    "id": "general_communication",
-    "title": "Communication and Community",
-    "content": "Use guild chat, general chat, and trade chat for communication. Voice chat enhances coordination. Good communication is essential for group content. Community websites provide additional information. Building relationships leads to better gameplay experiences. Respect other players and follow chat etiquette.",
-    "keywords": ["communication", "guild chat", "voice chat", "coordination", "community", "etiquette", "general chat", "trade chat", "group content", "websites", "relationships", "gameplay", "respect"],
-    "tags": ["general", "communication", "community", "social"]
   },
   {
     "id": "general_gear_optimization",
     "title": "Gear Optimization",
-    "content": "Stat priority depends on class and spec. Use gear comparison tools. Enchantments and gems improve gear significantly. Don't neglect off-hand items. There is no way to convert one stat into another on a finished piece, so gems and enchants are the whole of the tuning available. Understanding your class guides optimal gearing decisions. Regular gear upgrades improve performance.",
-    "keywords": ["gear optimization", "stat priority", "enchantments", "gems", "performance", "class", "spec", "comparison tools", "off hand", "upgrades"],
+    "content": "Gear is tuned with gems and enchants, including the off-hand. Head enchants are arcanums sold at Revered by factions like the Argent Crusade, Kirin Tor and Knights of the Ebon Blade; shoulder inscriptions come from the Sons of Hodir at Honored and Exalted; and a blacksmith's Eternal Belt Buckle adds one more socket to any belt.",
+    "keywords": ["gear", "gearing", "stat priority", "stats", "upgrade", "upgrades", "bis", "best in slot", "arcanum", "head enchant", "shoulder enchant", "inscription for shoulders", "belt buckle", "eternal belt buckle", "gem", "off", "offhand"],
     "tags": ["general", "gear", "optimization", "stats"]
-  },
-  {
-    "id": "general_playstyle_adaptation",
-    "title": "Adapting Playstyles",
-    "content": "Different content requires different approaches. Solo play, group play, PvP, raiding all have different strategies. Be flexible and learn from experiences. Try different roles and activities. Understanding various playstyles enriches the game experience. Don't limit yourself to one type of content.",
-    "keywords": ["playstyle adaptation", "solo play", "group play", "pvp", "raiding", "flexible", "experiences", "roles", "activities", "enriches", "game experience", "strategies"],
-    "tags": ["general", "playstyle", "adaptation", "variety"]
-  },
-  {
-    "id": "general_burnout_prevention",
-    "title": "Avoiding Burnout",
-    "content": "Take breaks when feeling frustrated. Set realistic goals. Don't feel obligated to do everything. Enjoy the journey, not just endgame. Play at your own pace. Balance gaming with real life. Burnout prevention leads to longer enjoyment of the game.",
-    "keywords": ["burnout prevention", "breaks", "goals", "balance", "pace", "enjoyment", "frustrated", "realistic", "obligated", "journey", "endgame", "real life"],
-    "tags": ["general", "health", "balance", "wellness"]
   },
   {
     "id": "general_patch_changes",
     "title": "Understanding Patches",
-    "content": "Game updates change mechanics and balance. Stay informed about upcoming changes. Some patches buff, others nerf. Class balance shifts over time. Understanding patch notes helps adapt strategies. Patches can significantly affect gameplay and require relearning.",
-    "keywords": ["patch changes", "updates", "balance", "buffs", "nerfs", "adaptation", "mechanics", "informed", "class balance", "patch notes", "strategies", "gameplay", "relearning"],
+    "content": "The realm runs patch 3.3.5a, the final patch of Wrath of the Lich King. Patch 3.3 added Icecrown Citadel, the Forge of Souls, Pit of Saron and Halls of Reflection dungeons and the Dungeon Finder, and 3.3.5 added the Ruby Sanctum raid against Halion.",
+    "keywords": ["patch", "patches", "patch notes", "335", "nerf", "nerfs", "nerfed", "expansion"],
     "tags": ["general", "patches", "updates", "balance"]
   },
   {
     "id": "general_achievement_hunting",
     "title": "Achievement Collecting",
-    "content": "Achievements provide goals and rewards. Some are easy, others very challenging. Achievement hunting adds replayability. Meta achievements combine multiple goals. Titles and mounts from achievements. Achievement points provide bragging rights. Collecting achievements extends game longevity.",
-    "keywords": ["achievement hunting", "goals", "rewards", "meta achievements", "titles", "mounts", "replayability", "challenging", "bragging rights", "game longevity", "collecting"],
+    "content": "The big meta achievements pay mounts: Glory of the Hero (heroic dungeon feats) gives the Red Proto-Drake, Glory of the Raider gives the Black Proto-Drake on 10-player and the Plagued Proto-Drake on 25, Glory of the Ulduar Raider gives the Rusted or Ironbound Proto-Drake, and What a Long, Strange Trip It's Been, for every holiday meta, gives the Violet Proto-Drake.",
+    "keywords": ["achievement hunting", "meta achievement", "glory of the hero", "glory of the raider", "glory of the ulduar raider", "glory of the icecrown raider", "what a long strange trip", "proto drake", "achievement mount"],
     "tags": ["general", "achievements", "goals", "collection"]
   },
   {
     "id": "general_alt_management",
     "title": "Managing Multiple Characters",
-    "content": "Alts provide different experiences and utility. Bank alts for storage, profession alts for crafting. Level alts for achievements or fun. Server transfers move characters. Managing alts requires organization. Multiple characters enhance gameplay variety and utility.",
-    "keywords": ["alt management", "bank alts", "profession alts", "server transfers", "organization", "variety", "utility", "storage", "crafting", "achievements", "fun", "multiple characters", "gameplay"],
+    "content": "You can have up to 10 characters on a realm and 50 across the account. Bind-to-account heirlooms can be mailed between your characters on the realm, and a Death Knight unlocks once one of them reaches level 55. Many players park a bank alt in a capital to hold materials and run auctions.",
+    "keywords": ["alt", "alts", "altoholic", "bank alt", "alt character", "character slots", "how many characters"],
     "tags": ["general", "alts", "management", "utility"]
   },
   {
     "id": "general_endgame_content",
     "title": "Endgame Content Overview",
-    "content": "Endgame includes raiding, PvP, achievements, professions, and reputation grinds. Different players prefer different activities. Endgame provides the most challenging content. Requires good gear and coordination. Endgame content evolves with expansions. Finding enjoyable endgame activities is key to long-term play.",
-    "keywords": ["endgame content", "raiding", "pvp", "achievements", "reputation", "challenging", "gear", "coordination", "expansions", "long term play", "activities", "evolves"],
+    "content": "At level 80 the endgame is heroic five-mans, raids, arenas, Wintergrasp, daily quests and reputation. The raids are Naxxramas, Obsidian Sanctum, Eye of Eternity, Vault of Archavon, Ulduar, Trial of the Crusader, Onyxia's Lair, Icecrown Citadel and Ruby Sanctum; Icecrown Citadel is the top tier and ends with the Lich King.",
+    "keywords": ["endgame", "end game", "max level", "level cap"],
     "tags": ["general", "endgame", "content", "variety"]
   },
   {
     "id": "general_learning_basics",
     "title": "Learning the Basics",
-    "content": "Start with the tutorial and basic quests in your starting zone. Learn your class abilities and how to use them effectively. Understand the interface and basic controls. Practice combat against low-level enemies. Don't be afraid to ask for help in chat. The game has a steep learning curve but becomes intuitive with practice.",
-    "keywords": ["learning basics", "tutorial", "starting zone", "class abilities", "interface", "controls", "combat", "practice", "help", "chat", "learning curve", "intuitive"],
+    "content": "New characters start at level 1 in their race's starting zone. Class trainers in towns and capitals teach new spells and ranks every two levels for gold. Talent points start at level 10, riding at 20, and dual specialization at 40; the cap is 80.",
+    "keywords": ["new player", "beginner", "just started", "how to play", "basics"],
     "tags": ["general", "basics", "learning", "beginners"]
   },
   {
     "id": "general_finding_groups",
     "title": "Finding Groups for Content",
-    "content": "Use the automatic Dungeon Finder tool to be grouped cross-realm for a random dungeon, or fall back to the LFG channel and trade chat for group content it doesn't cover, like raids. Be clear about what you're looking for and good communication helps get invites. Patience is key when looking for groups. Building a reputation as a good group member helps.",
-    "keywords": ["finding groups", "looking for group", "lfg", "communication", "invites", "trade chat", "guild recruitment", "dungeon finder", "patience", "reputation", "good member"],
+    "content": "The Dungeon Finder builds a group for five-man dungeons automatically, cross-realm. Raids aren't queued: they're formed in trade chat, the LookingForGroup channel or the Raid Browser, where you list yourself for a raid and leaders can invite you. Saying your role and gear level up front gets invites faster.",
+    "keywords": ["looking for group", "lfg", "lfm", "find a group", "find group", "pug", "pugs", "raid browser", "lookingforgroup"],
     "tags": ["general", "groups", "social", "content"]
   },
   {
     "id": "general_addon_management",
     "title": "Managing Addons Effectively",
-    "content": "Keep addons updated to avoid compatibility issues. Use a lightweight UI for better performance. Backup your WTF folder regularly. Some addons conflict with each other. Read addon descriptions carefully. Join addon communities for support. Not all addons work on all servers or with all versions.",
-    "keywords": ["addon management", "updated", "compatibility", "lightweight ui", "performance", "backup", "wtf folder", "conflict", "descriptions", "communities", "support", "servers", "versions"],
+    "content": "Addons go in World of Warcraft\\Interface\\AddOns, one folder per addon, and are switched on per character from the AddOns button on the character select screen; tick Load out of date AddOns if one is flagged out of date. Their settings are saved in the WTF folder, so copying it backs up your setup, and /reload reloads the interface.",
+    "keywords": ["install addons", "install addon", "addon folder", "out of date addons", "load out of date", "wtf folder", "reload ui", "reloadui", "addon broken"],
     "tags": ["general", "addons", "management", "technical"]
   },
   {
     "id": "general_questing_efficiency",
     "title": "Questing Efficiently",
-    "content": "Group similar quests together to minimize travel. Use quest helper addons for navigation. Complete daily quests for extra rewards. Some quests have follow-ups that chain together. Pay attention to quest objectives and requirements. Questing in the right level zones maximizes experience. Don't ignore side quests for bonus rewards.",
-    "keywords": ["questing efficiency", "group quests", "travel", "quest helper", "navigation", "daily quests", "rewards", "follow ups", "objectives", "requirements", "level zones", "experience", "side quests", "bonus"],
+    "content": "Since patch 3.3 the world map and minimap show where each tracked quest's objectives are, so a quest addon is optional. The quest log holds 25 quests, and up to 25 daily quests can be completed per day. Picking up every quest in a hub before heading out saves the most travel.",
+    "keywords": ["questing", "quest tracking", "quest objectives", "quest map", "daily cap", "quest tracker"],
     "tags": ["general", "questing", "efficiency", "progression"]
   },
   {
     "id": "general_inventory_management",
     "title": "Managing Inventory and Bags",
-    "content": "Use bag space efficiently by selling junk to vendors. Bank important items you don't need immediately. Use profession bags for materials. Sort your bags regularly. Items have no weight, so the only limit is the number of slots. Some items can be disenchanted or milled for profit. Bag space is limited so prioritize what you keep.",
-    "keywords": ["inventory management", "bags", "bag space", "vendors", "bank", "profession bags", "materials", "sort", "weight", "disenchanted", "milled", "profit", "limited", "prioritize"],
+    "content": "Characters carry a backpack plus four bag slots; tailors make the 20-slot Frostweave Bag, and profession bags hold more but only their own material. The bank adds 28 slots and seven more bag slots bought with gold. Items have no weight, only slot count matters.",
+    "keywords": ["bags", "bag", "bag space", "inventory", "inventory full", "bag slots", "bigger bags", "frostweave bag", "profession bag"],
     "tags": ["general", "inventory", "management", "organization"]
   },
   {
     "id": "general_reputation_grinding",
     "title": "Reputation Grinding Strategies",
-    "content": "Focus on one faction at a time for faster progress. Use reputation tabards for bonus gains. Complete faction-specific quests and dailies. Kill reputation enemies in appropriate zones. Some reputations require special items or achievements. Reputation unlocks vendors, mounts, and titles. Plan your grinding to maximize rewards.",
-    "keywords": ["reputation grinding", "faction", "progress", "tabards", "bonus gains", "quests", "dailies", "enemies", "zones", "special items", "achievements", "unlocks", "vendors", "mounts", "titles", "plan", "rewards"],
+    "content": "In Northrend, wearing the tabard of the Argent Crusade, Kirin Tor, Knights of the Ebon Blade or Wyrmrest Accord in a level-80 dungeon sends that dungeon's reputation to the faction, called championing. Factions without a tabard, like the Sons of Hodir, rise only through quests and dailies, and humans gain 10% more reputation from Diplomacy.",
+    "keywords": ["rep grind", "reputation grind", "grind rep", "rep farm", "farm rep", "championing", "champion tabard"],
     "tags": ["general", "reputation", "grinding", "progression"]
   },
   {
     "id": "general_raid_preparation",
     "title": "Preparing for Raids",
-    "content": "Ensure you have appropriate gear and consumables. Learn boss strategies beforehand. Know your role in the raid. Practice with your class in dummy scenarios. Have backup strategies for different situations. Good preparation reduces wipes and increases success. Communication with your raid team is crucial.",
-    "keywords": ["raid preparation", "gear", "consumables", "boss strategies", "role", "practice", "dummy", "backup strategies", "situations", "preparation", "wipes", "success", "communication", "raid team"],
+    "content": "Raiders bring a flask, which lasts an hour and stays through death, plus food; a cook's Fish Feast feeds the whole raid at once. Repair before the first pull, and since raid lockouts reset once a week, check whether the group is on a fresh or a saved raid ID before joining.",
+    "keywords": ["raid prep", "raid ready", "pre raid", "fish feast", "raid consumables", "raid requirements"],
     "tags": ["general", "raids", "preparation", "strategy"]
   },
   {
     "id": "general_pvp_preparation",
     "title": "PvP Preparation Tips",
-    "content": "Gear up with PvP-specific items and enchants. Learn class matchups and counters. Practice in battlegrounds or world PvP. Understand crowd control and interrupts. Know when to engage and when to retreat. Team coordination is essential. PvP requires different tactics than PvE combat.",
-    "keywords": ["pvp preparation", "gear", "enchants", "matchups", "counters", "practice", "battlegrounds", "world pvp", "crowd control", "interrupts", "engage", "retreat", "coordination", "tactics", "pve"],
+    "content": "For PvP, wear gear with resilience, which cuts critical strikes and damage taken from players, and carry the PvP trinket: the Medallion of the Alliance or Medallion of the Horde. It breaks stuns, fears and other crowd control on a 2-minute cooldown; humans' Every Man for Himself does the same.",
+    "keywords": ["pvp trinket", "medallion of the alliance", "medallion of the horde", "pvp prep", "break cc", "cc break"],
     "tags": ["general", "pvp", "preparation", "combat"]
   }
 ]

@@ -3,7 +3,7 @@
     "id": "bg_rules_general",
     "title": "Battleground Basics",
     "content": "Battlegrounds are instanced PvP matches queued for from any Battlemaster NPC or the Battleground UI; most use standard 10-level brackets, though Alterac Valley opens at level 51 and Eye of the Storm, Strand of the Ancients, and Isle of Conquest all require at least level 61-71. Winning awards a burst of Honor plus a Mark of Honor for that battleground, spent at PvP quartermasters on battleground-specific gear, while losing still pays a smaller Honor reward. Patch 3.3.3 added the Random Battleground queue, replacing the old daily battleground quests with a bonus of Honor and Arena Points for the day's first win; the featured 'Call to Arms' battleground of the day pays that same bonus for queuing it directly instead of random.",
-    "keywords": ["battlegrounds", "battlemaster", "marks of honor", "random battleground", "call to arms", "pvp brackets", "quartermaster"],
+    "keywords": ["battlegrounds", "battlemaster", "marks of honor", "random battleground", "call to arms", "pvp brackets"],
     "tags": ["pvp", "battlegrounds", "mechanic"]
   },
   {
@@ -17,7 +17,7 @@
     "id": "bg_arathi_basin",
     "title": "Arathi Basin",
     "content": "Arathi Basin is a resource-control battleground played 15-a-side over five capturable nodes -- the Blacksmith, Farm, Gold Mine, Lumber Mill, and Stables -- scattered across a stretch of the Arathi Highlands. Holding a node generates resources for your team every few seconds, so controlling more nodes at once matters more than any single capture. The first team to reach 2000 resources wins, or whichever team is ahead if the match runs its full length. It opens to characters at level 20.",
-    "keywords": ["arathi basin", "ab", "resource nodes", "blacksmith", "gold mine", "lumber mill", "stables"],
+    "keywords": ["arathi basin", "ab", "blacksmith", "gold mine", "lumber mill", "stables"],
     "tags": ["pvp", "battlegrounds", "leveling"]
   },
   {

@@ -199,21 +199,9 @@ namespace
                 // secondary skills (fishing, cooking, first aid), which is
                 // what a player asking "what professions do you have"
                 // means in practice.
-                static const std::pair<uint32_t, const char*> kProfessions[] = {
-                    { SKILL_ALCHEMY, "alchemy" },       { SKILL_BLACKSMITHING, "blacksmithing" },
-                    { SKILL_ENCHANTING, "enchanting" }, { SKILL_ENGINEERING, "engineering" },
-                    { SKILL_HERBALISM, "herbalism" },   { SKILL_INSCRIPTION, "inscription" },
-                    { SKILL_JEWELCRAFTING, "jewelcrafting" }, { SKILL_LEATHERWORKING, "leatherworking" },
-                    { SKILL_MINING, "mining" },         { SKILL_SKINNING, "skinning" },
-                    { SKILL_TAILORING, "tailoring" },
-                };
                 std::vector<std::string> known;
-                for (auto const& prof : kProfessions)
-                {
-                    if (bot->HasSkill(prof.first))
-                        known.push_back(std::string(prof.second) + " (" +
-                                         std::to_string(bot->GetSkillValue(prof.first)) + ")");
-                }
+                for (auto const& prof : Hs_PrimaryProfessions(bot))
+                    known.push_back(prof.first + " (" + std::to_string(prof.second) + ")");
                 hasFact = !known.empty();
                 if (hasFact)
                 {
