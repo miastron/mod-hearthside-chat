@@ -97,12 +97,13 @@ namespace
             return; // Silent BotQuestion mode, or PersonalProbe's no-reply roll
 
         // Same style pass the LLM path applies, so a reflex reply reads as
-        // this bot's voice rather than a flat string. No history append and
-        // no cooldown/last-reply bump: tier 0 writes no identity state at
-        // all.
+        // this bot's voice rather than a flat string. No cooldown or identity
+        // write; the exchange does go into history so the model's next reply
+        // knows it is mid-conversation.
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, match.text, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
+        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
     }
 
     // A fourth answer source, sitting between the reflex check and the tier
@@ -111,8 +112,8 @@ namespace
     // card facts, and shared-history recall (hs_grounded.h's HsGroundedKind),
     // each a direct lookup and a short template, no GPU work and no
     // chance of invention. Same "no identity state" shape as TryReflex
-    // above: style pass applies, nothing is scored or written to history,
-    // delivered through the same short-delay path.
+    // above: style pass applies, nothing is scored, the exchange is recorded
+    // to history, delivered through the same short-delay path.
     //
     // Returns false (falls through to the normal ceiling/LLM path) when the
     // trigger doesn't match any loaded question, when it matches Mount but
@@ -401,6 +402,7 @@ namespace
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, reply, styleCtx);
         Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
+        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
         return true;
     }
 
@@ -543,7 +545,8 @@ namespace
         // here, not for the reflex/grounded/corpus tiers above: those never
         // reach the LLM prompt they feed. A plain direct reply sets none of
         // the request's kind flags.
-        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, senderGuid, senderName, channel, msg)) && g_HsDebugEnabled)
+        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, senderGuid, senderName, channel, Hs_ExpandChatShorthand(msg)))
+            && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 

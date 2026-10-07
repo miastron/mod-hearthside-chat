@@ -287,6 +287,12 @@ void Hs_ForgetBotHistory(uint64_t botGuid);
 // `channelKind` is only meaningful when `channel == HsReplyChannel::Channel`
 // (§4.17's corpus-fallback channel reply, hs_handler.cpp's Channel* hook),
 // ignored otherwise, default value arbitrary.
+// Adds a canned exchange (reflex or grounded) to this bot-player pair's
+// history, so the model's next reply knows a conversation is under way.
+// Before 2026-10-07 only model replies were recorded, and "sup" -> "hey, not
+// much" followed by "wyd?" reached the model as an opening line.
+void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string& trigger, const std::string& reply);
+
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
                             HsChannelKind channelKind = HsChannelKind::Trade);
 

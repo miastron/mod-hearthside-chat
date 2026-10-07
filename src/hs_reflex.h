@@ -68,4 +68,11 @@ struct HsReflexMatch
 HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint64_t senderGuid,
                               HsBotQuestionMode botQuestionMode);
 
+// The player's message with chat shorthand spelled out ("wyd" -> "what are
+// you doing", "hbu" -> "how about you"), for the model's trigger only. The
+// tuned 1B answers the spelled-out form and misreads the shorthand
+// (Tests/whisper_probe.py, 2026-10-07: "wyd?" drew "u had ur ass handed to
+// u"). Whole tokens only, case-insensitive, punctuation kept.
+std::string Hs_ExpandChatShorthand(const std::string& text);
+
 #endif // MOD_HS_REFLEX_H

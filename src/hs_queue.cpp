@@ -1391,6 +1391,12 @@ bool Hs_TryEnqueue(HsReplyRequest request)
     return true;
 }
 
+void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string& trigger, const std::string& reply)
+{
+    if (!reply.empty())
+        HistoryAppend(botGuid, senderGuid, trigger, reply);
+}
+
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
                             HsChannelKind channelKind)
 {

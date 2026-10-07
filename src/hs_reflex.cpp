@@ -5,6 +5,7 @@
 #include <cctype>
 #include <functional>
 #include <regex>
+#include <unordered_map>
 #include <vector>
 
 namespace
@@ -86,6 +87,10 @@ namespace
             { "thx",       { "np", "yw", "no prob" } },
             { "thank you", { "np", "yw", "no problem" } },
             { "what",      { "nvm", "nvm lol", "nothing, nvm" } },
+            { "brb",       { "k", "ok", "kk" } },
+            { "afk",       { "k", "ok" } },
+            { "gtg",       { "cya", "later", "o/" } },
+            { "gn",        { "gn", "night", "cya" } },
             { "huh",       { "nvm", "nvm lol", "nothing" } },
             // A compliment, not a question: these phrases also sit in
             // hside_grounded_question's GEAR set, whose answers are written
@@ -256,5 +261,58 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
         }
     }
 
+    // ---- conversation closers: nobody answers "ok" ----
+    static const char* const kClosers[] = { "ok", "k", "kk", "okay", "cool", "nice", "alright", "np", "no problem",
+                                             "sure", "yep", "ya", "yeah", "kk ty", "ok ty", "ok thanks" };
+    for (const char* closer : kClosers)
+    {
+        if (plainCore == closer)
+        {
+            HsReflexMatch match;
+            match.kind = HsReflexKind::Plain; // matched, text empty: handled as silence
+            return match;
+        }
+    }
+
     return HsReflexMatch{}; // kind stays None; caller falls through
+}
+
+std::string Hs_ExpandChatShorthand(const std::string& text)
+{
+    static const std::unordered_map<std::string, const char*> kExpand = {
+        { "wyd", "what are you doing" }, { "wbu", "what about you" }, { "hbu", "how about you" },
+        { "hru", "how are you" }, { "wru", "where are you" }, { "wya", "where are you" },
+        { "sup", "what's up" }, { "u", "you" }, { "ur", "your" }, { "r", "are" },
+        { "idk", "i don't know" }, { "idc", "i don't care" }, { "dunno", "don't know" },
+        { "ty", "thanks" }, { "thx", "thanks" }, { "np", "no problem" }, { "pls", "please" },
+        { "plz", "please" }, { "ppl", "people" }, { "rn", "right now" }, { "atm", "at the moment" },
+        { "tbh", "to be honest" }, { "ngl", "not gonna lie" }, { "imo", "in my opinion" },
+        { "lfg", "looking for group" }, { "lf", "looking for" }, { "lvl", "level" },
+        { "lvling", "leveling" }, { "brb", "be right back" }, { "gtg", "got to go" },
+        { "afk", "away" }, { "nvm", "never mind" }, { "sry", "sorry" }, { "cuz", "because" },
+        { "bc", "because" }, { "ofc", "of course" }, { "gz", "congrats" }, { "grats", "congrats" },
+        { "k", "ok" }, { "kk", "ok" }, { "wanna", "want to" }, { "gonna", "going to" },
+        { "whats", "what's" }, { "hows", "how's" }, { "wheres", "where's" }, { "im", "i'm" },
+        { "dont", "don't" }, { "cant", "can't" },
+    };
+
+    std::string out;
+    out.reserve(text.size() + 16);
+    size_t i = 0;
+    while (i < text.size())
+    {
+        if (!std::isalpha(static_cast<unsigned char>(text[i])))
+        {
+            out.push_back(text[i++]);
+            continue;
+        }
+        size_t j = i;
+        while (j < text.size() && (std::isalpha(static_cast<unsigned char>(text[j])) || text[j] == '\''))
+            ++j;
+        std::string word = text.substr(i, j - i);
+        auto it = kExpand.find(HsText::Hs_ToLowerAscii(word));
+        out += (it != kExpand.end()) ? it->second : word;
+        i = j;
+    }
+    return out;
 }
