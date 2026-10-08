@@ -164,8 +164,7 @@
       "refuge pointe",
       "hammerfall",
       "stromgarde keep",
-      "boulderfist ogres",
-      "arathi basin"
+      "boulderfist ogres"
     ],
     "tags": [
       "zone",
@@ -204,7 +203,8 @@
       "rebel camp",
       "nesingwary",
       "zulgurub entrance",
-      "bloodsail buccaneers"
+      "bloodsail buccaneers",
+      "stv"
     ],
     "tags": [
       "zone",
@@ -341,7 +341,8 @@
       "hearthglen",
       "caer darrow",
       "scholomance entrance",
-      "the bulwark"
+      "the bulwark",
+      "wpl"
     ],
     "tags": [
       "zone",
@@ -359,7 +360,8 @@
       "lights hope chapel",
       "stratholme entrance",
       "plaguewood",
-      "corins crossing"
+      "corins crossing",
+      "epl"
     ],
     "tags": [
       "zone",

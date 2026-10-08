@@ -10,7 +10,7 @@
     "id": "city_stormwind",
     "title": "Stormwind City",
     "content": "Stormwind City is the human capital and the main Alliance hub in the Eastern Kingdoms, sitting in the north of Elwynn Forest. It is divided into the Trade District, Old Town, the Mage Quarter, Cathedral Square, the Dwarven District, and the Park, with the Valley of Heroes at the front gates. King Varian Wrynn rules from Stormwind Keep. The Deeprun Tram runs underground from the Dwarven District to Ironforge, and the harbor carries boats to Northrend and Kalimdor.",
-    "keywords": ["stormwind", "stormwind city", "human capital", "alliance capital", "trade district", "old town", "mage quarter", "cathedral square", "dwarven district", "valley of heroes", "stormwind keep", "varian wrynn", "deeprun tram", "stormwind harbor"],
+    "keywords": ["stormwind", "stormwind city", "human capital", "alliance capital", "trade district", "old town", "mage quarter", "cathedral square", "dwarven district", "valley of heroes", "stormwind keep", "varian wrynn", "deeprun tram", "stormwind harbor", "sw"],
     "tags": ["city", "alliance", "eastern_kingdoms"]
   },
   {
@@ -38,21 +38,21 @@
     "id": "city_orgrimmar",
     "title": "Orgrimmar",
     "content": "Orgrimmar is the orc capital and the main Horde hub, built into the canyons of Durotar. Its districts are the Valley of Strength, the Valley of Honor, the Valley of Wisdom, the Valley of Spirits, the Drag, and the Cleft of Shadow, where warlocks and rogues train and the entrance to Ragefire Chasm sits. Warchief Thrall rules from Grommash Hold. Zeppelin towers outside the gates run to Undercity, Grom'gol in Stranglethorn, and Northrend.",
-    "keywords": ["orgrimmar", "orc capital", "horde capital", "valley of strength", "valley of honor", "valley of wisdom", "valley of spirits", "cleft of shadow", "the drag", "grommash hold", "thrall", "warchief", "zeppelin tower"],
+    "keywords": ["orgrimmar", "orc capital", "horde capital", "valley of strength", "valley of honor", "valley of wisdom", "valley of spirits", "cleft of shadow", "the drag", "grommash hold", "thrall", "warchief", "zeppelin tower", "og", "org"],
     "tags": ["city", "horde", "kalimdor"]
   },
   {
     "id": "city_thunder_bluff",
     "title": "Thunder Bluff",
     "content": "Thunder Bluff is the tauren capital, a cluster of mesas rising above the plains of Mulgore and joined by rope bridges and wooden elevators. Elder Rise, Spirit Rise, and Hunter Rise ring the central High Rise, where Cairne Bloodhoof leads. It is the Horde's center for shamanism, druidism, and leatherworking, and the long fall from its bridges is a hazard for players who miss the lift.",
-    "keywords": ["thunder bluff", "tauren capital", "mulgore capital", "elder rise", "spirit rise", "hunter rise", "high rise", "cairne bloodhoof", "mesa", "rope bridges", "elevators"],
+    "keywords": ["thunder bluff", "tauren capital", "mulgore capital", "elder rise", "spirit rise", "hunter rise", "high rise", "cairne bloodhoof", "mesa", "rope bridges", "elevators", "tb"],
     "tags": ["city", "horde", "kalimdor"]
   },
   {
     "id": "city_undercity",
     "title": "Undercity",
     "content": "Undercity is the Forsaken capital, built in the catacombs beneath the ruined city of Lordaeron in Tirisfal Glades. It is laid out as a ring of quarters around a central well: the Trade Quarter, the War Quarter, the Magic Quarter, the Rogues' Quarter, and the Apothecarium, where Lady Sylvanas Windrunner and the Royal Apothecary Society plot. A zeppelin tower outside the ruins connects it to Orgrimmar and Northrend.",
-    "keywords": ["undercity", "forsaken capital", "undead capital", "lordaeron", "ruins of lordaeron", "trade quarter", "war quarter", "magic quarter", "rogues quarter", "apothecarium", "sylvanas windrunner", "royal apothecary society"],
+    "keywords": ["undercity", "forsaken capital", "undead capital", "lordaeron", "ruins of lordaeron", "trade quarter", "war quarter", "magic quarter", "rogues quarter", "apothecarium", "sylvanas windrunner", "royal apothecary society", "uc"],
     "tags": ["city", "horde", "eastern_kingdoms"]
   },
   {
@@ -66,14 +66,14 @@
     "id": "city_shattrath",
     "title": "Shattrath City",
     "content": "Shattrath City is the neutral hub of Outland, in western Terokkar Forest, where both factions trade and quest side by side. It is a sanctuary: all player versus player combat is disabled inside, including dueling. The Terrace of Light holds the naaru A'dal and portals to every capital city, while the Lower City below is home to refugees and the Sha'tar's quartermasters. Players choose between the Aldor and the Scryers here, and the choice locks out the other faction's rewards.",
-    "keywords": ["shattrath", "shattrath city", "outland hub", "neutral city", "sanctuary", "no pvp", "terrace of light", "lower city", "adal", "the shatar", "aldor", "scryers", "terokkar"],
+    "keywords": ["shattrath", "shattrath city", "outland hub", "neutral city", "sanctuary", "no pvp", "terrace of light", "lower city", "adal", "the shatar", "aldor", "scryers", "terokkar", "shatt"],
     "tags": ["city", "neutral", "outland", "sanctuary"]
   },
   {
     "id": "city_dalaran",
     "title": "Dalaran",
     "content": "Dalaran is the neutral magical city of Northrend, floating above Crystalsong Forest, and the main hub for level 75 and above. Like Shattrath it is a sanctuary, so faction combat and dueling are disabled in the streets above. Runeweaver Square holds portals to every capital, and the Violet Citadel houses the Kirin Tor under Rhonin. The exception is the Underbelly, the sewer level beneath the city, where free-for-all combat is allowed and players do fight.",
-    "keywords": ["dalaran", "northrend hub", "floating city", "neutral city", "sanctuary", "kirin tor", "runeweaver square", "violet citadel", "rhonin", "the underbelly", "dalaran sewers", "crystalsong forest"],
+    "keywords": ["dalaran", "northrend hub", "floating city", "neutral city", "sanctuary", "kirin tor", "runeweaver square", "violet citadel", "rhonin", "the underbelly", "dalaran sewers", "crystalsong forest", "dal"],
     "tags": ["city", "neutral", "northrend", "sanctuary"]
   }
 ]

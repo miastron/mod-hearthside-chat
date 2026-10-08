@@ -59,7 +59,7 @@
     "id": "quest_repeatable_quests",
     "title": "Repeatable and Daily Quests",
     "content": "Daily quests can be done once per day and reset at the realm's daily reset; you can finish up to 25 of them a day. Big Northrend daily hubs are the Argent Tournament, the Sons of Hodir and Wyrmrest Temple, plus the Dalaran cooking and fishing dailies. Some quests, like the raid weekly, reset once a week.",
-    "keywords": ["daily", "dailies", "daily quest", "daily quests", "repeatable", "repeatable quest", "daily reset", "weekly quest"],
+    "keywords": ["daily", "dailies", "daily quest", "daily quests", "repeatable", "repeatable quest", "daily reset", "weekly quest", "how many dailies"],
     "tags": ["quests", "repeatable", "daily", "grinding"]
   }
 ]

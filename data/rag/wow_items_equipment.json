@@ -58,7 +58,7 @@
   {
     "id": "item_keys",
     "title": "Dungeon and Raid Keys",
-    "content": "Northrend heroic dungeons need no key, just level 80. Older keys in use include the Crescent Key from Dire Maul, which opens its locked doors, and the Shadowforge Key for the Shadowforge City gate in Blackrock Depths; rogues can pick many of these locks instead.",
+    "content": "Northrend heroic dungeons need no key, only the level cap. Older keys in use include the Crescent Key from Dire Maul, which opens its locked doors, and the Shadowforge Key for the Shadowforge City gate in Blackrock Depths; rogues can pick many of these locks instead.",
     "keywords": ["key", "keys", "attunement", "attuned", "crescent key", "shadowforge key", "heroic key", "dungeon key"],
     "tags": ["items", "keys", "access", "attunement"]
   },

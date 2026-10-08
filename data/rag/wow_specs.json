@@ -171,21 +171,21 @@
     "id": "spec_affliction_warlock",
     "title": "Affliction Warlock",
     "content": "Affliction is the damage-over-time tree. Corruption, Curse of Agony and Unstable Affliction tick on the target while Haunt raises all of that damage and returns the healing to the warlock. Drain Soul hits far harder on a target about to die. Strong on one target and unforgiving if the timers are left to lapse.",
-    "keywords": ["affliction warlock", "affli warlock", "unstable affliction", "haunt", "curse of agony", "drain soul", "dot warlock"],
+    "keywords": ["affliction warlock", "affli warlock", "unstable affliction", "haunt", "curse of agony", "drain soul", "dot warlock", "affli lock", "aff lock"],
     "tags": ["spec", "warlock"]
   },
   {
     "id": "spec_demonology_warlock",
     "title": "Demonology Warlock",
     "content": "Demonology is the pet tree. The Felguard is its own summon, Demonic Empowerment buffs whatever demon is out, and Soul Link splits damage between warlock and pet. Metamorphosis is the deep talent: the warlock becomes a demon with its own abilities. Demonic Pact hands the raid spell power off the pet's critical strikes.",
-    "keywords": ["demonology warlock", "demo warlock", "felguard", "metamorphosis", "demonic empowerment", "soul link", "demonic pact", "pet warlock"],
+    "keywords": ["demonology warlock", "demo warlock", "felguard", "metamorphosis", "demonic empowerment", "soul link", "demonic pact", "pet warlock", "demo lock"],
     "tags": ["spec", "warlock"]
   },
   {
     "id": "spec_destruction_warlock",
     "title": "Destruction Warlock",
     "content": "Destruction is the direct damage tree, built on Immolate and Incinerate with Conflagrate consuming the Immolate for a burst. Chaos Bolt is the deep talent: it cannot be resisted and ignores absorption shields. Backdraft speeds up casting afterwards and Shadowburn is the finisher.",
-    "keywords": ["destruction warlock", "destro warlock", "chaos bolt", "conflagrate", "incinerate", "immolate", "shadowburn", "backdraft"],
+    "keywords": ["destruction warlock", "destro warlock", "chaos bolt", "conflagrate", "incinerate", "immolate", "shadowburn", "backdraft", "destro lock"],
     "tags": ["spec", "warlock"]
   },
   {

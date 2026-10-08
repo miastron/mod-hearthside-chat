@@ -2,7 +2,7 @@
   {
     "id": "mechanic_reputation",
     "title": "Reputation System",
-    "content": "Reputation runs Hated, Hostile, Unfriendly, Neutral, Friendly, Honored, Revered, Exalted. From Neutral it takes 3,000 points to Friendly, 6,000 to Honored, 12,000 to Revered and 21,000 to Exalted, 42,000 in all. Each faction's quartermaster sells more as you climb, and humans gain 10% extra reputation.",
+    "content": "Reputation levels run Hated, Hostile, Unfriendly, Neutral, Friendly, Honored, Revered, Exalted. From Neutral it takes 3,000 points to Friendly, 6,000 to Honored, 12,000 to Revered and 21,000 to Exalted, 42,000 in all. Each faction's quartermaster sells more as you climb, and humans gain 10% extra reputation.",
     "keywords": ["reputation", "rep", "exalted", "revered", "standing", "faction standing"],
     "tags": ["mechanic", "reputation", "factions", "progression"]
   },
@@ -38,7 +38,7 @@
     "id": "mechanic_achievements",
     "title": "Achievement System",
     "content": "Press Y to open achievements; they belong to each character and award points, and some give titles, pets or mounts. For example World Explorer gives the title the Explorer, and Higher Learning, reading the books hidden in Dalaran, gives the Kirin Tor Familiar pet. Feats of Strength give no points.",
-    "keywords": ["achievement", "achievements", "achievement points", "cheevo", "cheevos", "feat of strength", "achievement title"],
+    "keywords": ["achievement", "achievements", "achievement points", "cheevo", "cheevos", "feat of strength", "achievement title", "world explorer", "higher learning"],
     "tags": ["mechanic", "goals", "rewards", "progression"]
   },
   {
@@ -58,7 +58,7 @@
   {
     "id": "mechanic_pets",
     "title": "Pet System",
-    "content": "Hunters learn Tame Beast at level 10 and keep beasts as permanent combat pets; Beast Mastery hunters can also tame exotic beasts. Warlocks summon demons, Death Knights raise a ghoul and frost mages get a Water Elemental. Non-combat companion pets are purely cosmetic followers.",
+    "content": "Hunters learn Tame Beast at level 10 and keep beasts as permanent combat pets; Beast Mastery hunters can also tame exotic beasts. Warlocks summon demons, Death Knights raise a ghoul and frost mages get a Water Elemental. Non-combat companion pets are purely cosmetic followers. Stable masters hold the beasts a hunter isn't using.",
     "keywords": ["pet", "pets", "hunter pet", "tame", "tame beast", "demon pet", "warlock pet"],
     "tags": ["mechanic", "companions", "pets", "collection"]
   },
@@ -66,7 +66,7 @@
     "id": "mechanic_guilds",
     "title": "Guild System",
     "content": "To found a guild, buy a guild charter from a guild master in a capital and collect signatures from other players, then turn it in. The guild leader sets ranks and what each rank may do, including which guild bank tabs it can withdraw from. Guilds in Wrath have no levels or perks.",
-    "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions"],
+    "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions", "make a guild"],
     "tags": ["mechanic", "social", "guilds", "community"]
   },
   {

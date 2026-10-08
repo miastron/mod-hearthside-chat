@@ -108,7 +108,7 @@ INSTANCES = [
     ("The Culling of Stratholme", 79, 80, "five-player dungeon", "the Caverns of Time in Tanaris",
      "It replays Arthas purging Stratholme, and beating the optional timed run rewards the Bronze Drake mount.",
      ["Meathook", "Salramm the Fleshcrafter", "Chrono-Lord Epoch", "Mal'Ganis"],
-     ["culling of stratholme", "cos", "strat cot"]),
+     ["culling of stratholme", "cos", "strat cot", "bronze drake"]),
     ("Trial of the Champion", 79, 80, "five-player dungeon", "the Argent Tournament grounds in Icecrown",
      "It opens with a mounted jousting round using vehicle controls before turning into a normal fight.",
      ["The Grand Champions", "Eadric the Pure", "Argent Confessor Paletress", "The Black Knight"],

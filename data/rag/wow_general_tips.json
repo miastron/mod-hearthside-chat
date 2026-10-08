@@ -3,7 +3,7 @@
     "id": "general_leveling_guide",
     "title": "Leveling Strategies",
     "content": "Resting in an inn or a capital city builds rested experience, which doubles the experience from kills until it runs out. From level 15 the Dungeon Finder queues random dungeons, which pay well for leveling, and bind-to-account heirloom shoulders and chests add 10% experience each. The level cap is 80; Death Knights start at 55.",
-    "keywords": ["leveling", "level up", "lvling", "xp", "exp", "rested xp", "rested experience", "leveling fast", "heirloom", "heirlooms"],
+    "keywords": ["leveling", "level up", "lvling", "xp", "exp", "rested xp", "rested experience", "leveling fast", "heirloom", "heirlooms", "level fast", "fastest leveling"],
     "tags": ["general", "leveling", "progression", "efficiency"]
   },
   {
@@ -23,7 +23,7 @@
   {
     "id": "general_addons",
     "title": "Essential Addons",
-    "content": "Popular 3.3.5 addons: Deadly Boss Mods or BigWigs for boss timers, Omen for threat, Recount or Skada for damage meters, QuestHelper or Carbonite for quest routes, Auctioneer or Auctionator for the auction house, Gatherer for herb and ore nodes, and Bartender4 for action bars. An addon has to be the 3.3.5 version (interface 30300); retail builds won't load.",
+    "content": "Popular 3.3.5 addons: Deadly Boss Mods or BigWigs for boss timers, Omen for threat, Recount or Skada for damage meters, QuestHelper or Carbonite for quest routes, Auctioneer or Auctionator for the auction house, Gatherer for herb and ore nodes, and Bartender4 for action bars. An addon has to be the 3.3.5 version (interface 30300); retail builds won't load. Each addon installs as its own folder in Interface\\AddOns.",
     "keywords": ["addons", "addon", "dbm", "deadly boss mods", "bigwigs", "recount", "skada", "omen", "questhelper", "auctioneer", "auctionator", "gatherer", "bartender", "damage meter", "threat meter"],
     "tags": ["general", "addons", "tools", "enhancement"]
   },
@@ -37,7 +37,7 @@
   {
     "id": "general_character_creation",
     "title": "Character Creation Tips",
-    "content": "Ten races are playable: Alliance humans, dwarves, gnomes, night elves and draenei; Horde orcs, trolls, tauren, undead and blood elves. Only night elves and tauren can be druids, shamans are orcs, trolls, tauren or draenei, and paladins are humans, dwarves, draenei or blood elves. A Death Knight unlocks once you have a level 55 character on the realm.",
+    "content": "You can play ten races: Alliance humans, dwarves, gnomes, night elves and draenei; Horde orcs, trolls, tauren, undead and blood elves. Only night elves and tauren can be druids, shamans are orcs, trolls, tauren or draenei, and paladins are humans, dwarves, draenei or blood elves. A Death Knight unlocks once you have a level 55 character on the realm.",
     "keywords": ["character creation", "new character", "make a character", "create a character", "reroll", "race and class", "which race", "what race", "race class combo"],
     "tags": ["general", "character", "creation", "planning"]
   },
@@ -71,9 +71,9 @@
   },
   {
     "id": "general_endgame_content",
-    "title": "Endgame Content Overview",
+    "title": "Endgame and Raids",
     "content": "At level 80 the endgame is heroic five-mans, raids, arenas, Wintergrasp, daily quests and reputation. The raids are Naxxramas, Obsidian Sanctum, Eye of Eternity, Vault of Archavon, Ulduar, Trial of the Crusader, Onyxia's Lair, Icecrown Citadel and Ruby Sanctum; Icecrown Citadel is the top tier and ends with the Lich King.",
-    "keywords": ["endgame", "end game", "max level", "level cap"],
+    "keywords": ["endgame", "end game", "max level", "level cap", "raids"],
     "tags": ["general", "endgame", "content", "variety"]
   },
   {
@@ -115,7 +115,7 @@
     "id": "general_reputation_grinding",
     "title": "Reputation Grinding Strategies",
     "content": "In Northrend, wearing the tabard of the Argent Crusade, Kirin Tor, Knights of the Ebon Blade or Wyrmrest Accord in a level-80 dungeon sends that dungeon's reputation to the faction, called championing. Factions without a tabard, like the Sons of Hodir, rise only through quests and dailies, and humans gain 10% more reputation from Diplomacy.",
-    "keywords": ["rep grind", "reputation grind", "grind rep", "rep farm", "farm rep", "championing", "champion tabard"],
+    "keywords": ["rep grind", "reputation grind", "grind rep", "rep farm", "farm rep", "championing", "champion tabard", "kirin tor rep", "hodir rep", "sons of hodir rep", "diplomacy"],
     "tags": ["general", "reputation", "grinding", "progression"]
   },
   {

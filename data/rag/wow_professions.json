@@ -17,7 +17,7 @@
     "id": "profession_enchanting",
     "title": "Enchanting Profession",
     "content": "Enchanters disenchant green and better items into dusts, essences and shards (Infinite Dust, Greater Cosmic Essence and Dream Shards in Northrend, Abyss Crystals from epics) and use them to enchant gear. It needs no gathering profession, and its perk is enchanting your own rings.",
-    "keywords": ["enchanting", "enchanter", "disenchant", "disenchanting", "dust", "infinite dust", "dream shard", "abyss crystal", "cosmic essence", "ring enchant"],
+    "keywords": ["enchanting", "enchanter", "disenchant", "disenchanting", "dust", "infinite dust", "dream shard", "abyss crystal", "cosmic essence", "ring enchant", "ench"],
     "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"]
   },
   {
@@ -79,7 +79,7 @@
   {
     "id": "profession_cooking",
     "title": "Cooking Profession",
-    "content": "Cooking is a secondary profession anyone can learn alongside two primaries. Food gives Well Fed buffs, and the Fish Feast feeds a whole raid. Many Northrend recipes are bought with Dalaran Cooking Awards from the cooking dailies of Katherine Lee or Awilo Lon'gomba in Dalaran.",
+    "content": "Cooking is a secondary profession anyone can learn alongside two primaries. Food gives Well Fed buffs, and the Fish Feast feeds a whole raid. Dozens of Northrend recipes are bought with Dalaran Cooking Awards from the cooking dailies of Katherine Lee or Awilo Lon'gomba in Dalaran.",
     "keywords": ["cooking", "cook", "fish feast", "cooking recipe", "cooking recipes", "dalaran cooking award"],
     "tags": ["profession", "secondary", "consumables", "buffs", "raiding"]
   },

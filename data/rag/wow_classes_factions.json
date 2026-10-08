@@ -9,7 +9,7 @@
   {
     "id": "wow_classes_paladin",
     "title": "Paladin Class",
-    "content": "Paladins are plate-wearing holy warriors who run on mana: Holy heals, Protection tanks and Retribution deals melee damage. They buff the group with blessings and auras, use seals and judgements in combat, and carry Divine Shield. Humans, dwarves, draenei and blood elves can be paladins.",
+    "content": "Paladins are plate-wearing holy warriors who run on mana: Holy heals, Protection tanks and Retribution deals melee damage. They buff the group with blessings and auras, use seals and judgements in combat, and carry Divine Shield. The races that can be paladins are humans, dwarves, draenei and blood elves.",
     "keywords": ["paladin", "pally", "blessing", "blessings", "judgement", "judgment", "divine shield", "seal of"],
     "tags": ["class", "hybrid", "healer", "tank", "dps"]
   },
@@ -30,14 +30,14 @@
   {
     "id": "wow_classes_priest",
     "title": "Priest Class",
-    "content": "Priests wear cloth and run on mana: Discipline and Holy heal and Shadow deals damage from Shadowform. Their utility includes Power Word: Fortitude, Fear Ward, Mind Control and resurrection. Humans, dwarves, night elves, draenei, undead, trolls and blood elves can be priests.",
+    "content": "Priests wear cloth and run on mana: Discipline and Holy heal and Shadow deals damage from Shadowform. Their utility includes Power Word: Fortitude, Fear Ward, Mind Control and resurrection. The races that can be priests are humans, dwarves, night elves, draenei, undead, trolls and blood elves.",
     "keywords": ["priest", "mind control", "psychic scream", "fear ward", "power word fortitude", "shackle undead"],
     "tags": ["class", "caster", "healer", "dps", "utility"]
   },
   {
     "id": "wow_classes_shaman",
     "title": "Shaman Class",
-    "content": "Shamans run on mana, wear mail from level 40, and drop totems that buff the group; Bloodlust, called Heroism for the Alliance, speeds up the whole party. Elemental casts, Enhancement fights in melee and Restoration heals, and Reincarnation lets them revive themselves. Only orcs, tauren, trolls and draenei can be shamans.",
+    "content": "Shamans run on mana, wear mail from level 40, and drop totems that buff the group; Bloodlust, called Heroism for the Alliance, speeds up the whole party. Elemental casts, Enhancement fights in melee and Restoration heals, and Reincarnation lets them revive themselves. Only four races can be shamans: orcs, tauren, trolls and draenei.",
     "keywords": ["shaman", "shammy", "totem", "totems", "bloodlust", "heroism", "reincarnation", "ankh", "ghost wolf", "purge"],
     "tags": ["class", "hybrid", "healer", "dps", "elemental"]
   },
@@ -58,7 +58,7 @@
   {
     "id": "wow_classes_druid",
     "title": "Druid Class",
-    "content": "Druids shapeshift and wear leather: Balance casts in Moonkin Form, Feral fights as a cat or tanks as a bear, and Restoration heals, the only class that can tank, heal or deal damage in either melee or ranged. Rebirth revives an ally in combat and Innervate restores mana. Only night elves and tauren can be druids.",
+    "content": "Druids shapeshift and wear leather: Balance casts in Moonkin Form, Feral fights as a cat or tanks as a bear, and Restoration heals, the only class that can tank, heal or deal damage in either melee or ranged. Rebirth revives an ally in combat and Innervate restores mana. Only two races can be druids: night elves and tauren.",
     "keywords": ["druid", "shapeshift", "shapeshifting", "travel form", "flight form", "innervate", "rebirth", "brez", "battle rez", "hibernate", "cyclone", "entangling roots"],
     "tags": ["class", "hybrid", "versatile", "shapeshift"]
   },
@@ -66,7 +66,7 @@
     "id": "wow_classes_death_knight",
     "title": "Death Knight Class",
     "content": "Death Knights are Wrath's plate-wearing hero class: they start at level 55 in Ebon Hold and need a level 55 character on the realm to create. They run on runes and runic power, and Blood, Frost and Unholy can each tank or deal damage. Death Grip pulls an enemy to them, and every race can be one.",
-    "keywords": ["death knight", "dk", "deathknight", "death grip", "anti magic shell", "antimagic shell", "death coil", "icy touch", "plague strike", "blood strike", "army of the dead", "lichborne"],
+    "keywords": ["death knight", "dk", "deathknight", "death grip", "anti magic shell", "antimagic shell", "death coil", "icy touch", "plague strike", "blood strike", "army of the dead", "lichborne", "dks"],
     "tags": ["class", "melee", "tank", "dps", "undead"]
   },
   {

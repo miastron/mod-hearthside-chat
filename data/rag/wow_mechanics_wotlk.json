@@ -2,8 +2,8 @@
   {
     "id": "mechanic_dungeon_finder",
     "title": "Dungeon Finder",
-    "content": "The Dungeon Finder (patch 3.3, December 2009) automatically groups players across realms for a chosen dungeon or a random one, through a queue where each player selects the Tank, Healer, and/or Damage role they'll fill. Once a group forms, everyone is teleported directly to the dungeon entrance, and abandoning the run before the group agrees to disband applies the Dungeon Deserter debuff. Queuing for a random Northrend heroic is the most common use: the first one completed each day awards 2 Emblems of Frost, and every additional one that day awards 2 Emblems of Triumph instead, making it the fastest way to gear up at level 80.",
-    "keywords": ["dungeon finder", "lfd", "rdf", "random dungeon", "random heroic", "lfg tool", "deserter", "dungeon queue"],
+    "content": "The Dungeon Finder (patch 3.3, December 2009), open from level 15, automatically groups players across realms for a chosen dungeon or a random one, through a queue where each player selects the Tank, Healer, and/or Damage role they'll fill. Once a group forms, everyone is teleported directly to the dungeon entrance, and abandoning the run before the group agrees to disband applies the Dungeon Deserter debuff. Queuing for a random Northrend heroic is the most common use: the first one completed each day awards 2 Emblems of Frost, and every additional one that day awards 2 Emblems of Triumph instead, making it the fastest way to gear up at level 80.",
+    "keywords": ["dungeon finder", "lfd", "rdf", "random dungeon", "random heroic", "lfg tool", "deserter", "dungeon queue", "daily random"],
     "tags": ["mechanic", "wotlk", "dungeons", "grouping"]
   },
   {
@@ -23,7 +23,7 @@
   {
     "id": "mechanic_cold_weather_flying",
     "title": "Cold Weather Flying",
-    "content": "Cold Weather Flying is the extra skill needed to use a flying mount in Northrend; Expert or Artisan riding alone isn't enough there. It's trained from a flying trainer in Dalaran or the Storm Peaks for 1,000 gold at level 77. A level 80 can buy the Tome of Cold Weather Flight for 1,000 gold and mail it to an alt, letting that alt fly in Northrend from 68.",
+    "content": "Cold Weather Flying is the extra skill needed to use a flying mount in Northrend; Flying itself is learned at 60 with Expert riding, but Expert or Artisan alone isn't enough there. It's trained from a flying trainer in Dalaran or the Storm Peaks for 1,000 gold at level 77. A level 80 can buy the Tome of Cold Weather Flight for 1,000 gold and mail it to an alt, letting that alt fly in Northrend from 68.",
     "keywords": ["cold weather flying", "cwf", "fly in northrend", "flying in northrend", "tome of cold weather flight"],
     "tags": ["mechanic", "wotlk", "flying", "mounts"]
   },

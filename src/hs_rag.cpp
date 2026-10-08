@@ -55,7 +55,8 @@ namespace
             "or", "should", "so", "some", "that", "the", "them", "then", "there",
             "they", "this", "to", "too", "up", "us", "use", "very", "was", "we",
             "what", "whats", "when", "where", "which", "who", "why", "will", "with",
-            "would", "you", "your", "youre", "u", "r", "ur", "pls", "plz", "thx"
+            "would", "you", "your", "youre", "u", "r", "ur", "pls", "plz", "thx",
+            "whos", "wheres", "stuff", "lvl", "no"
         };
         return kStop.count(t) != 0;
     }
@@ -69,12 +70,13 @@ namespace
         if (t.size() < 4 || t.back() != 's')
             return t;
 
-        // bosses -> boss, axes -> axe: only after a sibilant, so zones -> zone
-        // still falls through to the plain -s rule below.
+        // bosses -> boss, boxes -> box, matches -> match: -es only after
+        // ss/x/zz/ch/sh. A lone s, z or c keeps its e: races -> race,
+        // phases -> phase, prizes -> prize (they used to become "rac").
         if (t.size() >= 5 && t[t.size() - 2] == 'e')
         {
-            char c = t[t.size() - 3];
-            if (c == 's' || c == 'x' || c == 'z' || c == 'h' || c == 'c')
+            const std::string pre = t.substr(t.size() - 4, 2);
+            if (pre == "ss" || pre == "zz" || pre == "ch" || pre == "sh" || pre[1] == 'x')
             {
                 t.erase(t.size() - 2);
                 return t;
@@ -148,7 +150,13 @@ namespace
                 "sell", "better", "expensive", "play", "tank", "healer", "heal",
                 "dps", "epic", "progression", "drop", "content", "learning", "mob",
                 "ok", "drag", "teach", "apply", "change", "strat", "character",
-                "general", "special", "trade", "duel"
+                "general", "special", "trade", "duel",
+                // measured 2026-10-08 (Tests/rag_recall_audit.py, rag_audit.py):
+                // "where do horde land in northrend" -> Blasted Lands, "where are
+                // the elders" -> Elder Nadox, "i'll pass" -> Deadwind Pass,
+                // "what level are you" -> Leveling Strategies, "how do i find a
+                // raid" -> Dwarf Race ("find treasure"), "out" like "off"
+                "land", "elder", "pass", "level", "many", "find", "out"
             };
 
             std::unordered_set<std::string> out;
@@ -169,6 +177,12 @@ namespace
 
         for (unsigned char c : s)
         {
+            // An apostrophe joins rather than splits: "gruul's" -> "gruuls",
+            // as players type it. Split, "what's up" scored a bare "s" and
+            // retrieved Gruul's Lair at 1.1.
+            if (c == '\'')
+                continue;
+
             if (std::isalnum(c))
             {
                 out.push_back(static_cast<char>(std::tolower(c)));
@@ -403,8 +417,17 @@ bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery)
     size_t end = normalizedQuery.find(' ');
     if (kOpeners.count(normalizedQuery.substr(0, end)) > 0)
         return true;
+    const auto spaces = std::count(normalizedQuery.begin(), normalizedQuery.end(), ' ');
+    // ...or, in a short line, closers: "neutral ah where", "prot warrior tips".
+    // Not in a long one: "picked it up questing, forget where".
+    static const std::unordered_set<std::string> kClosers = {
+        "how", "where", "what", "when", "which", "much", "tips", "advice",
+    };
+    size_t last = normalizedQuery.rfind(' ');
+    if (spaces <= 3 && last != std::string::npos && kClosers.count(normalizedQuery.substr(last + 1)) > 0)
+        return true;
     // A bare topic ("holy paladin", "dm north") is chat shorthand for a question.
-    return std::count(normalizedQuery.begin(), normalizedQuery.end(), ' ') < 2;
+    return spaces < 2;
 }
 
 std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate)

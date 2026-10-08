@@ -258,7 +258,13 @@ asking for information -- no `?`, no question opener, more than two words -- ret
 handle that names it: a term at most two entries carry, one of its multi-word keywords, or its
 whole title. "we killed it in one night" no longer retrieves Night Elf Race; "we're running dire
 maul tonight" still retrieves Dire Maul. `Tests/rag_audit.py` measures the effect over every
-player line in the fine-tune dataset (18% -> 3% retrieving, most of the old hits wrong).
+player line in the fine-tune dataset (18% -> 3% retrieving on the 1,434-line set, most of the old
+hits wrong; 8% of the rebuilt 1,633-line set, which adds the grounded bucket's questions).
+
+`Tests/rag_recall_audit.py` is the other side: 535 player questions, each paired with the entry
+that answers it, with misses grouped by cause. Nothing expands chat abbreviations (`og`, `dal`,
+`stv`, `wpl`): each one has to be a keyword. A short line ending in `where`/`how much`/`tips` also
+counts as a question.
 
 ## Why the scoring looks like this
 

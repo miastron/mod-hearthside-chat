@@ -24,7 +24,7 @@
     "id": "npc_vendors",
     "title": "Special Vendors",
     "content": "Reputation quartermasters sell recipes, enchants and gear as your standing rises: the Kirin Tor's is Archmage Alvareaux in Dalaran, the Sons of Hodir's is Lillehoff at Dun Niffelem in the Storm Peaks, and the Wyrmrest Accord's is Cielstrasza at Wyrmrest Temple in Dragonblight.",
-    "keywords": ["quartermaster", "quartermasters", "rep vendor", "reputation vendor", "faction vendor", "special vendor"],
+    "keywords": ["quartermaster", "quartermasters", "rep vendor", "reputation vendor", "faction vendor", "special vendor", "kirin tor quartermaster"],
     "tags": ["npcs", "vendors", "items", "reputation"]
   },
   {
@@ -59,7 +59,7 @@
     "id": "npc_lore_figures",
     "title": "Important Lore Figures",
     "content": "Wrath's story centers on Arthas Menethil, the Lich King, waiting on the Frozen Throne atop Icecrown Citadel. Along the way players face Malygos, the blue Dragon Aspect, in the Eye of Eternity and the Old God Yogg-Saron beneath Ulduar, while Tirion Fordring leads the Argent Crusade and Darion Mograine the Knights of the Ebon Blade.",
-    "keywords": ["lore", "lich king lore", "arthas", "tirion fordring", "darion mograine", "malygos lore", "yogg saron lore", "illidan", "sylvanas"],
+    "keywords": ["lore", "lich king lore", "arthas", "tirion fordring", "darion mograine", "malygos lore", "yogg saron lore"],
     "tags": ["npcs", "lore", "story", "characters"]
   },
   {
