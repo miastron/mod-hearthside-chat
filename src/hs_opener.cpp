@@ -198,7 +198,7 @@ namespace
         if (style.text.empty())
             return;
 
-        Hs_DeliverReflexReply(botGuid, playerGuid, channel, style.text);
+        Hs_DeliverReflexReply(botGuid, playerGuid, channel, style.text, HsChannelKind::Trade, "opener");
         MarkOpenerFired(botGuid, playerGuid);
 
         // The per-pair opener cooldown above says nothing about ambient, which

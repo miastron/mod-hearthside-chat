@@ -370,7 +370,7 @@ void Hs_AbortBotChainsInScope(uint64_t scopeId)
 //     block above), not merely when the scope is created.
 //   - The longest a hop can be in flight between that refresh and delivery
 //     is bounded by Queue.TTLSeconds (15s default, older entries are
-//     dropped) + LLM.TimeoutSeconds (20s) + TypingDelay.MaxMs (6s) +
+//     dropped) + LLM.TimeoutSeconds (20s) + TypingDelay.MaxMs (15s) +
 //     kSelfCorrectionMaxDelaySeconds (5s) -- under a minute, against a 900s
 //     staleness threshold.
 //

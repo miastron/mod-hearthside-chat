@@ -34,8 +34,11 @@
 #   module.hearthside.chat       every chat request/reply (noisy -- mostly
 #                                only shows up if HearthsideChat.DebugEnabled
 #                                below is on)
+#   module.hearthside.convo      the conversation log, JSON lines (only with
+#                                HearthsideChat.ConversationLog.Enable below;
+#                                give it its own file appender)
 #
-# Logger names nest, so turning on `module` (or `root`) covers all four at
+# Logger names nest, so turning on `module` (or `root`) covers all of them at
 # once. Example -- show backend problems on the console, keep per-reply
 # noise off:
 #
@@ -256,6 +259,19 @@ HearthsideChat.ExcludeNames =
 #     Default:     0 (false)
 HearthsideChat.DebugChatLog.Enable = 0
 
+# HearthsideChat.ConversationLog.Enable
+#     Description: Logs both sides of every player-bot exchange -- the
+#                  player's line when it arrives, each bot line when it is
+#                  delivered, with where it came from (reflex, grounded,
+#                  model, afk, followup...) and, for model lines, the system
+#                  block and history the model saw. One JSON object per line
+#                  on the module.hearthside.convo logger. Give that logger its
+#                  own file in worldserver.conf, or it lands in Server.log:
+#                    Appender.HearthsideConvo=2,4,0,hearthside_convo.log,a
+#                    Logger.module.hearthside.convo=4,HearthsideConvo
+#     Default:     0 (false)
+HearthsideChat.ConversationLog.Enable = 0
+
 # --------------------------------------------
 # RUNTIME QUEUE
 # --------------------------------------------
@@ -331,8 +347,8 @@ HearthsideChat.TypingDelay.Enable = 1
 #                  the database) and the reply's length; this setting is
 #                  just the ceiling, so an unusually long reply can't stall
 #                  delivery indefinitely.
-#     Default:     6000
-HearthsideChat.TypingDelay.MaxMs = 6000
+#     Default:     15000
+HearthsideChat.TypingDelay.MaxMs = 15000
 
 # HearthsideChat.MinDeliveryDelayMs
 #     Description: Minimum delay before any AI reply is delivered, even

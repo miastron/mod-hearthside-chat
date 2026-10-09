@@ -17,5 +17,6 @@ inline constexpr char const* kHsLog          = "module.hearthside";
 inline constexpr char const* kHsLogChat      = "module.hearthside.chat";
 inline constexpr char const* kHsLogGenerator = "module.hearthside.generator";
 inline constexpr char const* kHsLogLlm       = "module.hearthside.llm";
+inline constexpr char const* kHsLogConvo     = "module.hearthside.convo";
 
 #endif // MOD_HS_LOG_H

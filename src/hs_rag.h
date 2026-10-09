@@ -112,8 +112,10 @@ size_t Hs_RagEntryCount();
 // information retrieves only named entries (hs_rag.cpp's IsNamedEntry), so
 // small talk stops pulling in how-the-game-works paragraphs. The generator
 // passes false: its queries are its own statements and want grounding.
+// `inConversation` (the pair already has history): a bare one- or two-word
+// line is an answer to the bot ("bg's?"), not a request for facts.
 std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore,
-                                     bool chatGate = true);
+                                     bool chatGate = true, bool inConversation = false);
 
 // How many retrieval-bearing terms `query` actually carries: normalized,
 // stopword-dropped, stemmed -- exactly the terms the scorer would weigh.
@@ -159,7 +161,8 @@ std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxCha
 // Returns "" when nothing clears `minScore`, which is the common case and
 // degrades to "no reference block in the prompt".
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
-                             const std::string& prefix = kHsRagReplyPrefix, bool chatGate = true);
+                             const std::string& prefix = kHsRagReplyPrefix, bool chatGate = true,
+                             bool inConversation = false);
 
 // Direct lookup: no scoring, no threshold, no near-miss. Each key is matched
 // against entry ids first and then against normalized titles, and the first

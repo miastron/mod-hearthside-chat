@@ -9,6 +9,7 @@
 #include "hs_experience.h"
 #include "hs_identity.h"
 #include "hs_identity_store.h"
+#include "hs_json.h"
 #include "hs_llm.h"
 #include "hs_locale.h"
 #include "hs_log.h"
@@ -195,6 +196,10 @@ namespace
         // hop triggered by a bare "*healer" fragment has no conversation in
         // it) or be echoed into the bot's next prompt as something it said.
         bool        isPrimaryLine = true;
+        // Conversation log (ConvoLog): where the line came from, and for a
+        // model line the system block, history and trigger it was given.
+        char const* source = "canned";
+        hs_json     model;
     };
 
     // ---- work queue: world thread pushes, the one worker thread pops ----
@@ -726,7 +731,9 @@ namespace
             // find it.
             if (g_HsRagEnable)
             {
-                std::string ragLine = Hs_RagContextFor(req.prompt, g_HsRagMaxEntries, g_HsRagMinScore, g_HsRagMaxChars);
+                const bool inConversation = !req.isEvent && !HistorySnapshot(req.botGuid, req.senderGuid).empty();
+                std::string ragLine = Hs_RagContextFor(req.prompt, g_HsRagMaxEntries, g_HsRagMinScore, g_HsRagMaxChars,
+                                                       kHsRagReplyPrefix, /*chatGate=*/true, inConversation);
 
                 // Fallback, not an addition: inside a dungeon the instance is
                 // a fact the *game* supplied, so it is addressed by name
@@ -1107,11 +1114,23 @@ namespace
                 if (!distractedFiller.empty())
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, distractedFiller,
                                                  distractedFillerAt, req.isFollowUp, req.channelKind,
-                                                 req.chainScopeId, req.chainSeq, /*isPrimaryLine=*/false });
+                                                 req.chainScopeId, req.chainSeq, /*isPrimaryLine=*/false, "afk" });
 
+                hs_json model;
+                if (g_HsConversationLogEnabled)
+                {
+                    model["system"] = llm.systemPrompt.empty() ? personaLine : llm.systemPrompt + "\n" + personaLine;
+                    model["history"] = hs_json::array();
+                    for (auto const& h : history)
+                        model["history"].push_back({ { "user", h.trigger }, { "assistant", h.reply } });
+                    model["trigger"] = modelTrigger;
+                    model["raw"]     = preStyleForLog;
+                }
                 g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, result.text, deliverAt,
                                              req.isFollowUp, req.channelKind, req.chainScopeId, req.chainSeq,
-                                             /*isPrimaryLine=*/true });
+                                             /*isPrimaryLine=*/true,
+                                             req.isFollowUp ? "followup" : req.isEvent ? "event" : "model",
+                                             std::move(model) });
 
                 // Self-correction follow-up: only eligible when a typo
                 // actually landed in this message. The `*` prefix is added
@@ -1127,7 +1146,7 @@ namespace
                     g_DeliveryQueue.push_back({ req.botGuid, req.senderGuid, req.channel, followUp,
                                                  deliverAt + std::chrono::seconds(delaySec), req.isFollowUp,
                                                  req.channelKind, req.chainScopeId, req.chainSeq,
-                                                 /*isPrimaryLine=*/false });
+                                                 /*isPrimaryLine=*/false, "correction" });
                 }
             }
         }
@@ -1244,7 +1263,10 @@ HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::
         gate.professions += prof.first + " " + std::to_string(prof.second);
     }
     gate.canRide = bot->GetSkillValue(SKILL_RIDING) >= 75;
-    gate.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevel());
+    // The DF form averages the item levels on the tooltip. GetAverageItemLevel
+    // takes 26 off every green and 13 off every blue, so a level-22 bot in
+    // ilvl-25 greens read "Item level 4".
+    gate.avgItemLevel = static_cast<uint32_t>(bot->GetAverageItemLevelForDF());
     if (Group* group = bot->GetGroup())
     {
         gate.inGroup       = true;
@@ -1457,14 +1479,15 @@ void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string&
 }
 
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
-                            HsChannelKind channelKind)
+                            HsChannelKind channelKind, char const* source)
 {
     if (text.empty())
         return;
 
     Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kReflexDelayMinMs, kReflexDelayMaxMs));
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);
-    g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind });
+    g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind,
+                                0, 0, /*isPrimaryLine=*/true, source });
 }
 
 void Hs_RecordBotUtterance(uint64_t botGuid, const std::string& text)
@@ -1899,6 +1922,13 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid)
         g_DeliveryQueue.end());
 }
 
+namespace
+{
+void ConvoLog(bool fromPlayer, uint64_t botGuid, const std::string& botName, uint64_t playerGuid,
+              const std::string& playerName, HsReplyChannel channel, const std::string& text,
+              char const* source, const hs_json& model);
+}
+
 void Hs_DeliverPending()
 {
     std::deque<HsPendingReply> ready;
@@ -2032,6 +2062,14 @@ void Hs_DeliverPending()
             }
         }
 
+        if (g_HsConversationLogEnabled && reply.senderGuid != 0)
+        {
+            Player* sender = ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid));
+            if (!sender || !Hs_IsBot(sender))
+                ConvoLog(/*fromPlayer=*/false, reply.botGuid, bot->GetName(), reply.senderGuid,
+                            sender ? sender->GetName() : "", reply.channel, reply.text, reply.source, reply.model);
+        }
+
         // Feeds Hs_RecentUtteranceContext for this bot's next reactive
         // reply. Say/Channel only -- see g_RecentUtterances' comment for
         // why Whisper/Party/Raid/Guild stay out of this shared pool -- and
@@ -2067,6 +2105,34 @@ void Hs_DeliverPending()
         if (reply.isPrimaryLine)
             Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0);
     }
+}
+
+namespace
+{
+void ConvoLog(bool fromPlayer, uint64_t botGuid, const std::string& botName, uint64_t playerGuid,
+              const std::string& playerName, HsReplyChannel channel, const std::string& text,
+              char const* source, const hs_json& model)
+{
+    hs_json line = {
+        { "ts", std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count() },
+        { "from", fromPlayer ? "player" : "bot" },
+        { "bot", botName }, { "bot_guid", botGuid },
+        { "player", playerName }, { "player_guid", playerGuid },
+        { "channel", Hs_ReplyChannelName(channel) },
+        { "source", source }, { "text", text },
+    };
+    if (!model.is_null())
+        line["model"] = model;
+    LOG_INFO(kHsLogConvo, "{}", line.dump(-1, ' ', false, hs_json::error_handler_t::replace));
+}
+}
+
+void Hs_ConvoLogPlayerLine(uint64_t botGuid, const std::string& botName, uint64_t playerGuid,
+                           const std::string& playerName, HsReplyChannel channel, const std::string& text)
+{
+    if (g_HsConversationLogEnabled)
+        ConvoLog(/*fromPlayer=*/true, botGuid, botName, playerGuid, playerName, channel, text, "player", hs_json());
 }
 
 void Hs_ForgetBotHistory(uint64_t botGuid)

@@ -346,7 +346,7 @@ namespace
                 std::string line = GuildLoginGreeting(sender->GetName());
                 HsStyleResult style = Hs_ApplyStyle(candidates[index].botGuid, bot->GetName(), sender->GetName(), line,
                     Hs_BuildStyleContext(candidates[index].botGuid, bot->IsInCombat()));
-                Hs_DeliverReflexReply(candidates[index].botGuid, sender->GetGUID().GetRawValue(), channel, style.text);
+                Hs_DeliverReflexReply(candidates[index].botGuid, sender->GetGUID().GetRawValue(), channel, style.text, HsChannelKind::Trade, "event-canned");
                 g_EventsFiredThisSession.fetch_add(1);
                 continue;
             }

@@ -405,19 +405,22 @@ bool IsNamedEntry(const std::string& id)
 // A request for information: a question mark, or chat's unpunctuated
 // question openers ("how do i get to org"). Not "u ..." -- "u pick a
 // profession yet" asks about the bot, not for a paragraph on professions.
-bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery)
+// Mid-conversation a bare topic is an answer, not a question: "bg's?" after
+// "wanna do something" proposes a plan and drew the battleground list.
+bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery, bool inConversation)
 {
-    if (rawQuery.find('?') != std::string::npos)
-        return true;
     static const std::unordered_set<std::string> kOpeners = {
         "how", "hows", "where", "wheres", "what", "whats", "which", "who", "whos", "when", "why",
         "is", "are", "does", "do", "did", "can", "could", "should", "would", "will", "any",
         "anyone", "anybody", "know", "best", "tips", "advice",
     };
     size_t end = normalizedQuery.find(' ');
-    if (kOpeners.count(normalizedQuery.substr(0, end)) > 0)
-        return true;
+    const bool opener = kOpeners.count(normalizedQuery.substr(0, end)) > 0;
     const auto spaces = std::count(normalizedQuery.begin(), normalizedQuery.end(), ' ');
+    if (inConversation && spaces < 2 && !opener)
+        return false;
+    if (rawQuery.find('?') != std::string::npos || opener)
+        return true;
     // ...or, in a short line, closers: "neutral ah where", "prot warrior tips".
     // Not in a long one: "picked it up questing, forget where".
     static const std::unordered_set<std::string> kClosers = {
@@ -430,7 +433,8 @@ bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery)
     return spaces < 2;
 }
 
-std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate)
+std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate,
+                                     bool inConversation)
 {
     std::vector<HsRagHit> hits;
 
@@ -442,7 +446,7 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
 
     // A statement retrieves only named entries: "this tier has been fun"
     // pulled Tier Sets, a group-death event Group and Raid Quests.
-    const bool asking = !chatGate || IsAsking(normalizedQuery, query);
+    const bool asking = !chatGate || IsAsking(normalizedQuery, query, inConversation);
 
     // Dedupe: a term repeated in the question should not count twice toward
     // either the numerator or the denominator.
@@ -591,10 +595,11 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
 }
 } // namespace
 
-std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate)
+std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntries, float minScore, bool chatGate,
+                                     bool inConversation)
 {
     std::shared_lock<std::shared_mutex> guard(TableMutex());
-    return RetrieveLocked(query, maxEntries, minScore, chatGate);
+    return RetrieveLocked(query, maxEntries, minScore, chatGate, inConversation);
 }
 
 size_t Hs_RagQueryTermCount(const std::string& query)
@@ -606,13 +611,13 @@ size_t Hs_RagQueryTermCount(const std::string& query)
 }
 
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
-                             const std::string& prefix, bool chatGate)
+                             const std::string& prefix, bool chatGate, bool inConversation)
 {
     std::shared_lock<std::shared_mutex> guard(TableMutex());
     // Hs_RagContextLine only reads through the hit pointers, which stay valid
     // for as long as this guard is held, so formatting inside the lock is
     // what keeps them from escaping it.
-    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore, chatGate), maxChars, prefix);
+    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore, chatGate, inConversation), maxChars, prefix);
 }
 
 std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,

@@ -104,7 +104,7 @@ namespace
         // knows it is mid-conversation.
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, match.text, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "reflex");
         Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
     }
 
@@ -391,7 +391,7 @@ namespace
         // without touching the GPU.
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, reply, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "grounded");
         Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
         return true;
     }
@@ -441,7 +441,7 @@ namespace
 
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, line, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text);
+        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "corpus");
         return true;
     }
 
@@ -494,7 +494,7 @@ namespace
 
         HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, bot->IsInCombat());
         HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, HsReplyChannel::Channel, style.text, kind);
+        Hs_DeliverReflexReply(botGuid, senderGuid, HsReplyChannel::Channel, style.text, kind, "corpus");
     }
 
     // Once reflex/grounded have passed on the trigger, check the surface's
@@ -515,6 +515,8 @@ namespace
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
         bool     inCombat   = bot->IsInCombat(); // context modulates care downward in combat
         uint8_t  botLevel   = bot->GetLevel();   // corpus fallback's level-band tag
+
+        Hs_ConvoLogPlayerLine(botGuid, bot->GetName(), senderGuid, senderName, channel, msg);
 
         bool reflexHandled = false;
         TryReflex(bot, senderName, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
@@ -632,11 +634,19 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
     if (!Hs_IsEligibleBot(receiver))
         return true; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
-    if (g_HsDisableRepliesInCombat && receiver->IsInCombat())
+
+    // A whisper the bot leaves unanswered is still half of the conversation;
+    // one that reaches TryDispatch is logged there.
+    auto unanswered = [&]() {
+        Hs_ConvoLogPlayerLine(receiver->GetGUID().GetRawValue(), receiver->GetName(),
+                              player->GetGUID().GetRawValue(), player->GetName(), HsReplyChannel::Whisper, msg);
         return true;
+    };
+    if (g_HsDisableRepliesInCombat && receiver->IsInCombat())
+        return unanswered();
 
     if (urand(0, 99) >= g_HsReplyChanceWhisper)
-        return true;
+        return unanswered();
 
     // mod-playerbots acts on a whisper that starts with "invite" from anyone
     // (PlayerbotAI::IsAllowedCommand) and sends a group invite itself; a
@@ -647,7 +657,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         std::string lower = msg;
         std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
         if (lower.rfind("invite", 0) == 0 && lower.find("guild") == std::string::npos)
-            return true;
+            return unanswered();
     }
 
     TryDispatch(receiver, player, msg, HsReplyChannel::Whisper);

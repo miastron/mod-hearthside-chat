@@ -24,6 +24,9 @@ extern bool g_HsBridgeEnable;
 // capture`; it does not feed replies back into the corpus automatically.
 // Off by default: writes to the DB and can grow large on a busy realm.
 extern bool g_HsDebugChatLogEnabled;
+// Both sides of every player-bot exchange, one JSON object per line, to the
+// module.hearthside.convo logger (hs_queue.cpp Hs_ConvoLog).
+extern bool g_HsConversationLogEnabled;
 
 // --------------------------------------------
 // Reading the std::string globals from a thread that is not the world thread

@@ -299,8 +299,16 @@ void Hs_ForgetBotHistory(uint64_t botGuid);
 // much" followed by "wyd?" reached the model as an opening line.
 void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string& trigger, const std::string& reply);
 
+// `source` names the tier for the conversation log (Hs_ConvoLog).
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
-                            HsChannelKind channelKind = HsChannelKind::Trade);
+                            HsChannelKind channelKind = HsChannelKind::Trade, char const* source = "canned");
+
+// The conversation log (HearthsideChat.ConversationLog.Enable): one JSON line
+// on module.hearthside.convo per player line that reaches a bot. Bot lines are
+// logged by Hs_DeliverPending as they are delivered, with their source and,
+// for a model line, the system block, history and trigger it was given.
+void Hs_ConvoLogPlayerLine(uint64_t botGuid, const std::string& botName, uint64_t playerGuid,
+                           const std::string& playerName, HsReplyChannel channel, const std::string& text);
 
 // Records that this bot said `text` somewhere with no bounded/membership
 // audience (Say or Channel; see hs_queue.cpp's g_RecentUtterances comment

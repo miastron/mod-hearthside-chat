@@ -14,6 +14,7 @@ bool g_HsEnable       = true;
 bool g_HsDebugEnabled = false;
 bool g_HsBridgeEnable = true;
 bool g_HsDebugChatLogEnabled = false;
+bool g_HsConversationLogEnabled = false;
 
 std::string g_HsLLMApiType  = "llamacpp";
 std::string g_HsLLMUrl      = "http://127.0.0.1:8080";
@@ -171,7 +172,7 @@ uint32_t g_HsBreakerFailureThreshold     = 3;
 uint32_t g_HsBreakerProbeIntervalSeconds = 15;
 
 bool     g_HsTypingDelayEnabled   = true;
-uint32_t g_HsTypingDelayMaxMs     = 6000;
+uint32_t g_HsTypingDelayMaxMs     = 15000;
 uint32_t g_HsMinDeliveryDelayMs   = 400;
 
 bool     g_HsDistractedEnabled         = true;
@@ -361,6 +362,7 @@ void Hs_LoadHearthsideChatConfig()
     RebuildExcludeNameSet();
 
     g_HsDebugChatLogEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugChatLog.Enable", false);
+    g_HsConversationLogEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.ConversationLog.Enable", false);
 
     g_HsQueueTTLSeconds             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Queue.TTLSeconds", 15);
     g_HsQueueMaxDepth               = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Queue.MaxDepth", 20);
@@ -371,7 +373,7 @@ void Hs_LoadHearthsideChatConfig()
     g_HsBreakerProbeIntervalSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.CircuitBreaker.ProbeIntervalSeconds", 15);
 
     g_HsTypingDelayEnabled   = sConfigMgr->GetOption<bool>("HearthsideChat.TypingDelay.Enable", true);
-    g_HsTypingDelayMaxMs     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.MaxMs", 6000);
+    g_HsTypingDelayMaxMs     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.TypingDelay.MaxMs", 15000);
     g_HsMinDeliveryDelayMs   = sConfigMgr->GetOption<uint32_t>("HearthsideChat.MinDeliveryDelayMs", 400);
 
     g_HsDistractedEnabled         = sConfigMgr->GetOption<bool>("HearthsideChat.Distracted.Enable", true);
