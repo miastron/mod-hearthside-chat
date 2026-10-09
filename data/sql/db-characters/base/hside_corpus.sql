@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS `hside_corpus` (
 --   category added below must be added to this list too.
 DELETE FROM `hside_corpus` WHERE `generated_at` IS NULL AND `name` IN (
   'chat_gripe_general', 'chat_class_banter', 'chat_levelband_musing',
-  'channel_trade_wts', 'channel_general_chat', 'chat_faction_banter',
+  'channel_trade_wts', 'channel_general_chat', 'channel_general_band',
+  'chat_faction_banter',
   'chat_zone_musing', 'chat_carded_focus',
   'opener_group_formed', 'opener_rez', 'opener_joint_kill',
   'opener_dungeon_complete', 'opener_prolonged_proximity'
@@ -169,57 +170,206 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_trade_wts', 'selling off some %item_link, pst if interested'),
 ('channel_trade_wts', 'WTS %item_link, first come first served'),
 ('channel_trade_wts', 'have a spare %item_link if anyone''s after one'),
-('channel_trade_wts', '%item_link up for grabs, pst'),
--- channel_general_chat: General channel. Resolved per zone, so every reader
--- is standing in the same zone as the speaker: but one stored row is
--- replayed in every zone there is, so the text still has to be phrased as a
--- general statement (not "here"/"this place"), questions, gripes, nothing
--- checkable
+('channel_trade_wts', '%item_link up for grabs, pst');
+
+-- channel_general_chat: General channel, band-neutral. Resolved per zone and
+-- replayed in every zone at every level, so each line has to be true at any
+-- level 1-80: no zone or dungeon names, no systems that only exist at one
+-- stage (emblems, heirlooms, glyphs, flying). Level-specific talk lives in
+-- channel_general_band below.
 --
--- Rewritten 2026-09-13. The originals were all true and none of them said
--- anything: "always another goal worth chasing in this game", "still
--- surprises me how much content there is to get through", "feels like
--- there's always something going on somewhere on the server". Every one
--- could have been typed about any MMO ever made, which is what made them
--- read as fake -- a real player complains about a *specific* thing. The
--- zone-agnostic constraint above is what pushed them that way: with "here"
--- off the table the easy move is to go abstract. The fix is to be concrete
--- about the parts of the game that are the same in every zone (travel,
--- bags, professions, repair bills, group composition) instead.
---
--- Second constraint, new: these rows are hs_generator.cpp's tone reference
--- for this bucket, so a vague row here teaches the model to generate more
--- vague rows. Every line below also passes the generator's own quality gate
--- (hs_gen_validate.cpp) -- no reply-shaped openers, no trend claims -- so
--- the sample never contradicts the rules the candidate is judged against.
-('channel_general_chat', 'escort quests where the npc walks slower than you do are a special kind of pain'),
-('channel_general_chat', 'the repair bill after a bad night costs more than the run brought in'),
-('channel_general_chat', 'half my bag space is quest items i am scared to vendor'),
-('channel_general_chat', 'riding skill costs more than the mount'),
-('channel_general_chat', 'flight paths route you through three stops to go one zone over'),
-('channel_general_chat', 'dual spec paid for itself the first week i had it'),
-('channel_general_chat', 'engineering is a money pit and i would take it again on every alt'),
-('channel_general_chat', 'cooking dailies are the only dailies i actually look forward to'),
-('channel_general_chat', 'fishing is either the most relaxing thing in the game or the most boring'),
-('channel_general_chat', 'every group needs a tank and somehow nobody ever wants to be one'),
-('channel_general_chat', 'elite quests dropped in the middle of a zone chain stop a solo run dead'),
-('channel_general_chat', 'corpse runs teach you the map faster than any guide ever did'),
--- General opinions/banter with nothing tied to a zone or place. These were
--- authored for a separate channel_world_chat category; 3.3.5a has no World
--- channel, so they were folded in here rather than discarded: they already
--- satisfy this category's "true in any zone" rule.
-('channel_general_chat', 'heirlooms make leveling an alt feel like cheating in the best way'),
-('channel_general_chat', 'emblems pile up faster than the vendors give me reasons to spend them'),
-('channel_general_chat', 'glyphs are the cheapest upgrade in the game and half the server skips them'),
-('channel_general_chat', 'the hearthstone cooldown is always five minutes longer than i need it to be'),
-('channel_general_chat', 'gathering nodes vanish the second somebody else lands next to you'),
-('channel_general_chat', 'resist gear sits in my bank taking up room for one fight a patch'),
-('channel_general_chat', 'a good tank makes a pug feel like a guild run'),
-('channel_general_chat', 'nothing humbles you like pulling two patrols at once'),
-('channel_general_chat', 'the auction house cut always stings more on a slow sale'),
-('channel_general_chat', 'ganking a lowbie says more about the ganker than the lowbie'),
-('channel_general_chat', 'summoning stones have saved more raid nights than any buff'),
-('channel_general_chat', 'quest text tells you exactly where to go and i end up running the wrong way anyway');
+-- Rewritten 2026-10-09 to read like real General chat: mostly questions to
+-- the channel, group asks, short reactions and gripes, a little banter and
+-- AFK noise, in place of the earlier polished one-off observations. Many are
+-- questions or group asks, which Hs_QualityGate's standalone-line rules
+-- reject for generated rows, so Tests/test_hs_gen_validate_seed_corpus.cpp
+-- exempts the two channel_general_* categories from the question rule.
+INSERT INTO `hside_corpus` (`name`, `text`) VALUES
+('channel_general_chat', 'anyone know where the flight master is'),
+('channel_general_chat', 'is it just me or is the server lagging'),
+('channel_general_chat', 'how do i turn off auto loot'),
+('channel_general_chat', 'how do i change where my hearthstone takes me'),
+('channel_general_chat', 'where do i find the auction house'),
+('channel_general_chat', 'how do i link an item in chat'),
+('channel_general_chat', 'what does need before greed actually mean'),
+('channel_general_chat', 'can you mount up indoors'),
+('channel_general_chat', 'is the bank shared between my characters'),
+('channel_general_chat', 'how do i leave a party'),
+('channel_general_chat', 'how long is the hearthstone cooldown supposed to be'),
+('channel_general_chat', 'how do i see who is in my guild'),
+('channel_general_chat', 'anyone know how to inspect another player'),
+('channel_general_chat', 'where can i learn first aid'),
+('channel_general_chat', 'can you trade with the other faction'),
+('channel_general_chat', 'what is the fastest way to make some gold'),
+('channel_general_chat', 'does anyone have a spare bag they can part with'),
+('channel_general_chat', 'how do i change my keybindings'),
+('channel_general_chat', 'why can''t i see trade chat'),
+('channel_general_chat', 'anyone else getting kicked to the login screen'),
+('channel_general_chat', 'how do i feed my pet'),
+('channel_general_chat', 'where do i go to get my corpse back'),
+('channel_general_chat', 'does dying cost anything besides repairs'),
+('channel_general_chat', 'how do i check my reputation'),
+('channel_general_chat', 'how do i invite someone to a guild'),
+('channel_general_chat', 'is it worth picking up a second profession'),
+('channel_general_chat', 'what does the exclamation mark over an npc mean'),
+('channel_general_chat', 'how do i get to the other continent'),
+('channel_general_chat', 'anyone know how to set up a macro'),
+('channel_general_chat', 'which is better, a cheap bag now or saving for a big one'),
+('channel_general_chat', 'what do the colors on item names mean'),
+('channel_general_chat', 'is there a way to hide my helmet'),
+('channel_general_chat', 'anyone want to group for quests'),
+('channel_general_chat', 'need one more for an elite quest'),
+('channel_general_chat', 'lf1m for a quest, anyone nearby'),
+('channel_general_chat', 'lfg, any quests anyone needs help with'),
+('channel_general_chat', 'looking for a group to do some quests'),
+('channel_general_chat', 'anyone need a tank'),
+('channel_general_chat', 'healer here, anyone want to group'),
+('channel_general_chat', 'any dps want to group up'),
+('channel_general_chat', 'anyone want to run a dungeon'),
+('channel_general_chat', 'lf1m dps for a dungeon, pst'),
+('channel_general_chat', 'anyone want to team up for an elite'),
+('channel_general_chat', 'need a couple more people for this elite'),
+('channel_general_chat', 'this escort is so slow'),
+('channel_general_chat', 'died to a mob that was gray two levels ago'),
+('channel_general_chat', 'i keep pulling extra mobs by accident'),
+('channel_general_chat', 'my bags are full again already'),
+('channel_general_chat', 'someone just took the node i was running to'),
+('channel_general_chat', 'lost another half hour to a corpse run'),
+('channel_general_chat', 'the repair bill is brutal today'),
+('channel_general_chat', 'wiped on a trash pack, i can''t even'),
+('channel_general_chat', 'the respawn timer on this mob is ridiculous'),
+('channel_general_chat', 'forty kills and not one drop'),
+('channel_general_chat', 'flight path took forever, should have walked'),
+('channel_general_chat', 'stood in fire again, my own fault'),
+('channel_general_chat', 'somebody pulled the whole room, great'),
+('channel_general_chat', 'pulled one mob and brought three friends'),
+('channel_general_chat', 'ran out of food at the worst time'),
+('channel_general_chat', 'lag spike killed me, thanks'),
+('channel_general_chat', 'the real boss is the flight path'),
+('channel_general_chat', 'my hearthstone is on cooldown, naturally'),
+('channel_general_chat', 'one more quest and then i log off, famous last words'),
+('channel_general_chat', 'caught another boot while fishing'),
+('channel_general_chat', 'tank pulls, healer panics, dps blames the healer'),
+('channel_general_chat', 'if you see someone running in circles that was me'),
+('channel_general_chat', 'who needs a map when you have confidence'),
+('channel_general_chat', 'my bags have bags now'),
+('channel_general_chat', 'gold goes in and nothing comes out'),
+('channel_general_chat', 'just one more dungeon, i promise'),
+('channel_general_chat', 'my pet is more useful than my group last night'),
+('channel_general_chat', 'standing in the road, come get me'),
+('channel_general_chat', 'brb, grabbing food'),
+('channel_general_chat', 'afk for a few minutes'),
+('channel_general_chat', 'anyone else just get disconnected'),
+('channel_general_chat', 'back, did i miss anything'),
+('channel_general_chat', 'gtg after this quest, see you all'),
+('channel_general_chat', 'afk, letting the dog out'),
+('channel_general_chat', 'need to eat, back in ten'),
+('channel_general_chat', 'connection dropped, back now');
+
+-- channel_general_band: General channel lines for one level band, drawn by
+-- the speaker's level (level_band_tag). Same register as channel_general_chat
+-- but free to name what that band actually does in 3.3.5a.
+INSERT INTO `hside_corpus` (`name`, `text`, `level_band_tag`) VALUES
+('channel_general_band', 'anyone know where the next quest hub is', 'low'),
+('channel_general_band', 'when do i get my first talent point', 'low'),
+('channel_general_band', 'anyone want to run ragefire chasm', 'low'),
+('channel_general_band', 'lf1m for deadmines, need a healer', 'low'),
+('channel_general_band', 'how do i get to wailing caverns', 'low'),
+('channel_general_band', 'anyone want to do shadowfang keep', 'low'),
+('channel_general_band', 'is deadmines worth running at this level', 'low'),
+('channel_general_band', 'at what level do i get a mount', 'low'),
+('channel_general_band', 'no mount until twenty, this is rough', 'low'),
+('channel_general_band', 'died to a boar again', 'low'),
+('channel_general_band', 'anyone else stuck on the kill ten quest', 'low'),
+('channel_general_band', 'first time on this class, any tips', 'low'),
+('channel_general_band', 'where do i learn my new spells', 'low'),
+('channel_general_band', 'are the starting zones always this crowded', 'low'),
+('channel_general_band', 'is it worth picking up two gathering professions', 'low'),
+('channel_general_band', 'anyone selling small bags cheap', 'low'),
+('channel_general_band', 'need a few more levels before i try the dungeon', 'low'),
+('channel_general_band', 'anyone want to help with a group quest', 'low'),
+('channel_general_band', 'should i finish the starting zone or move on', 'low'),
+('channel_general_band', 'what do i do with all this linen', 'low'),
+('channel_general_band', 'where do i buy a better weapon at this level', 'low'),
+('channel_general_band', 'ran past a mob and now i have six on me', 'low'),
+('channel_general_band', 'how do hunters get their first pet', 'low'),
+('channel_general_band', 'lost in the starting zone again', 'low'),
+('channel_general_band', 'how do i use my hearthstone', 'low'),
+('channel_general_band', 'just bought my first mount and now i''m broke', 'mid'),
+('channel_general_band', 'just hit forty, time to save for the riding skill', 'mid'),
+('channel_general_band', 'lf1m for scarlet monastery', 'mid'),
+('channel_general_band', 'anyone want to run zul''farrak', 'mid'),
+('channel_general_band', 'lfg for uldaman', 'mid'),
+('channel_general_band', 'lf tank for maraudon', 'mid'),
+('channel_general_band', 'lfg blackrock depths, need a healer', 'mid'),
+('channel_general_band', 'how do i get to stranglethorn from here', 'mid'),
+('channel_general_band', 'stranglethorn is full of tigers that hate me', 'mid'),
+('channel_general_band', 'tanaris is huge, anyone know where the next quest is', 'mid'),
+('channel_general_band', 'where do i get dual talent specialization', 'mid'),
+('channel_general_band', 'the escort quests at this level are so long', 'mid'),
+('channel_general_band', 'anyone need help with an elite quest in the barrens', 'mid'),
+('channel_general_band', 'which scarlet monastery wing is best for xp', 'mid'),
+('channel_general_band', 'lf group for dire maul', 'mid'),
+('channel_general_band', 'does anyone need a healer for uldaman', 'mid'),
+('channel_general_band', 'almost sixty, so ready for outland', 'mid'),
+('channel_general_band', 'grinding mobs for riding gold, send help', 'mid'),
+('channel_general_band', 'dungeon finder queue is taking forever for dps', 'mid'),
+('channel_general_band', 'how long is the run to blackrock mountain', 'mid'),
+('channel_general_band', 'is blackrock depths really that long', 'mid'),
+('channel_general_band', 'lf2m for maraudon, whisper me', 'mid'),
+('channel_general_band', 'anyone know where the epic mount trainer is', 'mid'),
+('channel_general_band', 'need two more for the elite quest', 'mid'),
+('channel_general_band', 'can''t believe the mount costs this much', 'mid'),
+('channel_general_band', 'anyone know where to get flying', 'high'),
+('channel_general_band', 'how do i get to outland', 'high'),
+('channel_general_band', 'anyone know how to get to northrend', 'high'),
+('channel_general_band', 'lf1m hellfire ramparts', 'high'),
+('channel_general_band', 'lfg for the blood furnace', 'high'),
+('channel_general_band', 'need a tank for shattered halls', 'high'),
+('channel_general_band', 'anyone running utgarde keep', 'high'),
+('channel_general_band', 'lfg for the nexus', 'high'),
+('channel_general_band', 'azjol-nerub, need a healer', 'high'),
+('channel_general_band', 'still saving up for cold weather flying', 'high'),
+('channel_general_band', 'dragonblight is huge, where is the next quest hub', 'high'),
+('channel_general_band', 'lf heroic outland, need a tank', 'high'),
+('channel_general_band', 'is it worth running outland dungeons for gear', 'high'),
+('channel_general_band', 'borean tundra or howling fjord first', 'high'),
+('channel_general_band', 'ran out of gold again, flying mount', 'high'),
+('channel_general_band', 'how do i get to the dark portal', 'high'),
+('channel_general_band', 'anyone need help with a group quest in zul''drak', 'high'),
+('channel_general_band', 'anyone know a good place to level from 70', 'high'),
+('channel_general_band', 'lfg for gundrak', 'high'),
+('channel_general_band', 'just hit seventy, where to next', 'high'),
+('channel_general_band', 'anyone up for the culling of stratholme', 'high'),
+('channel_general_band', 'hellfire is so crowded tonight', 'high'),
+('channel_general_band', 'where do i train expert riding', 'high'),
+('channel_general_band', 'can i fly in northrend yet', 'high'),
+('channel_general_band', 'lf2m for the slave pens', 'high'),
+('channel_general_band', 'lf2m heroic, need a tank and healer', 'endgame'),
+('channel_general_band', 'how many emblems of triumph for the chest piece', 'endgame'),
+('channel_general_band', 'emblems of frost or triumph, which first', 'endgame'),
+('channel_general_band', 'need a healer for icc, anyone', 'endgame'),
+('channel_general_band', 'lf2m icc 10, need tank and healer', 'endgame'),
+('channel_general_band', 'anyone running vault of archavon', 'endgame'),
+('channel_general_band', 'wintergrasp is up, anyone coming', 'endgame'),
+('channel_general_band', 'wintergrasp queue is so long', 'endgame'),
+('channel_general_band', 'how do i get started with the argent tournament dailies', 'endgame'),
+('channel_general_band', 'what gearscore do i need for trial of the crusader', 'endgame'),
+('channel_general_band', 'lfg trial of the champion heroic', 'endgame'),
+('channel_general_band', 'random heroic queue for dps is so long', 'endgame'),
+('channel_general_band', 'need one more for toc 10', 'endgame'),
+('channel_general_band', 'what gear do i need before icc', 'endgame'),
+('channel_general_band', 'anyone need the daily heroic done for emblems', 'endgame'),
+('channel_general_band', 'gearscore check before anything, as usual', 'endgame'),
+('channel_general_band', 'lf more for naxxramas 10', 'endgame'),
+('channel_general_band', 'obsidian sanctum, anyone need a tank', 'endgame'),
+('channel_general_band', 'anyone running ulduar tonight', 'endgame'),
+('channel_general_band', 'need a tank for ulduar 10', 'endgame'),
+('channel_general_band', 'anyone know when the next wintergrasp battle starts', 'endgame'),
+('channel_general_band', 'tank here, lf heroic, any healers', 'endgame'),
+('channel_general_band', 'lfm icc 25, need ranged dps', 'endgame'),
+('channel_general_band', 'daily heroic done, now to wait for the reset', 'endgame'),
+('channel_general_band', 'my gearscore is fine, my attention span isn''t', 'endgame');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- opener_*: fired only by hs_opener.cpp's shared-context triggers
@@ -630,49 +780,6 @@ INSERT INTO `hside_corpus` (`name`, `text`, `zone_tag`) VALUES
 ('chat_zone_musing', 'argent tournament dailies every single day', 210),
 ('chat_zone_musing', 'shadow vault quests are worth doing for the ebon blade', 210),
 ('chat_zone_musing', 'forge of souls, pit of saron and halls of reflection, all right here', 210);
-
-INSERT INTO `hside_corpus` (`name`, `text`) VALUES
--- channel_general_chat: 40
-('channel_general_chat', 'anyone else think the auction house prices are crazy right now'),
-('channel_general_chat', 'gathering still makes the most gold for the least effort'),
-('channel_general_chat', 'first aid is worth leveling on every alt, bandages beat sitting down to eat'),
-('channel_general_chat', 'enchanting is the most expensive profession to level'),
-('channel_general_chat', 'people who roll need on everything should get a timeout'),
-('channel_general_chat', 'tailoring bags are the only thing that sells for me'),
-('channel_general_chat', 'wish there was a way to sort bags without an addon'),
-('channel_general_chat', 'jewelcrafting dailies are worth it'),
-('channel_general_chat', 'skinning and leatherworking make a good pair'),
-('channel_general_chat', 'mining nodes get stolen right under me'),
-('channel_general_chat', 'the later guild bank tabs cost a small fortune'),
-('channel_general_chat', 'cooking is the cheapest profession to max'),
-('channel_general_chat', 'my quest log is always at 25'),
-('channel_general_chat', 'flying gets trained out in hellfire peninsula once you hit 60'),
-('channel_general_chat', 'random thought, why do murlocs always come in packs'),
-('channel_general_chat', 'who decided kill ten rats quests were fun'),
-('channel_general_chat', 'what does everyone do with all the cloth they find'),
-('channel_general_chat', 'every time i hearth i realize i needed to go somewhere else'),
-('channel_general_chat', 'cant decide what to level next'),
-('channel_general_chat', 'hunters and warlocks level solo the easiest, the pet does half the work'),
-('channel_general_chat', 'tanks are always the bottleneck for groups'),
-('channel_general_chat', 'healers wanted, healers always wanted'),
-('channel_general_chat', 'pvp is fun until you get farmed'),
-('channel_general_chat', 'bgs are the best xp if you can get a decent team'),
-('channel_general_chat', 'warsong gulch takes forever when nobody caps'),
-('channel_general_chat', 'arathi basin is the most fun battleground, change my mind'),
-('channel_general_chat', 'alterac valley takes forever but the honor is good'),
-('channel_general_chat', 'never understood why people ignore glyphs'),
-('channel_general_chat', 'anyone else keep forgetting to use their talent points'),
-('channel_general_chat', 'dual spec is the best thing they ever added'),
-('channel_general_chat', 'leveling an alt is more fun than playing my main'),
-('channel_general_chat', 'every server has that one guy who just yells in general'),
-('channel_general_chat', 'i just want one decent drop today'),
-('channel_general_chat', 'my bank is a museum of things i never use'),
-('channel_general_chat', 'how do people have time to farm gold'),
-('channel_general_chat', 'riding skill is the biggest gold sink there is'),
-('channel_general_chat', 'loot council or need before greed, what do you all prefer'),
-('channel_general_chat', 'does anyone actually read quest text'),
-('channel_general_chat', 'heirlooms are the only reason i level alts'),
-('channel_general_chat', 'the stranglethorn fishing extravaganza is the most chaotic thing in the game');
 
 INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 -- channel_trade_wts: 15, %item_link exactly once each
