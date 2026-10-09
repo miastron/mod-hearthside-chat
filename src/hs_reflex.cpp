@@ -286,7 +286,7 @@ HsReflexMatch Hs_MatchReflex(const std::string& trigger, uint64_t botGuid, uint6
     return HsReflexMatch{}; // kind stays None; caller falls through
 }
 
-std::string Hs_ExpandChatShorthand(const std::string& text)
+std::string Hs_ExpandChatShorthand(const std::string& rawText)
 {
     static const std::unordered_map<std::string, const char*> kExpand = {
         { "wyd", "what are you doing" }, { "wbu", "what about you" }, { "hbu", "how about you" },
@@ -305,6 +305,7 @@ std::string Hs_ExpandChatShorthand(const std::string& text)
         { "dont", "don't" }, { "cant", "can't" },
     };
 
+    std::string const text = HsText::Hs_StripChatLinks(rawText);
     std::string out;
     out.reserve(text.size() + 16);
     size_t i = 0;

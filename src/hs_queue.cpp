@@ -10,6 +10,7 @@
 #include "hs_identity.h"
 #include "hs_identity_store.h"
 #include "hs_json.h"
+#include "hs_text.h"
 #include "hs_llm.h"
 #include "hs_locale.h"
 #include "hs_log.h"
@@ -106,8 +107,9 @@ namespace
         }
     }
 
-    // Real players answer these in under a second, but a same-tick reply
-    // would itself be a tell, so tier 0 still gets a short randomized delay.
+    // Tier 0's delay when TypingDelay.Enable is off. With it on, a canned
+    // line is typed at the same archetype speed as a model reply: a "hey, not
+    // much" one second after the player's line read as instant (2026-10-09).
     constexpr uint32_t kReflexDelayMinMs = 400;
     constexpr uint32_t kReflexDelayMaxMs = 1500;
 
@@ -441,7 +443,7 @@ namespace
         Clock::time_point now = Clock::now();
 
         HsHistoryEntry& entry = g_History[{ botGuid, senderGuid }];
-        entry.turns.push_back({ trigger, reply });
+        entry.turns.push_back({ HsText::Hs_StripChatLinks(trigger), HsText::Hs_StripChatLinks(reply) });
         entry.touchedAt = now;
         while (entry.turns.size() > g_HsLLMHistoryTurns)
             entry.turns.pop_front();
@@ -1484,7 +1486,14 @@ void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel
     if (text.empty())
         return;
 
-    Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kReflexDelayMinMs, kReflexDelayMaxMs));
+    uint32_t delayMs = urand(kReflexDelayMinMs, kReflexDelayMaxMs);
+    if (g_HsTypingDelayEnabled)
+    {
+        HsArchetypeInfo const archetypeInfo = Hs_ArchetypeInfoFor(Hs_ArchetypeForBot(botGuid));
+        delayMs = std::max(g_HsMinDeliveryDelayMs, std::min(g_HsTypingDelayMaxMs,
+            archetypeInfo.typingBaseMs + static_cast<uint32_t>(text.size()) * archetypeInfo.typingPerCharMs));
+    }
+    Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(delayMs);
     std::lock_guard<std::mutex> lock(g_DeliveryMutex);
     g_DeliveryQueue.push_back({ botGuid, senderGuid, channel, text, deliverAt, /*isFollowUp=*/false, channelKind,
                                 0, 0, /*isPrimaryLine=*/true, source });

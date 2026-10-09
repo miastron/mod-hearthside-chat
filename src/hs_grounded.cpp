@@ -87,14 +87,18 @@ HsGroundedKind Hs_MatchGroundedQuestion(const std::string& trigger, uint32_t fuz
 
     for (auto const& q : g_Questions)
     {
+        // One edit per five characters of the phrase, up to the cap: two
+        // edits turned "not much" into "how much" and answered it with a
+        // trade quote (2026-10-09).
+        uint32_t const maxDistance = std::min<uint32_t>(fuzzyMaxDistance, static_cast<uint32_t>(q.phrase.size() / 5));
         size_t lenDiff = corePhrase.size() > q.phrase.size()
                               ? corePhrase.size() - q.phrase.size()
                               : q.phrase.size() - corePhrase.size();
-        if (lenDiff > fuzzyMaxDistance)
+        if (lenDiff > maxDistance)
             continue;
 
         uint32_t d = LevenshteinDistance(corePhrase, q.phrase);
-        if (d > fuzzyMaxDistance)
+        if (d > maxDistance)
             continue;
 
         if (d < bestDistance)

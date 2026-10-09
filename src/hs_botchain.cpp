@@ -2,6 +2,7 @@
 #include "hs_arbiter.h"
 #include "hs_bot.h"
 #include "hs_config.h" // every g_Hs* key below, and Hs_IsExcludedBotName
+#include "hs_reflex.h" // Hs_ExpandChatShorthand
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
 
@@ -314,7 +315,9 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     // engagement re-arm, the distracted-reply roll, and: the part only this
     // flag carries: Hs_EnsureFirstMeetingRecorded, so a chain can never
     // seed identity state from two bots meeting each other.
-    HsReplyRequest request = Hs_MakeReplyRequest(responder, speaker, channel, text);
+    // The line arrives styled (typos, "u", "rn"); spelled out like a
+    // player's, the model sees the shape it was trained on.
+    HsReplyRequest request = Hs_MakeReplyRequest(responder, speaker, channel, Hs_ExpandChatShorthand(text));
     request.isEvent      = true;
     request.channelKind  = kind;
     request.chainScopeId = scopeId;

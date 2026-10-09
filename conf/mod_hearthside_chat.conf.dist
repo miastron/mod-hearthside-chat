@@ -337,7 +337,8 @@ HearthsideChat.CircuitBreaker.ProbeIntervalSeconds = 15
 # however long the AI call itself already took, never shortening it.
 
 # HearthsideChat.TypingDelay.Enable
-#     Description: Master toggle for the extra typing delay on AI replies.
+#     Description: Master toggle for the typing delay on AI replies and on
+#                  canned/fact-based/pre-written replies (same speed).
 #     Default:     1 (true)
 HearthsideChat.TypingDelay.Enable = 1
 
@@ -354,10 +355,10 @@ HearthsideChat.TypingDelay.MaxMs = 15000
 #     Description: Minimum delay before any AI reply is delivered, even
 #                  with TypingDelay.Enable off -- otherwise a fast AI server
 #                  could deliver a reply the instant it's ready, which is
-#                  just as unnatural as a long delay. Canned/fact-based/
-#                  pre-written replies (400-1500ms) and scripted scenes
-#                  (800-2000ms+) already have their own minimums and aren't
-#                  affected by this.
+#                  just as unnatural as a long delay. Also the floor for
+#                  canned/fact-based/pre-written replies when typing delay
+#                  is on (400-1500ms when it is off). Scripted scenes
+#                  (800-2000ms+) have their own minimums.
 #     Default:     400
 HearthsideChat.MinDeliveryDelayMs = 400
 
@@ -922,7 +923,9 @@ HearthsideChat.GroundedAnswers = 1
 #                  single-character edits (a "Levenshtein distance"), so
 #                  "waht level are you" still matches "what level are you"
 #                  as a typo -- it is typo tolerance only, not a general
-#                  reword or substring match. A phrase whose length differs
+#                  reword or substring match. Short phrases get less: one
+#                  edit per five characters, so "not much" never becomes
+#                  "how much" and "price" allows none. A phrase whose length differs
 #                  too much from the message is skipped outright, and if
 #                  two different questions end up equally close, the match
 #                  is treated as too ambiguous and dropped rather than

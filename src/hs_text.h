@@ -63,6 +63,35 @@ namespace HsText
         }
         return s;
     }
+
+    // Chat hyperlinks (|cAARRGGBB|Hitem:...|h[Name]|h|r) reduced to "[Name]",
+    // which is how a player reads them and the form training rows use. Raw
+    // markup reached the model through history on 2026-10-09.
+    inline std::string Hs_StripChatLinks(const std::string& s)
+    {
+        std::string out;
+        out.reserve(s.size());
+        for (size_t i = 0; i < s.size();)
+        {
+            if (s[i] == '|' && i + 1 < s.size())
+            {
+                char code = s[i + 1];
+                if (code == 'c' && i + 10 <= s.size()) { i += 10; continue; }   // |cAARRGGBB
+                if (code == 'r') { i += 2; continue; }
+                if (code == 'h') { i += 2; continue; }
+                if (code == 'H')
+                {
+                    size_t end = s.find("|h", i + 2);
+                    if (end == std::string::npos)
+                        break;
+                    i = end + 2;
+                    continue;
+                }
+            }
+            out.push_back(s[i++]);
+        }
+        return out;
+    }
 }
 
 #endif // MOD_HS_TEXT_H
