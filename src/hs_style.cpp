@@ -554,6 +554,19 @@ namespace
         // the new greeting reflexes came out as "Yo." and "Winterspring.").
         if (mark.empty() && std::count(s.begin(), s.end(), ' ') < 3)
             return s;
+        // An unmarked question gets "?", not "." (realm 2026-10-10: "why
+        // can't i see trade chat.").
+        if (mark.empty())
+        {
+            static const std::unordered_set<std::string> kQuestionOpeners = {
+                "how", "hows", "where", "wheres", "what", "whats", "which", "who", "whos", "when", "why",
+                "is", "are", "does", "do", "did", "can", "could", "should", "would", "will", "anyone", "anybody",
+            };
+            std::string first = HsText::Hs_ToLowerAscii(s.substr(0, s.find(' ')));
+            first.erase(std::remove(first.begin(), first.end(), '\''), first.end());
+            if (kQuestionOpeners.count(first))
+                mark = "?";
+        }
         return s + (mark.empty() ? "." : mark);
     }
 

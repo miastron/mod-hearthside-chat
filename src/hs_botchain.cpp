@@ -5,6 +5,8 @@
 #include "hs_reflex.h" // Hs_ExpandChatShorthand
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
+#include "hs_log.h"
+#include "Log.h"
 
 #include "Channel.h" // Hs_ResolveChannelForDelivery's return
 #include "Group.h"
@@ -223,6 +225,14 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         return;
     }
 
+    // Why a General line did not draw a hop (Debug only; realm 2026-10-10:
+    // 0 hops in 45 General lines).
+    auto skip = [&](char const* why)
+    {
+        if (g_HsDebugEnabled && channel == HsReplyChannel::Channel)
+            LOG_INFO(kHsLogChat, "[HearthsideChat] chain General skipped after {}: {}", speaker->GetName(), why);
+    };
+
     // ---- cheap gates first, all under one lock ----
     uint32_t depth = 0;
     uint32_t seq   = 0;
@@ -240,7 +250,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
             scope.depth = 0;
 
         if (scope.depth >= g_HsBotChainMaxDepth)
-            return;
+            return skip("max depth");
 
         // The cooldown paces whole chains, not the hops inside one: at depth
         // 0 a new chain has to wait out the scope's rest period, while a
@@ -249,7 +259,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         {
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - scope.lastHopAt).count();
             if (elapsed < static_cast<int64_t>(g_HsBotChainScopeCooldownSeconds))
-                return;
+                return skip("scope cooldown");
         }
 
         depth = scope.depth;
@@ -258,13 +268,13 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
 
     if (urand(0, 99) >= Hs_BotChainHopChancePercent(g_HsBotChainBaseChancePercent,
                                                      g_HsBotChainDecayPercent, depth))
-        return;
+        return skip("chance roll");
 
     // A hop is a line in the channel like any other, so it spends a token
     // from that channel's bucket. Taken after the chance roll (a roll that
     // misses costs nothing) and before the realm-wide scan below.
     if (channel == HsReplyChannel::Channel && !Hs_ChannelBucketTake(kind))
-        return;
+        return skip("channel RatePerMin bucket is empty");
 
     bool                 sawRealPlayer = false;
     std::vector<Player*> candidates;
@@ -289,19 +299,19 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     if (g_HsBotChainRequireRealPlayer && !sawRealPlayer)
     {
         refundChannelToken();
-        return;
+        return skip("no real player in the channel");
     }
     if (candidates.empty())
     {
         refundChannelToken();
-        return;
+        return skip("no eligible bot");
     }
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(speaker, text, candidates);
     if (selected.empty())
     {
         refundChannelToken();
-        return;
+        return skip("arbiter picked nobody");
     }
 
     // Exactly one, even though the arbiter may offer two: a second bot
@@ -323,7 +333,7 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     request.chainScopeId = scopeId;
     request.chainSeq     = seq;
     if (!Hs_TryEnqueue(std::move(request)))
-        return; // bucket/cooldown/breaker/queue-depth: silence, not a retry
+        return skip("not admitted"); // bucket/cooldown/breaker/queue-depth: silence, not a retry
 
     {
         Clock::time_point now = Clock::now();

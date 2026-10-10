@@ -787,6 +787,15 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     // General, which is the only one hs_botchain.h chains on.
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
+    // No canned reply to a player's General line: a random corpus line can't
+    // answer what they said (realm 2026-10-10). Bots keep their own General
+    // lines and scenes; replying waits for General on the model.
+    if (kind == HsChannelKind::General)
+    {
+        Hs_ConvoLogPlayerLine(0, "", player->GetGUID().GetRawValue(), player->GetName(), HsReplyChannel::Channel, msg);
+        return true;
+    }
+
     // Review G5: this hook used to walk ObjectAccessor::GetPlayers() twice on
     // a Trade WTS/WTB line -- once to stamp the `care` sightings and again to
     // build the candidate list -- with the same IsBot/IsInWorld/IsInChannel
@@ -870,6 +879,9 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     }
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, capped);
+    if (!selected.empty()) // once, beside the first replier, so the log shows what was answered
+        Hs_ConvoLogPlayerLine(selected.front()->GetGUID().GetRawValue(), selected.front()->GetName(),
+                              player->GetGUID().GetRawValue(), player->GetName(), HsReplyChannel::Channel, msg);
     for (Player* bot : selected)
         TryChannelCorpusReply(bot, player, kind, bot->GetGUID().GetRawValue(), player->GetGUID().GetRawValue(), bot->GetLevel());
 

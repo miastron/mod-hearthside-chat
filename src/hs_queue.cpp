@@ -2071,12 +2071,18 @@ void Hs_DeliverPending()
             }
         }
 
-        if (g_HsConversationLogEnabled && reply.senderGuid != 0)
+        // Bot-to-bot and channel lines too, so a General exchange can be
+        // corrected into training rows like a whisper (2026-10-10).
+        if (g_HsConversationLogEnabled &&
+            (reply.senderGuid != 0 || reply.channel == HsReplyChannel::Channel))
         {
-            Player* sender = ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid));
-            if (!sender || !Hs_IsBot(sender))
-                ConvoLog(/*fromPlayer=*/false, reply.botGuid, bot->GetName(), reply.senderGuid,
-                            sender ? sender->GetName() : "", reply.channel, reply.text, reply.source, reply.model);
+            Player* sender = reply.senderGuid ? ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid)) : nullptr;
+            hs_json model = reply.model;
+            if (reply.chainScopeId != 0 && model.is_object())
+                model["chain"] = { { "scope", reply.chainScopeId }, { "seq", reply.chainSeq },
+                                   { "from_bot", sender && Hs_IsBot(sender) } };
+            ConvoLog(/*fromPlayer=*/false, reply.botGuid, bot->GetName(), reply.senderGuid,
+                     sender ? sender->GetName() : "", reply.channel, reply.text, reply.source, model);
         }
 
         // Feeds Hs_RecentUtteranceContext for this bot's next reactive
