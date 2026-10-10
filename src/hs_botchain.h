@@ -78,7 +78,7 @@ inline uint32_t Hs_BotChainHopChancePercent(uint32_t basePercent, uint32_t decay
 
 // Called from Hs_DeliverPending for every successfully delivered line that
 // may seed a chain. Applies every gate itself (tier ceiling, surface,
-// depth cap, scope cooldown, decayed chance, the channel's own bucket, and
+// depth cap, scope cooldown, decayed chance, and
 // the real-player requirement), so the call site needs no conditions of its
 // own, and is a cheap no-op on the surfaces and tiers that never chain.
 //

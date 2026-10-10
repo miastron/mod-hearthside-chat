@@ -270,11 +270,9 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
                                                      g_HsBotChainDecayPercent, depth))
         return skip("chance roll");
 
-    // A hop is a line in the channel like any other, so it spends a token
-    // from that channel's bucket. Taken after the chance roll (a roll that
-    // misses costs nothing) and before the realm-wide scan below.
-    if (channel == HsReplyChannel::Channel && !Hs_ChannelBucketTake(kind))
-        return skip("channel RatePerMin bucket is empty");
+    // No channel-bucket token: a hop always follows a line that just spent
+    // one, so at General's RatePerMin = 1 every hop found the bucket empty
+    // (realm 2026-10-10). Chance, depth and the scope cooldown pace chains.
 
     bool                 sawRealPlayer = false;
     std::vector<Player*> candidates;
@@ -283,34 +281,21 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
     else
         CollectChannelCandidates(speaker, kind, candidates, sawRealPlayer);
 
-    // Review C2: the channel token above is spent before this scan, which
-    // can then find nobody. Each bail-out below returns it -- no hop was
-    // ever going to be spoken, so charging the channel's RatePerMin for it
-    // just throttles the hops that would have worked.
-    auto refundChannelToken = [&]()
-    {
-        if (channel == HsReplyChannel::Channel)
-            Hs_ChannelBucketRefund(kind);
-    };
-
     // Bots talking to each other with nobody there to overhear it is pure GPU
     // spend against no one's experience: the same reasoning that scopes
     // guild replies to a guild with a real member online.
     if (g_HsBotChainRequireRealPlayer && !sawRealPlayer)
     {
-        refundChannelToken();
         return skip("no real player in the channel");
     }
     if (candidates.empty())
     {
-        refundChannelToken();
         return skip("no eligible bot");
     }
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(speaker, text, candidates);
     if (selected.empty())
     {
-        refundChannelToken();
         return skip("arbiter picked nobody");
     }
 

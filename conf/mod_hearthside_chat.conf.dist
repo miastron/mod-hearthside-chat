@@ -744,7 +744,8 @@ HearthsideChat.Script.Proximity.FireChancePercent = 20
 #
 # Every hop is a full AI call, so these settings are an extra layer of
 # volume control on top of Bucket.RepliesPerMinute (which still caps
-# everything) and, in General chat, that channel's own rate limit. A chain
+# everything). General's own rate limit paces only the lines that start a
+# chain, not the replies within one. A chain
 # also ends the instant a real player speaks into the group or channel:
 # whatever hop was still generating is thrown away, and the bots' next
 # replies address that player instead -- so a player interrupting joins
