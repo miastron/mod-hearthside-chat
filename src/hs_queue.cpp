@@ -710,6 +710,9 @@ namespace
             if (!rpgHint.empty())
                 personaLine += "\n" + rpgHint;
             personaLine += "\n" + Hs_TopicGateLine(req.topicGate);
+            // A reply in public, to a stranger: chat/general.txt trains on this line.
+            if (req.channel == HsReplyChannel::Channel && req.channelKind == HsChannelKind::General)
+                personaLine += "\nTalking in General chat.";
 
             // World knowledge (hs_rag.h). The only layer here that knows
             // anything about Azeroth: everything above states facts about

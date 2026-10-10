@@ -469,6 +469,47 @@ namespace
         }
     }
 
+    // One bot answers a player's General line with the model. Logged either
+    // way, so the conversation log shows what was said in the channel.
+    void TryGeneralModelReply(Player* player, Channel* channel, const std::string& msg, HsChannelPolicy const& policy)
+    {
+        std::vector<Player*> eligible;
+        if (HsTierAllows(policy.maxTier, HsTier::Inference) && Hs_ChannelBucketTake(HsChannelKind::General))
+        {
+            for (auto const& itr : ObjectAccessor::GetPlayers())
+            {
+                Player* candidate = itr.second;
+                if (!candidate || !candidate->IsInWorld() || !Hs_IsBot(candidate) || candidate == player)
+                    continue;
+                if (!Hs_IsInChannelInstance(candidate, HsChannelKind::General, channel))
+                    continue;
+                if (Hs_IsExcludedBotName(candidate->GetName()) || candidate->GetTeamId() != player->GetTeamId())
+                    continue;
+                if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
+                    continue;
+                eligible.push_back(candidate);
+            }
+            if (eligible.empty())
+                Hs_ChannelBucketRefund(HsChannelKind::General);
+        }
+
+        std::vector<Player*> selected = eligible.empty() ? std::vector<Player*>{}
+                                                         : Hs_ArbitrateReplies(player, msg, eligible);
+        Player* bot = selected.empty() ? nullptr : selected.front();
+        Hs_ConvoLogPlayerLine(bot ? bot->GetGUID().GetRawValue() : 0, bot ? bot->GetName() : "",
+                              player->GetGUID().GetRawValue(), player->GetName(), HsReplyChannel::Channel, msg);
+        if (!bot)
+        {
+            if (!eligible.empty())
+                Hs_ChannelBucketRefund(HsChannelKind::General);
+            return;
+        }
+
+        HsReplyRequest request = Hs_MakeReplyRequest(bot, player, HsReplyChannel::Channel, Hs_ExpandChatShorthand(msg));
+        request.channelKind = HsChannelKind::General;
+        Hs_TryEnqueue(std::move(request));
+    }
+
     // §4.17's corpus-only channel reply, deliberately not a call into
     // TryDispatch: channel content is corpus/script only by design (never
     // tier-2 inference, never reflex/grounded, which are direct-address
@@ -788,11 +829,12 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortBotChainsInScope(Hs_BotChainScopeForChannel(kind));
 
     // No canned reply to a player's General line: a random corpus line can't
-    // answer what they said (realm 2026-10-10). Bots keep their own General
-    // lines and scenes; replying waits for General on the model.
+    // answer what they said (realm 2026-10-10). At Channel.General.MaxTier
+    // inference one bot answers it with the model; the reply then seeds a
+    // bot-to-bot chain like any General line (hs_botchain.h).
     if (kind == HsChannelKind::General)
     {
-        Hs_ConvoLogPlayerLine(0, "", player->GetGUID().GetRawValue(), player->GetName(), HsReplyChannel::Channel, msg);
+        TryGeneralModelReply(player, channel, msg, policy);
         return true;
     }
 
