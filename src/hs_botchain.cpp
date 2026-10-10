@@ -177,7 +177,7 @@ namespace
 }
 
 void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
-                     const std::string& text, bool wasChainHop)
+                     const std::string& text, bool wasChainHop, uint64_t answeredGuid)
 {
     if (!g_HsEnable || !speaker || text.empty())
         return;
@@ -293,20 +293,28 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         return skip("no eligible bot");
     }
 
-    std::vector<Player*> selected = Hs_ArbitrateReplies(speaker, text, candidates);
-    if (selected.empty())
-    {
-        return skip("arbiter picked nobody");
-    }
+    // The bot this line answered replies back, when it still can.
+    Player* responder = nullptr;
+    for (Player* candidate : candidates)
+        if (answeredGuid != 0 && candidate->GetGUID().GetRawValue() == answeredGuid)
+            responder = candidate;
 
-    // Exactly one, even though the arbiter may offer two: a second bot
-    // answering the same line would fork the chain into two branches sharing
-    // one depth counter, and the depth cap would stop meaning what it says.
-    Player* responder = selected[0];
+    if (!responder)
+    {
+        std::vector<Player*> selected = Hs_ArbitrateReplies(speaker, text, candidates);
+        if (selected.empty())
+            return skip("arbiter picked nobody");
+
+        // Exactly one, even though the arbiter may offer two: a second bot
+        // answering the same line would fork the chain into two branches sharing
+        // one depth counter, and the depth cap would stop meaning what it says.
+        responder = selected[0];
+    }
 
     // isEvent, not isFollowUp: hs_queue.h documents that flag as the one for
     // a request whose "sender" is another bot, and that is exactly this case.
-    // It suppresses the history write, the interaction-score bump, the
+    // It suppresses the interaction-score bump (a hop does write history,
+    // hs_queue.cpp, so a back-and-forth remembers its own turns), the
     // engagement re-arm, the distracted-reply roll, and: the part only this
     // flag carries: Hs_EnsureFirstMeetingRecorded, so a chain can never
     // seed identity state from two bots meeting each other.

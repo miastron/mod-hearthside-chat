@@ -87,8 +87,12 @@ inline uint32_t Hs_BotChainHopChancePercent(uint32_t basePercent, uint32_t decay
 // something a player actually said, so it starts a chain rather than
 // continuing one. That is also what makes an interrupted chain resume
 // naturally, see Hs_AbortBotChainsInScope.
+//
+// answeredGuid is the bot a hop's line answered (0 otherwise): it gets the
+// next turn when still eligible, so a chain is a back-and-forth between two
+// bots rather than a line passed around the channel.
 void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
-                     const std::string& text, bool wasChainHop);
+                     const std::string& text, bool wasChainHop, uint64_t answeredGuid = 0);
 
 // A real player spoke into this scope: they take the floor. Bumps the
 // scope's generation (invalidating any hop still generating, which

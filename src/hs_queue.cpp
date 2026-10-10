@@ -950,7 +950,9 @@ namespace
             // player actually said. An event trigger (hs_event.h) is a
             // synthetic state line for the same reason: nobody said
             // "you have just been killed" to the bot.
-            if (!botInitiated)
+            // A chain hop is one: the other bot really said its line, and the
+            // hop after next reads this pair back (hs_botchain.h).
+            if (!botInitiated || req.chainScopeId != 0)
                 HistoryAppend(req.botGuid, req.senderGuid, req.prompt, result.text);
 
             // Scores the bot the arbiter selected, only when the reply
@@ -2118,7 +2120,8 @@ void Hs_DeliverPending()
         // g_DeliveryMutex was released before it, and the hop this may
         // enqueue lands on the *work* queue, never back on this one.
         if (reply.isPrimaryLine)
-            Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0);
+            Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0,
+                           reply.chainScopeId != 0 ? reply.senderGuid : 0);
     }
 }
 
