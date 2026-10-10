@@ -2150,6 +2150,14 @@ void Hs_ConvoLogPlayerLine(uint64_t botGuid, const std::string& botName, uint64_
         ConvoLog(/*fromPlayer=*/true, botGuid, botName, playerGuid, playerName, channel, text, "player", hs_json());
 }
 
+void Hs_ConvoLogScriptLine(uint64_t botGuid, const std::string& botName, uint64_t toGuid, const std::string& toName,
+                           const std::string& text, uint32_t runId)
+{
+    if (g_HsConversationLogEnabled)
+        ConvoLog(/*fromPlayer=*/false, botGuid, botName, toGuid, toName, HsReplyChannel::Channel, text, "script",
+                 hs_json{ { "script_run", runId } });
+}
+
 void Hs_ForgetBotHistory(uint64_t botGuid)
 {
     std::lock_guard<std::mutex> lock(g_HistoryMutex);

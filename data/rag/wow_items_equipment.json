@@ -1,5 +1,12 @@
 [
   {
+    "id": "item_quality",
+    "title": "Item Quality Colors",
+    "content": "An item's name is colored by its quality: grey is poor, junk sold to vendors; white is common; green is uncommon; blue is rare; purple is epic; orange is legendary; and light gold marks bind-to-account heirlooms. Higher quality means better stats for the item level, and purple gear mostly comes from heroics and raids.",
+    "keywords": ["item quality", "item colors", "item colours", "colors on item", "color of items", "item rarity", "green items", "blue items", "purple items", "grey items", "gray items", "white items", "orange items", "greens", "blues", "purples", "epics"],
+    "tags": ["items", "quality", "basics"]
+  },
+  {
     "id": "item_tier_sets",
     "title": "Tier Sets",
     "content": "Each class's tier set gives a bonus at 2 and at 4 pieces worn. Wrath has Tier 7 from Naxxramas, Tier 8 from Ulduar, Tier 9 from Trial of the Crusader and Tier 10 from Icecrown Citadel. Tier 9 is bought with Emblems of Triumph and Tier 10 with Emblems of Frost, then upgraded with Marks of Sanctification from ICC bosses.",

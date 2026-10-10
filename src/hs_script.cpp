@@ -639,6 +639,8 @@ namespace
             return; // speaker no longer resolves to that channel instance (e.g. moved zones): drop, don't misdeliver
         channel->Say(speaker->GetGUID(), style.text, LANG_UNIVERSAL);
         Hs_RecordBotUtterance(scheduled.speakerGuid, style.text);
+        Hs_ConvoLogScriptLine(scheduled.speakerGuid, speaker->GetName(), scheduled.listenerGuid,
+                              listener ? listener->GetName() : "", style.text, scheduled.runId);
     }
 
     void DeliverPendingChannelTurns()

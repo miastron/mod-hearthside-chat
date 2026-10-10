@@ -17,7 +17,7 @@
     "id": "mechanic_quests",
     "title": "Quest System",
     "content": "Quest givers show a yellow ! when they have a quest and a yellow ? when you can turn one in. A quest's level shows as a color: grey is too low to give much experience, green is easy, yellow is your level, orange is hard and red is well above you. The log holds 25 quests, and most can be shared with your party.",
-    "keywords": ["quest", "quests", "quest giver", "quest log", "turn in"],
+    "keywords": ["quest", "quests", "quest giver", "quest log", "turn in", "exclamation mark", "exclamation point", "question mark", "quest marker", "yellow exclamation", "grey exclamation"],
     "tags": ["mechanic", "progression", "story", "objectives"]
   },
   {
