@@ -18,12 +18,6 @@ extern bool g_HsDebugEnabled;
 // while the chat/reply pipeline itself is off, or vice versa.
 extern bool g_HsBridgeEnable;
 
-// Logs every reactive-tier (LLM) exchange (trigger, pre-style reply,
-// styled reply, archetype) to hside_chat_log for later human review. This
-// is a raw log an operator reads and manually promotes via `.hearthside
-// capture`; it does not feed replies back into the corpus automatically.
-// Off by default: writes to the DB and can grow large on a busy realm.
-extern bool g_HsDebugChatLogEnabled;
 // Both sides of every player-bot exchange, one JSON object per line, to the
 // module.hearthside.convo logger (hs_queue.cpp Hs_ConvoLog).
 extern bool g_HsConversationLogEnabled;
@@ -371,22 +365,6 @@ extern uint32_t     g_HsChannelTradeMaxCandidates;
 extern std::string g_HsChannelGeneralMaxTier;
 extern uint32_t     g_HsChannelGeneralRatePerMin;
 extern uint32_t     g_HsChannelGeneralMaxCandidates;
-
-extern std::string g_HsChannelLookingForGroupMaxTier;
-extern uint32_t     g_HsChannelLookingForGroupRatePerMin;
-extern uint32_t     g_HsChannelLookingForGroupMaxCandidates;
-
-extern std::string g_HsChannelGuildRecruitmentMaxTier;
-extern uint32_t     g_HsChannelGuildRecruitmentRatePerMin;
-extern uint32_t     g_HsChannelGuildRecruitmentMaxCandidates;
-
-extern std::string g_HsChannelLocalDefenseMaxTier;
-extern uint32_t     g_HsChannelLocalDefenseRatePerMin;
-extern uint32_t     g_HsChannelLocalDefenseMaxCandidates;
-
-extern std::string g_HsChannelWorldDefenseMaxTier;
-extern uint32_t     g_HsChannelWorldDefenseRatePerMin;
-extern uint32_t     g_HsChannelWorldDefenseMaxCandidates;
 
 // --------------------------------------------
 // Tier-0 reflex. The "are you a bot?" reflex is the only reflex behavior

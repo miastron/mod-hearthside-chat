@@ -13,7 +13,6 @@
 bool g_HsEnable       = true;
 bool g_HsDebugEnabled = false;
 bool g_HsBridgeEnable = true;
-bool g_HsDebugChatLogEnabled = false;
 bool g_HsConversationLogEnabled = false;
 
 std::string g_HsLLMApiType  = "llamacpp";
@@ -243,22 +242,6 @@ std::string g_HsChannelGeneralMaxTier          = "corpus";
 uint32_t     g_HsChannelGeneralRatePerMin       = 1;
 uint32_t     g_HsChannelGeneralMaxCandidates    = 8;
 
-std::string g_HsChannelLookingForGroupMaxTier         = "off";
-uint32_t     g_HsChannelLookingForGroupRatePerMin      = 0;
-uint32_t     g_HsChannelLookingForGroupMaxCandidates   = 0;
-
-std::string g_HsChannelGuildRecruitmentMaxTier        = "off";
-uint32_t     g_HsChannelGuildRecruitmentRatePerMin     = 0;
-uint32_t     g_HsChannelGuildRecruitmentMaxCandidates  = 0;
-
-std::string g_HsChannelLocalDefenseMaxTier     = "off";
-uint32_t     g_HsChannelLocalDefenseRatePerMin  = 0;
-uint32_t     g_HsChannelLocalDefenseMaxCandidates = 0;
-
-std::string g_HsChannelWorldDefenseMaxTier     = "off";
-uint32_t     g_HsChannelWorldDefenseRatePerMin  = 0;
-uint32_t     g_HsChannelWorldDefenseMaxCandidates = 0;
-
 std::string g_HsBotQuestionMode = "wink";
 
 bool     g_HsGroundedAnswersEnabled  = true;
@@ -361,7 +344,6 @@ void Hs_LoadHearthsideChatConfig()
     g_HsExcludeNames = sConfigMgr->GetOption<std::string>("HearthsideChat.ExcludeNames", "");
     RebuildExcludeNameSet();
 
-    g_HsDebugChatLogEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugChatLog.Enable", false);
     g_HsConversationLogEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.ConversationLog.Enable", false);
 
     g_HsQueueTTLSeconds             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Queue.TTLSeconds", 15);
@@ -438,45 +420,17 @@ void Hs_LoadHearthsideChatConfig()
     g_HsChannelGeneralRatePerMin         = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.RatePerMin", 1);
     g_HsChannelGeneralMaxCandidates       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.General.MaxCandidates", 8);
 
-
-    g_HsChannelLookingForGroupMaxTier          = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.LookingForGroup.MaxTier", "off");
-    g_HsChannelLookingForGroupRatePerMin        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LookingForGroup.RatePerMin", 0);
-    g_HsChannelLookingForGroupMaxCandidates      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LookingForGroup.MaxCandidates", 0);
-
-    g_HsChannelGuildRecruitmentMaxTier         = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.GuildRecruitment.MaxTier", "off");
-    g_HsChannelGuildRecruitmentRatePerMin       = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.GuildRecruitment.RatePerMin", 0);
-    g_HsChannelGuildRecruitmentMaxCandidates     = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.GuildRecruitment.MaxCandidates", 0);
-
-    g_HsChannelLocalDefenseMaxTier      = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.LocalDefense.MaxTier", "off");
-    g_HsChannelLocalDefenseRatePerMin    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LocalDefense.RatePerMin", 0);
-    g_HsChannelLocalDefenseMaxCandidates  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.LocalDefense.MaxCandidates", 0);
-
-    g_HsChannelWorldDefenseMaxTier      = sConfigMgr->GetOption<std::string>("HearthsideChat.Channel.WorldDefense.MaxTier", "off");
-    g_HsChannelWorldDefenseRatePerMin    = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.WorldDefense.RatePerMin", 0);
-    g_HsChannelWorldDefenseMaxCandidates  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Channel.WorldDefense.MaxCandidates", 0);
-
     {
         HsChannelPolicy table[kHsChannelKindCount] = {};
         table[static_cast<size_t>(HsChannelKind::Trade)] =
             { HsParseTier(g_HsChannelTradeMaxTier), g_HsChannelTradeRatePerMin, g_HsChannelTradeMaxCandidates };
         table[static_cast<size_t>(HsChannelKind::General)] =
             { HsParseTier(g_HsChannelGeneralMaxTier), g_HsChannelGeneralRatePerMin, g_HsChannelGeneralMaxCandidates };
-        table[static_cast<size_t>(HsChannelKind::LookingForGroup)] =
-            { HsParseTier(g_HsChannelLookingForGroupMaxTier), g_HsChannelLookingForGroupRatePerMin, g_HsChannelLookingForGroupMaxCandidates };
-        table[static_cast<size_t>(HsChannelKind::GuildRecruitment)] =
-            { HsParseTier(g_HsChannelGuildRecruitmentMaxTier), g_HsChannelGuildRecruitmentRatePerMin, g_HsChannelGuildRecruitmentMaxCandidates };
-        table[static_cast<size_t>(HsChannelKind::LocalDefense)] =
-            { HsParseTier(g_HsChannelLocalDefenseMaxTier), g_HsChannelLocalDefenseRatePerMin, g_HsChannelLocalDefenseMaxCandidates };
-        table[static_cast<size_t>(HsChannelKind::WorldDefense)] =
-            { HsParseTier(g_HsChannelWorldDefenseMaxTier), g_HsChannelWorldDefenseRatePerMin, g_HsChannelWorldDefenseMaxCandidates };
         // Review H3: a channel enabled by MaxTier but left at MaxCandidates
         // = 0 passes every gate, spends a bucket token, and then selects
         // nobody -- Hs_OrderChannelCandidates ends in
-        // candidates.resize(maxCandidates). The four off-by-default channels
-        // ship with MaxCandidates = 0, so an operator who flips only MaxTier
-        // to switch one on (the natural thing to do, since MaxTier is what
-        // every other surface is gated by) gets silence with no explanation
-        // anywhere.
+        // candidates.resize(maxCandidates), so a channel left on at
+        // MaxCandidates = 0 gets silence with no explanation anywhere.
         //
         // Reported and repaired rather than only reported: leaving the value
         // at 0 would mean the operator has to read this log line, find the

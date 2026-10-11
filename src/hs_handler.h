@@ -50,7 +50,7 @@ public:
 // hook's own candidate selection, chance roll or interrupt handling. For
 // `.hearthside ask`: the sender is a GUID and a name, not a Player*, so it
 // may be an offline character, in which case the reply is generated and
-// logged to hside_chat_log but has nobody to be delivered to.
+// logged but has nobody to be delivered to.
 void Hs_DispatchDirectReply(Player* bot, uint64_t senderGuid, const std::string& senderName,
                             const std::string& msg, HsReplyChannel channel);
 

@@ -9,9 +9,11 @@
 
 // §4.17's global-channel chat surface: policy lookup, WTS/WTB detection (the
 // trigger for hs_style.h's Trade `care` offset), and candidate-set ordering
-// for the six real channels mod-playerbots joins every bot to unconditionally
-// (Trade, General, LookingForGroup, GuildRecruitment, LocalDefense,
-// WorldDefense, trap 20).
+// for the two channels the module speaks on, Trade and General. mod-playerbots
+// joins every bot to LookingForGroup, GuildRecruitment, LocalDefense and
+// WorldDefense as well (trap 20); the module has nothing to say there (no
+// corpus, and a bot can't honour a group or guild solicitation), so those
+// four are not kinds at all and their messages pass through untouched.
 //
 // Pure logic, no AzerothCore dependency, split like hs_topic_gate.h/
 // hs_archetype.h so it's standalone-testable. hs_handler.cpp's Channel*
@@ -23,13 +25,9 @@ enum class HsChannelKind
 {
     Trade,
     General,
-    LookingForGroup,
-    GuildRecruitment,
-    LocalDefense,
-    WorldDefense,
 };
 
-constexpr size_t kHsChannelKindCount = 6;
+constexpr size_t kHsChannelKindCount = 2;
 
 // Matches the ".conf.dist" key segment exactly (HearthsideChat.Channel.<name>.*)
 // so config parsing, logging, and this lookup all agree on one spelling.

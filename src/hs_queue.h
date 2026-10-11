@@ -14,6 +14,7 @@
 class Channel;
 class ObjectGuid;
 class Player;
+struct HsCardSnapshot;
 
 // The runtime queue. A fixed worker pool of exactly one thread (slots in
 // llama-server are a prompt cache, not a concurrency target, so requests are
@@ -280,30 +281,38 @@ void Hs_CancelPendingFollowUpsFor(uint64_t senderGuid);
 // the GUID".
 void Hs_ForgetBotHistory(uint64_t botGuid);
 
-// Delivers a tier-0 reflex reply, and also a grounded-answer reply: both are
-// "answer without the GPU" paths that need identical no-bucket, no-cooldown,
-// no-worker-thread, no-history/identity-write delivery, so grounded answers
-// reuse this function rather than duplicating it. Both callers only reach
-// this after the arbiter selected the bot, and score nothing: tier 0 stays
-// completely free of identity side effects. Style-pass `text` before
-// calling this (hs_style.h); this function delivers it verbatim after a
-// short randomized delay, reusing the same delivery-queue drain
-// (Hs_DeliverPending) rather than duplicating Say()/Whisper() dispatch. A
-// call with empty `text` is a no-op (e.g. Silent BotQuestion mode, or a
-// matched PersonalProbe pool entry with no reply).
-//
-// `channelKind` is only meaningful when `channel == HsReplyChannel::Channel`
-// (§4.17's corpus-fallback channel reply, hs_handler.cpp's Channel* hook),
-// ignored otherwise, default value arbitrary.
 // Adds a canned exchange (reflex or grounded) to this bot-player pair's
 // history, so the model's next reply knows a conversation is under way.
 // Before 2026-10-07 only model replies were recorded, and "sup" -> "hey, not
 // much" followed by "wyd?" reached the model as an opening line.
 void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string& trigger, const std::string& reply);
 
-// `source` names the tier for the conversation log (Hs_ConvoLog).
+// Delivers a reply that never touched the GPU (reflex, grounded, corpus,
+// opener, ambient, canned event line): no bucket, no cooldown, no worker
+// thread, no history or identity write. `text` must already be styled
+// (hs_style.h); it is delivered verbatim after a short randomized delay
+// through the same queue drain (Hs_DeliverPending) as every other line. An
+// empty `text` is a no-op (Silent BotQuestion mode, a PersonalProbe pool
+// entry with no reply). `channelKind` only matters when `channel` is
+// HsReplyChannel::Channel. `source` names the tier for the conversation log.
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
                             HsChannelKind channelKind = HsChannelKind::Trade, char const* source = "canned");
+
+// Styles `text` in this bot's voice and hands it to Hs_DeliverReflexReply.
+// Returns what was delivered: "" when styling emptied it and nothing was sent.
+std::string Hs_StyleAndDeliver(Player* bot, uint64_t senderGuid, const std::string& listenerName,
+                               const std::string& text, HsReplyChannel channel, HsChannelKind channelKind,
+                               bool inCombat, char const* source);
+
+// A pre-written line (corpus, opener, ambient): card placeholders for a
+// carded bot, then the universal ones (%zone, %item_link...), then
+// Hs_StyleAndDeliver. False, with nothing sent, when a placeholder cannot be
+// resolved -- silence rather than an untrue claim (§4.13) -- or styling
+// empties the line. `card` is the bot's snapshot if the caller already has
+// one; otherwise it is looked up, and only when the line holds a '%'.
+bool Hs_DeliverCorpusLine(Player* bot, std::string line, uint64_t senderGuid, const std::string& listenerName,
+                          HsReplyChannel channel, HsChannelKind channelKind, bool inCombat, char const* source,
+                          HsCardSnapshot const* card = nullptr);
 
 // The conversation log (HearthsideChat.ConversationLog.Enable): one JSON line
 // on module.hearthside.convo per player line that reaches a bot. Bot lines are
@@ -358,8 +367,7 @@ void Hs_ChannelBucketRefund(HsChannelKind kind);
 
 // §4.17: resolves the live Channel* a bot should speak into for delivery,
 // building the same name Player::UpdateLocalChannels does: the zone name for
-// General/LocalDefense, and for the city-scoped Trade/GuildRecruitment the
-// LANG_CHANNEL_CITY acore_string rather than AreaTable 3459. That function is
+// General, and for the city-scoped Trade the LANG_CHANNEL_CITY acore_string rather than AreaTable 3459. That function is
 // what actually joins *real players*, so matching it is what makes the
 // lookup hit the instance worth reaching. It is deliberately not the name
 // PlayerbotMgr.cpp builds: its AreaID 3459 route yields an empty suffix, so
@@ -368,17 +376,17 @@ void Hs_ChannelBucketRefund(HsChannelKind kind);
 //
 // Note ChannelMgr::GetChannel is a pure name lookup and does *not* test
 // membership, so a hit here proves the channel exists, not that the bot is
-// in it -- with one exception: for the city-scoped Trade/GuildRecruitment
-// this returns nullptr unless the bot's zone carries AREA_FLAG_SLAVE_CAPITAL,
-// because their name is a constant and the lookup alone would otherwise
-// resolve every bot on the realm into the one live instance. See the .cpp
-// for why the zone is the only membership signal available for those two.
+// in it -- with one exception: for the city-scoped Trade this returns
+// nullptr unless the bot's zone carries AREA_FLAG_SLAVE_CAPITAL, because its
+// name is a constant and the lookup alone would otherwise resolve every bot
+// on the realm into the one live instance. See the .cpp for why the zone is
+// the only membership signal available there.
 //
 // Called fresh at delivery time from the bot's *then-current*
 // zone by both Hs_DeliverPending (a corpus-fallback channel reply) and
 // hs_script.cpp's channel-script delivery, not a name captured earlier: the
 // bot may have moved zones during the typing delay for a zone-scoped channel
-// (General/LocalDefense). Returns nullptr if the bot no longer resolves to
+// (General). Returns nullptr if the bot no longer resolves to
 // that channel instance; caller must not misdeliver.
 // sendPacketOnMiss forwards to ChannelMgr::GetChannel's own `pkt` (default
 // true there, matching every pre-existing caller of this function): on a

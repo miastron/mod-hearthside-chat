@@ -11,8 +11,7 @@ namespace
     constexpr uint64_t kChannelSalt = 0x9E3779B97F4A7C15ULL;
 
     constexpr std::array<const char*, kHsChannelKindCount> kChannelNames = {{
-        "Trade", "General", "LookingForGroup", "GuildRecruitment",
-        "LocalDefense", "WorldDefense",
+        "Trade", "General",
     }};
 
     // Populated by Hs_SetChannelPolicyTable, normally called once at startup

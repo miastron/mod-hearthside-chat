@@ -120,30 +120,29 @@ namespace
     // MaxTier.Reflex ceiling, independent of MaxTier.DirectReply below --
     // an operator can turn off canned replies without touching the LLM
     // ceiling, or vice versa.
-    void TryReflex(Player* bot, const std::string& senderName, const std::string& msg, HsReplyChannel channel,
-                    uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel, bool& handled)
+    // Returns true when a reflex pattern matched, whether or not a reply
+    // actually went out (Silent BotQuestion mode, PersonalProbe's no-reply
+    // roll).
+    bool TryReflex(Player* bot, const std::string& senderName, const std::string& msg, HsReplyChannel channel,
+                   uint64_t botGuid, uint64_t senderGuid, bool inCombat)
     {
-        handled = false;
-
         if (!HsTierAllows(g_HsMaxTierReflex, HsTier::Reflex))
-            return;
+            return false;
 
         HsReflexMatch match = Hs_MatchReflex(msg, botGuid, senderGuid, Hs_ParseBotQuestionMode(g_HsBotQuestionMode));
         if (match.kind == HsReflexKind::None)
-            return;
-
-        handled = true; // matched: handled whether or not a reply actually goes out
+            return false;
         if (match.text.empty())
-            return; // Silent BotQuestion mode, or PersonalProbe's no-reply roll
+            return true;
 
         // Same style pass the LLM path applies, so a reflex reply reads as
         // this bot's voice rather than a flat string. No cooldown or identity
         // write; the exchange does go into history so the model's next reply
         // knows it is mid-conversation.
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, match.text, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "reflex");
-        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
+        std::string sent = Hs_StyleAndDeliver(bot, senderGuid, senderName, match.text, channel,
+                                              HsChannelKind::Trade, inCombat, "reflex");
+        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), sent);
+        return true;
     }
 
     // A fourth answer source, sitting between the reflex check and the tier
@@ -162,7 +161,7 @@ namespace
     // state-contradicting claim, so it's simpler to let the normal path
     // handle that case than to special-case a "not mounted" reply here.
     bool TryGrounded(Player* bot, const std::string& senderName, const std::string& msg, HsReplyChannel channel,
-                      uint64_t botGuid, uint64_t senderGuid, bool inCombat, uint8_t botLevel)
+                      uint64_t botGuid, uint64_t senderGuid, bool inCombat)
     {
         if (!g_HsGroundedAnswersEnabled)
             return false;
@@ -427,10 +426,9 @@ namespace
 
         // Same style pass and delivery path as TryReflex; both answer
         // without touching the GPU.
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, reply, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "grounded");
-        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), style.text);
+        std::string sent = Hs_StyleAndDeliver(bot, senderGuid, senderName, reply, channel,
+                                              HsChannelKind::Trade, inCombat, "grounded");
+        Hs_RecordExchange(botGuid, senderGuid, Hs_ExpandChatShorthand(msg), sent);
         return true;
     }
 
@@ -459,31 +457,11 @@ namespace
         if (line.empty())
             return false;
 
-        // Card-only placeholders (%main_focus, %current_goal). A no-op for
-        // the overwhelming majority of lines, which never contain either
-        // token: Hs_ResolveCardPlaceholders is a plain substring replace.
-        if (snapshot.active)
-            line = Hs_ResolveCardPlaceholders(line, snapshot.mainFocus, snapshot.currentGoal);
-
-        // Universal placeholders (%item_link, %class, %level, %zone,
-        // %guild, %quest_link), after the card pass so the leftover check
-        // sees a fully-substituted line. Guarded on a bare '%' so the
-        // common no-placeholder case skips the bag/quest-log scans
-        // Hs_BuildPlaceholderContext does. An unresolvable placeholder
-        // drops the line into silence rather than an untrue claim (§4.13).
-        if (line.find('%') != std::string::npos)
-        {
-            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
-                return false;
-        }
-
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, inCombat);
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), senderName, line, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, HsChannelKind::Trade, "corpus");
-        return true;
+        return Hs_DeliverCorpusLine(bot, line, senderGuid, senderName, channel, HsChannelKind::Trade, inCombat,
+                                    "corpus", &snapshot);
     }
 
-    // §4.17: maps a live Channel* to one of the six kinds this module
+    // §4.17: maps a live Channel* to one of the two kinds this module
     // knows about, via mod-playerbots' own ChatChannelId enum (PlayerbotAI.h,
     // the same ids mod-playerbots itself joins bots to, PlayerbotMgr.cpp)
     // rather than parsing Channel::GetName()'s zone-suffixed display string.
@@ -499,10 +477,6 @@ namespace
         {
             case ChatChannelId::TRADE:              out = HsChannelKind::Trade;            return true;
             case ChatChannelId::GENERAL:             out = HsChannelKind::General;          return true;
-            case ChatChannelId::LOOKING_FOR_GROUP:   out = HsChannelKind::LookingForGroup;  return true;
-            case ChatChannelId::GUILD_RECRUITMENT:   out = HsChannelKind::GuildRecruitment; return true;
-            case ChatChannelId::LOCAL_DEFENSE:       out = HsChannelKind::LocalDefense;     return true;
-            case ChatChannelId::WORLD_DEFENSE:       out = HsChannelKind::WorldDefense;     return true;
             default: return false;
         }
     }
@@ -518,21 +492,9 @@ namespace
     {
         std::string line = Hs_SelectChannelLine(kind, bot->getClass(), botLevel,
                                                  static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId());
-        if (line.empty())
-            return;
-
-        // Universal placeholders only: channel_* categories are never
-        // card_gated (Hs_SelectChannelLine's category filter), so no card
-        // placeholder pass is needed here, unlike TryCorpusFallback.
-        if (line.find('%') != std::string::npos)
-        {
-            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
-                return;
-        }
-
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, bot->IsInCombat());
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), sender->GetName(), line, styleCtx);
-        Hs_DeliverReflexReply(botGuid, senderGuid, HsReplyChannel::Channel, style.text, kind, "corpus");
+        if (!line.empty())
+            Hs_DeliverCorpusLine(bot, line, senderGuid, sender->GetName(), HsReplyChannel::Channel, kind,
+                                 bot->IsInCombat(), "corpus");
     }
 
     // Once reflex/grounded have passed on the trigger, check the surface's
@@ -556,12 +518,10 @@ namespace
 
         Hs_ConvoLogPlayerLine(botGuid, bot->GetName(), senderGuid, senderName, channel, msg);
 
-        bool reflexHandled = false;
-        TryReflex(bot, senderName, msg, channel, botGuid, senderGuid, inCombat, botLevel, reflexHandled);
-        if (reflexHandled)
+        if (TryReflex(bot, senderName, msg, channel, botGuid, senderGuid, inCombat))
             return;
 
-        if (TryGrounded(bot, senderName, msg, channel, botGuid, senderGuid, inCombat, botLevel))
+        if (TryGrounded(bot, senderName, msg, channel, botGuid, senderGuid, inCombat))
             return;
 
         if (!HsTierAllows(g_HsMaxTierDirectReply, HsTier::Inference))

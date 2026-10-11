@@ -4,47 +4,18 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
+#include <unordered_map>
 
-// Opportunistic staleness pruning for the module's per-bot and per-pair time
-// maps.
+// Opportunistic staleness pruning for the module's `key -> last time` maps.
 //
-// Several subsystems keep a `key -> last time something happened` map that is
-// only ever *read* through a window: a cooldown, a sighting decay, a
-// proximity streak. Past that window an old entry answers every query exactly
-// as a missing one would, so it is pure retention with no behavioral effect,
-// and on a long-uptime realm it accumulates for the life of the process.
-//
-// This is the shape hs_botchain.cpp's PruneStaleLocked already uses, lifted
-// so the other call sites do not each re-derive it:
-//
-//   - **opportunistic, not timed.** The prune runs inside a write path that
-//     already holds the map's mutex, so it needs no scan, no WorldScript, and
-//     no second lock acquisition.
-//   - **size-gated.** Below `pruneAboveSize` the walk is skipped entirely, so
-//     a small realm never pays for it; the cost only appears once the map is
-//     big enough for the cost to be worth paying.
-//
-// Every caller's constants are deliberately generous relative to the window
-// the map is actually read through. Pruning early would change behavior;
-// pruning late only delays reclamation, so the constants err late.
-//
-// Two shapes make a map *worth* pruning: a key that is a *pair* (whose count
-// is the product of two populations, not the sum), or a value holding more
-// than a timestamp. hs_queue.cpp's g_History is the first; g_RecentUtterances
-// and hs_experience.cpp's ring are the second (bot-keyed, but each
-// accumulates content). hs_experience_store.cpp's g_LastZoneByBot is the
-// counter-example left unpruned on purpose: bot-keyed, one id per entry.
-//
-// It is applied more widely than those three, though (this comment claimed
-// "three call sites today" until review item 12; there are ten). The rest are
-// plain bot- or player-keyed cooldown maps -- hs_ambient's g_LastAmbientAt,
-// hs_opener's g_LastOpenerAt, hs_script's g_LastWitnessAt, hs_style's
-// g_LastTradeSighting, hs_queue's three g_Last*At maps -- which the criteria
-// above would call exempt. Pruning them anyway is deliberate and free: the
-// call sits in a write path that already holds the mutex, the size gate means
-// a small realm never walks the map at all, and an entry past its cooldown
-// window answers identically whether it is stale or absent. The criteria say
-// which maps *must* be pruned to stay bounded, not which ones may be.
+// Each such map is only ever read through a window (a cooldown, a sighting
+// decay, a proximity streak), so past it an old entry answers exactly as a
+// missing one would and is pure retention. The prune runs inside a write
+// path that already holds the map's mutex (no timer, no second lock), and is
+// skipped below `pruneAboveSize`, so a small realm never walks the map.
+// Callers' staleness constants err late on purpose: pruning early would
+// change behavior, pruning late only delays reclamation.
 
 namespace HsPrune
 {
@@ -85,5 +56,33 @@ namespace HsPrune
         PruneStale(map, now, staleSeconds, pruneAboveSize, TimePointItself{});
     }
 }
+
+// A thread-safe "has this key's cooldown passed" map: Ready() answers it,
+// Mark() starts it and prunes entries four windows old. `Map` is any
+// key -> Clock::time_point map; a std::map for a key with no hash (a pair).
+template <typename Key, typename Map = std::unordered_map<Key, HsPrune::Clock::time_point>>
+class HsCooldownMap
+{
+public:
+    bool Ready(Key const& key, int64_t cooldownSeconds)
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto it = _map.find(key);
+        return it == _map.end() ||
+               HsPrune::Clock::now() - it->second >= std::chrono::seconds(cooldownSeconds);
+    }
+
+    void Mark(Key const& key, int64_t cooldownSeconds)
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        auto now = HsPrune::Clock::now();
+        _map[key] = now;
+        HsPrune::PruneStale(_map, now, cooldownSeconds * 4, /*pruneAboveSize=*/512);
+    }
+
+private:
+    std::mutex _mutex;
+    Map        _map;
+};
 
 #endif // MOD_HS_PRUNE_H

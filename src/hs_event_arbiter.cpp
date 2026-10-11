@@ -1,4 +1,5 @@
 #include "hs_event_arbiter.h"
+#include "hs_weight.h"
 
 #include <algorithm>
 #include <map>
@@ -103,33 +104,11 @@ namespace
         return 1.0;
     }
 
-    // Byte-identical curve to hs_arbiter.cpp's RecencyWeight, duplicated
-    // rather than shared because that file is not dependency-free (Player.h)
-    // and hoisting it here would mean including this header there, dragging
-    // the event vocabulary into the /say path for one function. Both are
-    // eleven lines; a shared "weights" file for two would be the heavier
-    // change.
-    double RecencyWeight(uint32_t secondsSinceLastReply)
-    {
-        constexpr uint32_t window    = 60;
-        constexpr double   minFactor = 0.15;
-        if (secondsSinceLastReply >= window)
-            return 1.0;
-
-        double t = static_cast<double>(secondsSinceLastReply) / static_cast<double>(window);
-        return minFactor + (1.0 - minFactor) * t;
-    }
-
-    // Same falloff and same beyond-range floor as the /say arbiter's, with
-    // the cross-map case decided by the caller's sameMap flag instead of a
-    // GetMapId() comparison this file cannot make.
+    // The cross-map case is decided by the caller's sameMap flag instead of
+    // a GetMapId() comparison this file cannot make.
     double ProximityWeight(float sayDistance, const HsEventCandidate& candidate)
     {
-        if (!candidate.sameMap)
-            return 1.0;
-
-        float falloff = sayDistance - candidate.distance;
-        return static_cast<double>(std::max(1.0f, falloff));
+        return candidate.sameMap ? Hs_ProximityWeight(sayDistance, candidate.distance) : 1.0;
     }
 
     // ---- affinity table ----------------------------------------------------
@@ -244,7 +223,7 @@ std::vector<size_t> Hs_ArbitrateEventReplies(HsEventCountBias bias, float sayDis
         {
             HsEventCandidate const& c = candidates[index];
             double w = ProximityWeight(sayDistance, c)
-                      * RecencyWeight(c.secondsSinceLastReply)
+                      * Hs_RecencyWeight(c.secondsSinceLastReply)
                       * InvolvementWeight(c.involvement)
                       * static_cast<double>(c.affinityWeight);
             weights.push_back(w);
@@ -259,18 +238,7 @@ std::vector<size_t> Hs_ArbitrateEventReplies(HsEventCountBias bias, float sayDis
             break;
 
         std::uniform_real_distribution<double> dist(0.0, total);
-        double rollWeight = dist(Rng());
-        size_t pickSlot   = pool.size() - 1;
-        double cumulative = 0.0;
-        for (size_t slot = 0; slot < weights.size(); ++slot)
-        {
-            cumulative += weights[slot];
-            if (rollWeight < cumulative)
-            {
-                pickSlot = slot;
-                break;
-            }
-        }
+        size_t pickSlot = Hs_WeightedIndex(weights, dist(Rng()));
 
         selected.push_back(pool[pickSlot]);
         pool.erase(pool.begin() + static_cast<long>(pickSlot));

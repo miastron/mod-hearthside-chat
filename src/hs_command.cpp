@@ -400,12 +400,11 @@ namespace
     // channels this module speaks on, which live Channel instance does the
     // invoking character actually share with bots.
     //
-    // Global channels are not one channel each: General/LocalDefense are
-    // one Channel object per zone, Trade/GuildRecruitment one per "City"
-    // label, and every producer here resolves its delivery target from the
+    // Global channels are not one channel each: General is one Channel
+    // object per zone, Trade one per "City" label, and every producer here resolves its delivery target from the
     // *speaking bot's* zone (Hs_ResolveChannelForDelivery, hs_queue.cpp).
     // A bot musing in "General - Elwynn Forest" is logged as delivered, is
-    // written to hside_chat_log, and is completely inaudible to a player
+    // written to the conversation log, and is completely inaudible to a player
     // standing in Ironforge. Nothing else in the module distinguishes that
     // case from silence, which is exactly the confusion this command exists
     // to end.
@@ -466,10 +465,6 @@ namespace
         const HsChannelKind kinds[] = {
             HsChannelKind::Trade,
             HsChannelKind::General,
-            HsChannelKind::LookingForGroup,
-            HsChannelKind::GuildRecruitment,
-            HsChannelKind::LocalDefense,
-            HsChannelKind::WorldDefense,
         };
 
         for (HsChannelKind kind : kinds)
@@ -540,8 +535,8 @@ namespace
     // A whisper to a bot as if `sender` had typed it, through the same tiers
     // a real one takes (Hs_DispatchDirectReply). Lets the module be tested
     // end to end with no client connected: the sender may be any character,
-    // online or not, and the reply lands in hside_chat_log (inference) or the
-    // debug log (every tier) either way.
+    // online or not, and the reply lands in the conversation log and, with
+    // DebugEnabled, the server log either way.
     bool HandleHearthsideAsk(ChatHandler* handler, std::string senderName, std::string botName, Tail text)
     {
         if (text.empty())

@@ -23,7 +23,6 @@
 #include "Channel.h"          // §4.17 channel delivery: Channel::Say
 #include "ChannelMgr.h"       // §4.17 channel delivery: ChannelMgr::forTeam/GetChannel
 #include "DBCStores.h"        // §4.17 channel delivery: sChatChannelsStore (zone-qualified channel name)
-#include "DatabaseEnv.h" // HearthsideChat.DebugChatLog insert
 #include "Group.h"            // Hs_MakeReplyRequest: topic-gate group facts
 #include "Guild.h"            // Hs_MakeReplyRequest: guild name
 #include "GuildMgr.h"
@@ -827,8 +826,8 @@ namespace
             // req.prompt stays the event text for everything else that
             // reads it: RAG scores against it (the block above, which
             // relies on an event naming its boss or item precisely so
-            // retrieval can find it) and hside_chat_log records it as the
-            // trigger, which is what makes a debug row readable.
+            // retrieval can find it) and the conversation log records it as
+            // the trigger, which is what makes a logged line readable.
             std::string const& modelTrigger = req.triggerIsStateLine ? kEventReactionTrigger : req.prompt;
             if (req.triggerIsStateLine)
                 personaLine += "\n" + req.prompt;
@@ -920,9 +919,9 @@ namespace
             // baseline is the archetype's; TRADER is the only entry with an
             // abbreviation override today.
             HsStyleContext styleCtx = Hs_BuildStyleContext(req.botGuid, req.inCombat);
-            // Captured before result.text is overwritten below, so
-            // HearthsideChat.DebugChatLog can log both the pre-style and
-            // post-style text for an operator to review later.
+            // Captured before result.text is overwritten below: the
+            // conversation log records the model's raw line beside the
+            // delivered one.
             std::string preStyleForLog = result.text;
 
             HsStyleResult style = Hs_ApplyStyle(req.botGuid, req.botName, req.senderName, result.text, styleCtx);
@@ -933,23 +932,6 @@ namespace
                 continue;
             }
             RecordRequestOutcome(archetypeInfo.enumName, req.channel, /*replied=*/true);
-
-            if (g_HsDebugChatLogEnabled)
-            {
-                std::string escapedBotName    = req.botName;    CharacterDatabase.EscapeString(escapedBotName);
-                std::string escapedSenderName = req.senderName; CharacterDatabase.EscapeString(escapedSenderName);
-                std::string escapedArchetype  = archetypeInfo.enumName; CharacterDatabase.EscapeString(escapedArchetype);
-                std::string escapedTrigger    = req.prompt;     CharacterDatabase.EscapeString(escapedTrigger);
-                std::string escapedPreStyle   = preStyleForLog; CharacterDatabase.EscapeString(escapedPreStyle);
-                std::string escapedStyled     = result.text;    CharacterDatabase.EscapeString(escapedStyled);
-                CharacterDatabase.Execute(
-                    "INSERT INTO hside_chat_log (bot_guid, bot_name, sender_guid, sender_name, is_whisper, "
-                    "archetype, trigger_text, pre_style_text, styled_text, created_at) "
-                    "VALUES ({}, '{}', {}, '{}', {}, '{}', '{}', '{}', '{}', NOW())",
-                    req.botGuid, escapedBotName, req.senderGuid, escapedSenderName,
-                    req.channel == HsReplyChannel::Whisper ? 1 : 0, // party/raid/guild collapse to 0: debug log doesn't distinguish them from say yet
-                    escapedArchetype, escapedTrigger, escapedPreStyle, escapedStyled);
-            }
 
             // The two bot-initiated request kinds share every "this was not
             // a player utterance" suppression below. Named once here so a
@@ -1504,6 +1486,46 @@ void Hs_RecordExchange(uint64_t botGuid, uint64_t senderGuid, const std::string&
         HistoryAppend(botGuid, senderGuid, trigger, reply);
 }
 
+std::string Hs_StyleAndDeliver(Player* bot, uint64_t senderGuid, const std::string& listenerName,
+                               const std::string& text, HsReplyChannel channel, HsChannelKind channelKind,
+                               bool inCombat, char const* source)
+{
+    uint64_t botGuid = bot->GetGUID().GetRawValue();
+    HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), listenerName, text,
+                                        Hs_BuildStyleContext(botGuid, inCombat));
+    Hs_DeliverReflexReply(botGuid, senderGuid, channel, style.text, channelKind, source);
+    return style.text;
+}
+
+bool Hs_DeliverCorpusLine(Player* bot, std::string line, uint64_t senderGuid, const std::string& listenerName,
+                          HsReplyChannel channel, HsChannelKind channelKind, bool inCombat, char const* source,
+                          HsCardSnapshot const* card)
+{
+    if (line.find('%') != std::string::npos)
+    {
+        HsCardSnapshot looked;
+        if (!card)
+        {
+            looked = Hs_LookupCardSnapshot(bot->GetGUID().GetRawValue());
+            card = &looked;
+        }
+        if (card->active)
+            line = Hs_ResolveCardPlaceholders(line, card->mainFocus, card->currentGoal);
+
+        if (line.find('%') != std::string::npos &&
+            !Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
+        {
+            // The Trade pool is entirely %item_link lines, so a bot with
+            // nothing non-soulbound in its bags drops every one of them here.
+            if (g_HsDebugEnabled)
+                LOG_INFO(kHsLogChat, "[HearthsideChat] Bot {} dropped a {} line: unresolved placeholder in \"{}\"",
+                         bot->GetName(), source, line);
+            return false;
+        }
+    }
+    return !Hs_StyleAndDeliver(bot, senderGuid, listenerName, line, channel, channelKind, inCombat, source).empty();
+}
+
 void Hs_DeliverReflexReply(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel channel, const std::string& text,
                             HsChannelKind channelKind, char const* source)
 {
@@ -1679,16 +1701,11 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
         return nullptr;
 
     uint32 chatChannelId = 0;
-    bool   isCityScoped  = false; // Trade/GuildRecruitment always use the "City" label, not a zone name
-    bool   isGlobal      = false; // LookingForGroup/WorldDefense: pattern used as-is, no zone substitution
+    bool   isCityScoped  = false; // Trade always uses the "City" label, not a zone name
     switch (kind)
     {
-        case HsChannelKind::Trade:            chatChannelId = ChatChannelId::TRADE;             isCityScoped = true; break;
-        case HsChannelKind::GuildRecruitment:  chatChannelId = ChatChannelId::GUILD_RECRUITMENT;  isCityScoped = true; break;
-        case HsChannelKind::General:           chatChannelId = ChatChannelId::GENERAL;                                break;
-        case HsChannelKind::LocalDefense:      chatChannelId = ChatChannelId::LOCAL_DEFENSE;                          break;
-        case HsChannelKind::LookingForGroup:   chatChannelId = ChatChannelId::LOOKING_FOR_GROUP;  isGlobal = true;    break;
-        case HsChannelKind::WorldDefense:      chatChannelId = ChatChannelId::WORLD_DEFENSE;      isGlobal = true;    break;
+        case HsChannelKind::Trade:   chatChannelId = ChatChannelId::TRADE;   isCityScoped = true; break;
+        case HsChannelKind::General: chatChannelId = ChatChannelId::GENERAL;                      break;
         default: return nullptr;
     }
 
@@ -1697,8 +1714,6 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
         return nullptr;
 
     uint8 locale = sWorld->GetDefaultDbcLocale();
-    if (isGlobal)
-        return cMgr->GetChannel(entry->pattern[locale], bot, sendPacketOnMiss);
 
     // The substituted half of the channel name. City-scoped channels take it
     // from the same acore_string the core does (LANG_CHANNEL_CITY), not from
@@ -1727,9 +1742,8 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
     // worth reaching -- and let the delivery site in Hs_DeliverPending join
     // the bot to it.
 
-    // Both remaining kinds need the bot's zone row: the city-scoped pair to
-    // test AREA_FLAG_SLAVE_CAPITAL, the zone-scoped pair to build the name
-    // out of it. A zone with no row resolves to nothing either way.
+    // Both kinds need the bot's zone row: Trade to test
+    // AREA_FLAG_SLAVE_CAPITAL, General to build the name out of it. A zone with no row resolves to nothing either way.
     AreaTableEntry const* zone = sAreaTableStore.LookupEntry(bot->GetZoneId());
     if (!zone)
         return nullptr;
@@ -1743,9 +1757,9 @@ Channel* Hs_ResolveChannelForDelivery(Player* bot, HsChannelKind kind, bool send
         // it hands back the live "Trade - City" for a bot out in Durotar
         // that the core never joined to it. Player::IsInChannel cannot catch
         // that either: it compares DBC type, and the bot is in some
-        // Trade-type channel. So for these two channels the zone is the only
-        // thing that carries membership, exactly as the zone *name* does for
-        // General/LocalDefense below.
+        // Trade-type channel. So for Trade the zone is the only thing that
+        // carries membership, exactly as the zone *name* does for General
+        // below.
         //
         // Mirrors Player::CanJoinConstantChannelInZone: a CHANNEL_DBC_FLAG_
         // CITY_ONLY channel requires AREA_FLAG_SLAVE_CAPITAL on the zone.
@@ -2061,7 +2075,7 @@ void Hs_DeliverPending()
                                  bot->GetName(), Hs_ChannelKindName(reply.channelKind));
                     continue;
                 }
-                // Trade/GuildRecruitment are a single object realm-wide that
+                // Trade is a single object realm-wide that
                 // the bot is not in: PlayerbotMgr's login join lands every
                 // bot in "Trade - " while the core puts real players in
                 // "Trade - City" (see Hs_ResolveChannelForDelivery). Without
@@ -2074,10 +2088,9 @@ void Hs_DeliverPending()
                 // constructed with _announce = false, so nobody already in
                 // the channel sees a join notice.
                 //
-                // Restricted to city-scoped channels on purpose. General and
-                // LocalDefense are named per zone and already share one
-                // instance with the players standing there; joining those
-                // could stack a second, stale instance onto a bot whose zone
+                // Restricted to Trade on purpose. General is named per zone
+                // and already shares one instance with the players standing
+                // there; joining it could stack a second, stale instance onto a bot whose zone
                 // change the core has not processed yet.
                 if (channel->HasFlag(CHANNEL_FLAG_CITY))
                     channel->JoinChannel(bot, "");

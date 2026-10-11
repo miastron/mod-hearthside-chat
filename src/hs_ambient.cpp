@@ -81,34 +81,16 @@ namespace
     // to nobody, so the only question is how recently this bot last spoke
     // into the void. That also keeps the map bounded by the bot population
     // rather than its product with the player population.
-    std::mutex                                      g_CooldownMutex;
-    std::unordered_map<uint64_t, Clock::time_point>  g_LastAmbientAt;
+    HsCooldownMap<uint64_t> g_AmbientCooldown;
 
     bool AmbientCooldownOk(uint64_t botGuid)
     {
-        std::lock_guard<std::mutex> lock(g_CooldownMutex);
-        auto it = g_LastAmbientAt.find(botGuid);
-        if (it == g_LastAmbientAt.end())
-            return true;
-        auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - it->second).count();
-        return elapsedSec >= static_cast<int64_t>(g_HsAmbientBotCooldownSeconds);
+        return g_AmbientCooldown.Ready(botGuid, g_HsAmbientBotCooldownSeconds);
     }
 
     void MarkAmbientFired(uint64_t botGuid)
     {
-        std::lock_guard<std::mutex> lock(g_CooldownMutex);
-        Clock::time_point now = Clock::now();
-        g_LastAmbientAt[botGuid] = now;
-
-        // Read only through g_HsAmbientBotCooldownSeconds, so an entry four
-        // windows old already answers exactly as a missing one does
-        // (hs_prune.h). Bounded by the bot population rather than a product,
-        // so this is retention hygiene on a long-uptime realm rather than a
-        // correctness need: hence the same generous multiplier the other
-        // call sites use.
-        HsPrune::PruneStale(g_LastAmbientAt, now,
-                            /*staleSeconds=*/static_cast<int64_t>(g_HsAmbientBotCooldownSeconds) * 4,
-                            /*pruneAboveSize=*/512);
+        g_AmbientCooldown.Mark(botGuid, g_HsAmbientBotCooldownSeconds);
     }
 
     // Every gate that depends only on the bot itself, in ascending cost
@@ -143,53 +125,15 @@ namespace
     {
         uint64_t botGuid = bot->GetGUID().GetRawValue();
 
-        HsCardSnapshot snapshot = Hs_LookupCardSnapshot(botGuid);
-
-        // Card-only placeholders (%main_focus, %current_goal). Only the /say
-        // pool can contain them: the party/raid and channel category
-        // queries both filter card_gated = 0: but running the pass
-        // unconditionally is a plain substring replace over a line that
-        // almost never contains either token, and it means a future
-        // card_gated category on those surfaces can't silently deliver a
-        // half-resolved line.
-        if (snapshot.active)
-            line = Hs_ResolveCardPlaceholders(line, snapshot.mainFocus, snapshot.currentGoal);
-
-        // Universal placeholders, after the card pass so the leftover check
-        // sees a fully-substituted line. An unresolvable token drops the
-        // line into silence rather than an untrue claim (§4.13): and note
-        // the ambient token is already spent at this point, which is
-        // correct: the budget bounds how often a bot *attempts* to speak,
-        // and a dropped line is silence the player experiences, not free.
-        if (line.find('%') != std::string::npos)
-        {
-            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
-            {
-                // The Trade pool is entirely %item_link lines, so a bot with
-                // nothing non-soulbound in its bags drops every one of them
-                // here. Silent before this log, and indistinguishable from
-                // the surface never firing.
-                if (g_HsDebugEnabled)
-                    LOG_INFO(kHsLogChat,
-                             "[HearthsideChat] Bot {} dropped an ambient line: unresolved placeholder in \"{}\"",
-                             bot->GetName(), line);
-                return;
-            }
-        }
-
-        // inCombat=false: BotBaseEligible already excluded in-combat bots.
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, /*inCombat=*/false);
-
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), listenerName, line, styleCtx);
-        if (style.text.empty())
+        // The ambient token is already spent when a placeholder drops the
+        // line, which is correct: the budget bounds how often a bot
+        // *attempts* to speak. inCombat=false: BotBaseEligible already
+        // excluded in-combat bots. senderGuid 0: ambient has no addressee,
+        // and never whispers -- an unprompted whisper to a stranger would
+        // read as harassment rather than atmosphere.
+        if (!Hs_DeliverCorpusLine(bot, line, /*senderGuid=*/0, listenerName, channel, channelKind,
+                                  /*inCombat=*/false, "ambient"))
             return;
-
-        // senderGuid 0: ambient has no addressee. Hs_DeliverReflexReply only
-        // reads it on the Whisper path (to resolve the recipient), and
-        // ambient never whispers: an unprompted whisper to a stranger is
-        // the one shape of this feature that would read as harassment rather
-        // than atmosphere.
-        Hs_DeliverReflexReply(botGuid, /*senderGuid=*/0, channel, style.text, channelKind);
 
         MarkAmbientFired(botGuid);
         g_AmbientLinesFired.fetch_add(1);

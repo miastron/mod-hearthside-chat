@@ -78,8 +78,7 @@ namespace
     std::mutex                     g_ScheduleMutex;
     std::deque<HsScheduledTurn>    g_ScheduledTurns;
 
-    std::mutex                                      g_WitnessCooldownMutex;
-    std::unordered_map<uint64_t, Clock::time_point>  g_LastWitnessAt;
+    HsCooldownMap<uint64_t> g_WitnessCooldown;
 
     uint32_t g_ScanAccumulatorMs = 0;
 
@@ -137,24 +136,12 @@ namespace
 
     bool WitnessCooldownOk(uint64_t playerGuid)
     {
-        std::lock_guard<std::mutex> lock(g_WitnessCooldownMutex);
-        auto it = g_LastWitnessAt.find(playerGuid);
-        if (it == g_LastWitnessAt.end())
-            return true;
-        auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - it->second).count();
-        return elapsedSec >= static_cast<int64_t>(kWitnessCooldownSeconds);
+        return g_WitnessCooldown.Ready(playerGuid, kWitnessCooldownSeconds);
     }
 
     void MarkWitnessCooldown(uint64_t playerGuid)
     {
-        std::lock_guard<std::mutex> lock(g_WitnessCooldownMutex);
-        Clock::time_point now = Clock::now();
-        g_LastWitnessAt[playerGuid] = now;
-        // Read only through kWitnessCooldownSeconds, so anything well past
-        // that window answers as a missing key would (hs_prune.h).
-        HsPrune::PruneStale(g_LastWitnessAt, now,
-                            /*staleSeconds=*/static_cast<int64_t>(kWitnessCooldownSeconds) * 4,
-                            /*pruneAboveSize=*/512);
+        g_WitnessCooldown.Mark(playerGuid, kWitnessCooldownSeconds);
     }
 
     // A header with no turn rows. The generator writes a script's header and

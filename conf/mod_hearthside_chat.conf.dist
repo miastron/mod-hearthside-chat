@@ -249,16 +249,6 @@ HearthsideChat.DisableRepliesInCombat = 1
 #     Default:     (empty)
 HearthsideChat.ExcludeNames =
 
-# HearthsideChat.DebugChatLog.Enable
-#     Description: Logs every AI-generated exchange -- the trigger message,
-#                  the AI's raw output, and the final styled reply -- to the
-#                  hside_chat_log database table, so you can review them and
-#                  hand-pick good ones to reuse later (via the
-#                  `.hearthside capture` GM command). This log isn't cleaned
-#                  up automatically -- prune it yourself on a busy realm.
-#     Default:     0 (false)
-HearthsideChat.DebugChatLog.Enable = 0
-
 # HearthsideChat.ConversationLog.Enable
 #     Description: Logs both sides of every player-bot exchange -- the
 #                  player's line when it arrives, each bot line when it is
@@ -813,11 +803,9 @@ HearthsideChat.BotChain.RequireRealPlayer = 1
 # per triggering message, so a busy channel doesn't have to check every
 # member on every message.
 #
-# LookingForGroup, GuildRecruitment, LocalDefense and WorldDefense default
-# to off -- soliciting a group/guild a bot can't actually honour, or
-# chiming into a system-generated PvP alert, isn't something a bot should
-# do conversationally -- but you can turn any of them on like any other
-# setting here.
+# Only Trade and General are spoken on. LookingForGroup, GuildRecruitment,
+# LocalDefense and WorldDefense are left alone: a bot can't honour a group or
+# guild solicitation, and the defense channels carry system PvP alerts.
 
 # HearthsideChat.Channel.Trade.MaxTier / .RatePerMin / .MaxCandidates
 #     Description: Trade channel -- WTS/WTB-style flavor lines and comments
@@ -844,38 +832,6 @@ HearthsideChat.Channel.Trade.MaxCandidates = 8
 HearthsideChat.Channel.General.MaxTier = corpus
 HearthsideChat.Channel.General.RatePerMin = 1
 HearthsideChat.Channel.General.MaxCandidates = 8
-
-# HearthsideChat.Channel.LookingForGroup.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: LookingForGroup channel. Off by default -- see the note
-#                  above.
-#     Default:     off / 0 / 0
-HearthsideChat.Channel.LookingForGroup.MaxTier = off
-HearthsideChat.Channel.LookingForGroup.RatePerMin = 0
-HearthsideChat.Channel.LookingForGroup.MaxCandidates = 0
-
-# HearthsideChat.Channel.GuildRecruitment.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: GuildRecruitment channel. Off by default, same
-#                  reasoning as LookingForGroup.
-#     Default:     off / 0 / 0
-HearthsideChat.Channel.GuildRecruitment.MaxTier = off
-HearthsideChat.Channel.GuildRecruitment.RatePerMin = 0
-HearthsideChat.Channel.GuildRecruitment.MaxCandidates = 0
-
-# HearthsideChat.Channel.LocalDefense.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: LocalDefense channel. Off by default -- this channel
-#                  carries system PvP alerts, not conversation.
-#     Default:     off / 0 / 0
-HearthsideChat.Channel.LocalDefense.MaxTier = off
-HearthsideChat.Channel.LocalDefense.RatePerMin = 0
-HearthsideChat.Channel.LocalDefense.MaxCandidates = 0
-
-# HearthsideChat.Channel.WorldDefense.MaxTier / .RatePerMin / .MaxCandidates
-#     Description: WorldDefense channel. Off by default, same reasoning as
-#                  LocalDefense.
-#     Default:     off / 0 / 0
-HearthsideChat.Channel.WorldDefense.MaxTier = off
-HearthsideChat.Channel.WorldDefense.RatePerMin = 0
-HearthsideChat.Channel.WorldDefense.MaxCandidates = 0
 
 # --------------------------------------------
 # TIER-0 REFLEX

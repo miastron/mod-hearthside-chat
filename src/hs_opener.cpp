@@ -60,35 +60,19 @@ namespace
 
     // Per (bot, player) opener cooldown: prevents a string of joint kills
     // from firing an opener every single time.
-    std::mutex g_OpenerCooldownMutex;
-    std::map<std::pair<uint64_t, uint64_t>, Clock::time_point> g_LastOpenerAt;
+    HsCooldownMap<std::pair<uint64_t, uint64_t>,
+                  std::map<std::pair<uint64_t, uint64_t>, HsPrune::Clock::time_point>> g_OpenerCooldown;
 
     std::atomic<uint32_t> g_OpenersFiredThisSession{0};
 
     bool OpenerCooldownOk(uint64_t botGuid, uint64_t playerGuid)
     {
-        std::lock_guard<std::mutex> lock(g_OpenerCooldownMutex);
-        auto it = g_LastOpenerAt.find({ botGuid, playerGuid });
-        if (it == g_LastOpenerAt.end())
-            return true;
-        auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - it->second).count();
-        return elapsedSec >= static_cast<int64_t>(kOpenerCooldownSeconds);
+        return g_OpenerCooldown.Ready({ botGuid, playerGuid }, kOpenerCooldownSeconds);
     }
 
     void MarkOpenerFired(uint64_t botGuid, uint64_t playerGuid)
     {
-        std::lock_guard<std::mutex> lock(g_OpenerCooldownMutex);
-        Clock::time_point now = Clock::now();
-        g_LastOpenerAt[{ botGuid, playerGuid }] = now;
-
-        // Keyed by (bot, player), so this grows with the *product* of the two
-        // populations rather than either one: worth pruning even though the
-        // value is only a timestamp. OpenerCooldownOk reads it purely through
-        // kOpenerCooldownSeconds, so an entry four windows old already
-        // answers exactly as a missing one does (hs_prune.h).
-        HsPrune::PruneStale(g_LastOpenerAt, now,
-                            /*staleSeconds=*/static_cast<int64_t>(kOpenerCooldownSeconds) * 4,
-                            /*pruneAboveSize=*/512);
+        g_OpenerCooldown.Mark({ botGuid, playerGuid }, kOpenerCooldownSeconds);
     }
 
     // Fifth trigger: how long each (bot, player) pair has been observed
@@ -180,25 +164,11 @@ namespace
             return;
         }
 
-        // Same universal-placeholder pass as hs_handler.cpp's
-        // TryCorpusFallback: an opener category is ordinary corpus
-        // content, so a row may carry %zone/%class/%level too. No card pass
-        // here, since is_opener categories are never card_gated
-        // (Hs_SelectOpenerLine enforces that); a card-only token surviving
-        // into an opener means a corrupt row, and the leftover check turns
-        // that into silence.
-        if (line.find('%') != std::string::npos)
-        {
-            if (!Hs_ResolveUniversalPlaceholders(line, Hs_BuildPlaceholderContext(bot)))
-                return;
-        }
-
-        HsStyleContext styleCtx = Hs_BuildStyleContext(botGuid, bot->IsInCombat());
-        HsStyleResult style = Hs_ApplyStyle(botGuid, bot->GetName(), player->GetName(), line, styleCtx);
-        if (style.text.empty())
+        // An opener category is ordinary corpus content, so a row may carry
+        // %zone/%class/%level too.
+        if (!Hs_DeliverCorpusLine(bot, line, playerGuid, player->GetName(), channel, HsChannelKind::Trade,
+                                  bot->IsInCombat(), "opener"))
             return;
-
-        Hs_DeliverReflexReply(botGuid, playerGuid, channel, style.text, HsChannelKind::Trade, "opener");
         MarkOpenerFired(botGuid, playerGuid);
 
         // The per-pair opener cooldown above says nothing about ambient, which

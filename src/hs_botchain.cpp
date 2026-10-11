@@ -6,6 +6,7 @@
 #include "hs_queue.h"  // HsReplyChannel's definition, Hs_TryEnqueue, the channel helpers
 #include "hs_tier.h"
 #include "hs_log.h"
+#include "hs_prune.h"
 #include "Log.h"
 
 #include "Channel.h" // Hs_ResolveChannelForDelivery's return
@@ -49,20 +50,11 @@ namespace
     std::unordered_map<uint64_t, ChainScope>    g_Chains;
     std::atomic<uint32_t>                       g_HopsFiredThisSession{0};
 
-    // Caller holds g_ChainMutex. Only walks the map once it has grown past a
-    // threshold, so the common case (a handful of live scopes) costs nothing.
+    // Caller holds g_ChainMutex.
     void PruneStaleLocked(Clock::time_point now)
     {
-        if (g_Chains.size() < kChainPruneThreshold)
-            return;
-        for (auto it = g_Chains.begin(); it != g_Chains.end(); )
-        {
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.lastTouchedAt).count();
-            if (elapsed >= kChainScopeStaleSeconds)
-                it = g_Chains.erase(it);
-            else
-                ++it;
-        }
+        HsPrune::PruneStale(g_Chains, now, kChainScopeStaleSeconds, kChainPruneThreshold,
+                            [](ChainScope const& scope) { return scope.lastTouchedAt; });
     }
 
     // Party/raid candidates: the speaker's own group, subgroup-scoped for

@@ -214,30 +214,17 @@ namespace
     // checked. The bot still gets the recent-event line, so a player who
     // talks to it about the death gets an answer.
     constexpr int64_t kSameEventCooldownSeconds = 600;
-    constexpr size_t  kSameEventPruneThreshold  = 1024;
 
-    std::mutex                                                 g_LastReactionMutex;
-    std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> g_LastReaction;
-
-    uint64_t ReactionKey(uint64_t botGuid, HsEventType type)
-    {
-        return (botGuid << 8) | static_cast<uint8_t>(type);
-    }
+    HsCooldownMap<uint64_t> g_ReactionCooldown; // keyed (botGuid << 8) | event type
 
     bool ReactedRecently(uint64_t botGuid, HsEventType type)
     {
-        std::lock_guard<std::mutex> lock(g_LastReactionMutex);
-        auto it = g_LastReaction.find(ReactionKey(botGuid, type));
-        return it != g_LastReaction.end() &&
-               std::chrono::steady_clock::now() - it->second < std::chrono::seconds(kSameEventCooldownSeconds);
+        return !g_ReactionCooldown.Ready((botGuid << 8) | static_cast<uint8_t>(type), kSameEventCooldownSeconds);
     }
 
     void NoteReaction(uint64_t botGuid, HsEventType type)
     {
-        auto const now = std::chrono::steady_clock::now();
-        std::lock_guard<std::mutex> lock(g_LastReactionMutex);
-        g_LastReaction[ReactionKey(botGuid, type)] = now;
-        HsPrune::PruneStale(g_LastReaction, now, kSameEventCooldownSeconds, kSameEventPruneThreshold);
+        g_ReactionCooldown.Mark((botGuid << 8) | static_cast<uint8_t>(type), kSameEventCooldownSeconds);
     }
 
     bool EligibleBot(Player* bot)
@@ -372,7 +359,7 @@ namespace
             Player* bot = bots[index];
 
             // The other person in the event where there is one, so the
-            // request (and hside_chat_log) names who the line is aimed at
+            // request (and the conversation log) names who the line is aimed at
             // rather than the origin, which for a duel or a solo death is the
             // bot itself.
             Player* sender = (counterparts[index] && counterparts[index]->IsInWorld()) ? counterparts[index] : origin;
@@ -384,10 +371,9 @@ namespace
             // adds to a greeting that a short list does not.
             if (primaryType == HsEventType::GuildLogin)
             {
-                std::string line = GuildLoginGreeting(sender->GetName());
-                HsStyleResult style = Hs_ApplyStyle(candidates[index].botGuid, bot->GetName(), sender->GetName(), line,
-                    Hs_BuildStyleContext(candidates[index].botGuid, bot->IsInCombat()));
-                Hs_DeliverReflexReply(candidates[index].botGuid, sender->GetGUID().GetRawValue(), channel, style.text, HsChannelKind::Trade, "event-canned");
+                Hs_StyleAndDeliver(bot, sender->GetGUID().GetRawValue(), sender->GetName(),
+                                   GuildLoginGreeting(sender->GetName()), channel, HsChannelKind::Trade,
+                                   bot->IsInCombat(), "event-canned");
                 g_EventsFiredThisSession.fetch_add(1);
                 continue;
             }

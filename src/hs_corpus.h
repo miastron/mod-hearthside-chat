@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -156,6 +157,36 @@ struct HsPlaceholderContext
     std::string guild;      // empty when the bot is unguilded
 };
 
+// Replaces every token in `text` with its value. Returns false when a token
+// present in the text has an empty value -- nothing true to put there -- and
+// the caller must then discard the half-replaced text. Shared by the
+// universal and script resolvers below.
+struct HsPlaceholderEntry
+{
+    const char*        token;
+    const std::string* value;
+};
+
+inline bool Hs_ReplacePlaceholders(std::string& text, std::initializer_list<HsPlaceholderEntry> entries)
+{
+    for (HsPlaceholderEntry const& entry : entries)
+    {
+        std::string token(entry.token);
+        size_t pos = text.find(token);
+        if (pos == std::string::npos)
+            continue;
+        if (entry.value->empty())
+            return false;
+
+        while (pos != std::string::npos)
+        {
+            text.replace(pos, token.size(), *entry.value);
+            pos = text.find(token, pos + entry.value->size());
+        }
+    }
+    return true;
+}
+
 // Resolves every universal placeholder in `text` in place. Returns false if
 // a placeholder in the text has no value in `ctx`, or if a card-only token
 // is still standing afterwards (a card_gated line that reached an uncarded
@@ -171,31 +202,15 @@ struct HsPlaceholderContext
 // harness can cover it.
 inline bool Hs_ResolveUniversalPlaceholders(std::string& text, const HsPlaceholderContext& ctx)
 {
-    struct Entry { const char* token; const std::string* value; };
-    const Entry kEntries[] = {
-        { "%item_link",  &ctx.itemLink  },
-        { "%quest_link", &ctx.questLink },
-        { "%class",      &ctx.className },
-        { "%level",      &ctx.level     },
-        { "%zone",       &ctx.zone      },
-        { "%guild",      &ctx.guild     },
-    };
-
-    for (Entry const& entry : kEntries)
-    {
-        std::string token(entry.token);
-        size_t pos = text.find(token);
-        if (pos == std::string::npos)
-            continue;
-        if (entry.value->empty())
-            return false; // nothing true to substitute, drop the line
-
-        while (pos != std::string::npos)
-        {
-            text.replace(pos, token.size(), *entry.value);
-            pos = text.find(token, pos + entry.value->size());
-        }
-    }
+    if (!Hs_ReplacePlaceholders(text, {
+            { "%item_link",  &ctx.itemLink  },
+            { "%quest_link", &ctx.questLink },
+            { "%class",      &ctx.className },
+            { "%level",      &ctx.level     },
+            { "%zone",       &ctx.zone      },
+            { "%guild",      &ctx.guild     },
+        }))
+        return false;
 
     if (text.find("%main_focus") != std::string::npos || text.find("%current_goal") != std::string::npos)
         return false;
@@ -260,8 +275,7 @@ HsPlaceholderContext Hs_BuildPlaceholderContext(Player* bot);
 inline bool Hs_ResolveScriptPlaceholders(std::string& text, const HsPlaceholderContext& mine,
                                           const HsPlaceholderContext& other)
 {
-    struct Entry { const char* token; const std::string* value; };
-    const Entry kEntries[] = {
+    return Hs_ReplacePlaceholders(text, {
         { "%my_class",     &mine.className  },
         { "%my_level",     &mine.level      },
         { "%my_zone",      &mine.zone       },
@@ -270,25 +284,7 @@ inline bool Hs_ResolveScriptPlaceholders(std::string& text, const HsPlaceholderC
         { "%other_level",  &other.level     },
         { "%other_zone",   &other.zone      },
         { "%other_guild",  &other.guild     },
-    };
-
-    for (Entry const& entry : kEntries)
-    {
-        std::string token(entry.token);
-        size_t pos = text.find(token);
-        if (pos == std::string::npos)
-            continue;
-        if (entry.value->empty())
-            return false; // nothing true to substitute, drop the turn
-
-        while (pos != std::string::npos)
-        {
-            text.replace(pos, token.size(), *entry.value);
-            pos = text.find(token, pos + entry.value->size());
-        }
-    }
-
-    return true;
+    });
 }
 
 // Class id -> the lowercase class name this module uses in prompts, card
