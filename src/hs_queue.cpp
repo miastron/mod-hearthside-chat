@@ -2050,10 +2050,12 @@ void Hs_DeliverPending()
                 {
                     // `.hearthside ask` from the console as an offline
                     // character: the reply exists, it just has no recipient.
+                    // Still logged below, so a console test reads back from
+                    // the conversation log.
                     if (g_HsDebugEnabled)
                         LOG_INFO(kHsLogChat, "[HearthsideChat] Bot {} replied [whisper, recipient offline]: {}",
                             bot->GetName(), reply.text);
-                    continue;
+                    break;
                 }
                 botAI->Whisper(reply.text, sender->GetName());
                 break;
