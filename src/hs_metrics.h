@@ -23,91 +23,11 @@ constexpr uint32_t kHsMetricsRetentionDays         = 7;
 // count to a known maximum). Called from hs_main.cpp's HsMetricsWorldScript.
 void Hs_SampleMetrics();
 
-struct HsMetricsSample
-{
-    std::string sampledAt;
-    bool        backendDown;
-    uint32_t    queueDepth;
-    uint32_t    corpusRowCount;
-    uint32_t    corpusRowsAddedSession;
-    uint32_t    corpusRowsEvictedSession;
-    uint32_t    scriptReserveDepth;
-    uint32_t    scriptActiveRuns;
-    uint32_t    scriptConsumed24h;
-    uint32_t    identityRowCount;
-    uint32_t    cardActiveCount;
-    uint32_t    promotionsSession;
-    uint32_t    demotionsSession;
-    uint32_t    retirementsSession;
-    uint32_t    memoryRowCount;
-    uint32_t    openersFiredSession;
-
-    // §4.19: reactive-tier latency percentiles (rolling window, hs_queue.h's
-    // Hs_ReactiveLatencyPercentiles) and mean assembled-prompt length by
-    // identity ring (hs_queue.h's Hs_PromptCharsByRing). Archetype/channel
-    // reply rates don't fit this flat shape; see hside_metrics_breakdown
-    // and Hs_RecentMetricsBreakdown below instead.
-    uint32_t    latencyP50Ms;
-    uint32_t    latencyP95Ms;
-    uint32_t    latencyP99Ms;
-    uint32_t    promptCharsRing1Mean;
-    uint32_t    promptCharsRing2Mean;
-    uint32_t    promptCharsRing3Mean;
-
-    // Session-cumulative (since worldserver process start, not a per-interval
-    // delta): hs_queue.h's Hs_TtlDropStatsSnapshot/Hs_GlobalBucketSaturationSnapshot.
-    // A consumer wanting a rate divides droppedCount/processedCount (or
-    // deniedCount/attemptCount) itself; storing the raw running totals lets a
-    // dashboard also see whether either denominator is even moving.
-    uint64_t    ttlDroppedSession;
-    uint64_t    ttlProcessedSession;
-    uint64_t    bucketDeniedSession;
-    uint64_t    bucketAttemptedSession;
-};
-
-// Most-recent samples first, capped at `limit`. Backs the HTTP
-// GET /api/metrics route. There is no GM-command equivalent since a
-// scrolling table of ~16 columns doesn't fit a chat window usefully;
-// `.hearthside status` already gives the current-moment view of the same
-// counters.
-std::vector<HsMetricsSample> Hs_RecentMetrics(uint32_t limit);
-
-// One row per (dimension, key) pair sampled alongside HsMetricsSample.
-// dimension is "archetype", "channel", or "channel_bucket" (§4.17's
-// per-channel token buckets, hs_queue.h's Hs_ChannelBucketSaturationSnapshot);
-// key is the archetype enum name, Hs_ReplyChannelName(channel), or
-// Hs_ChannelKindName(kind). Its own table (hside_metrics_breakdown) rather
-// than columns on hside_metrics, since these are variable-cardinality and
-// don't fit that table's flat per-interval row. For "channel_bucket" rows,
-// repliedCount/silentCount hold granted/denied token-bucket takes rather
-// than a reply/silence outcome (same two-counter shape, different meaning,
-// not worth a second table for).
-//
-// Review C17 -- counters are SESSION-CUMULATIVE, not per-interval. The
-// snapshots these rows are built from (Hs_ArchetypeReplyCountsSnapshot,
-// Hs_ChannelReplyCountsSnapshot, Hs_ChannelBucketSaturationSnapshot) are
-// running totals since worldserver start, so each sample re-writes a
-// monotonically growing number and a consumer wanting per-interval rates
-// must diff consecutive rows itself. The header used to describe these as
-// "one row per dimension/key per interval", which is true of the row
-// cadence and false of the values, and nothing said so.
-//
-// They also reset to zero on restart, so a diff across a restart boundary
-// goes negative: treat any decrease as a new session rather than as
-// negative traffic. Left cumulative rather than converted to deltas because
-// the in-memory counters are the module's own status-command source of
-// truth and resetting them per sample would break `.hearthside status`.
-struct HsMetricsBreakdownRow
-{
-    std::string sampledAt;
-    std::string dimension;
-    std::string key;
-    uint32_t    repliedCount;
-    uint32_t    silentCount;
-};
-
-// Most-recent samples first, capped at `limit` rows (not `limit` intervals:
-// each interval contributes one row per archetype plus one per channel).
-std::vector<HsMetricsBreakdownRow> Hs_RecentMetricsBreakdown(uint32_t limit);
+// hside_metrics_breakdown's counters are session-cumulative: each sample
+// rewrites a running total since worldserver start, so a reader wanting
+// per-interval rates diffs consecutive rows and treats a decrease as a
+// restart. For dimension "channel_bucket" the two counters are granted and
+// denied rate-limit takes rather than replied/silent. The reader is
+// acore-web-reg's hearthside.php.
 
 #endif // MOD_HS_METRICS_H

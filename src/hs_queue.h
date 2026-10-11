@@ -39,7 +39,7 @@ enum class HsReplyChannel : uint8_t
 };
 
 // Lowercase name for logging/JSON, e.g. hs_metrics.cpp's per-channel
-// breakdown rows and hs_http_server.cpp's status output.
+// breakdown rows.
 const char* Hs_ReplyChannelName(HsReplyChannel channel);
 
 // Starts the worker thread. Call once at worldserver startup.
@@ -165,71 +165,36 @@ void Hs_RunDeferredWork();
 // world in between.
 Player* Hs_FindInWorld(ObjectGuid guid);
 
-// Claude/archive/PLAN-ARBITER.md §8: the event tier's own token bucket
-// (HearthsideChat.Events.Bucket.*), independent of the tier-2 reply bucket
-// Hs_TryEnqueue spends above. A busy dungeon generates deaths, loot and
-// dings constantly; sharing one budget would let ambient reactions starve
-// replies to players who actually spoke, which is the thing players notice
-// most. Spent once per *event*, not per selected bot, and before any
-// per-candidate work: a cheap early-out on an exhausted budget, the same
-// shape Hs_ChannelBucketTake gives §4.17's per-channel buckets. Burst
-// capacity is its own config key, since an event burst (a wipe) is a
-// different shape from a chat burst. Returns false (caller does no further
-// work) when the bucket is empty. An admitted event still has to clear
-// Hs_TryEnqueue's own gates per bot on top of this.
+// The event tier's own token bucket (HearthsideChat.Events.Bucket.*), apart
+// from the reply bucket so a busy dungeon's deaths and dings can't starve
+// replies to players who spoke. Spent once per event, before any
+// per-candidate work; false means do nothing further. An admitted event
+// still has to clear Hs_TryEnqueue's per-bot gates.
 bool Hs_EventBucketTake();
 
-// Peek: true when Hs_EventBucketTake would fail right now. For a caller that
-// has expensive work to do *before* it can call FireEvent at all -- the
-// world-scoped witness scan in hs_event.cpp's level-up path is the one that
-// mattered (review item 14), since it walked the realm and collected actors
-// only for the budget gate inside FireEvent to throw the lot away. Takes no
-// token, so a caller that proceeds still has to clear Hs_EventBucketTake.
+// True when Hs_EventBucketTake would fail right now, for a caller with
+// expensive work to do before it could take (the level-up witness scan).
 bool Hs_EventBucketExhausted();
 
 // Review C2: refund for an event whose EligibleBot filtering left no actor
 // able to speak, so the budget paid for nothing.
 void Hs_EventBucketRefund();
 
-// Claude/archive/PLAN-AMBIENT.md §2: the shared *unprompted-speech* budget
-// (HearthsideChat.Ambient.Bucket.*). Unlike every other bucket in this file,
-// this one is not owned by a single surface: all three producers that
-// speak on no trigger at all spend from it:
-//
-//   - hs_ambient.cpp's scan (dead air near a player)
-//   - hs_opener.cpp's FireOpener (shared-context greeting)
-//   - hs_script.cpp's two scene claims (/say and channel)
-//
-// One budget rather than three because ambient speech has no natural rate
-// limiter. Every other surface is bounded by how often its trigger fires
-// (players only talk so much, mobs only die so often), so a per-surface
-// bucket there is a ceiling on something already self-limiting. These three
-// are bounded only by the clock and the bot population, and three producers
-// each individually tuned to "reasonable" still stack into constant noise.
-// A realm's tolerance for bots talking to themselves is one quantity, so it
-// gets one knob.
-//
-// Spent once per *line about to be spoken* (a script scene spends once at
-// claim time for the whole multi-turn run, not per turn: the run is the
-// unit a listener perceives). Returns false when the budget is empty; the
-// caller falls silent rather than queuing, exactly as with the other
-// buckets. Deliberately checked late, after the cheap eligibility filters
-// but before the corpus query, so a denied line costs no DB work.
+// The shared unprompted-speech budget (HearthsideChat.Ambient.Bucket.*),
+// spent by the three producers that speak on no trigger: ambient musing,
+// openers, and scripted scenes (once per scene, not per turn). Those are
+// bounded only by the clock, and a realm's tolerance for bots talking to
+// themselves is one quantity, so it gets one knob. Taken after the cheap
+// eligibility filters but before the corpus query; false means stay silent.
 bool Hs_AmbientBucketTake();
 
-// Review C2: returns a token taken by Hs_AmbientBucketTake that the caller
-// then discovered it could not use, rolling the grant tally back with it.
-// For abandon paths where *nothing was ever going to be spoken and no
-// listener could tell*: an empty corpus reserve, a candidate scan that found
-// nobody, a script header whose turn rows are missing.
-//
-// Not for the ambient scan's own late drops. hs_ambient.cpp argues that a
-// line dropped after the budget said yes is silence the player experiences,
-// and silence is not free; that reasoning is deliberately preserved.
+// Returns a token for a line nothing was ever going to speak (an empty
+// reserve, no candidate, a script with no turns). Not for a line dropped
+// after the budget said yes: that is silence a player experiences.
 void Hs_AmbientBucketRefund();
 
 // Session-cumulative grant/deny counts for the shared bucket above, for
-// `.hearthside status` and the HTTP metrics route. Saturation here is the
+// `.hearthside status` and the metrics sampler. Saturation here is the
 // signal that the three producers are competing rather than coexisting --
 // the number to look at before raising Ambient.Bucket.RepliesPerMinute.
 struct HsAmbientBucketStats
@@ -551,9 +516,8 @@ HsPromptCharsByRing Hs_PromptCharsByRing();
 
 // Reply-vs-silence counts since this worldserver process started, keyed by
 // archetype and by delivery channel. Not surfaced by `.hearthside status`
-// (too wide for a chat window, same reasoning hs_metrics.h already gives
-// for the metrics table itself). The HTTP /api/metrics route is the
-// consumer.
+// (too wide for a chat window); the metrics sampler writes them to
+// hside_metrics_breakdown for the acore-web-reg dashboard.
 struct HsArchetypeReplyCounts
 {
     std::string enumName;

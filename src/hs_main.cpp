@@ -11,7 +11,6 @@
 #include "hs_grounded_store.h"
 #include "hs_handler.h"
 #include "hs_command.h"
-#include "hs_http_server.h"
 #include "hs_identity_store.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
@@ -294,19 +293,6 @@ namespace
         uint32 _msSinceEviction = 0;
     };
 
-    // The authenticated HTTP control API's lifecycle. Registered after
-    // HsConfigWorldScript so g_HsHttpServer* is loaded before Start() reads
-    // it. A bind failure or missing private key is logged and leaves the
-    // server off (hs_http_server.cpp); this WorldScript doesn't need to
-    // know which happened.
-    class HsHttpServerWorldScript : public WorldScript
-    {
-    public:
-        HsHttpServerWorldScript() : WorldScript("HsHttpServerWorldScript") {}
-        void OnStartup() override { Hs_HttpServerStart(); }
-        void OnShutdown() override { Hs_HttpServerStop(); }
-    };
-
     // Rolling metrics sampler, on the same tick-driven shape as the other
     // periodic sweeps in this file. Its own accumulator since none of
     // them share its cadence.
@@ -415,6 +401,5 @@ void Addmod_hearthside_chatScripts()
     new HsQueueLifecycleWorldScript();
     new HsGeneratorLifecycleWorldScript();
     new HsIdentityLifecycleWorldScript();
-    new HsHttpServerWorldScript();
     new HsMetricsWorldScript();
 }

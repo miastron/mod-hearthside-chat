@@ -656,12 +656,10 @@ uint32_t Hs_RetirementsThisSession()
 
 bool Hs_ForcePromote(uint64_t botGuid, uint8_t botLevel)
 {
-    // Review item 3: both force paths are check-then-act and both are
-    // reachable from two threads at once -- the world thread (`.hearthside
-    // promote`/`demote`) and cpp-httplib's pool (the /api/bot/:guid/promote
-    // and /demote routes). Without this lock two callers can each read
-    // "not promoted yet", each write, and each increment the session
-    // counter, while the idempotent SQL below changes the row only once.
+    // Review item 3: both force paths are check-then-act. Only the world
+    // thread calls them now (`.hearthside promote`/`demote`; the HTTP routes
+    // that also did are gone), but the lock is cheap and keeps the session
+    // counter honest if another caller ever appears.
     // One mutex for both functions, not one each: they read and write the
     // same two columns of the same row.
     std::lock_guard<std::mutex> forceLock(g_ForceStateMutex);

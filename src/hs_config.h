@@ -32,10 +32,7 @@ extern bool g_HsConversationLogEnabled;
 //   - the queue worker (hs_queue.cpp), which passes g_HsLLMSystemPrompt to
 //     Hs_CallLLM by const& and keeps that reference live for the whole HTTP
 //     round trip, up to LLM.TimeoutSeconds;
-//   - the generator (hs_generator.cpp), same shape on its own six keys;
-//   - the HTTP server (hs_http_auth.cpp), which indexes
-//     g_HsHttpServerPrivateKey character by character inside the
-//     constant-time token compare.
+//   - the generator (hs_generator.cpp), same shape on its own six keys.
 //
 // Reassigning a std::string frees its buffer when the new value does not fit
 // the old allocation, so an unguarded read is a use-after-free, not a stale
@@ -488,33 +485,6 @@ extern std::string g_HsGeneratorPromptVersion;            // tags generated rows
 // buckets" order the generator uses.
 extern uint32_t     g_HsGeneratorScriptsPerPool;
 
-// --------------------------------------------
-// Observability and the control API. An authenticated HTTP server lifted
-// from mod-playerbots-characters' own (Unlicense) implementation: same
-// config-key shape (Port/Bind/PrivateKey/TimeoutSeconds), minus PBC's per-
-// account OTP/session-token system and its FrontendPath static-file
-// serving, neither of which this single-operator admin tool needs.
-// Bearer-token auth is a direct equality check against PrivateKey, not
-// PBC's AES-encrypted per-account tokens: this module has no concept of
-// multiple authenticated web users to distinguish between. Read routes need
-// only the token; mutating routes need the token *and* HttpControlEnable.
-// --------------------------------------------
-//
-// Three of these five are the module's only keys that do NOT take effect on
-// `.reload config`, despite being re-read by it: Port, Bind and
-// TimeoutSeconds are consumed once, by Hs_HttpServerStart, which runs only
-// from HsHttpServerWorldScript::OnStartup (hs_main.cpp). By the time a
-// reload rewrites them the listener is already bound, so the new values sit
-// in these globals unused until the next worldserver start. PrivateKey and
-// HttpControlEnable *do* take effect, because they are read per request --
-// which makes the split more confusing rather than less, hence the
-// RESTART REQUIRED banner on this section of conf.dist.
-extern uint32_t     g_HsHttpServerPort;           // 0 = disabled; startup-only
-extern std::string g_HsHttpServerBind;            // loopback by default; startup-only
-extern std::string g_HsHttpServerPrivateKey;      // required when port != 0; live-reloads
-extern uint32_t     g_HsHttpServerTimeoutSeconds; // startup-only
-extern bool         g_HsHttpControlEnable;        // live-reloads
-
 void Hs_LoadHearthsideChatConfig();
 
 class HsConfigWorldScript : public WorldScript
@@ -525,11 +495,6 @@ public:
 
     // `.reload config` re-reads every HearthsideChat.* key into its global.
     // Gated on `reload` since OnStartup already covers the initial load.
-    //
-    // Re-read is not the same as takes-effect: HttpServerPort/Bind/
-    // TimeoutSeconds are consumed once at startup and ignore the refreshed
-    // value until the next restart (see their declarations above). Every
-    // other key is read at its point of use and so genuinely live-reloads.
     void OnAfterConfigLoad(bool reload) override;
 };
 

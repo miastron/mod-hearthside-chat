@@ -11,8 +11,7 @@
 // client never displays, only delivers back as CHAT_MSG_ADDON), with
 // the bot's live archetype/personality/memory-flavor data. This is a third
 // transport for the same HsIdentityInspection data `.hearthside inspect`
-// (hs_command.cpp) and the HTTP inspect route (hs_http_server.cpp) already
-// expose, not a new data source, so there is no separate permission gate:
+// (hs_command.cpp) already exposes, not a new data source, so there is no separate permission gate:
 // any player can inspect any bot's Hearthside tab, the same trust level as
 // the rest of Blizzard's own Inspect frame.
 //

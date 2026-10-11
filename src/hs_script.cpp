@@ -166,20 +166,6 @@ namespace
         return false;
     }
 
-    // Claims one available script and schedules its turns, staggered by a
-    // per-turn typing delay so they don't land in a burst.
-    //
-    // Review B1: only this scan ever writes hside_script.consumed_at, so
-    // there is no concurrent claimant *thread* -- but the scan calls this
-    // once per real player, so two players in one world tick are two
-    // claimants. An async Execute() of the claiming UPDATE has not landed by
-    // the time the second call's synchronous SELECT runs, so both would take
-    // the same script id and cast the same dialogue with two different bot
-    // pairs at once. DirectExecute runs on the synchronous connection pool
-    // Query() reads from, so the claim is committed and visible before this
-    // function returns. It fires at most a couple of times a minute (30s
-    // scan x a proximity chance roll), so the blocking write is not on any
-    // hot path.
     // Hand-authored scripts (generated_at NULL, base/hside_script_handwritten.sql)
     // are a fixed set rather than a reserve the generator refills, so once
     // every one has played they come back -- but only those last played more
@@ -197,54 +183,95 @@ namespace
         return left != nullptr;
     }
 
-    void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
+    using HsScriptTurns = std::vector<std::pair<uint8_t, std::string>>;
+
+    // Claims one unplayed script matching `channelCondition` (a literal built
+    // from Hs_ChannelColumnName, never player input), re-arming the
+    // hand-written set when none is left, and marks it played. Returns 0,
+    // having claimed nothing, when the reserve is dry, the shared budget
+    // says no, or the script has no turns.
+    //
+    // The unprompted-speech budget (hs_queue.h) is spent once per *scene*,
+    // not per turn: a four-turn exchange is one thing a listener perceives.
+    // It sits between the availability check and the claiming UPDATE: earlier
+    // would burn a token whenever the reserve is dry, later would consume a
+    // script nobody is then allowed to hear.
+    //
+    // Review B1: DirectExecute for the claim. The scan runs once per real
+    // player, so two players in one tick are two claimants, and an async
+    // Execute() would not land before the second SELECT: both would cast the
+    // same dialogue at once.
+    uint32_t ClaimScript(std::string const& channelCondition, uint32_t zoneId, uint64_t witnessGuid,
+                         HsScriptTurns& turns)
     {
         QueryResult idResult = CharacterDatabase.Query(
-            "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL ORDER BY id LIMIT 1");
-        if (!idResult && RearmHandAuthoredScripts("channel IS NULL"))
+            "SELECT id FROM hside_script WHERE consumed_at IS NULL AND " + channelCondition + " ORDER BY id LIMIT 1");
+        if (!idResult && RearmHandAuthoredScripts(channelCondition))
             idResult = CharacterDatabase.Query(
-                "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel IS NULL ORDER BY RAND() LIMIT 1");
+                "SELECT id FROM hside_script WHERE consumed_at IS NULL AND " + channelCondition + " ORDER BY RAND() LIMIT 1");
         if (!idResult)
-            return; // reserve dry: running dry is the correct failure mode, not an error
+            return 0; // reserve dry: running dry is the correct failure mode, not an error
         uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
 
-        // Claude/archive/PLAN-AMBIENT.md §2's shared unprompted-speech budget (hs_queue.h).
-        // Spent once per *scene*, not per turn: a four-turn exchange is one
-        // thing a listener perceives, and charging four tokens for it would
-        // let a single scene drain a budget sized for the whole realm.
-        //
-        // Placed between the availability check and the claiming UPDATE
-        // specifically. Earlier would burn a token whenever the reserve is
-        // dry; later would consume a script the budget then refuses to let
-        // anyone hear. Here, a denied budget costs one wasted SELECT and
-        // leaves the script unclaimed for the next scan.
         if (!Hs_AmbientBucketTake())
-            return;
+            return 0;
 
         QueryResult turnResult = CharacterDatabase.Query(
             "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
         if (!turnResult)
         {
-            // Review C2: refund, because nothing was ever going to be
-            // spoken here -- no listener experiences this as silence.
-            Hs_AmbientBucketRefund();
+            Hs_AmbientBucketRefund(); // review C2: nothing was ever going to be spoken
             RetireTurnlessScript(scriptId);
-            return;
+            return 0;
         }
 
-        std::vector<std::pair<uint8_t, std::string>> turns;
+        turns.clear();
         do
         {
             turns.emplace_back((*turnResult)[0].Get<uint8_t>(), (*turnResult)[1].Get<std::string>());
         } while (turnResult->NextRow());
 
-        uint64_t bot0Guid    = bot0->GetGUID().GetRawValue();
-        uint64_t bot1Guid    = bot1->GetGUID().GetRawValue();
-        uint64_t witnessGuid = witness->GetGUID().GetRawValue();
-
         CharacterDatabase.DirectExecute(
             "UPDATE hside_script SET consumed_at = NOW(), consumed_by_zone = {}, consumed_witness = {} WHERE id = {}",
-            witness->GetZoneId(), witnessGuid, scriptId);
+            zoneId, witnessGuid ? std::to_string(witnessGuid) : std::string("NULL"), scriptId);
+        return scriptId;
+    }
+
+    // Takes every turn whose time has come off the front of a schedule.
+    template <typename Turn>
+    std::deque<Turn> TakeReadyTurns(std::mutex& mutex, std::deque<Turn>& schedule)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::deque<Turn> ready;
+        if (schedule.empty())
+            return ready;
+        Clock::time_point now = Clock::now();
+        auto notYetReady = std::stable_partition(schedule.begin(), schedule.end(),
+            [now](Turn const& t) { return t.deliverAt <= now; });
+        ready.assign(schedule.begin(), notYetReady);
+        schedule.erase(schedule.begin(), notYetReady);
+        return ready;
+    }
+
+    // Two distinct members of a pool of at least two.
+    std::pair<Player*, Player*> PickTwo(std::vector<Player*> const& pool)
+    {
+        size_t first  = urand(0, static_cast<uint32_t>(pool.size() - 1));
+        size_t second = urand(0, static_cast<uint32_t>(pool.size() - 2));
+        if (second >= first)
+            ++second;
+        return { pool[first], pool[second] };
+    }
+
+    void ClaimAndSchedule(Player* bot0, Player* bot1, Player* witness)
+    {
+        uint64_t witnessGuid = witness->GetGUID().GetRawValue();
+        HsScriptTurns turns;
+        if (!ClaimScript("channel IS NULL", witness->GetZoneId(), witnessGuid, turns))
+            return;
+
+        uint64_t bot0Guid = bot0->GetGUID().GetRawValue();
+        uint64_t bot1Guid = bot1->GetGUID().GetRawValue();
 
         uint32_t runId;
         {
@@ -328,16 +355,8 @@ namespace
         if (nearbyBots.size() < 2)
             return;
 
-        // Two distinct members of the pool, same shape TryFireChannelScript
-        // uses for its own cast.
-        size_t first  = urand(0, static_cast<uint32_t>(nearbyBots.size() - 1));
-        size_t second = first;
-        for (int attempt = 0; attempt < 5 && second == first; ++attempt)
-            second = urand(0, static_cast<uint32_t>(nearbyBots.size() - 1));
-        if (second == first)
-            second = (first + 1) % nearbyBots.size(); // deterministic fallback, never the same bot twice
-
-        ClaimAndSchedule(nearbyBots[first], nearbyBots[second], player);
+        auto cast = PickTwo(nearbyBots);
+        ClaimAndSchedule(cast.first, cast.second, player);
     }
 
     // Re-checks every abort condition immediately before sending: schedule
@@ -425,77 +444,22 @@ namespace
 
     void DeliverPendingTurns()
     {
-        std::deque<HsScheduledTurn> ready;
-        {
-            std::lock_guard<std::mutex> lock(g_ScheduleMutex);
-            if (g_ScheduledTurns.empty())
-                return;
-            Clock::time_point now = Clock::now();
-            auto notYetReady = std::stable_partition(g_ScheduledTurns.begin(), g_ScheduledTurns.end(),
-                [now](const HsScheduledTurn& t) { return t.deliverAt <= now; });
-            ready.assign(g_ScheduledTurns.begin(), notYetReady);
-            g_ScheduledTurns.erase(g_ScheduledTurns.begin(), notYetReady);
-            if (ready.empty())
-                return;
-        }
-
-        for (auto const& turn : ready)
+        for (auto const& turn : TakeReadyTurns(g_ScheduleMutex, g_ScheduledTurns))
             DeliverOneTurn(turn);
     }
 
     // §4.17: claims one 2-turn channel script (hside_script.channel = the
-    // kind's lowercase name) and schedules its turns. Same shape as
-    // ClaimAndSchedule above, minus the witness bookkeeping that mechanism
-    // has no equivalent for.
+    // kind's lowercase name) and schedules its turns. A channel scene costs
+    // the same single budget token a /say scene does: one exchange, however
+    // many players overhear it.
     void ClaimAndScheduleChannel(HsChannelKind kind, Player* bot0, Player* bot1)
     {
-        std::string channelColumn = Hs_ChannelColumnName(kind);
-
-        QueryResult idResult = CharacterDatabase.Query(
-            "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel = '{}' ORDER BY id LIMIT 1",
-            channelColumn);
-        if (!idResult && RearmHandAuthoredScripts("channel = '" + channelColumn + "'"))
-            idResult = CharacterDatabase.Query(
-                "SELECT id FROM hside_script WHERE consumed_at IS NULL AND channel = '{}' ORDER BY RAND() LIMIT 1",
-                channelColumn);
-        if (!idResult)
-            return; // reserve dry
-        uint32_t scriptId = (*idResult)[0].Get<uint32_t>();
-
-        // Shared unprompted-speech budget, same placement and reasoning as
-        // ClaimAndSchedule above. A channel scene is charged the same single
-        // token a /say scene is: it reaches a wider audience, but it is
-        // still one exchange, and this budget measures how often bots talk
-        // among themselves rather than how many players overhear it.
-        if (!Hs_AmbientBucketTake())
+        HsScriptTurns turns;
+        if (!ClaimScript("channel = '" + Hs_ChannelColumnName(kind) + "'", bot0->GetZoneId(), /*witnessGuid=*/0, turns))
             return;
-
-        QueryResult turnResult = CharacterDatabase.Query(
-            "SELECT speaker_slot, text FROM hside_script_turn WHERE script_id = {} ORDER BY turn_no", scriptId);
-        if (!turnResult)
-        {
-            Hs_AmbientBucketRefund(); // review C2, as ClaimAndSchedule above
-            RetireTurnlessScript(scriptId);
-            return;
-        }
-
-        std::vector<std::pair<uint8_t, std::string>> turns;
-        do
-        {
-            turns.emplace_back((*turnResult)[0].Get<uint8_t>(), (*turnResult)[1].Get<std::string>());
-        } while (turnResult->NextRow());
 
         uint64_t bot0Guid = bot0->GetGUID().GetRawValue();
         uint64_t bot1Guid = bot1->GetGUID().GetRawValue();
-
-        // Review B1: DirectExecute for the same reason ClaimAndSchedule
-        // documents. Trade and General scan in the same tick and filter on
-        // different `channel` values, so they cannot collide with each
-        // other -- but keeping one claim idiom means a third channel kind
-        // cannot reintroduce the bug by accident.
-        CharacterDatabase.DirectExecute(
-            "UPDATE hside_script SET consumed_at = NOW(), consumed_by_zone = {}, consumed_witness = NULL WHERE id = {}",
-            bot0->GetZoneId(), scriptId);
 
         uint32_t runId;
         {
@@ -570,16 +534,8 @@ namespace
         if (pick.miss != HsChannelScanMiss::None)
             return;
 
-        // Two distinct random members of the same pool.
-        std::vector<Player*>& pool = pick.bots;
-        Player* bot0 = pool[urand(0, static_cast<uint32_t>(pool.size() - 1))];
-        Player* bot1 = bot0;
-        for (int attempt = 0; attempt < 5 && bot1 == bot0; ++attempt)
-            bot1 = pool[urand(0, static_cast<uint32_t>(pool.size() - 1))];
-        if (bot1 == bot0)
-            return; // defensive, shouldn't happen with size() >= 2
-
-        ClaimAndScheduleChannel(kind, bot0, bot1);
+        auto cast = PickTwo(pick.bots);
+        ClaimAndScheduleChannel(kind, cast.first, cast.second);
     }
 
     void DeliverOneChannelTurn(const HsScheduledChannelTurn& scheduled)
@@ -632,21 +588,7 @@ namespace
 
     void DeliverPendingChannelTurns()
     {
-        std::deque<HsScheduledChannelTurn> ready;
-        {
-            std::lock_guard<std::mutex> lock(g_ChannelScheduleMutex);
-            if (g_ScheduledChannelTurns.empty())
-                return;
-            Clock::time_point now = Clock::now();
-            auto notYetReady = std::stable_partition(g_ScheduledChannelTurns.begin(), g_ScheduledChannelTurns.end(),
-                [now](const HsScheduledChannelTurn& t) { return t.deliverAt <= now; });
-            ready.assign(g_ScheduledChannelTurns.begin(), notYetReady);
-            g_ScheduledChannelTurns.erase(g_ScheduledChannelTurns.begin(), notYetReady);
-            if (ready.empty())
-                return;
-        }
-
-        for (auto const& turn : ready)
+        for (auto const& turn : TakeReadyTurns(g_ChannelScheduleMutex, g_ScheduledChannelTurns))
             DeliverOneChannelTurn(turn);
     }
 }

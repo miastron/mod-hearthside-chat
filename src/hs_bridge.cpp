@@ -36,7 +36,7 @@ namespace
     // (Hs_ValidateVoiceBlock), well past what fits in one 255-byte addon
     // chat packet alongside its envelope/opcode/token overhead: rather
     // than a second framing layer for what is a cosmetic flavor line, this
-    // just truncates. `.hearthside inspect` and the HTTP route already show
+    // just truncates. `.hearthside inspect` already shows
     // the untruncated text for anyone who needs it in full.
     //
     // Review item 10: these budget the *encoded* field, not the raw string.

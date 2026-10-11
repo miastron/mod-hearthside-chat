@@ -1482,7 +1482,7 @@ uint32_t Hs_EvictGenerationRun(const std::string& promptVersion)
         return 0;
 
     // Review A4: DirectExecute, same reasoning as the unused-row sweep --
-    // the count returned to the GM command / HTTP route has to describe a
+    // the count returned to the GM command has to describe a
     // delete that happened.
     CharacterDatabase.DirectExecute("DELETE FROM hside_corpus WHERE prompt_version = '{}'", escaped);
     g_RowsEvictedThisSession.fetch_add(count);

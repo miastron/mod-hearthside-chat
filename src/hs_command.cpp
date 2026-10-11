@@ -212,7 +212,6 @@ namespace
         handler->PSendSysMessage("[HearthsideChat] Promoted: {}  Card-active: {}  Pinned-by-friend: {}  Has memory rows: {}",
             insp.promoted ? "yes" : "no", insp.cardActive ? "yes" : "no",
             insp.pinnedByFriend ? "yes" : "no", insp.hasAnyMemoryRows ? "yes" : "no");
-        if (insp.cardActive)
         return true;
     }
 
