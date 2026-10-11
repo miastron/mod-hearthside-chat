@@ -11,6 +11,7 @@
 #include "hs_grounded_store.h"
 #include "hs_handler.h"
 #include "hs_command.h"
+#include "hs_http_server.h"
 #include "hs_identity_store.h"
 #include "hs_lifesteer.h"
 #include "hs_log.h"
@@ -294,6 +295,17 @@ namespace
         uint32 _msSinceEviction = 0;
     };
 
+    // The HTTP API's lifecycle. Registered after HsConfigWorldScript so the
+    // g_HsHttp* keys are loaded before Start() reads them. A bind failure or
+    // missing private key is logged and leaves the server off.
+    class HsHttpServerWorldScript : public WorldScript
+    {
+    public:
+        HsHttpServerWorldScript() : WorldScript("HsHttpServerWorldScript") {}
+        void OnStartup() override { Hs_HttpServerStart(); }
+        void OnShutdown() override { Hs_HttpServerStop(); }
+    };
+
     // Rolling metrics sampler, on the same tick-driven shape as the other
     // periodic sweeps in this file. Its own accumulator since none of
     // them share its cadence.
@@ -402,6 +414,7 @@ void Addmod_hearthside_chatScripts()
     new HsQueueLifecycleWorldScript();
     new HsGeneratorLifecycleWorldScript();
     new HsIdentityLifecycleWorldScript();
+    new HsHttpServerWorldScript();
     new HsMetricsWorldScript();
     // Registers nothing unless mod-playerbots-pvp-life is in the build.
     Hs_AddLifeSteerScripts();

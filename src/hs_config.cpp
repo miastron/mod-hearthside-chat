@@ -280,6 +280,13 @@ uint32_t     g_HsGeneratorQuotaSatisfiedBackoffSeconds = 300;
 std::string g_HsGeneratorPromptVersion        = "v1";
 uint32_t     g_HsGeneratorScriptsPerPool       = 50;
 
+uint32_t     g_HsHttpServerPort           = 0;
+std::string g_HsHttpServerBind            = "127.0.0.1";
+std::string g_HsHttpServerPrivateKey      = "";
+uint32_t     g_HsHttpServerTimeoutSeconds = 10;
+bool         g_HsHttpControlEnable        = false;
+std::string g_HsHttpAllowedNetworks       = "127.0.0.1/32";
+std::string g_HsHttpConvoLogPath          = "hearthside_convo.log";
 
 HsLLMStrings Hs_LLMStringsSnapshot()
 {
@@ -495,6 +502,14 @@ void Hs_LoadHearthsideChatConfig()
     g_HsGeneratorQuotaSatisfiedBackoffSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.QuotaSatisfiedBackoffSeconds", 300);
     g_HsGeneratorPromptVersion               = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.PromptVersion", "v1");
     g_HsGeneratorScriptsPerPool              = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Generator.ScriptsPerPool", 50);
+
+    g_HsHttpServerPort           = sConfigMgr->GetOption<uint32_t>("HearthsideChat.HttpServerPort", 0);
+    g_HsHttpServerBind            = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpServerBind", "127.0.0.1");
+    g_HsHttpServerPrivateKey      = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpServerPrivateKey", "");
+    g_HsHttpServerTimeoutSeconds = sConfigMgr->GetOption<uint32_t>("HearthsideChat.HttpServerTimeoutSeconds", 10);
+    g_HsHttpControlEnable         = sConfigMgr->GetOption<bool>("HearthsideChat.HttpControlEnable", false);
+    g_HsHttpAllowedNetworks       = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpAllowedNetworks", "127.0.0.1/32");
+    g_HsHttpConvoLogPath          = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpConvoLogPath", "hearthside_convo.log");
 
 }
 

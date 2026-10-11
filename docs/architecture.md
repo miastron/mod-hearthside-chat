@@ -194,7 +194,7 @@ because nothing on that path ever produces speech on its own.
 
 ## Threads
 
-Three kinds of thread touch this module, and which one a piece of code runs on decides what it may
+Four kinds of thread touch this module, and which one a piece of code runs on decides what it may
 touch:
 
 - **The world thread** runs the chat hooks (chat opcodes are `PROCESS_THREADUNSAFE`), every
@@ -211,6 +211,9 @@ touch:
   make the LLM calls and their own database reads. Neither touches a game object: everything the
   worker needs from a `Player*` is sampled into the request on the world thread
   (`Hs_MakeReplyRequest`).
+- **The HTTP server** (`hs_http_server.cpp`) answers from its own pool. Anything it needs that only
+  the world thread may read or do, such as whether a GUID is a bot or sending a whisper, it asks for
+  through the same deferral and waits, bounded, for the answer.
 
 ## Life-module steering
 

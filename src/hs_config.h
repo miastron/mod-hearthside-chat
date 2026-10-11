@@ -491,6 +491,20 @@ extern std::string g_HsGeneratorPromptVersion;            // tags generated rows
 // buckets" order the generator uses.
 extern uint32_t     g_HsGeneratorScriptsPerPool;
 
+// --------------------------------------------
+// The HTTP API (hs_http_server.cpp). Port, Bind and TimeoutSeconds are read
+// once at startup and ignore `.reload config`; the rest are read per request
+// and live-reload. The strings are read from the server thread, so go
+// through Hs_ConfigString.
+// --------------------------------------------
+extern uint32_t     g_HsHttpServerPort;           // 0 = disabled; startup-only
+extern std::string g_HsHttpServerBind;            // startup-only
+extern std::string g_HsHttpServerPrivateKey;      // required when port != 0
+extern uint32_t     g_HsHttpServerTimeoutSeconds; // startup-only
+extern bool         g_HsHttpControlEnable;        // gates the routes that change anything
+extern std::string g_HsHttpAllowedNetworks;       // comma-separated IPv4 CIDRs; empty allows nobody
+extern std::string g_HsHttpConvoLogPath;          // the file /api/replies reads
+
 void Hs_LoadHearthsideChatConfig();
 
 class HsConfigWorldScript : public WorldScript

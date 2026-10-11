@@ -543,26 +543,32 @@ namespace
             return true;
         }
 
-        Player* bot = ObjectAccessor::FindPlayerByName(botName);
-        if (!bot || !bot->IsInWorld() || !Hs_IsBot(bot))
+        std::string error = Hs_AskBot(senderName, botName, std::string(text));
+        if (!error.empty())
         {
-            handler->PSendSysMessage("[HearthsideChat] Bot '{}' not found, not online, or not a bot.", botName);
+            handler->PSendSysMessage("[HearthsideChat] {}", error);
             return true;
         }
 
-        ObjectGuid senderGuid = sCharacterCache->GetCharacterGuidByName(senderName);
-        if (senderGuid.IsEmpty() || Hs_IsBotGuid(senderGuid.GetRawValue()))
-        {
-            handler->PSendSysMessage("[HearthsideChat] Sender '{}' not found or is a bot.", senderName);
-            return true;
-        }
-        if (CharacterCacheEntry const* entry = sCharacterCache->GetCharacterCacheByGuid(senderGuid))
-            senderName = entry->Name; // the stored capitalization, as a real hook would see it
-
-        Hs_DispatchDirectReply(bot, senderGuid.GetRawValue(), senderName, std::string(text), HsReplyChannel::Whisper);
-        handler->PSendSysMessage("[HearthsideChat] {} -> {}: {}", senderName, bot->GetName(), std::string(text));
+        handler->PSendSysMessage("[HearthsideChat] {} -> {}: {}", senderName, botName, std::string(text));
         return true;
     }
+}
+
+std::string Hs_AskBot(std::string& senderName, const std::string& botName, const std::string& text)
+{
+    Player* bot = ObjectAccessor::FindPlayerByName(botName);
+    if (!bot || !bot->IsInWorld() || !Hs_IsBot(bot))
+        return "Bot '" + botName + "' not found, not online, or not a bot.";
+
+    ObjectGuid senderGuid = sCharacterCache->GetCharacterGuidByName(senderName);
+    if (senderGuid.IsEmpty() || Hs_IsBotGuid(senderGuid.GetRawValue()))
+        return "Sender '" + senderName + "' not found or is a bot.";
+    if (CharacterCacheEntry const* entry = sCharacterCache->GetCharacterCacheByGuid(senderGuid))
+        senderName = entry->Name; // the stored capitalization, as a real hook would see it
+
+    Hs_DispatchDirectReply(bot, senderGuid.GetRawValue(), senderName, text, HsReplyChannel::Whisper);
+    return "";
 }
 
 HsCommandScript::HsCommandScript() : CommandScript("HsCommandScript") {}

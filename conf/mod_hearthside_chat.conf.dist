@@ -1210,3 +1210,65 @@ HearthsideChat.Generator.PromptVersion = v3
 #     Default:     50
 HearthsideChat.Generator.ScriptsPerPool = 50
 
+# --------------------------------------------
+# THE HTTP API
+# --------------------------------------------
+# A small JSON API: status, bot inspection, the promote/demote/retire/pin
+# actions, and chatting with a bot without a game client (POST /api/ask,
+# GET /api/replies). Off by default. A request needs ALL of: a client address
+# inside HttpAllowedNetworks, the shared password as `Authorization: Bearer
+# <key>`, and, for anything that changes state (including /api/ask),
+# HttpControlEnable. The in-game `.hearthside` commands cover the same
+# actions without it.
+#
+# HttpServerPort, HttpServerBind and HttpServerTimeoutSeconds are read once at
+# startup and need a restart. The rest take effect on `.reload config`.
+#
+# /api/replies reads the conversation log file, so it needs
+# HearthsideChat.ConversationLog.Enable = 1 and the HearthsideConvo appender
+# described there.
+
+# HearthsideChat.HttpServerPort
+#     Description: Port to listen on. 0 turns the API off.
+#     Default:     0
+HearthsideChat.HttpServerPort = 0
+
+# HearthsideChat.HttpServerBind
+#     Description: Address to listen on. 127.0.0.1 is this machine only; use
+#                  0.0.0.0 to be reachable from the LAN (HttpAllowedNetworks
+#                  still applies).
+#     Default:     127.0.0.1
+HearthsideChat.HttpServerBind = 127.0.0.1
+
+# HearthsideChat.HttpServerPrivateKey
+#     Description: Shared password. Required whenever HttpServerPort is
+#                  non-zero; left blank, the server refuses to start.
+#     Default:     (empty)
+HearthsideChat.HttpServerPrivateKey =
+
+# HearthsideChat.HttpServerTimeoutSeconds
+#     Default:     10
+HearthsideChat.HttpServerTimeoutSeconds = 10
+
+# HearthsideChat.HttpControlEnable
+#     Description: Second switch for requests that change anything:
+#                  promote/demote/retire/pin/unpin/evict-run and /api/ask.
+#     Default:     0 (false)
+HearthsideChat.HttpControlEnable = 0
+
+# HearthsideChat.HttpAllowedNetworks
+#     Description: Comma-separated IPv4 addresses or CIDR ranges allowed to
+#                  talk to the API, e.g. "10.0.10.0/24, 127.0.0.1". Anyone
+#                  else gets a 403 before the password is even looked at.
+#                  Empty allows nobody.
+#     Default:     127.0.0.1/32
+HearthsideChat.HttpAllowedNetworks = 127.0.0.1/32
+
+# HearthsideChat.HttpConvoLogPath
+#     Description: The conversation log file /api/replies reads: the
+#                  HearthsideConvo appender's file. Relative paths resolve
+#                  against the worldserver's working directory (and LogsDir
+#                  is empty here, so the log is next to the binary).
+#     Default:     hearthside_convo.log
+HearthsideChat.HttpConvoLogPath = hearthside_convo.log
+
