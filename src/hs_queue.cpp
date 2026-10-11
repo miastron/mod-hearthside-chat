@@ -27,6 +27,7 @@
 #include "Guild.h"            // Hs_MakeReplyRequest: guild name
 #include "GuildMgr.h"
 #include "Language.h"         // §4.17 channel delivery: LANG_CHANNEL_CITY
+#include "CharacterCache.h"
 #include "Log.h"
 #include "Map.h"              // Hs_MakeReplyRequest: topic-gate instance facts
 #include "ObjectMgr.h"        // §4.17 channel delivery: GetAcoreStringForDBCLocale
@@ -2118,12 +2119,20 @@ void Hs_DeliverPending()
             (reply.senderGuid != 0 || reply.channel == HsReplyChannel::Channel))
         {
             Player* sender = reply.senderGuid ? ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid)) : nullptr;
+            // An offline recipient (`.hearthside ask`, /api/ask) has no Player*, but the
+            // log still names them: /api/replies matches on that name.
+            std::string senderName;
+            if (sender)
+                senderName = sender->GetName();
+            else if (reply.senderGuid)
+                if (CharacterCacheEntry const* entry = sCharacterCache->GetCharacterCacheByGuid(ObjectGuid(reply.senderGuid)))
+                    senderName = entry->Name;
             hs_json model = reply.model;
             if (reply.chainScopeId != 0 && model.is_object())
                 model["chain"] = { { "scope", reply.chainScopeId }, { "seq", reply.chainSeq },
                                    { "from_bot", sender && Hs_IsBot(sender) } };
             ConvoLog(/*fromPlayer=*/false, reply.botGuid, bot->GetName(), reply.senderGuid,
-                     sender ? sender->GetName() : "", reply.channel, reply.text, reply.source, model);
+                     senderName, reply.channel, reply.text, reply.source, model);
         }
 
         // Feeds Hs_RecentUtteranceContext for this bot's next reactive
