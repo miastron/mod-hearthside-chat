@@ -98,7 +98,7 @@ namespace
 
     // ---- Exclude-vector writes are world-thread-only ----
     //
-    // sPlayerbotAIConfig.levelBracketsExcludeNames/resetBotLevelExcludeNames
+    // sPlayerbotAIConfig.LevelBracketsExcludeNames/ResetBotLevelExcludeNames
     // are plain std::vectors with no synchronization of their own, and
     // mod-playerbots walks them from the world thread (RandomBotLevelMgr's
     // IsNameInExcludeList sites). A mutex on this side alone would not close
@@ -128,8 +128,8 @@ namespace
     {
         if (botName.empty())
             return;
-        AppendIfMissing(sPlayerbotAIConfig.levelBracketsExcludeNames, botName);
-        AppendIfMissing(sPlayerbotAIConfig.resetBotLevelExcludeNames, botName);
+        AppendIfMissing(sPlayerbotAIConfig.LevelBracketsExcludeNames, botName);
+        AppendIfMissing(sPlayerbotAIConfig.ResetBotLevelExcludeNames, botName);
     }
 
     // World-thread-only: writes sPlayerbotAIConfig's vectors directly.
@@ -137,8 +137,8 @@ namespace
     {
         if (botName.empty())
             return;
-        EraseIfPresent(sPlayerbotAIConfig.levelBracketsExcludeNames, botName);
-        EraseIfPresent(sPlayerbotAIConfig.resetBotLevelExcludeNames, botName);
+        EraseIfPresent(sPlayerbotAIConfig.LevelBracketsExcludeNames, botName);
+        EraseIfPresent(sPlayerbotAIConfig.ResetBotLevelExcludeNames, botName);
     }
 
     // Callable from any thread.

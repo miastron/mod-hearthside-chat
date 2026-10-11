@@ -130,9 +130,22 @@
     ]
   },
   {
+    "id": "boss_the_prophet_tharon_ja",
+    "title": "The Prophet Tharon'ja",
+    "content": "The Prophet Tharon'ja is the final boss of Drak'Tharon Keep, a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. Partway through he turns the whole group into skeletons with their own short action bar, then turns them back.",
+    "keywords": [
+      "the prophet tharon'ja",
+      "drak'tharon keep"
+    ],
+    "tags": [
+      "boss",
+      "dungeon"
+    ]
+  },
+  {
     "id": "boss_king_dred",
     "title": "King Dred",
-    "content": "King Dred is the final boss of Drak'Tharon Keep, a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. He is a devilsaur kept by the Drakkari, and the raptors around him can be pulled in with the fight.",
+    "content": "King Dred is the third boss of Drak'Tharon Keep, a level 74 to 76 five-player dungeon in on the border between the Grizzly Hills and Zul'Drak. He is a devilsaur kept by the Drakkari, and the raptors around him can be pulled in with the fight.",
     "keywords": [
       "king dred",
       "drak'tharon keep"
@@ -249,7 +262,7 @@
   {
     "id": "boss_king_ymiron",
     "title": "King Ymiron",
-    "content": "King Ymiron is the final boss of Utgarde Pinnacle, a level 79 to 80 five-player dungeon in Howling Fjord. He is the vrykul king, and he channels power from the burial barrows around the room.",
+    "content": "King Ymiron is the final boss of Utgarde Pinnacle, a level 79 to 80 five-player dungeon in Howling Fjord. He is the vrykul king, and he draws power from the spirits of the old kings in the burial boats around the room.",
     "keywords": [
       "king ymiron",
       "utgarde pinnacle"

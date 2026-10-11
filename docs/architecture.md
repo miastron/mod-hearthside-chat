@@ -111,10 +111,20 @@ even considered. Resolving "who answers" once, up front, is what stops six bots 
 an identical `gz` at the same level-up — the same defect as "four bots answer the same question,"
 solved once instead of per tier.
 
+Two checks in `hs_handler.cpp` run before it and can leave every bot silent. A line mod-playerbots
+takes as an order ("follow", "stay", "@tank attack", "co +dps") gets no chat reply on any surface
+it commands, since mod-playerbots answers those itself; the command names come from its own
+`ChatTriggerContext`, so a command added there is covered without an edit. And a line in /say,
+party or guild chat that names one of the real players who heard it, and no bot, is talk between
+people (`Hs_AddressesSomeoneElse`): nobody nearby answers "Bob you coming?".
+
 `hs_event_arbiter.*` is its sibling for things that *happen* rather than things said, and it exists
 because three questions the `/say` arbiter cannot express matter there: involvement (the bot that
 died has different standing from one that watched), per-event archetype affinity, and per-event
 reply count. Its count bias is mostly a suppression device — most deaths pass without comment.
+On top of it a bot reacts to one kind of event at most once per ten minutes (`hs_event.cpp`,
+`kSameEventCooldownSeconds`): the same death prompt at temperature 0.5 is the same line, and a bot
+that kept dying near a player said "oh no, that wasnt me" three times in twenty minutes.
 
 ## Decision flow
 

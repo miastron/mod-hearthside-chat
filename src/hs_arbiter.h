@@ -30,4 +30,12 @@ class Player;
 // carries a standalone harness this one cannot.
 std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& message, const std::vector<Player*>& candidates);
 
+// True when the line names one of the real players who heard it and none of
+// the candidate bots: "thanks Bob", "Bob you coming?" said to a friend in
+// /say, party or guild chat. People nearby don't answer a line addressed to
+// someone else, so the caller lets no bot reply. Same whole-word,
+// case-insensitive match as the named-address rule in Hs_ArbitrateReplies.
+bool Hs_AddressesSomeoneElse(const std::string& message, const std::vector<Player*>& bots,
+                             const std::vector<Player*>& humans);
+
 #endif // MOD_HS_ARBITER_H

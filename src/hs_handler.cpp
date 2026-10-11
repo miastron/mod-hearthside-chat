@@ -19,6 +19,7 @@
 #include "hs_locale.h"
 
 #include "Channel.h"    // §4.17 channel hook: Channel::GetChannelId()/GetName()
+#include "ChatTriggerContext.h" // mod-playerbots' chat command names: IsPlayerbotCommand
 #include "DBCStores.h"
 #include "Group.h"
 #include "GroupReference.h"
@@ -30,7 +31,7 @@
 #include "Map.h"
 #include "Player.h"
 #include "PlayerbotAI.h"
-#include "PlayerbotAIConfig.h" // NewRpgStatus, enableRandomBotTrading (grounded TradePrice)
+#include "PlayerbotAIConfig.h" // NewRpgStatus, EnableRandomBotTrading (grounded TradePrice)
 #include "PlayerbotMgr.h"
 #include "RandomPlayerbotMgr.h" // GetSellMultiplier/IsRandomBot: grounded TradePrice
 #include "ObjectAccessor.h"
@@ -43,6 +44,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstring>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -50,6 +53,41 @@
 
 namespace
 {
+    // A line mod-playerbots takes as an order, not chat: "follow", "stay",
+    // "attack", "summon", "who", "stats" typed by the player who grouped the
+    // bot. mod-playerbots runs it and answers itself, so a chat reply on top
+    // would talk over the command ("follow" -> "ok where are we going").
+    //
+    // The names come from its own ChatTriggerContext, the list
+    // ExternalEventHelper::ParseChatCommand matches against, so a command
+    // added there is covered here without an edit. Case-sensitive like that
+    // match. Narrower than ParseChatCommand on purpose: it also fires on any
+    // leading word ("help me with this quest" runs "help"), but those are
+    // chat a person wants answered, so only three shapes count here: the
+    // whole line is a command, it starts with an `@` bot selector ("@tank
+    // attack", ChatFilter), or a command word is followed by a parameter no
+    // sentence starts with ("co +dps", "nc ?", "e |Hitem:...", "rti 8").
+    bool IsPlayerbotCommand(const std::string& msg)
+    {
+        static const std::set<std::string> kCommands = ChatTriggerContext().supports();
+
+        size_t begin = msg.find_first_not_of(" \t");
+        if (begin == std::string::npos)
+            return false;
+        size_t end = msg.find_last_not_of(" \t");
+        std::string text = msg.substr(begin, end - begin + 1);
+
+        if (text[0] == '@' || kCommands.count(text))
+            return true;
+
+        size_t space = text.find(' ');
+        if (space == std::string::npos || space + 1 >= text.size())
+            return false;
+        char param = text[space + 1];
+        return kCommands.count(text.substr(0, space)) &&
+               (std::strchr("+-~?*@#|[", param) || std::isdigit(static_cast<unsigned char>(param)));
+    }
+
     // Copper -> the way a player writes a price: "2g50s", "80s", "35c".
     // Trailing zero denominations are dropped, so a round 5 gold is "5g" and
     // not "5g0s0c".
@@ -303,7 +341,7 @@ namespace
             case HsGroundedKind::TradePrice:
             {
                 // Selling has to be possible at all before quoting a number.
-                // enableRandomBotTrading 0 disables trading outright and 2
+                // EnableRandomBotTrading 0 disables trading outright and 2
                 // disables selling specifically (TradeStatusAction::Execute);
                 // in either case the bot would quote a price and then refuse
                 // the trade, which is worse than not answering. Falls through
@@ -314,8 +352,8 @@ namespace
                 // Both modes gate on IsRandomBot/IsAddclassBot in
                 // mod-playerbots, so the check is scoped the same way: an
                 // account-controlled bot is unaffected by either mode.
-                if (sPlayerbotAIConfig.enableRandomBotTrading == 0 ||
-                    sPlayerbotAIConfig.enableRandomBotTrading == 2)
+                if (sPlayerbotAIConfig.EnableRandomBotTrading == 0 ||
+                    sPlayerbotAIConfig.EnableRandomBotTrading == 2)
                 {
                     if (sRandomPlayerbotMgr.IsRandomBot(bot) || sRandomPlayerbotMgr.IsAddclassBot(bot))
                         return false;
@@ -588,13 +626,18 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
 
     std::vector<Player*> eligible;
+    std::vector<Player*> listeners; // the humans in earshot, for Hs_AddressesSomeoneElse
     for (auto const& itr : ObjectAccessor::GetPlayers())
     {
         Player* candidate = itr.second;
         if (!candidate || candidate == player || !candidate->IsInWorld())
             continue;
         if (!Hs_IsEligibleBot(candidate))
+        {
+            if (!Hs_IsBot(candidate) && candidate->IsWithinDistInMap(player, g_HsSayDistance))
+                listeners.push_back(candidate);
             continue; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        }
         if (candidate->GetTeamId() != player->GetTeamId())
             continue; // opposing faction can't read /say
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
@@ -608,7 +651,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
             continue;
         eligible.push_back(candidate);
     }
-    if (eligible.empty())
+    if (eligible.empty() || Hs_AddressesSomeoneElse(msg, eligible, listeners))
         return true;
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);
@@ -659,6 +702,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (lower.rfind("invite", 0) == 0 && lower.find("guild") == std::string::npos)
             return unanswered();
     }
+    if (IsPlayerbotCommand(msg))
+        return unanswered();
 
     TryDispatch(receiver, player, msg, HsReplyChannel::Whisper);
     return true;
@@ -682,6 +727,8 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+    if (IsPlayerbotCommand(msg))
+        return true; // an order to the group's bots, which mod-playerbots answers itself
 
     // A real player speaking takes the floor from any bot-to-bot chain in
     // this group (hs_botchain.h): it drops only the hop still answering a
@@ -693,6 +740,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
 
     // The group's own member list, not a realm walk filtered down to it.
     std::vector<Player*> eligible;
+    std::vector<Player*> listeners; // the humans who heard it, for Hs_AddressesSomeoneElse
     for (GroupReference* itr = group->GetFirstMember(); itr != nullptr; itr = itr->next())
     {
         Player* candidate = itr->GetSource();
@@ -705,12 +753,16 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         if (subgroupScoped && !group->SameSubGroup(player, candidate))
             continue;
         if (!Hs_IsEligibleBot(candidate))
+        {
+            if (!Hs_IsBot(candidate))
+                listeners.push_back(candidate);
             continue; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        }
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             continue;
         eligible.push_back(candidate);
     }
-    if (eligible.empty())
+    if (eligible.empty() || Hs_AddressesSomeoneElse(msg, eligible, listeners))
         return true;
 
     HsReplyChannel channel = (type == CHAT_MSG_RAID || type == CHAT_MSG_RAID_LEADER)
@@ -731,22 +783,29 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
         return true; // sender-aware (bot-initiated) chatter is not wired up yet
 
     Hs_AbortEngagementFollowUpsFor(player->GetGUID().GetRawValue());
+    if (IsPlayerbotCommand(msg))
+        return true; // mod-playerbots takes guild-chat orders for the speaker's own bots
 
     // The guild's own online members (Guild::BroadcastWorker resolves each
     // one and skips `player`), not a realm walk filtered down to the id.
     std::vector<Player*> eligible;
-    auto collect = [&eligible](Player* candidate)
+    std::vector<Player*> listeners; // online human guildmates, for Hs_AddressesSomeoneElse
+    auto collect = [&eligible, &listeners](Player* candidate)
     {
         if (!candidate->IsInWorld())
             return;
         if (!Hs_IsEligibleBot(candidate))
+        {
+            if (!Hs_IsBot(candidate))
+                listeners.push_back(candidate);
             return; // a human, or HearthsideChat.ExcludeNames: never spoken through, no tier at all
+        }
         if (g_HsDisableRepliesInCombat && candidate->IsInCombat())
             return;
         eligible.push_back(candidate);
     };
     guild->BroadcastWorker(collect, player);
-    if (eligible.empty())
+    if (eligible.empty() || Hs_AddressesSomeoneElse(msg, eligible, listeners))
         return true;
 
     std::vector<Player*> selected = Hs_ArbitrateReplies(player, msg, eligible);

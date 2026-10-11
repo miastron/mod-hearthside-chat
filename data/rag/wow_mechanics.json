@@ -9,7 +9,7 @@
   {
     "id": "mechanic_auction_house",
     "title": "Auction House",
-    "content": "Every faction capital has an Auction House, such as Stormwind's Trade District and Orgrimmar's Valley of Strength, and Booty Bay, Gadgetzan and Everlook have neutral ones shared by both factions; Dalaran and Shattrath have none. Every auction house is one shared market open to both factions. Auctions last 12, 24 or 48 hours, the deposit is lost if the item doesn't sell, and the house keeps 15% of a sale.",
+    "content": "Every faction capital has an Auction House, such as Stormwind's Trade District and Orgrimmar's Valley of Strength, and so do Booty Bay, Gadgetzan and Everlook; Dalaran and Shattrath have none. On this realm every auction house is the same market, open to both factions, so it doesn't matter which one you use. Auctions last 12, 24 or 48 hours, the deposit is lost if the item doesn't sell, and the house keeps 15% of a sale.",
     "keywords": ["auction house", "ah", "auction", "auctions", "auctioneer", "buyout", "neutral ah", "selling on the ah"],
     "tags": ["mechanic", "economy", "trading", "market"],
     "expert_domain": "gold",

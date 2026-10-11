@@ -76,8 +76,8 @@ void Hs_InvalidateAllCardCache();
 std::string Hs_LookupCardFactField(uint64_t botGuid, const std::string& fieldName);
 
 // Re-applies every card_active bot's name into both of mod-playerbots'
-// recycling-exclusion vectors (levelBracketsExcludeNames,
-// resetBotLevelExcludeNames). Idempotent (checks for an existing entry
+// recycling-exclusion vectors (LevelBracketsExcludeNames,
+// ResetBotLevelExcludeNames). Idempotent (checks for an existing entry
 // before appending), so it's safe to call repeatedly: at worldserver
 // startup, on every `.reload config` (playerbots' own OnAfterConfigLoad
 // handler unconditionally clears both vectors from playerbots.conf, which

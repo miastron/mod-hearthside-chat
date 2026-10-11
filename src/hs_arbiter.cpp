@@ -93,6 +93,18 @@ namespace
     }
 }
 
+bool Hs_AddressesSomeoneElse(const std::string& message, const std::vector<Player*>& bots,
+                             const std::vector<Player*>& humans)
+{
+    for (Player* bot : bots)
+        if (MentionsName(message, bot->GetName()))
+            return false;
+    for (Player* human : humans)
+        if (MentionsName(message, human->GetName()))
+            return true;
+    return false;
+}
+
 std::vector<Player*> Hs_ArbitrateReplies(Player* speaker, const std::string& message, const std::vector<Player*>& candidates)
 {
     std::vector<Player*> selected;

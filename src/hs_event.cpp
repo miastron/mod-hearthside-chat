@@ -204,6 +204,42 @@ namespace
                             [](HsRecentEvent const& e) { return e.at; });
     }
 
+    // ---- One reaction per kind of event, per bot, per ten minutes -----------
+    //
+    // A bot that keeps dying near a player reacted to every death with the
+    // same prompt, and at temperature 0.5 the same prompt is the same line:
+    // "oh no, that wasnt me" three times in twenty minutes (realm
+    // 2026-10-09). A person who dies six times in a row stops narrating it.
+    // Admission only, like the event bucket: nothing about the reply is
+    // checked. The bot still gets the recent-event line, so a player who
+    // talks to it about the death gets an answer.
+    constexpr int64_t kSameEventCooldownSeconds = 600;
+    constexpr size_t  kSameEventPruneThreshold  = 1024;
+
+    std::mutex                                                 g_LastReactionMutex;
+    std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> g_LastReaction;
+
+    uint64_t ReactionKey(uint64_t botGuid, HsEventType type)
+    {
+        return (botGuid << 8) | static_cast<uint8_t>(type);
+    }
+
+    bool ReactedRecently(uint64_t botGuid, HsEventType type)
+    {
+        std::lock_guard<std::mutex> lock(g_LastReactionMutex);
+        auto it = g_LastReaction.find(ReactionKey(botGuid, type));
+        return it != g_LastReaction.end() &&
+               std::chrono::steady_clock::now() - it->second < std::chrono::seconds(kSameEventCooldownSeconds);
+    }
+
+    void NoteReaction(uint64_t botGuid, HsEventType type)
+    {
+        auto const now = std::chrono::steady_clock::now();
+        std::lock_guard<std::mutex> lock(g_LastReactionMutex);
+        g_LastReaction[ReactionKey(botGuid, type)] = now;
+        HsPrune::PruneStale(g_LastReaction, now, kSameEventCooldownSeconds, kSameEventPruneThreshold);
+    }
+
     bool EligibleBot(Player* bot)
     {
         if (!bot || !Hs_IsBot(bot) || !bot->IsInWorld())
@@ -285,9 +321,11 @@ namespace
         std::vector<HsEventCandidate> candidates;
         std::vector<Player*>          bots;
         std::vector<Player*>          counterparts;
+        std::vector<HsEventType>      types;
         candidates.reserve(actors.size());
         bots.reserve(actors.size());
         counterparts.reserve(actors.size());
+        types.reserve(actors.size());
 
         for (auto const& actor : actors)
         {
@@ -295,6 +333,8 @@ namespace
                 continue;
 
             uint64_t botGuid = actor.bot->GetGUID().GetRawValue();
+            if (ReactedRecently(botGuid, actor.affinityType))
+                continue;
 
             HsEventCandidate candidate;
             candidate.botGuid               = botGuid;
@@ -311,6 +351,7 @@ namespace
             candidates.push_back(std::move(candidate));
             bots.push_back(actor.bot);
             counterparts.push_back(actor.counterpart);
+            types.push_back(actor.affinityType);
         }
 
         if (candidates.empty())
@@ -356,7 +397,10 @@ namespace
             request.triggerIsStateLine = true;
 
             if (Hs_TryEnqueue(std::move(request)))
+            {
+                NoteReaction(candidates[index].botGuid, types[index]);
                 g_EventsFiredThisSession.fetch_add(1);
+            }
             else if (g_HsDebugEnabled)
                 LOG_INFO(kHsLogChat, "[HearthsideChat] Event {} enqueue rejected for bot {}.",
                     Hs_EventTypeName(primaryType), bot->GetName());
