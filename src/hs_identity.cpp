@@ -177,26 +177,6 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
     return { true, "" };
 }
 
-HsGenVerdict Hs_ValidateVoiceBlock(const std::string& text)
-{
-    if (text.empty() || text.size() > 400)
-        return { false, "length" };
-    if (text.find_first_of("\"`*[]{}") != std::string::npos)
-        return { false, "markdown_or_quote_chars" };
-    return { true, "" };
-}
-
-std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout)
-{
-    return
-        "You are helping write a short persona note for a World of Warcraft player character, to "
-        "sit alongside their existing personality summary: \"You mostly "
-        "talk about: " + archetypeTalksAbout + ".\" Write one or two short sentences, second "
-        "person (\"You...\"), describing how this specific character comes across in chat -- their "
-        "manner, not new facts about their life. No markdown, no emoji, no quotation marks, "
-        "roughly 50 tokens.";
-}
-
 namespace
 {
     // GBNF alternation of literal values: root ::= "a" | "b" | "c".

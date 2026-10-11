@@ -464,6 +464,9 @@ extern uint32_t g_HsExperienceSkillStep;       // record only on multiples of th
 // module is enabled.
 // --------------------------------------------
 extern bool        g_HsGeneratorEnabled;
+// Card generation (character fact sheets for promoted bots) on its own,
+// independent of Generator.Enable's corpus and script generation.
+extern bool        g_HsGeneratorCardsEnabled;
 extern std::string g_HsGeneratorLLMApiType;
 extern std::string g_HsGeneratorLLMUrl;
 extern std::string g_HsGeneratorLLMModel;

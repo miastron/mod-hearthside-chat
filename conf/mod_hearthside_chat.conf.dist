@@ -1101,6 +1101,17 @@ HearthsideChat.Experience.SkillStep = 25
 #     Default:     0 (false)
 HearthsideChat.Generator.Enable = 0
 
+# HearthsideChat.Generator.Cards.Enable
+#     Description: Character cards for bots a player keeps coming back to
+#                  (promoted bots): a short fact sheet -- main focus,
+#                  current goal, when they started playing, an alt, a pet
+#                  phrase -- that grounded answers and some corpus lines
+#                  draw on. Runs on the same idle-time generator thread and
+#                  endpoint as above, but on its own: cards are built even
+#                  with Generator.Enable = 0.
+#     Default:     1 (true)
+HearthsideChat.Generator.Cards.Enable = 1
+
 # HearthsideChat.Generator.LLM.ApiType / Template / Url / Model / ApiKey / TimeoutSeconds / MaxTokens
 #     Description: The background generator's own AI connection settings,
 #                  kept separate from the live-reply HearthsideChat.LLM.*

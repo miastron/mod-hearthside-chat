@@ -213,7 +213,6 @@ namespace
             insp.promoted ? "yes" : "no", insp.cardActive ? "yes" : "no",
             insp.pinnedByFriend ? "yes" : "no", insp.hasAnyMemoryRows ? "yes" : "no");
         if (insp.cardActive)
-            handler->PSendSysMessage("[HearthsideChat] Voice: \"{}\"", insp.voiceBlock);
         return true;
     }
 

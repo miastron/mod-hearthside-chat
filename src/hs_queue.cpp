@@ -702,9 +702,11 @@ namespace
             bool metBefore = Hs_HasMetBefore(req.botGuid, req.senderGuid);
             uint8_t ring = cardSnapshot.active ? 3 : (metBefore ? 2 : 1);
 
+            // A card's generated voice paragraph is not sent: no training row
+            // carries one, and the runtime prompt must be the trained shape.
+            // The card still shows through its facts (grounded answers,
+            // %main_focus lines) and its verbal tic (hs_style.cpp).
             std::string personaLine = Hs_ArchetypePromptLine(archetype);
-            if (cardSnapshot.active && !cardSnapshot.voiceBlock.empty())
-                personaLine += "\n" + cardSnapshot.voiceBlock;
             std::string rpgHint = RpgStatusHint(req.rpgStatus);
             if (!rpgHint.empty())
                 personaLine += "\n" + rpgHint;

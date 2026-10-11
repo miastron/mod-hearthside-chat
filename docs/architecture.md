@@ -98,7 +98,7 @@ the fine-tune carries rows for both that and the reply that ignores it
 (`Claude/finetune/matrix/followup.txt`, `add_context_layers.py`).
 
 Everything above is concatenated into one `personaLine` in `hs_queue.cpp`'s `WorkerLoop`, alongside
-the archetype line, the card voice block and the recent-utterance echo. Order matters: the
+the archetype line and the recent-utterance echo. Order matters: the
 experience block comes after the rest, because it changes as a bot plays, and the event line (a
 reaction's own, or a follow-up's) comes **last**, because it changes fastest; keeping the volatile
 segments at the end leaves the whole prefix above them reusable by the backend's prompt cache.
@@ -168,7 +168,7 @@ flowchart TD
     CEIL -->|inference| B{Token bucket +<br/>per-bot cooldown}
     B -->|fail| S
 
-    B -->|pass| P[TIER 2 — archetype tag<br/>+ card voice block if carded<br/>token cap: archetype's verbosity_cap,<br/>never above LLM.MaxTokens]
+    B -->|pass| P[TIER 2 — archetype tag<br/>token cap: archetype's verbosity_cap,<br/>never above LLM.MaxTokens]
 
     P --> CTX[append context layers<br/>rpg status → topic gate → RAG →<br/>recent utterances → experience]
     CTX --> Q[bounded queue, 15s TTL]
@@ -185,8 +185,10 @@ flowchart TD
 ```
 
 The promotion check never runs in the request path, and can trigger idle-time card generation. A
-bot's ring (stranger, known, carded) changes what the prompt *contains* -- a carded bot's voice block
--- but not the token cap, which is the archetype's alone. The experience ring is written by hooks on
+bot's ring (stranger, known, carded) changes what it can *answer* -- a carded bot's fact sheet backs
+grounded answers and `%main_focus` lines, and its pet phrase reaches the style pass -- but never the
+prompt shape or token cap. Cards are generated on their own switch (`Generator.Cards.Enable`), with
+corpus and script generation off. The experience ring is written by hooks on
 the map-update threads, under its own lock, and read by the worker thread; it is drawn dotted
 because nothing on that path ever produces speech on its own.
 

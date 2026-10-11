@@ -263,6 +263,7 @@ uint32_t g_HsExperienceMoneyMinCopper = 100000;  // 10 gold
 uint32_t g_HsExperienceSkillStep      = 25;
 
 bool        g_HsGeneratorEnabled              = false;
+bool        g_HsGeneratorCardsEnabled         = true;
 std::string g_HsGeneratorLLMApiType           = "llamacpp";
 std::string g_HsGeneratorLLMUrl               = "http://127.0.0.1:8080";
 std::string g_HsGeneratorLLMModel             = "";
@@ -478,6 +479,7 @@ void Hs_LoadHearthsideChatConfig()
     g_HsExperienceSkillStep      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.SkillStep", 25);
 
     g_HsGeneratorEnabled                    = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Enable", false);
+    g_HsGeneratorCardsEnabled               = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Cards.Enable", true);
     g_HsGeneratorLLMApiType                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.ApiType", "llamacpp");
     g_HsGeneratorLLMUrl                      = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.Url", "http://127.0.0.1:8080");
     g_HsGeneratorLLMModel                    = sConfigMgr->GetOption<std::string>("HearthsideChat.Generator.LLM.Model", "");

@@ -94,7 +94,6 @@ HsGenVerdict Hs_ValidateCardFacts(const hs_json& facts, uint8_t level, bool hasG
 // wrappers around the archetype's own "talks about" line and the level/
 // guild context the caller already resolved, not invented biography. Same
 // discipline as hs_archetype.h's Hs_ArchetypePromptLine.
-std::string Hs_BuildVoiceBlockPrompt(const std::string& archetypeTalksAbout);
 
 // One card fact, asked on its own -- 2026-09-14. Replaces
 // Hs_BuildCardFactsPrompt, which asked for all eight keys at once as a single
@@ -164,11 +163,5 @@ std::string Hs_ExtractVerbalTic(const hs_json& facts);
 // played_since, alt) so the JSON access pattern lives in one place.
 std::string Hs_CardFactField(const hs_json& facts, const std::string& fieldName);
 
-// The voice-block quality bound: short prose, no markdown/quote characters,
-// non-empty. Deliberately not hs_gen_validate.h's Hs_QualityGate: that
-// gate's 10-180 char bound and question-shape rejection are tuned for
-// closed corpus lines, not a ~50-token persona paragraph. Conflating the
-// two would tie card validation to unrelated corpus tuning.
-HsGenVerdict Hs_ValidateVoiceBlock(const std::string& text);
 
 #endif // MOD_HS_IDENTITY_H

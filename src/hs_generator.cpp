@@ -1065,7 +1065,7 @@ namespace
     uint32_t PendingCardCount()
     {
         QueryResult result = CharacterDatabase.Query(
-            "SELECT COUNT(*) FROM hside_identity WHERE promoted_at IS NOT NULL AND card_voice IS NULL {}",
+            "SELECT COUNT(*) FROM hside_identity WHERE promoted_at IS NOT NULL AND card_facts IS NULL {}",
             ParkedCardsWhere());
         return result ? (*result)[0].Get<uint32_t>() : 0;
     }
@@ -1092,7 +1092,7 @@ namespace
     {
         QueryResult result = CharacterDatabase.Query(
             "SELECT bot_guid, last_known_level FROM hside_identity "
-            "WHERE promoted_at IS NOT NULL AND card_voice IS NULL {} "
+            "WHERE promoted_at IS NOT NULL AND card_facts IS NULL {} "
             "ORDER BY promoted_at ASC, bot_guid ASC LIMIT 1",
             ParkedCardsWhere());
         if (!result)
@@ -1139,9 +1139,11 @@ namespace
         return lookup;
     }
 
-    // One card, both halves (a voice block and a fact sheet), two LLM
-    // calls. Aborts (returns false, no partial card ever written) on the
-    // first LLM failure or validation rejection, retrying next cycle the
+    // One card: a fact sheet, one short LLM call per field. (Cards also had
+    // a generated voice paragraph until 2026-10-11; no training row carries
+    // one, so it is neither generated nor sent.) Aborts (returns false, no
+    // partial card ever written) on the first LLM failure or validation
+    // rejection, retrying next cycle the
     // same as script generation. On success: writes both halves, flips
     // card_active, and pushes the bot's name into playerbots' recycling-
     // exclusion vectors immediately rather than waiting for the next
@@ -1158,29 +1160,6 @@ namespace
 
         HsLLMConfig cfg;
         const HsGeneratorStrings gen = BuildGeneratorLLMConfig(cfg);
-
-        std::string voicePrompt = Hs_BuildVoiceBlockPrompt(archetypeInfo.talksAbout);
-        HsLLMResult voiceResult = GeneratorCallLLM(cfg, voicePrompt, "",
-            "Write it now. Reply with only the persona note itself.");
-        if (CallFailed(voiceResult))
-        {
-            if (g_HsDebugEnabled)
-                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block call failed for bot {} (failure={}).",
-                    pending.botGuid, static_cast<int>(voiceResult.failure));
-            if (!Hs_LLMBackendAnswered(voiceResult))
-                return HsGenCycle::BackendFailed;
-            NoteCardGenerationFailed(pending.botGuid);
-            return HsGenCycle::Rejected;
-        }
-        HsGenVerdict voiceVerdict = Hs_ValidateVoiceBlock(voiceResult.text);
-        if (!voiceVerdict.accepted)
-        {
-            if (g_HsDebugEnabled)
-                LOG_INFO(kHsLogGenerator, "[HearthsideChat] Generator: card voice-block rejected for bot {} ({}) -- \"{}\"",
-                    pending.botGuid, voiceVerdict.reason, voiceResult.text);
-            NoteCardGenerationFailed(pending.botGuid);
-            return HsGenCycle::Rejected;
-        }
 
         // Eight short questions, not one JSON document. See hs_identity.h's
         // HsCardFactAsk: the tuned model returned valid JSON 0 times in 10
@@ -1225,8 +1204,6 @@ namespace
             return HsGenCycle::Rejected;
         }
 
-        std::string escapedVoice = voiceResult.text;
-        CharacterDatabase.EscapeString(escapedVoice);
         std::string factsCompact = facts.dump();
         CharacterDatabase.EscapeString(factsCompact);
 
@@ -1242,9 +1219,9 @@ namespace
         // cache "no card yet" for another kCardCacheTtlSeconds. That is the
         // exact opposite of the comment on the invalidate.
         CharacterDatabase.DirectExecute(
-            "UPDATE hside_identity SET archetype = '{}', card_voice = '{}', card_facts = '{}', "
+            "UPDATE hside_identity SET archetype = '{}', card_voice = NULL, card_facts = '{}', "
             "card_model = {}, card_prompt_version = {}, card_active = 1 WHERE bot_guid = {}",
-            archetypeInfo.enumName, escapedVoice, factsCompact, SqlStringOrNull(gen.model),
+            archetypeInfo.enumName, factsCompact, SqlStringOrNull(gen.model),
             SqlStringOrNull(gen.promptVersion), pending.botGuid);
 
         Hs_InvalidateCardCache(pending.botGuid); // review G1: a brand-new card must be visible immediately
@@ -1262,9 +1239,21 @@ namespace
     {
         while (!g_StopGenerator.load())
         {
-            if (!g_HsGeneratorEnabled || !Hs_IsReactiveIdle())
+            if ((!g_HsGeneratorEnabled && !g_HsGeneratorCardsEnabled) || !Hs_IsReactiveIdle())
             {
                 GeneratorSleep(g_HsGeneratorPollIntervalSeconds);
+                continue;
+            }
+
+            // Generator.Cards.Enable runs card generation on its own, with
+            // corpus and script generation off (the shipped setup since
+            // 2026-10-07: generated lines read worse than hand-written).
+            if (!g_HsGeneratorEnabled)
+            {
+                HsGenCycle cards = PendingCardCount() > 0 ? RunOneCardGenerationCycle() : HsGenCycle::Idle;
+                GeneratorSleep(cards == HsGenCycle::Added ? 0 :
+                               cards == HsGenCycle::Rejected ? g_HsGeneratorPollIntervalSeconds
+                                                             : g_HsGeneratorQuotaSatisfiedBackoffSeconds);
                 continue;
             }
 
@@ -1277,7 +1266,7 @@ namespace
             // truncation rule" question, answered as "shared target" for
             // now: easy to split later against live-realm evidence).
             HsGenCycle outcome;
-            if (PendingCardCount() > 0)
+            if (g_HsGeneratorCardsEnabled && PendingCardCount() > 0)
                 outcome = RunOneCardGenerationCycle();
             else if (ScriptReserveDepthQuery() < g_HsGeneratorScriptsPerPool)
                 outcome = RunOneScriptGenerationCycle();
@@ -1363,6 +1352,13 @@ uint32_t Hs_RunEvictionSweep()
         uint32_t overflow = count - g_HsGeneratorRowsPerBucket;
         std::string tagWhere = bucket.tagColumn.empty() ? "" : ("AND " + bucket.tagColumn + " = " + bucket.tagValueSql);
 
+        // Only generated rows are ever evicted (2026-10-11). The sweep exists
+        // so the generator can replace overplayed lines with fresh ones;
+        // deleting hand-written rows with nothing to replace them shrank
+        // channel_general_chat from 80 to 50 on the realm and made repeats
+        // more frequent, not less. A bucket full of hand-written lines just
+        // keeps them all.
+
         // Review D1: escaped, like every other statement that takes a
         // category name. This is the destructive one -- a name that broke
         // out of its quotes here would widen a DELETE.
@@ -1392,9 +1388,17 @@ uint32_t Hs_RunEvictionSweep()
         // Review A4: DirectExecute, so the counts EnumerateBucketsWithCounts
         // reads on the next sweep reflect this one rather than racing an
         // eviction still queued on the async worker.
+        QueryResult generatedResult = CharacterDatabase.Query(
+            "SELECT COUNT(*) FROM hside_corpus WHERE name = '{}' {} AND generated_at IS NOT NULL",
+            escapedCategory, tagWhere);
+        uint32_t generated = generatedResult ? (*generatedResult)[0].Get<uint32_t>() : 0;
+        overflow = std::min(overflow, generated);
+        if (overflow == 0)
+            continue;
+
         CharacterDatabase.DirectExecute(
-            "DELETE FROM hside_corpus WHERE name = '{}' {} "
-            "ORDER BY (generated_at IS NULL) ASC, times_used DESC, generated_at ASC LIMIT {}",
+            "DELETE FROM hside_corpus WHERE name = '{}' {} AND generated_at IS NOT NULL "
+            "ORDER BY times_used DESC, generated_at ASC LIMIT {}",
             escapedCategory, tagWhere, overflow);
         evictedTotal += overflow;
         g_RowsEvictedThisSession.fetch_add(overflow);
