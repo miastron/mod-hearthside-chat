@@ -9,9 +9,11 @@
   {
     "id": "mechanic_auction_house",
     "title": "Auction House",
-    "content": "Every faction capital has an Auction House, such as Stormwind's Trade District and Orgrimmar's Valley of Strength, and Booty Bay, Gadgetzan and Everlook have neutral ones shared by both factions; Dalaran and Shattrath have none. Auctions last 12, 24 or 48 hours, the deposit is lost if the item doesn't sell, and the house keeps 5% of a sale (15% at a neutral house).",
-    "keywords": ["auction house", "ah", "auction", "auctions", "auctioneer", "buyout", "neutral ah"],
-    "tags": ["mechanic", "economy", "trading", "market"]
+    "content": "Every faction capital has an Auction House, such as Stormwind's Trade District and Orgrimmar's Valley of Strength, and Booty Bay, Gadgetzan and Everlook have neutral ones shared by both factions; Dalaran and Shattrath have none. Every auction house is one shared market open to both factions. Auctions last 12, 24 or 48 hours, the deposit is lost if the item doesn't sell, and the house keeps 15% of a sale.",
+    "keywords": ["auction house", "ah", "auction", "auctions", "auctioneer", "buyout", "neutral ah", "selling on the ah"],
+    "tags": ["mechanic", "economy", "trading", "market"],
+    "expert_domain": "gold",
+    "expert_content": "Post on 24 hours and undercut the lowest price by a copper, not by half; if the market is flooded, wait for it to clear instead of racing to the bottom. The house keeps 15% of every sale, so price that in, never list below what a vendor would pay, and park a bank alt next to the auctioneer to save the trip."
   },
   {
     "id": "mechanic_quests",
@@ -53,7 +55,9 @@
     "title": "Mount System",
     "content": "Riding is trained in steps: Apprentice (60% ground mounts) at level 20 for 4 gold, Journeyman (100% epic ground) at 40 for 50 gold, Expert (flying) at 60 for 250 gold, Artisan (epic flying) at 70 for 5,000 gold, and Cold Weather Flying, needed to fly in Northrend, at 77 for 1,000 gold. Mounts are bought separately from mount vendors.",
     "keywords": ["mount", "mounts", "riding", "riding skill", "riding trainer", "apprentice riding", "journeyman riding", "expert riding", "artisan riding", "epic mount", "flying", "flying mount", "learn to fly"],
-    "tags": ["mechanic", "travel", "collection", "mounts"]
+    "tags": ["mechanic", "travel", "collection", "mounts"],
+    "expert_domain": "general",
+    "expert_content": "Buy Expert riding at 60 and go to Outland, where you can fly; Artisan is worth buying once you have the gold. Cold Weather Flying at 77 makes Northrend much faster, and a level 80 can buy a Tome of Cold Weather Flight to let an alt fly from 68. Save gold for each riding skill before spending it on gear you will replace."
   },
   {
     "id": "mechanic_pets",

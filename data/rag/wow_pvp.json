@@ -4,14 +4,18 @@
     "title": "Battlegrounds",
     "content": "3.3.5 has six battlegrounds: Warsong Gulch (capture the flag, from level 10), Arathi Basin (five nodes, from 20), Alterac Valley (40 a side, from 51), Eye of the Storm (from 61), and Strand of the Ancients and Isle of Conquest (both from 71). Queue from a Battlemaster or the PvP window. Wintergrasp is a zone, not a battleground.",
     "keywords": ["battleground", "battlegrounds", "bg", "bgs", "queue for bg", "pvp queue"],
-    "tags": ["pvp", "battlegrounds", "teamwork", "honor"]
+    "tags": ["pvp", "battlegrounds", "teamwork", "honor"],
+    "expert_domain": "pvp",
+    "expert_content": "Do the random battleground for its daily first-win bonus. In node maps like Arathi Basin and Eye of the Storm, holding three nodes and defending them wins; chasing a five-cap loses. Fight on objectives, not in the middle of the road, and call out incoming players in chat."
   },
   {
     "id": "pvp_arenas",
     "title": "Arena Combat",
     "content": "Arena teams fight 2v2, 3v3 or 5v5 in Nagrand Arena, Blade's Edge Arena, the Ruins of Lordaeron, the Dalaran sewers and the Ring of Valor. Rated matches move your team rating, and Arena Points are paid out weekly by rating if you played at least 10 games that week; skirmishes are unrated practice.",
     "keywords": ["arena", "arenas", "2v2", "3v3", "5v5", "arena team", "arena rating", "skirmish", "skirmishes", "ring of valor", "dalaran arena"],
-    "tags": ["pvp", "arena", "skill", "competition"]
+    "tags": ["pvp", "arena", "skill", "competition"],
+    "expert_domain": "pvp",
+    "expert_content": "The strong 3v3 teams are Rogue, Mage and Priest, Warrior or Death Knight with a Holy Paladin, and two casters with a healer. In 2v2 a damage dealer with a healer is the easy start. Arena Points need 10 games a week, and you must play at least 30% of your team's games to get them. Focus one target, chain crowd control through diminishing returns, and save your trinket for the stun that would actually kill you."
   },
   {
     "id": "pvp_world_pvp",
@@ -32,7 +36,9 @@
     "title": "PvP Gear Progression",
     "content": "PvP gear carries resilience, which lowers the chance to be crit and the damage taken from players. Entry pieces are bought with Honor, the season's best pieces need Arena Points, and the top items also require a personal arena rating. Honor caps at 75,000, so spend it before hitting the cap.",
     "keywords": ["pvp gear", "honor gear", "arena gear", "resilience", "resil", "resi", "gladiator gear", "pvp set", "pvp sets"],
-    "tags": ["pvp", "gear", "progression", "equipment"]
+    "tags": ["pvp", "gear", "progression", "equipment"],
+    "expert_domain": "pvp",
+    "expert_content": "Buy honor gear for the off-pieces first, neck, rings, cloak, belt, bracers and boots, then get the five-piece set with Arena Points, since the set bonuses matter. The season's best weapons and shoulders need a personal rating, so climb in 3v3 where rating is easiest to earn."
   },
   {
     "id": "pvp_faction_conflicts",
@@ -45,8 +51,10 @@
     "id": "pvp_honor_system",
     "title": "Honor System",
     "content": "Honor comes from honorable kills, battleground wins and objectives, and Wintergrasp; a player low enough to show grey to you gives none. Honor doesn't decay and caps at 75,000, and it's spent with PvP vendors on gear.",
-    "keywords": ["honor", "honor points", "honor cap", "honor farm", "honor system", "honorable kills", "hks"],
-    "tags": ["pvp", "honor", "system", "rewards"]
+    "keywords": ["honor", "honor points", "honor cap", "honor farm", "farm honor", "honor system", "honorable kills", "hks"],
+    "tags": ["pvp", "honor", "system", "rewards"],
+    "expert_domain": "pvp",
+    "expert_content": "The fastest honor is the random battleground: the first win each day pays a big bonus and Arena Points, and later wins pay less. Winning Alterac Valley and Isle of Conquest is the most honor per match, and holding Wintergrasp gives honor plus Vault of Archavon access. Spend honor before you reach the 75,000 cap."
   },
   {
     "id": "pvp_ganking",

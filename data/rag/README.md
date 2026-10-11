@@ -148,6 +148,9 @@ through scored retrieval against something a player actually typed.
 `Hs_SetRagTable` reads `id`, `title`, `content`, `keywords`. **`tags` is parsed by nothing today** —
 it's carried for future filtering only.
 
+Two optional fields, always together: `expert_domain` (`gold`, `pve`, `pvp` or `general`) and
+`expert_content`, covered under "Expert answers" below.
+
 `id` must be unique across every file in this folder. Nothing enforces that at load time; the test
 harness checks it, and a duplicate id silently double-weights a topic.
 
@@ -288,10 +291,12 @@ Then re-apply the SQL on the realm and `.reload config` — `HsRagLifecycleWorld
 table on reload, no restart needed.
 
 `hside_rag.sql` is generated and is the one `base/*.sql` file in this module safe to change and
-re-apply: it opens with `DELETE FROM hside_rag`, which is what makes a regeneration a clean reload
+re-apply: it opens with `DROP TABLE` + `CREATE TABLE`, which is what makes a regeneration a clean reload
 rather than a duplicate-key crash on AzerothCore's changed-hash re-apply behavior (see repo
 `CLAUDE.md`'s SQL section). Don't hand-edit it — the JSON is the source of truth, and
-`generate_rag_sql.py` refuses to emit on a duplicate `id` or malformed JSON.
+`generate_rag_sql.py` refuses to emit on a duplicate `id` or malformed JSON. Schema changes to `hside_rag`
+go in that same file, never an `updates/` ALTER: the ALTER would sort after it and the re-applied
+INSERTs would name columns that don't exist yet.
 
 ## Who retrieves, and how
 
@@ -330,3 +335,33 @@ already in the chat window — so it's the more cautious knob to turn on.
 
 Config: the six `HearthsideChat.Rag.*` keys, documented in
 [`conf/mod_hearthside_chat.conf.dist`](../../conf/mod_hearthside_chat.conf.dist).
+
+## Expert answers (2026-10-10)
+
+An entry can carry a second paragraph: the best-known way to do the thing, rather than the
+ordinary answer. `expert_content` replaces `content` in the reply block only when **both** hold:
+
+- the bot's archetype is expert in the entry's `expert_domain` (`hside_archetype.expertise`:
+  TRADER `gold`, RAIDER_SERIOUS `pve`, PVP_SERIOUS `pvp`, MENTOR and GRUMPY_VETERAN `general`), and
+- the player has teamed up with that bot: grouped with it or in its guild right now, has it on their
+  friend list, or shares a memory beat with it other than `first_meeting` (`Hs_HasBondWith`).
+
+Everyone else, including trolls, gets the ordinary paragraph. The point is that a veteran's
+knowledge is a reason to befriend one.
+
+Rules:
+
+- **Expert text is never indexed.** Retrieval scores `content`, `keywords` and `title` only, so
+  adding or editing expert text cannot move a score or the separation margin.
+  `Tests/test_hs_rag_expert.cpp` pins this by retrieving with and without expert fields loaded.
+- **Same question, better answer.** The expert paragraph answers what the entry's keywords ask
+  ("how do i make gold"), with specifics a casual player wouldn't know. It must not contradict
+  `content`.
+- **Fits whole.** Title plus expert text stays under 600 characters (`generate_rag_sql.py` refuses
+  more), so the block is never truncated mid-answer at `Rag.MaxChars` 700.
+- **Generated files stay plain.** `wow_instances.json` and `wow_bosses.json` are rebuilt by
+  `build_instances_and_bosses.py`, which would drop hand-added fields; put PvE expertise elsewhere
+  until that script carries them.
+
+The log line `Reply RAG: ... [scored, expert-eligible gold]` shows when a reply qualified.
+`rag_block_cli` takes `"expert": "<domain>"` so training rows can carry the exact expert block.

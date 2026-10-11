@@ -52,7 +52,8 @@ namespace
 
 void Hs_LoadRagFromDb()
 {
-    QueryResult result = CharacterDatabase.Query("SELECT id, title, content, keywords FROM hside_rag");
+    QueryResult result = CharacterDatabase.Query(
+        "SELECT id, title, content, keywords, expert_domain, expert_content FROM hside_rag");
 
     // `tags` is deliberately not selected: data/rag/README.md documents it as
     // carried for future filtering and parsed by nothing, and selecting a
@@ -83,6 +84,8 @@ void Hs_LoadRagFromDb()
         entry.title    = (*result)[1].Get<std::string>();
         entry.content  = (*result)[2].Get<std::string>();
         entry.keywords = SplitKeywords((*result)[3].Get<std::string>());
+        entry.expertDomain  = (*result)[4].Get<std::string>();
+        entry.expertContent = (*result)[5].Get<std::string>();
 
         if (entry.id.empty() || entry.title.empty() || entry.content.empty())
         {

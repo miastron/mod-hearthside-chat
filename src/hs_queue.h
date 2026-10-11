@@ -73,6 +73,8 @@ struct HsReplyRequest
     NewRpgStatus       rpgStatus  = RPG_IDLE; // mod-playerbots' live activity, stated in the prompt as a fact
     bool               botSettled = false;    // Hs_IsBotSettled (hs_rpgstate.h); gates the distracted reply only
     HsTopicGateContext topicGate;             // §4.13 gear/group/instance/gold/zone facts (hs_topic_gate.h)
+    bool               senderIsAlly = false;  // sender is in the bot's group or guild right now: the live half of
+                                              // the expert-answer gate (Hs_HasBondWith is the durable half)
 
     // ---- what kind of request this is ----
 

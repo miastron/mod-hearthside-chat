@@ -33,7 +33,7 @@ void Hs_LoadArchetypesFromDb()
         // make UpdateFetcher re-apply the whole file.
         "SELECT enum_name, talks_about, care, distracted_chance, verbosity_cap, spawn_weight, "
         "has_abbrev_override, abbrev_override_chance, profanity_level, "
-        "typing_base_ms, typing_per_char_ms "
+        "typing_base_ms, typing_per_char_ms, expertise "
         "FROM hside_archetype");
 
     std::array<HsArchetypeInfo, kHsArchetypeCount> table;
@@ -83,6 +83,7 @@ void Hs_LoadArchetypesFromDb()
         info.profanityLevel        = (*result)[8].Get<uint8_t>();
         info.typingBaseMs          = (*result)[9].Get<uint32_t>();
         info.typingPerCharMs       = (*result)[10].Get<uint32_t>();
+        info.expertDomain          = (*result)[11].Get<std::string>();
         found[slot] = true;
         ++matched;
     } while (result->NextRow());

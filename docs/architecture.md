@@ -81,6 +81,12 @@ zone label, a generator bucket), since it skips the threshold entirely. A third,
 `Hs_RagContextRandom`, exists for callers with nothing to look anything up *with* — the generator's
 untagged buckets and a script's first turn. See [`data/rag/README.md`](../data/rag/README.md).
 
+**Expert answers swap a paragraph, never a retrieval.** An entry may carry expert text for one
+domain (gold/pve/pvp/general). It replaces the ordinary paragraph only for an archetype expert in
+that domain (`hside_archetype.expertise`) talking to a player who has teamed up with it: grouped or
+guilded now, friended, or a shared memory beyond `first_meeting` (`Hs_HasBondWith`). Expert text is
+not indexed, so it cannot change what is retrieved.
+
 **What just happened is its own slot, after all of them.** An event's state line ("You have just
 lost a duel to X.") used to reach exactly one prompt: the reaction's, when the arbiter picked that
 bot. Since 2026-09-23 every actor of every event keeps that line for two minutes

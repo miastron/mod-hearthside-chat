@@ -4,28 +4,36 @@
     "title": "Dungeon Finder",
     "content": "The Dungeon Finder (patch 3.3, December 2009), open from level 15, automatically groups players across realms for a chosen dungeon or a random one, through a queue where each player selects the Tank, Healer, and/or Damage role they'll fill. Once a group forms, everyone is teleported directly to the dungeon entrance, and abandoning the run before the group agrees to disband applies the Dungeon Deserter debuff. Queuing for a random Northrend heroic is the most common use: the first one completed each day awards 2 Emblems of Frost, and every additional one that day awards 2 Emblems of Triumph instead, making it the fastest way to gear up at level 80.",
     "keywords": ["dungeon finder", "lfd", "rdf", "random dungeon", "random heroic", "lfg tool", "deserter", "dungeon queue", "daily random"],
-    "tags": ["mechanic", "wotlk", "dungeons", "grouping"]
+    "tags": ["mechanic", "wotlk", "dungeons", "grouping"],
+    "expert_domain": "pve",
+    "expert_content": "Queue as tank or healer if you can, because those queues pop almost immediately. Do the first random heroic every day for the Frost, run the Icecrown five-mans for the best drops, and do not leave a group early, since Deserter keeps you out of the queue for a while."
   },
   {
     "id": "mechanic_heroic_emblems",
     "title": "Heroic Dungeons and Emblems",
     "content": "Heroic difficulty unlocks at level 80 for every Northrend five-man dungeon, with no attunement or key required as there was in the Burning Crusade -- just queue for it. Heroics and raids pay Emblems rather than gold-bought tokens; by patch 3.3.5 the two currencies actually being earned are Emblem of Triumph (heroics, Trial of the Crusader, and repeat random-dungeon wins) and Emblem of Frost (Icecrown Citadel and the day's first random heroic). The earlier Emblem of Heroism, Valor, and Conquest from Naxxramas, Ulduar, and Trial of the Crusader's launch are no longer dropped, having been superseded as raid content advanced. Emblems are spent with quartermasters in Dalaran and Icecrown for current-tier epic gear.",
     "keywords": ["heroic", "heroics", "heroic dungeon", "heroic dungeons", "emblem", "emblems", "emblem of triumph", "emblem of frost", "frost emblems", "triumph emblems", "emblem vendor"],
-    "tags": ["mechanic", "wotlk", "dungeons", "currency", "gearing"]
+    "tags": ["mechanic", "wotlk", "dungeons", "currency", "gearing"],
+    "expert_domain": "pve",
+    "expert_content": "At 80 do the daily random heroic for Emblems of Frost and spend Triumph on tier 9 and other item level 232 gear. Frost buys tier 10 at 60 for shoulders and gloves and 95 for head, chest and legs, plus item level 264 off-pieces. The weekly raid quest from Archmage Lan'dalock in Dalaran adds 5 more Frost, and the Icecrown five-mans drop the best heroic gear."
   },
   {
     "id": "mechanic_dual_spec",
     "title": "Dual Talent Specialization",
     "content": "Dual talent specialization (patch 3.1) lets a character save two separate talent builds -- each with its own glyphs and action bars -- and swap between them outside combat. It costs 1000 gold, requires level 40, and is bought once from your class trainer; after that, switching between the two saved specs is free and unlimited. Players commonly keep one PvE spec and one PvP spec, or a tank/healer spec alongside a damage spec, and swap depending on what the group needs.",
     "keywords": ["dual specialization", "dual talent specialization", "dualspec", "dual talent"],
-    "tags": ["mechanic", "wotlk", "talents", "character"]
+    "tags": ["mechanic", "wotlk", "talents", "character"],
+    "expert_domain": "general",
+    "expert_content": "Buy dual specialization as soon as you can pay for it. Keep a damage spec for questing and a tank or healer spec for dungeons and faster queues, and give each spec its own glyphs and action bars."
   },
   {
     "id": "mechanic_cold_weather_flying",
     "title": "Cold Weather Flying",
     "content": "Cold Weather Flying is the extra skill needed to use a flying mount in Northrend; Flying itself is learned at 60 with Expert riding, but Expert or Artisan alone isn't enough there. It's trained from a flying trainer in Dalaran or the Storm Peaks for 1,000 gold at level 77. A level 80 can buy the Tome of Cold Weather Flight for 1,000 gold and mail it to an alt, letting that alt fly in Northrend from 68.",
     "keywords": ["cold weather flying", "cwf", "fly in northrend", "flying in northrend", "tome of cold weather flight"],
-    "tags": ["mechanic", "wotlk", "flying", "mounts"]
+    "tags": ["mechanic", "wotlk", "flying", "mounts"],
+    "expert_domain": "general",
+    "expert_content": "Buy Cold Weather Flying at 77 even if you are short on gold: flying makes Northrend questing much faster. If you have a level 80 already, buy a Tome of Cold Weather Flight and mail it to your alt so they can fly from 68."
   },
   {
     "id": "mechanic_death_knight_runes",

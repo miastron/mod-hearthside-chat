@@ -106,6 +106,20 @@ bool Hs_HasMetBefore(uint64_t botGuid, uint64_t playerGuid)
     return result != nullptr;
 }
 
+bool Hs_HasBondWith(uint64_t botGuid, uint64_t playerGuid)
+{
+    // character_social read directly, same as the identity friend sweep
+    // (hs_identity_store.h): it covers a sender who is offline, which the
+    // live SocialMgr does not. Flag 1 is SOCIAL_FLAG_FRIEND.
+    QueryResult result = CharacterDatabase.Query(
+        "SELECT 1 FROM character_social WHERE guid = {} AND friend = {} AND (flags & 1) != 0 "
+        "UNION ALL "
+        "SELECT 1 FROM hside_memory WHERE bot_guid = {} AND player_guid = {} AND event_type <> '{}' "
+        "LIMIT 1",
+        playerGuid, botGuid, botGuid, playerGuid, EscapedEventType(kHsMemoryEventFirstMeeting));
+    return result != nullptr;
+}
+
 HsMemoryFact Hs_LookupLastDungeonRun(uint64_t botGuid, uint64_t playerGuid)
 {
     HsMemoryFact fact;

@@ -32,6 +32,14 @@ void Hs_RecordMemoryEvent(uint64_t botGuid, uint64_t playerGuid, const std::stri
 // "Do you remember me": any hside_memory row at all for this pair.
 bool Hs_HasMetBefore(uint64_t botGuid, uint64_t playerGuid);
 
+// Expert answers' durable half of "has this player earned it": the player
+// has the bot on their friend list, or the pair shares a memory beat other
+// than first_meeting (that one is written on first contact, so it proves
+// nothing). The live half -- grouped together, same guild -- is read on the
+// world thread into HsReplyRequest::senderIsAlly. One synchronous query, so
+// worker thread only.
+bool Hs_HasBondWith(uint64_t botGuid, uint64_t playerGuid);
+
 struct HsMemoryFact
 {
     bool        hasFact = false;

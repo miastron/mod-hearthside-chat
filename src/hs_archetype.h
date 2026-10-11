@@ -64,6 +64,9 @@ struct HsArchetypeInfo
     uint32_t    typingBaseMs;     // hs_queue.cpp's tier-2 typing-delay formula: flat "notice and start typing" cost
     uint32_t    typingPerCharMs;  // ms per character of the styled reply; a hasty archetype types faster, not just shorter
                                    // (HearthsideChat.TypingDelay.Enable/MaxMs is the kill switch and ceiling, same relationship as verbosityCap/LLM.MaxTokens)
+    std::string expertDomain;     // hside_archetype.expertise: "gold" | "pve" | "pvp" | "general", or empty. A world-knowledge
+                                   // entry carrying expert text for this domain formats with it (HsRagEntry::expertContent), but
+                                   // only for a player who has earned it -- hs_queue.cpp's WorkerLoop decides that.
 };
 
 // Replaces the whole in-memory archetype table. Called once at startup by

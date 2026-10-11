@@ -611,17 +611,19 @@ size_t Hs_RagQueryTermCount(const std::string& query)
 }
 
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
-                             const std::string& prefix, bool chatGate, bool inConversation)
+                             const std::string& prefix, bool chatGate, bool inConversation,
+                             const std::string& expertDomain)
 {
     std::shared_lock<std::shared_mutex> guard(TableMutex());
     // Hs_RagContextLine only reads through the hit pointers, which stay valid
     // for as long as this guard is held, so formatting inside the lock is
     // what keeps them from escaping it.
-    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore, chatGate, inConversation), maxChars, prefix);
+    return Hs_RagContextLine(RetrieveLocked(query, maxEntries, minScore, chatGate, inConversation), maxChars, prefix,
+                             expertDomain);
 }
 
 std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,
-                                 const std::string& prefix)
+                                 const std::string& prefix, const std::string& expertDomain)
 {
     if (keys.empty() || maxChars == 0)
         return "";
@@ -649,7 +651,7 @@ std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t 
         // and a keyed hit has no score to report -- it was addressed, not
         // ranked.
         std::vector<HsRagHit> hits{ { &idx.entries[it->second], 1.0f } };
-        return Hs_RagContextLine(hits, maxChars, prefix);
+        return Hs_RagContextLine(hits, maxChars, prefix, expertDomain);
     }
 
     return "";
@@ -690,7 +692,8 @@ std::string Hs_RagBlockLeadTitle(const std::string& block, const std::string& pr
     return sep == std::string::npos ? body.substr(0, 48) : body.substr(0, sep);
 }
 
-std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars, const std::string& prefix)
+std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars, const std::string& prefix,
+                              const std::string& expertDomain)
 {
     if (hits.empty() || maxChars == 0)
         return "";
@@ -699,7 +702,10 @@ std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxCha
 
     for (size_t i = 0; i < hits.size(); ++i)
     {
-        std::string piece = hits[i].entry->title + " -- " + hits[i].entry->content;
+        const HsRagEntry& e      = *hits[i].entry;
+        const bool        expert = !expertDomain.empty() && e.expertDomain == expertDomain && !e.expertContent.empty();
+
+        std::string piece = e.title + " -- " + (expert ? e.expertContent : e.content);
         if (i > 0)
             piece = " " + piece;
 

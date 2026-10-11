@@ -4,7 +4,9 @@
     "title": "Alchemy Profession",
     "content": "Alchemists turn herbs into potions, elixirs and flasks, so the profession pairs with Herbalism. Its Mixology perk makes the flasks and elixirs an alchemist knows stronger and longer-lasting on them, and transmutes turn materials into rarer ones, such as Titanium. Grand Master alchemy is taught in Dalaran.",
     "keywords": ["alchemy", "alchemist", "alch", "transmute", "transmutes", "transmutation", "mixology"],
-    "tags": ["profession", "crafting", "consumables", "raiding", "all classes"]
+    "tags": ["profession", "crafting", "consumables", "raiding", "all classes"],
+    "expert_domain": "gold",
+    "expert_content": "Transmute: Titanium has no cooldown, so run it whenever a Titanium Bar sells for more than the Saronite Bars it uses. Eternal transmutes share the daily transmute cooldown, so spend it on whichever Eternal sells highest. Pick Transmutation Master for procs on transmutes, or Elixir Master to proc extra flasks, and stock Flask of Endless Rage and Flask of the Frost Wyrm before raid nights."
   },
   {
     "id": "profession_blacksmithing",
@@ -18,7 +20,9 @@
     "title": "Enchanting Profession",
     "content": "Enchanters disenchant green and better items into dusts, essences and shards (Infinite Dust, Greater Cosmic Essence and Dream Shards in Northrend, Abyss Crystals from epics) and use them to enchant gear. It needs no gathering profession, and its perk is enchanting your own rings.",
     "keywords": ["enchanting", "enchanter", "disenchant", "disenchanting", "dust", "infinite dust", "dream shard", "abyss crystal", "cosmic essence", "ring enchant", "ench"],
-    "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"]
+    "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"],
+    "expert_domain": "gold",
+    "expert_content": "Disenchant the cheap green and blue items other players list and sell the Infinite Dust, Greater Cosmic Essence and Dream Shards that come out, or use them yourself. Put popular enchants on a scribe's vellum and sell the scrolls: weapon enchants like Berserking and Black Magic and cloak and boot enchants move every day."
   },
   {
     "id": "profession_engineering",
@@ -32,21 +36,27 @@
     "title": "Herbalism Profession",
     "content": "Herbalists gather herbs for Alchemy and Inscription, with Find Herbs showing nodes on the minimap. Northrend herbs include Goldclover, Tiger Lily, Adder's Tongue, Lichbloom, Icethorn and the rare Frost Lotus. The perk Lifeblood is a self-heal.",
     "keywords": ["herbalism", "herbalist", "herb", "herbs", "herbing", "frost lotus", "lichbloom", "icethorn", "adders tongue", "goldclover", "lifeblood", "find herbs", "peacebloom", "silverleaf"],
-    "tags": ["profession", "gathering", "materials", "alchemy", "inscription"]
+    "tags": ["profession", "gathering", "materials", "alchemy", "inscription"],
+    "expert_domain": "gold",
+    "expert_content": "Farm a loop in Sholazar Basin for Adder's Tongue, or Icecrown and the Storm Peaks for Lichbloom and Icethorn; any Northrend node can also give a Frost Lotus, which sells high. Herbs sell in stacks of 20 to scribes and alchemists."
   },
   {
     "id": "profession_inscription",
     "title": "Inscription Profession",
     "content": "Scribes mill herbs, five at a time, into pigments, turn those into inks, and make glyphs, off-hand books, Darkmoon Cards and vellums. Their perk is Master's Inscription shoulder enchants for themselves, and Grand Master Inscription is taught in Dalaran.",
     "keywords": ["inscription", "scribe", "scribes", "milling", "mill herbs", "pigment", "pigments", "ink", "inks", "darkmoon card", "darkmoon cards", "vellum"],
-    "tags": ["profession", "crafting", "spell mods", "cosmetic", "all classes"]
+    "tags": ["profession", "crafting", "spell mods", "cosmetic", "all classes"],
+    "expert_domain": "gold",
+    "expert_content": "Glyphs are the money: learn as many as you can through Northrend Inscription Research and Minor Inscription Research, mill the cheapest Northrend herbs for pigments, and list a few of every glyph so you are never out of stock. A finished Darkmoon Card deck, such as the one that makes Greatness, sells for a lot."
   },
   {
     "id": "profession_jewelcrafting",
     "title": "Jewelcrafting Profession",
     "content": "Jewelcrafters prospect ore, five at a time, for raw gems, cut them, and make rings, necklaces and trinkets, so it pairs with Mining. Their perk is Dragon's Eye gems only they can socket, up to three. Timothy Jones in Dalaran gives a daily quest paying tokens for new designs.",
     "keywords": ["jewelcrafting", "jewelcrafter", "jc", "prospect", "prospecting", "dragons eye", "dragons eyes", "cut gems"],
-    "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"]
+    "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"],
+    "expert_domain": "gold",
+    "expert_content": "Prospect Saronite and Titanium ore for gems; Titanium is the one that gives the epic gems. Cut what raiders actually socket, red strength, agility and spell power gems sell fastest, and do the Timothy Jones daily in Dalaran every day: its tokens buy new designs, Dragon's Eye designs included. Selling cut gems beats selling raw gems almost every time."
   },
   {
     "id": "profession_leatherworking",
@@ -60,21 +70,27 @@
     "title": "Mining Profession",
     "content": "Miners gather ore and stone from mineral nodes, shown on the minimap with Find Minerals, and smelt it into bars at a forge for Blacksmithing, Engineering and Jewelcrafting. Northrend ores are Cobalt, Saronite and the rare Titanium, and the perk Toughness adds stamina.",
     "keywords": ["mining", "miner", "ore", "ores", "smelting", "smelt", "cobalt", "saronite", "titanium", "toughness", "find minerals", "mining node"],
-    "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"]
+    "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"],
+    "expert_domain": "gold",
+    "expert_content": "Saronite is the volume ore, thickest in Sholazar Basin, Icecrown and the Storm Peaks, and a Saronite node can be a Titanium vein at random. Sell Titanium raw, or smelt it only when the bar is worth more than the ore. Mining plus Herbalism is the best pair for pure farming, since you pick up both nodes on one route."
   },
   {
     "id": "profession_skinning",
     "title": "Skinning Profession",
     "content": "Skinners skin dead beasts, and some dragonkin, for leather and hides used in Leatherworking; humanoids drop cloth instead. Northrend gives Borean Leather and the rare Arctic Fur, and the perk Master of Anatomy adds critical strike rating.",
     "keywords": ["skinning", "skinner", "hides", "borean leather", "arctic fur", "master of anatomy"],
-    "tags": ["profession", "gathering", "materials", "leatherworking"]
+    "tags": ["profession", "gathering", "materials", "leatherworking"],
+    "expert_domain": "gold",
+    "expert_content": "Skinning pays well alongside an AoE class: pull groups of beasts in Sholazar Basin or Zul'Drak and skin them all. Borean Leather sells by the stack, Arctic Fur is the prize, and Heavy Borean Leather is worth making when it sells for more than the leather that goes into it."
   },
   {
     "id": "profession_tailoring",
     "title": "Tailoring Profession",
-    "content": "Tailors sew cloth gear and bags from cloth looted off humanoids, like Frostweave Cloth in Northrend, and need no gathering profession. Their perk is cloak embroideries only they can use, Lightweave, Darkglow and Swordguard, and they make Moonshroud, Ebonweave and Spellweave cloth on a cooldown.",
+    "content": "Tailors sew cloth gear and bags from cloth looted off humanoids, like Frostweave Cloth in Northrend, and need no gathering profession. Their perk is cloak embroideries only they can use, Lightweave, Darkglow and Swordguard, and they make Moonshroud, Ebonweave and Spellweave cloth for the best tailored gear.",
     "keywords": ["tailoring", "tailor", "frostweave bag", "embroidery", "lightweave", "darkglow", "swordguard", "moonshroud", "ebonweave", "spellweave"],
-    "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"]
+    "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"],
+    "expert_domain": "gold",
+    "expert_content": "Frostweave Bags always sell, since everyone needs bag space, and the 22-slot Glacial Bag is the prize, though it can only be sewn about once a week. Moonshroud, Ebonweave and Spellweave have no cooldown and go into the best tailored gear, so make them when the cloth is cheap."
   },
   {
     "id": "profession_cooking",

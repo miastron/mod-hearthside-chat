@@ -219,7 +219,6 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_general_chat', 'is there a way to hide my helmet'),
 ('channel_general_chat', 'anyone want to group for quests'),
 ('channel_general_chat', 'need one more for an elite quest'),
-('channel_general_chat', 'lf1m for a quest, anyone nearby'),
 ('channel_general_chat', 'lfg, any quests anyone needs help with'),
 ('channel_general_chat', 'looking for a group to do some quests'),
 ('channel_general_chat', 'anyone need a tank'),
@@ -254,17 +253,8 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('channel_general_chat', 'who needs a map when you have confidence'),
 ('channel_general_chat', 'my bags have bags now'),
 ('channel_general_chat', 'gold goes in and nothing comes out'),
-('channel_general_chat', 'just one more dungeon, i promise'),
 ('channel_general_chat', 'my pet is more useful than my group last night'),
-('channel_general_chat', 'standing in the road, come get me'),
-('channel_general_chat', 'brb, grabbing food'),
-('channel_general_chat', 'afk for a few minutes'),
-('channel_general_chat', 'anyone else just get disconnected'),
-('channel_general_chat', 'back, did i miss anything'),
-('channel_general_chat', 'gtg after this quest, see you all'),
-('channel_general_chat', 'afk, letting the dog out'),
-('channel_general_chat', 'need to eat, back in ten'),
-('channel_general_chat', 'connection dropped, back now');
+('channel_general_chat', 'anyone else just get disconnected');
 
 -- channel_general_band: General channel lines for one level band, drawn by
 -- the speaker's level (level_band_tag). Same register as channel_general_chat

@@ -55,6 +55,15 @@ struct HsRagEntry
     std::string              title;    // short label, used in the prompt block
     std::string              content;  // the fact paragraph handed to the model
     std::vector<std::string> keywords; // authored retrieval handles: the strongest signal
+
+    // The best-known answer to the same question, for a bot whose archetype
+    // is expert in `expertDomain` (hside_archetype.expertise) talking to a
+    // player who has earned it. Both empty on most entries. Never indexed:
+    // retrieval scores `content` alone, so adding expert text cannot move a
+    // single score or the separation margin -- it only changes which
+    // paragraph a hit formats as (Hs_RagContextLine).
+    std::string              expertDomain;  // "gold" | "pve" | "pvp" | "general", or empty
+    std::string              expertContent;
 };
 
 struct HsRagHit
@@ -149,8 +158,13 @@ size_t Hs_RagQueryTermCount(const std::string& query);
 // to a character ("things you know"), a generation prompt is addressed to a
 // writer ("source material"). It counts against `maxChars`, so a longer
 // prefix leaves less room for content rather than overrunning the budget.
+//
+// `expertDomain`: a hit whose entry carries expert text for exactly this
+// domain formats with that text instead of `content`. Empty (the default,
+// and every generator caller) always formats `content`.
 std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxChars,
-                              const std::string& prefix = kHsRagReplyPrefix);
+                              const std::string& prefix = kHsRagReplyPrefix,
+                              const std::string& expertDomain = "");
 
 // Retrieve and format in one call, under one lock. The two-step
 // Hs_RetrieveRag + Hs_RagContextLine pair above hands out raw pointers into
@@ -162,7 +176,7 @@ std::string Hs_RagContextLine(const std::vector<HsRagHit>& hits, uint32_t maxCha
 // degrades to "no reference block in the prompt".
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,
                              const std::string& prefix = kHsRagReplyPrefix, bool chatGate = true,
-                             bool inConversation = false);
+                             bool inConversation = false, const std::string& expertDomain = "");
 
 // Direct lookup: no scoring, no threshold, no near-miss. Each key is matched
 // against entry ids first and then against normalized titles, and the first
@@ -181,7 +195,8 @@ std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, floa
 // from Map::GetMapName can be passed straight through without the caller
 // knowing the entry's id scheme.
 std::string Hs_RagContextForKeys(const std::vector<std::string>& keys, uint32_t maxChars,
-                                 const std::string& prefix = kHsRagReplyPrefix);
+                                 const std::string& prefix = kHsRagReplyPrefix,
+                                 const std::string& expertDomain = "");
 
 // One arbitrary entry, formatted the same way. No query, no key, no
 // threshold: this is for a caller that has nothing to look anything up

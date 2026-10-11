@@ -734,8 +734,22 @@ namespace
             if (g_HsRagEnable)
             {
                 const bool inConversation = !req.isEvent && !HistorySnapshot(req.botGuid, req.senderGuid).empty();
+
+                // Expert answers: an archetype expert in a domain hands its
+                // best-known answer only to a player who has teamed up with
+                // it -- grouped or guilded now (senderIsAlly), or friended or
+                // sharing a memory beat (Hs_HasBondWith) -- so the knowledge
+                // is a reason to befriend a veteran, not a property of every
+                // bot. Never for an event: its "sender" is not a player who
+                // asked anything. The query runs only when it could matter.
+                std::string expertDomain;
+                if (!req.isEvent && !archetypeInfo.expertDomain.empty() &&
+                    (req.senderIsAlly || Hs_HasBondWith(req.botGuid, req.senderGuid)))
+                    expertDomain = archetypeInfo.expertDomain;
+
                 std::string ragLine = Hs_RagContextFor(req.prompt, g_HsRagMaxEntries, g_HsRagMinScore, g_HsRagMaxChars,
-                                                       kHsRagReplyPrefix, /*chatGate=*/true, inConversation);
+                                                       kHsRagReplyPrefix, /*chatGate=*/true, inConversation,
+                                                       expertDomain);
 
                 // Fallback, not an addition: inside a dungeon the instance is
                 // a fact the *game* supplied, so it is addressed by name
@@ -747,7 +761,8 @@ namespace
 
                 if (ragLine.empty() && !req.topicGate.instanceName.empty())
                 {
-                    ragLine = Hs_RagContextForKeys({ req.topicGate.instanceName }, g_HsRagMaxChars);
+                    ragLine = Hs_RagContextForKeys({ req.topicGate.instanceName }, g_HsRagMaxChars,
+                                                   kHsRagReplyPrefix, expertDomain);
                     how     = "instance-keyed";
                 }
 
@@ -757,11 +772,11 @@ namespace
                 // Frost Mage at 1.09 and still producing a generic reply is a
                 // model problem; the same reply with NO BLOCK is a retrieval
                 // problem, and they want opposite fixes.
-                LOG_INFO(kHsLogChat, "[HearthsideChat] Reply RAG: bot {} <- \"{}\" -> {} [{}]",
+                LOG_INFO(kHsLogChat, "[HearthsideChat] Reply RAG: bot {} <- \"{}\" -> {} [{}{}{}]",
                          req.botName, req.prompt,
                          ragLine.empty() ? std::string("NO BLOCK")
                                          : Hs_RagBlockLeadTitle(ragLine, kHsRagReplyPrefix),
-                         how);
+                         how, expertDomain.empty() ? "" : ", expert-eligible ", expertDomain);
 
                 if (!ragLine.empty())
                     personaLine += "\n" + ragLine;
@@ -1275,7 +1290,14 @@ HsReplyRequest Hs_MakeReplyRequest(Player* bot, uint64_t senderGuid, const std::
     {
         gate.inGroup       = true;
         gate.isGroupLeader = group->IsLeader(bot->GetGUID());
+        req.senderIsAlly   = group->IsMember(ObjectGuid(senderGuid));
     }
+    // Guild roster rather than the sender's Player*, so `.hearthside ask`
+    // speaking as an offline guildmate still counts.
+    if (!req.senderIsAlly)
+        if (uint32_t guildId = bot->GetGuildId())
+            if (Guild* guild = sGuildMgr->GetGuildById(guildId))
+                req.senderIsAlly = guild->GetMember(ObjectGuid(senderGuid)) != nullptr;
     if (Map* map = bot->GetMap())
     {
         gate.inInstance = map->IsDungeon() || map->IsRaid();

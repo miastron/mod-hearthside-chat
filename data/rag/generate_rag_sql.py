@@ -9,13 +9,18 @@ The JSON files are the authoring source; SQL is what ships (README.md's
 Two things about the generated file that are deliberate and easy to get
 wrong if you hand-edit it later:
 
-1. It opens with DELETE FROM hside_rag, not a bare INSERT. Every base/*.sql
-   file is SHA1-tracked, and AzerothCore re-applies one whose hash changed
-   (repo CLAUDE.md, "How base/ vs updates/ actually behaves"). This data is
-   *generated* and will change often, so a re-apply has to be a clean reload
-   rather than a duplicate-key crash on the id PRIMARY KEY. That is the
+1. It opens with DROP TABLE + CREATE TABLE, not a bare INSERT. Every
+   base/*.sql file is SHA1-tracked, and AzerothCore re-applies one whose hash
+   changed (repo CLAUDE.md, "How base/ vs updates/ actually behaves"). This
+   data is *generated* and will change often, so a re-apply has to be a clean
+   reload rather than a duplicate-key crash on the id PRIMARY KEY. That is the
    opposite of the other base/hside_*.sql files, which are hand-authored,
    frozen once shipped, and end in a plain INSERT.
+
+   DROP rather than DELETE (2026-10-10) so a schema change ships in this same
+   file: an updates/ ALTER would sort *after* it (CLAUDE.md's filename-order
+   trap), so a re-apply would INSERT into columns that do not exist yet.
+   Nothing but this file ever writes hside_rag, so there is nothing to keep.
 
 2. Regenerating is therefore safe at any time, including on a deployed
    realm: the worst case is that the table is rewritten with the same rows.
@@ -32,6 +37,13 @@ import sys
 RAG = pathlib.Path(__file__).resolve().parent
 OUT = RAG.parent / "sql" / "db-characters" / "base" / "hside_rag.sql"
 
+EXPERT_DOMAINS = {"gold", "pve", "pvp", "general"}
+
+# The reply block is "Things you know about Azeroth: <title> -- <text>" under
+# HearthsideChat.Rag.MaxChars (700). An expert paragraph that alone overruns it
+# is word-truncated, so cap it with room left for the prefix and title.
+EXPERT_MAX_CHARS = 600
+
 HEADER = """-- hside_rag: static WoW world knowledge for the reactive tier and the
 -- idle-time generator (src/hs_rag.h, src/hs_rag_store.cpp).
 --
@@ -44,17 +56,19 @@ HEADER = """-- hside_rag: static WoW world knowledge for the reactive tier and t
 -- re-apply-on-changed-hash behaviour reloads the corpus instead of failing
 -- on a duplicate key. See that script's docstring for the full reasoning.
 
-CREATE TABLE IF NOT EXISTS `hside_rag` (
+DROP TABLE IF EXISTS `hside_rag`;
+
+CREATE TABLE `hside_rag` (
   `id`       VARCHAR(64)  NOT NULL COMMENT 'Stable entry id, unique across every data/rag/*.json file. Also the retriever tie-break, so it must be stable across regenerations.',
   `title`    VARCHAR(128) NOT NULL COMMENT 'What the entry is about, as a player would say it. Weighted above keywords by the scorer, and the key Hs_RagContextForKeys addresses entries by.',
   `content`  TEXT         NOT NULL COMMENT 'The fact paragraph handed to the model, 2-4 plain sentences.',
   `keywords` TEXT         NOT NULL COMMENT 'Comma-separated retrieval handles. Keep tight: a long list dilutes the specificity bonus.',
   `tags`     VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Carried for future filtering; read by nothing today.',
+  `expert_domain`  VARCHAR(16) NOT NULL DEFAULT '' COMMENT 'gold|pve|pvp|general: which hside_archetype.expertise gets expert_content. Empty on most rows.',
+  `expert_content` TEXT        NOT NULL COMMENT 'The best-known answer, swapped in for content for an expert bot talking to a player who earned it. Never indexed. Empty on most rows.',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   COMMENT='Authored world-knowledge corpus retrieved into LLM prompts. Generated from data/rag/*.json.';
-
-DELETE FROM `hside_rag`;
 
 """
 
@@ -83,6 +97,13 @@ def main():
             for field in ("id", "title", "content", "keywords"):
                 if field not in row:
                     problems.append(f"{path.name}: entry missing '{field}': {row.get('id', row)!r}")
+            has_dom, has_txt = bool(row.get("expert_domain")), bool(row.get("expert_content"))
+            if has_dom != has_txt:
+                problems.append(f"{path.name}: {row.get('id')!r} needs both expert_domain and expert_content, or neither")
+            if has_dom and row["expert_domain"] not in EXPERT_DOMAINS:
+                problems.append(f"{path.name}: {row.get('id')!r} expert_domain {row['expert_domain']!r} not in {sorted(EXPERT_DOMAINS)}")
+            if has_txt and len(row["expert_content"]) + len(row.get("title", "")) > EXPERT_MAX_CHARS:
+                problems.append(f"{path.name}: {row.get('id')!r} title + expert_content is over {EXPERT_MAX_CHARS} chars")
             rid = row.get("id", "")
             if rid in seen:
                 problems.append(f"duplicate id '{rid}' in {path.name} (first seen in {seen[rid]})")
@@ -103,9 +124,11 @@ def main():
             current_file = filename
             lines.append(f"-- from {filename}\n")
         lines.append(
-            "INSERT INTO `hside_rag` (`id`, `title`, `content`, `keywords`, `tags`) VALUES "
+            "INSERT INTO `hside_rag` (`id`, `title`, `content`, `keywords`, `tags`, "
+            "`expert_domain`, `expert_content`) VALUES "
             f"({q(row['id'])}, {q(row['title'])}, {q(row['content'])}, "
-            f"{q(','.join(row['keywords']))}, {q(','.join(row.get('tags', [])))});\n"
+            f"{q(','.join(row['keywords']))}, {q(','.join(row.get('tags', [])))}, "
+            f"{q(row.get('expert_domain', ''))}, {q(row.get('expert_content', ''))});\n"
         )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

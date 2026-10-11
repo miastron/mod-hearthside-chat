@@ -4,14 +4,18 @@
     "title": "Leveling Strategies",
     "content": "Resting in an inn or a capital city builds rested experience, which doubles the experience from kills until it runs out. From level 15 the Dungeon Finder queues random dungeons, which pay well for leveling, and bind-to-account heirloom shoulders and chests add 10% experience each. The level cap is 80; Death Knights start at 55.",
     "keywords": ["leveling", "level up", "lvling", "xp", "exp", "rested xp", "rested experience", "leveling fast", "heirloom", "heirlooms", "level fast", "fastest leveling"],
-    "tags": ["general", "leveling", "progression", "efficiency"]
+    "tags": ["general", "leveling", "progression", "efficiency"],
+    "expert_domain": "general",
+    "expert_content": "The fastest way to level is the random dungeon queue mixed with questing while you wait, with heirlooms on and rested XP banked; an heirloom chest and shoulders add 20% XP between them. At 58 go to Outland and at 68 Northrend, skipping old zones you have outlevelled. Don't grind dungeons that have turned grey; the XP falls off fast."
   },
   {
     "id": "general_gold_making",
     "title": "Gold Making Methods",
     "content": "Steady gold at 80 comes from daily quests, up to 25 a day, and from gathering: Saronite and Titanium ore, Frost Lotus and Lichbloom, and Frostweave Cloth always sell on the auction house. Crafters earn by selling glyphs, cut gems, flasks and enchanting materials like Infinite Dust.",
     "keywords": ["gold making", "make gold", "farm gold", "gold farming", "earn gold", "making money", "money"],
-    "tags": ["general", "economy", "gold", "professions"]
+    "tags": ["general", "economy", "gold", "professions"],
+    "expert_domain": "gold",
+    "expert_content": "The best steady gold at 80 is Inscription: mill Northrend herbs and keep the auction house stocked with every glyph, since glyphs sell one at a time all day. Next best is gathering with two gathering professions, Mining and Herbalism, in Sholazar Basin and the Storm Peaks, where Titanium, Frost Lotus and Eternals turn up. Fill the rest of the 25 dailies with the Argent Tournament and Sons of Hodir, and sell Frozen Orbs from heroics rather than spending them."
   },
   {
     "id": "general_ui_customization",
@@ -45,8 +49,10 @@
     "id": "general_gear_optimization",
     "title": "Gear Optimization",
     "content": "Gear is tuned with gems and enchants, including the off-hand. Head enchants are arcanums sold at Revered by factions like the Argent Crusade, Kirin Tor and Knights of the Ebon Blade; shoulder inscriptions come from the Sons of Hodir at Honored and Exalted; and a blacksmith's Eternal Belt Buckle adds one more socket to any belt.",
-    "keywords": ["gear", "gearing", "stat priority", "stats", "upgrade", "upgrades", "bis", "best in slot", "arcanum", "head enchant", "shoulder enchant", "inscription for shoulders", "belt buckle", "eternal belt buckle", "gem", "off", "offhand"],
-    "tags": ["general", "gear", "optimization", "stats"]
+    "keywords": ["gear", "gearing", "stat priority", "stats", "upgrade", "upgrades", "bis", "best in slot", "arcanum", "head enchant", "shoulder enchant", "inscription for shoulders", "belt buckle", "eternal belt buckle", "gem", "off", "offhand", "hit cap"],
+    "tags": ["general", "gear", "optimization", "stats"],
+    "expert_domain": "pve",
+    "expert_content": "Get to the hit cap first: 263 rating for melee special attacks and 446 for spells against a raid boss. Melee also wants 26 expertise, and tanks need 540 defense, 689 rating, to be crit-immune. Gem your main stat in every socket and only follow a socket bonus if it is worth more than the stat you give up. For the meta gem, use Relentless Earthsiege for physical damage, Chaotic Skyflare for casters and Austere Earthsiege for tanks."
   },
   {
     "id": "general_patch_changes",
@@ -67,14 +73,18 @@
     "title": "Managing Multiple Characters",
     "content": "You can have up to 10 characters on a realm and 50 across the account. Bind-to-account heirlooms can be mailed between your characters on the realm, and a Death Knight unlocks once one of them reaches level 55. Many players park a bank alt in a capital to hold materials and run auctions.",
     "keywords": ["alt", "alts", "altoholic", "bank alt", "alt character", "character slots", "how many characters"],
-    "tags": ["general", "alts", "management", "utility"]
+    "tags": ["general", "alts", "management", "utility"],
+    "expert_domain": "general",
+    "expert_content": "Keep one bank alt in a capital with a mailbox and auction house for materials and sales. Mail heirlooms to each new alt, and pick professions that feed your main, such as gathering on alts and crafting on the main. Rest every alt in an inn so they always have rested XP."
   },
   {
     "id": "general_endgame_content",
     "title": "Endgame and Raids",
     "content": "At level 80 the endgame is heroic five-mans, raids, arenas, Wintergrasp, daily quests and reputation. The raids are Naxxramas, Obsidian Sanctum, Eye of Eternity, Vault of Archavon, Ulduar, Trial of the Crusader, Onyxia's Lair, Icecrown Citadel and Ruby Sanctum; Icecrown Citadel is the top tier and ends with the Lich King.",
     "keywords": ["endgame", "end game", "max level", "level cap", "raids"],
-    "tags": ["general", "endgame", "content", "variety"]
+    "tags": ["general", "endgame", "content", "variety"],
+    "expert_domain": "pve",
+    "expert_content": "Fresh 80s should skip straight past Naxxramas and Ulduar: run heroics and the Icecrown five-mans, buy tier 9 with Triumph, then go into Trial of the Crusader and Icecrown Citadel, where the gear is. Hit the weekly raid quest and Vault of Archavon every week, and get attuned to the content your guild is actually on rather than doing it in order."
   },
   {
     "id": "general_learning_basics",
@@ -102,7 +112,9 @@
     "title": "Questing Efficiently",
     "content": "Since patch 3.3 the world map and minimap show where each tracked quest's objectives are, so a quest addon is optional. The quest log holds 25 quests, and up to 25 daily quests can be completed per day. Picking up every quest in a hub before heading out saves the most travel.",
     "keywords": ["questing", "quest tracking", "quest objectives", "quest map", "daily cap", "quest tracker"],
-    "tags": ["general", "questing", "efficiency", "progression"]
+    "tags": ["general", "questing", "efficiency", "progression"],
+    "expert_domain": "general",
+    "expert_content": "Grab every quest in a hub, kill along the way to quest objectives, and turn in everything at once before moving on. Skip group quests if you are alone, and abandon anything that sends you far from your route. Set your hearthstone to the hub you will come back to most."
   },
   {
     "id": "general_inventory_management",
@@ -116,20 +128,26 @@
     "title": "Reputation Grinding Strategies",
     "content": "In Northrend, wearing the tabard of the Argent Crusade, Kirin Tor, Knights of the Ebon Blade or Wyrmrest Accord in a level-80 dungeon sends that dungeon's reputation to the faction, called championing. Factions without a tabard, like the Sons of Hodir, rise only through quests and dailies, and humans gain 10% more reputation from Diplomacy.",
     "keywords": ["rep grind", "reputation grind", "grind rep", "rep farm", "farm rep", "championing", "champion tabard", "kirin tor rep", "hodir rep", "sons of hodir rep", "diplomacy"],
-    "tags": ["general", "reputation", "grinding", "progression"]
+    "tags": ["general", "reputation", "grinding", "progression"],
+    "expert_domain": "general",
+    "expert_content": "Wear the tabard of the faction you need when you run level-80 heroics: championing gives far more reputation than the dailies alone. Sons of Hodir is dailies only, so start it early. Kirin Tor, Argent Crusade, Wyrmrest Accord and Knights of the Ebon Blade sells the head enchants at Revered, and Sons of Hodir at Exalted gives the best shoulder enchant."
   },
   {
     "id": "general_raid_preparation",
     "title": "Preparing for Raids",
     "content": "Raiders bring a flask, which lasts an hour and stays through death, plus food; a cook's Fish Feast feeds the whole raid at once. Repair before the first pull, and since raid lockouts reset once a week, check whether the group is on a fresh or a saved raid ID before joining.",
     "keywords": ["raid prep", "raid ready", "pre raid", "fish feast", "raid consumables", "raid requirements"],
-    "tags": ["general", "raids", "preparation", "strategy"]
+    "tags": ["general", "raids", "preparation", "strategy"],
+    "expert_domain": "pve",
+    "expert_content": "Flask for your role: Endless Rage for physical damage, Frost Wyrm for spell power, Stoneblood for tanks, Pure Mojo for healers who need mana. Eat the raid's Fish Feast, drink a Potion of Speed or Wild Magic just before the pull and another during the fight, since the potion cooldown does not start until combat ends. Show up repaired, gemmed and enchanted, with reagents, having read the boss fights."
   },
   {
     "id": "general_pvp_preparation",
     "title": "PvP Preparation Tips",
     "content": "For PvP, wear gear with resilience, which cuts critical strikes and damage taken from players, and carry the PvP trinket: the Medallion of the Alliance or Medallion of the Horde. It breaks stuns, fears and other crowd control on a 2-minute cooldown; humans' Every Man for Himself does the same.",
     "keywords": ["pvp trinket", "medallion of the alliance", "medallion of the horde", "pvp prep", "break cc", "cc break"],
-    "tags": ["general", "pvp", "preparation", "combat"]
+    "tags": ["general", "pvp", "preparation", "combat"],
+    "expert_domain": "pvp",
+    "expert_content": "Set up macros before you queue: focus target, cast-at-focus for crowd control and interrupts, and a stopcasting interrupt. Trinket the crowd control that would get you killed, not the first one you see, and save your defensive cooldowns for the moment your team is at its lowest. Having healers on a different target than your damage keeps a fight under control."
   }
 ]

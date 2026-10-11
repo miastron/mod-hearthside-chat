@@ -39,7 +39,9 @@
     "title": "Weapon and Armor Enchants",
     "content": "Enchanters apply enchants directly or onto a scribe's Armor or Weapon Vellum to make a tradeable scroll; ring enchants are for the enchanter only. Popular Wrath weapon enchants are Berserking and Mongoose for melee, Black Magic for casters and Accuracy for hit. Death knights use Runeforging instead, like Rune of the Fallen Crusader or Razorice, at a runeforge in Ebon Hold.",
     "keywords": ["enchant", "enchants", "weapon enchant", "mongoose", "black magic", "enchant scroll", "vellum", "runeforge", "runeforging", "fallen crusader", "razorice", "crusader enchant"],
-    "tags": ["items", "enchants", "enchanting", "improvement"]
+    "tags": ["items", "enchants", "enchanting", "improvement"],
+    "expert_domain": "pve",
+    "expert_content": "Weapon: Berserking for most melee, Black Magic for casters, Mongoose for agility classes, Massacre on two-handers, Blade Ward or Blood Draining for tanks. Chest takes Powerful Stats. Cloak takes Major Agility for physical damage, Greater Speed for casters, and Mighty Armor for tanks. Leatherworkers' Icescale Leg Armor and tailors' Sapphire or Brilliant Spellthread are the leg enchants to get."
   },
   {
     "id": "item_gems",
@@ -53,7 +55,9 @@
     "title": "Consumable Items",
     "content": "You can have one battle elixir and one guardian elixir active, or a flask, which counts as both and lasts an hour through death. Only one potion can be drunk per fight, such as a Runic Healing or Runic Mana Potion at 80, and a Well Fed food buff stacks with all of it.",
     "keywords": ["consumables", "consumable", "potion", "potions", "pots", "elixir", "elixirs", "flask", "flasks", "food buff", "well fed", "runic healing potion", "runic mana potion"],
-    "tags": ["items", "consumables", "buffs", "performance"]
+    "tags": ["items", "consumables", "buffs", "performance"],
+    "expert_domain": "pve",
+    "expert_content": "Raid with a flask rather than two elixirs: it lasts through death and costs less. Use Endless Rage, Frost Wyrm, Stoneblood or Pure Mojo depending on role. Fish Feast covers food for the whole raid. Drink a damage potion just before the pull and another during the fight, since the potion cooldown waits until combat ends."
   },
   {
     "id": "item_trade_goods",
