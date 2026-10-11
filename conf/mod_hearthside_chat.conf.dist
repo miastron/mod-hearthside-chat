@@ -1076,6 +1076,40 @@ HearthsideChat.Experience.MoneyMinCopper = 100000
 #     Default:     25
 HearthsideChat.Experience.SkillStep = 25
 
+# --------------------------------------------
+# LIFE MODULE STEERING (mod-playerbots-pvp-life / mod-playerbots-city-life)
+# --------------------------------------------
+# Only does anything when mod-playerbots-pvp-life is built into the same
+# worldserver (the default static modules build). Without it, these keys
+# are ignored.
+#
+# PvP Life and City Life borrow random bots for duels, skirmishes and city
+# crowds, picking at random. This makes PvP Life mostly draw bots whose
+# personality fits it, while City Life still sees every personality:
+#
+#   - Each hour, ClaimPercent of the bots *not* on the PvP list are held out
+#     of both modules (a different random set every hour).
+#   - If PvP Life still ends up with more non-PvP bots than PvP ones,
+#     the extra ones are sent back and held out for 10 minutes.
+#
+# It only decides which bots those modules may borrow; it never moves a bot.
+# Their own status commands show these holds as "Artisans" reservations.
+
+# HearthsideChat.LifeModules.PvPArchetypes
+#     Description: Comma-separated personalities PvP Life should mostly
+#                  draw. Empty turns steering off entirely.
+#     Default:     "PVP_SERIOUS,PVP_CASUAL,TROLL_MILD,TROLL_AGGRESSIVE"
+HearthsideChat.LifeModules.PvPArchetypes = "PVP_SERIOUS,PVP_CASUAL,TROLL_MILD,TROLL_AGGRESSIVE"
+
+# HearthsideChat.LifeModules.ClaimPercent
+#     Description: Percent of the other personalities held out each hour
+#                  (0-100). Higher means PvP Life needs fewer send-backs
+#                  but cities lean more toward PvP/troll bots; 0 relies on
+#                  send-backs alone. At 50, roughly 41% of city bots are
+#                  PvP/troll types (26% with steering off).
+#     Default:     50
+HearthsideChat.LifeModules.ClaimPercent = 50
+
 
 # --------------------------------------------
 # IDLE-TIME GENERATOR

@@ -262,6 +262,9 @@ uint32_t g_HsExperienceLootMinQuality = 3;       // ITEM_QUALITY_RARE
 uint32_t g_HsExperienceMoneyMinCopper = 100000;  // 10 gold
 uint32_t g_HsExperienceSkillStep      = 25;
 
+std::string g_HsLifePvpArchetypes = "PVP_SERIOUS,PVP_CASUAL,TROLL_MILD,TROLL_AGGRESSIVE";
+uint32_t    g_HsLifeClaimPercent  = 50;
+
 bool        g_HsGeneratorEnabled              = false;
 bool        g_HsGeneratorCardsEnabled         = true;
 std::string g_HsGeneratorLLMApiType           = "llamacpp";
@@ -472,6 +475,10 @@ void Hs_LoadHearthsideChatConfig()
     g_HsExperienceLootMinQuality = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.LootMinQuality", 3);
     g_HsExperienceMoneyMinCopper = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.MoneyMinCopper", 100000);
     g_HsExperienceSkillStep      = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Experience.SkillStep", 25);
+
+    g_HsLifePvpArchetypes = sConfigMgr->GetOption<std::string>("HearthsideChat.LifeModules.PvPArchetypes",
+        "PVP_SERIOUS,PVP_CASUAL,TROLL_MILD,TROLL_AGGRESSIVE");
+    g_HsLifeClaimPercent  = std::min<uint32_t>(sConfigMgr->GetOption<uint32_t>("HearthsideChat.LifeModules.ClaimPercent", 50), 100);
 
     g_HsGeneratorEnabled                    = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Enable", false);
     g_HsGeneratorCardsEnabled               = sConfigMgr->GetOption<bool>("HearthsideChat.Generator.Cards.Enable", true);
