@@ -12,8 +12,8 @@
 // console alike.
 // Whisper `botName` as `senderName` would (the body of `.hearthside ask`),
 // shared with the HTTP API's /api/ask. World thread only. Returns "" on
-// success, else why not; on success `senderName` holds the stored spelling.
-std::string Hs_AskBot(std::string& senderName, const std::string& botName, const std::string& text);
+// success, else why not; on success both names hold the stored spelling.
+std::string Hs_AskBot(std::string& senderName, std::string& botName, const std::string& text);
 
 class HsCommandScript : public CommandScript
 {

@@ -328,12 +328,12 @@ namespace
 
             // Hs_AskBot touches Player objects: world thread, bounded wait, the same
             // shared-promise shape as RequireBotGuid.
-            struct Result { std::string error; std::string sender; };
+            struct Result { std::string error; std::string sender; std::string bot; };
             auto answer = std::make_shared<std::promise<Result>>();
             std::future<Result> done = answer->get_future();
             if (!Hs_DeferToWorldThread([answer, sender, bot, text]() mutable {
                     std::string error = Hs_AskBot(sender, bot, text);
-                    answer->set_value({ error, sender });
+                    answer->set_value({ error, sender, bot });
                 }) ||
                 done.wait_for(kWorldThreadWait) != std::future_status::ready)
             {
@@ -346,7 +346,7 @@ namespace
                 SendError(res, 404, r.error);
                 return;
             }
-            SendJson(res, hs_json{ {"sent", true}, {"sender", r.sender}, {"bot", bot},
+            SendJson(res, hs_json{ {"sent", true}, {"sender", r.sender}, {"bot", r.bot},
                                    {"ts", std::chrono::duration_cast<std::chrono::milliseconds>(
                                               std::chrono::system_clock::now().time_since_epoch()).count()} });
         });

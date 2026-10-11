@@ -26,6 +26,7 @@
 #include "ChatCommand.h"
 #include "DatabaseEnv.h"
 #include "ObjectAccessor.h"
+#include "ObjectMgr.h" // normalizePlayerName
 #include "Player.h"
 #include "PlayerbotAI.h"
 #include "PlayerbotMgr.h"
@@ -555,13 +556,22 @@ namespace
     }
 }
 
-std::string Hs_AskBot(std::string& senderName, const std::string& botName, const std::string& text)
+std::string Hs_AskBot(std::string& senderName, std::string& botName, const std::string& text)
 {
-    Player* bot = ObjectAccessor::FindPlayerByName(botName);
-    if (!bot || !bot->IsInWorld() || !Hs_IsBot(bot))
-        return "Bot '" + botName + "' not found, not online, or not a bot.";
+    if (!g_HsEnable)
+        return "HearthsideChat.Enable is off.";
 
-    ObjectGuid senderGuid = sCharacterCache->GetCharacterGuidByName(senderName);
+    // Hs_IsEligibleBot, not Hs_IsBot: an ExcludeNames bot is never spoken through,
+    // and a real whisper to one gets no reply either.
+    Player* bot = ObjectAccessor::FindPlayerByName(botName);
+    if (!bot || !bot->IsInWorld() || !Hs_IsEligibleBot(bot))
+        return "Bot '" + botName + "' not found, not online, not a bot, or in ExcludeNames.";
+    botName = bot->GetName();
+
+    // The character cache is keyed on the stored capitalization; the player
+    // name map FindPlayerByName uses is not, so normalize to match.
+    std::string lookup = senderName;
+    ObjectGuid senderGuid = normalizePlayerName(lookup) ? sCharacterCache->GetCharacterGuidByName(lookup) : ObjectGuid::Empty;
     if (senderGuid.IsEmpty() || Hs_IsBotGuid(senderGuid.GetRawValue()))
         return "Sender '" + senderName + "' not found or is a bot.";
     if (CharacterCacheEntry const* entry = sCharacterCache->GetCharacterCacheByGuid(senderGuid))
