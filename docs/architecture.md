@@ -215,21 +215,15 @@ touch:
   the world thread may read or do, such as whether a GUID is a bot or sending a whisper, it asks for
   through the same deferral and waits, bounded, for the answer.
 
-## Life-module steering
+## Life modules
 
-`mod-playerbots-city-life` and `mod-playerbots-pvp-life` (third-party, optional) borrow random bots
-for city crowds and world PvP, picking at random, and share one claim registry so they never take
-each other's bots. A claim blocks a bot from both, and neither offers a per-module filter, so
-`hs_lifesteer.cpp` steers PvP Life toward PvP/troll archetypes from outside, without patching them:
-
-- **Rotating claims.** Each hour, `ClaimPercent` of the online bots *not* on the PvP list are
-  claimed, a fresh GUID-hashed subset per hour, so every archetype still reaches the cities.
-- **Majority releases.** Every second, if PvP Life holds more misfits than fitting bots, the surplus
-  is handed back through `DisengageParticipant` and claimed for 10 minutes so it is not redrawn.
-
-City Life is never released from. The trade is one dial: a higher `ClaimPercent` means fewer
-releases but cities that lean further toward PvP/troll bots. It runs on the world thread
-(`OnUpdate`), as do both Life modules' own updates.
+`mod-hearthside-city` and `mod-hearthside-pvp` (forks of `mod-playerbots-city-life`/`-pvp-life`)
+borrow bots for city crowds and world PvP and share one claim registry (`LifeBotReservation.h`) so
+they never take each other's bots. Each picks *which* bots by archetype in its own candidate loader:
+`CityLife.Bots.Archetypes` / `PvPLife.Bots.Archetypes` list the enum names it may borrow, checked
+against `Hs_ArchetypeForBot` via `Hs_ArchetypeMaskForNames`. This module exports those two
+functions and nothing else to them; they find `hs_archetype.h` with `__has_include`, so each still
+builds, unfiltered, without it.
 
 ## Identity rings
 

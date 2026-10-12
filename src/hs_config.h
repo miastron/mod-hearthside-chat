@@ -454,12 +454,6 @@ extern uint32_t g_HsExperienceMoneyMinCopper;  // single-gain floor, in copper
 extern uint32_t g_HsExperienceSkillStep;       // record only on multiples of this skill value
 
 // --------------------------------------------
-// Archetype steering for mod-playerbots-pvp-life / -city-life
-// (hs_lifesteer.h). Inert unless mod-playerbots-pvp-life is in the build.
-extern std::string g_HsLifePvpArchetypes;  // comma-separated enum names PvP Life should mostly draw; empty disables steering
-extern uint32_t    g_HsLifeClaimPercent;   // 0-100: share of other-archetype bots held out of both Life modules each hour
-
-// --------------------------------------------
 // Idle-time generator. Its own LLM endpoint, kept separate from the
 // reactive path's, regardless of whether they point at the same container.
 // Defaults to disabled: autonomous, GPU-spending, DB-writing background

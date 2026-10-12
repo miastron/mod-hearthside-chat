@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 // Archetype content (weights, care, verbosity, etc.) loads from SQL
 // (hside_archetype) rather than a compiled table, so it can be retuned
@@ -88,6 +89,13 @@ HsArchetypeInfo Hs_ArchetypeInfoFor(HsArchetype a);
 // separately-maintained name list. Returns false (out untouched) if no
 // loaded entry's enumName matches.
 bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out);
+
+// Comma-separated enum names (whitespace around each ignored) to a bitmask
+// with bit `1u << HsArchetype` set per listed archetype. Names matching
+// nothing are appended to `unknown` for the caller to log. An empty list
+// gives 0, which callers read as "no filter". For mod-hearthside-city/-pvp,
+// which pick the bots they borrow by archetype (their *.Archetypes keys).
+uint32_t Hs_ArchetypeMaskForNames(const std::string& csv, std::vector<std::string>& unknown);
 
 // GM override: pins a bot to one specific stock archetype, bypassing the
 // GUID-weighted draw entirely (Hs_ArchetypeForBot checks this first).

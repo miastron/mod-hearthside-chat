@@ -13,7 +13,6 @@
 #include "hs_command.h"
 #include "hs_http_server.h"
 #include "hs_identity_store.h"
-#include "hs_lifesteer.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_metrics.h"
@@ -416,6 +415,4 @@ void Addmod_hearthside_chatScripts()
     new HsIdentityLifecycleWorldScript();
     new HsHttpServerWorldScript();
     new HsMetricsWorldScript();
-    // Registers nothing unless mod-playerbots-pvp-life is in the build.
-    Hs_AddLifeSteerScripts();
 }

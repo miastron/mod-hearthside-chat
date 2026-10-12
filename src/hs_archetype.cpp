@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <mutex>
+#include <sstream>
 #include <unordered_map>
 
 namespace
@@ -87,6 +88,26 @@ bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out)
         }
     }
     return false;
+}
+
+uint32_t Hs_ArchetypeMaskForNames(const std::string& csv, std::vector<std::string>& unknown)
+{
+    uint32_t mask = 0;
+    std::stringstream ss(csv);
+    std::string token;
+    while (std::getline(ss, token, ','))
+    {
+        size_t begin = token.find_first_not_of(" 	");
+        if (begin == std::string::npos)
+            continue;
+        token = token.substr(begin, token.find_last_not_of(" 	") - begin + 1);
+        HsArchetype a;
+        if (Hs_ArchetypeForName(token, a))
+            mask |= 1u << static_cast<uint32_t>(a);
+        else
+            unknown.push_back(token);
+    }
+    return mask;
 }
 
 void Hs_SetArchetypeOverride(uint64_t botGuid, HsArchetype archetype)
