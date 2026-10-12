@@ -175,6 +175,8 @@ namespace
         uint64_t                              counterpartGuid = 0;
         std::string                           counterpartName;
         std::chrono::steady_clock::time_point at;
+        bool                                  duelEnd  = false; // won or lost a duel against the counterpart
+        bool                                  answered = false; // that duel's one comeback is spent (Hs_MaybeAnswerDuelLine)
     };
 
     // Two minutes: long enough to cover "gg" typed after a duel or a "wb"
@@ -186,10 +188,11 @@ namespace
     std::mutex                                  g_RecentEventMutex;
     std::unordered_map<uint64_t, HsRecentEvent> g_RecentEvents;
 
-    void NoteRecentEvent(Player* bot, std::string const& line, Player* counterpart)
+    void NoteRecentEvent(Player* bot, std::string const& line, Player* counterpart, bool duelEnd = false)
     {
         HsRecentEvent entry;
         entry.line = line;
+        entry.duelEnd = duelEnd;
         if (counterpart && counterpart != bot)
         {
             entry.counterpartGuid = counterpart->GetGUID().GetRawValue();
@@ -275,7 +278,8 @@ namespace
         // gates below decide about a reaction (see HsRecentEvent above).
         for (auto const& actor : actors)
             if (EligibleBot(actor.bot))
-                NoteRecentEvent(actor.bot, actor.trigger, actor.counterpart);
+                NoteRecentEvent(actor.bot, actor.trigger, actor.counterpart,
+                                actor.affinityType == HsEventType::DuelWon || actor.affinityType == HsEventType::DuelLost);
 
         // A ceiling is permission, not budget. Events have no corpus
         // fallback: a canned line reacting to a specific death or roll
@@ -1139,7 +1143,11 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
     // relevel through this signature, and that noise is accepted
     // (Claude/archive/PLAN-ARBITER.md §3).
     uint8 newLevel = player->GetLevel();
-    if (newLevel <= oldlevel)
+    // Three or more levels at once is a RandomBotLevelMgr bracket relevel,
+    // not a ding (realm 2026-10-12: a level 9 bot "reached level 63" and drew
+    // "U better keep up"). Same character-replaced reasoning as a drop below.
+    bool const relevel = newLevel > oldlevel + 2 && Hs_IsBot(player);
+    if (newLevel <= oldlevel || relevel)
     {
         // A *drop* is how mod-playerbots' recycler shows up here:
         // RandomBotLevelMgr::ResetBot knocks a bot back down a bracket in
@@ -1149,7 +1157,7 @@ void HsEventLevelHandler::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
         // signal that covers every bot: hside_identity's own retirement
         // sweep only walks carded rows. Every map it clears is under its own
         // mutex, so this one runs inline.
-        if (newLevel < oldlevel && Hs_IsBot(player))
+        if ((newLevel < oldlevel || relevel) && Hs_IsBot(player))
             Hs_ForgetBotHistory(player->GetGUID().GetRawValue());
         return;
     }
@@ -1581,6 +1589,60 @@ std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid)
     if (senderGuid && senderGuid == recent.counterpartGuid && !recent.counterpartName.empty())
         out += "\nThe one talking to you now is " + recent.counterpartName + ".";
     return out;
+}
+
+bool Hs_HasRecentEvent(uint64_t botGuid)
+{
+    std::lock_guard<std::mutex> lock(g_RecentEventMutex);
+    auto it = g_RecentEvents.find(botGuid);
+    return it != g_RecentEvents.end() &&
+           std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - it->second.at).count()
+               <= kRecentEventWindowSeconds;
+}
+
+// One comeback per duel, a third of the time: "gg, u got lucky" -> "wasn't
+// luck". Not every taunt gets one, and the comeback never gets one back. A
+// starting judgement, same status as the bias table.
+constexpr uint32_t kDuelComebackPercent = 35;
+
+void Hs_MaybeAnswerDuelLine(Player* speaker, uint64_t opponentGuid, std::string const& text)
+{
+    if (!g_HsEnable || !speaker || !opponentGuid || text.empty() || !HsTierAllows(g_HsMaxTierEvents, HsTier::Inference))
+        return;
+
+    uint64_t const speakerGuid = speaker->GetGUID().GetRawValue();
+    {
+        // Both sides must still hold this duel as their latest event, and
+        // claiming it spends it for both, so the comeback (delivered as an
+        // event line itself) can never draw another.
+        std::lock_guard<std::mutex> lock(g_RecentEventMutex);
+        auto mine   = g_RecentEvents.find(speakerGuid);
+        auto theirs = g_RecentEvents.find(opponentGuid);
+        if (mine == g_RecentEvents.end() || theirs == g_RecentEvents.end())
+            return;
+        HsRecentEvent& a = mine->second;
+        HsRecentEvent& b = theirs->second;
+        if (!a.duelEnd || !b.duelEnd || a.answered || b.answered ||
+            a.counterpartGuid != opponentGuid || b.counterpartGuid != speakerGuid)
+            return;
+        auto const now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - b.at).count() > kRecentEventWindowSeconds)
+            return;
+        a.answered = b.answered = true;
+    }
+    if (urand(1, 100) > kDuelComebackPercent)
+        return;
+
+    Player* opponent = ObjectAccessor::FindPlayer(ObjectGuid(opponentGuid));
+    if (!EligibleBot(opponent) || !opponent->IsAlive() || !opponent->IsWithinDistInMap(speaker, g_HsSayDistance))
+        return;
+
+    // Answered like any line said to it after the duel: the worker appends
+    // the duel state line and "The one talking to you now is X." -- the
+    // post-event follow-up shape the tune already trains on.
+    HsReplyRequest request = Hs_MakeReplyRequest(opponent, speaker, HsReplyChannel::Say, text);
+    request.isEvent = true;
+    Hs_TryEnqueue(std::move(request));
 }
 
 uint32_t Hs_EventsFiredThisSession()

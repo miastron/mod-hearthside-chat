@@ -1,4 +1,5 @@
 #include "hs_ambient.h"
+#include "hs_event.h"
 #include "hs_archetype.h"
 #include "hs_bot.h"
 #include "hs_channel.h"
@@ -100,7 +101,12 @@ namespace
     {
         if (!bot || !bot->IsInWorld() || !Hs_IsEligibleBot(bot))
             return false;
-        if (!bot->IsAlive() || bot->IsInCombat())
+        if (!bot->IsAlive() || bot->IsInCombat() || bot->duel)
+            return false;
+        // Just dueled, died, dinged...: a stock line about Stormwind's flight
+        // paths reads as not having noticed (realm 2026-10-12, right after a
+        // duel win and its achievement).
+        if (Hs_HasRecentEvent(bot->GetGUID().GetRawValue()))
             return false;
         // A bot mid-scene must not interrupt itself to muse aloud. The two
         // producers share speakers and a 30-second cadence, so without this

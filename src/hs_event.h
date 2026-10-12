@@ -286,6 +286,16 @@ Player* Hs_RealPlayerResurrecting(Player* bot);
 // thread (the reactive worker reads it while hooks write it).
 std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid);
 
+// True while this bot's latest event is under two minutes old (the window
+// Hs_RecentEventContext uses). Ambient lines skip such a bot: a stock musing
+// right after a duel or a death reads as not having noticed it.
+bool Hs_HasRecentEvent(uint64_t botGuid);
+
+// World thread (Hs_DeliverPending). `speaker` just said `text` in /say as
+// its reaction to a duel against `opponentGuid`; sometimes the opponent, if
+// it is a bot in earshot, answers it once. See hs_event.cpp.
+void Hs_MaybeAnswerDuelLine(Player* speaker, uint64_t opponentGuid, std::string const& text);
+
 // Read-only status for the `.hearthside status` GM command, the same
 // visibility problem hs_opener.h's counter solves, for the same reason:
 // this subsystem is invisible when nothing is happening in a reachable

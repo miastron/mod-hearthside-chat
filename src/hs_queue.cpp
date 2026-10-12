@@ -42,6 +42,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstring>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -2170,6 +2171,11 @@ void Hs_DeliverPending()
         if (reply.isPrimaryLine)
             Hs_NoteBotLine(bot, reply.channel, reply.channelKind, reply.text, reply.chainScopeId != 0,
                            reply.chainScopeId != 0 ? reply.senderGuid : 0);
+
+        // /say is not a chaining surface, but a duel's end may draw one
+        // comeback from the other duelist (Hs_MaybeAnswerDuelLine).
+        if (reply.isPrimaryLine && reply.channel == HsReplyChannel::Say && std::strcmp(reply.source, "event") == 0)
+            Hs_MaybeAnswerDuelLine(bot, reply.senderGuid, reply.text);
     }
 }
 
