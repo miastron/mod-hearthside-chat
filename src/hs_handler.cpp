@@ -39,6 +39,8 @@
 #include "Random.h"
 #include "SharedDefines.h"
 #include "SpellAuraDefines.h"
+#include "CharacterCache.h"     // Hs_DispatchDirectReply: the GM-ask sender's account
+#include "WorldSession.h"       // TryDispatch: the sender's account, for the cloud-fact limit
 #include "SpellAuraEffects.h"
 #include "SpellInfo.h"
 
@@ -509,8 +511,12 @@ namespace
     // TryCorpusFallback rather than silence. Below corpus, or if the
     // corpus pick comes back empty, the request is simply not admitted --
     // silence.
+    // cloudAccountId: the account a cloud fact is counted against (hs_cloud.h),
+    // or 0 when this line may never reach the cloud -- the fail-safe's first
+    // layer. Only the Player* overload below, reached from the chat hooks, and
+    // Hs_DispatchDirectReply with Cloud.AllowGmAsk ever pass one.
     void TryDispatch(Player* bot, uint64_t senderGuid, const std::string& senderName, const std::string& msg,
-                     HsReplyChannel channel)
+                     HsReplyChannel channel, uint32_t cloudAccountId)
     {
         uint64_t botGuid    = bot->GetGUID().GetRawValue();
         bool     inCombat   = bot->IsInCombat(); // context modulates care downward in combat
@@ -535,21 +541,33 @@ namespace
         // here, not for the reflex/grounded/corpus tiers above: those never
         // reach the LLM prompt they feed. A plain direct reply sets none of
         // the request's kind flags.
-        if (!Hs_TryEnqueue(Hs_MakeReplyRequest(bot, senderGuid, senderName, channel, Hs_ExpandChatShorthand(msg)))
-            && g_HsDebugEnabled)
+        HsReplyRequest request = Hs_MakeReplyRequest(bot, senderGuid, senderName, channel, Hs_ExpandChatShorthand(msg));
+        request.cloudAccountId = cloudAccountId;
+        if (!Hs_TryEnqueue(std::move(request)) && g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Enqueue rejected for bot {}.", bot->GetName());
     }
 
     void TryDispatch(Player* bot, Player* sender, const std::string& msg, HsReplyChannel channel)
     {
-        TryDispatch(bot, sender->GetGUID().GetRawValue(), sender->GetName(), msg, channel);
+        // A human with a live client session: the only sender whose own words
+        // may reach the cloud.
+        uint32_t cloudAccountId = 0;
+        if (!Hs_IsBot(sender))
+            if (WorldSession* session = sender->GetSession())
+                cloudAccountId = session->GetAccountId();
+        TryDispatch(bot, sender->GetGUID().GetRawValue(), sender->GetName(), msg, channel, cloudAccountId);
     }
 }
 
 void Hs_DispatchDirectReply(Player* bot, uint64_t senderGuid, const std::string& senderName,
                             const std::string& msg, HsReplyChannel channel)
 {
-    TryDispatch(bot, senderGuid, senderName, msg, channel);
+    // A GM speaking as someone: cloud only with its own switch, counted
+    // against that character's account. Hs_AskBot already refuses a bot sender.
+    uint32_t cloudAccountId = 0;
+    if (g_HsCloudAllowGmAsk && !Hs_IsBotGuid(senderGuid))
+        cloudAccountId = sCharacterCache->GetCharacterAccountIdByGuid(ObjectGuid(senderGuid));
+    TryDispatch(bot, senderGuid, senderName, msg, channel, cloudAccountId);
 }
 
 // LANG_ADDON is checked first in all five hooks below. An addon message is

@@ -1,6 +1,7 @@
 #include "hs_ambient.h"
 #include "hs_archetype_store.h"
 #include "hs_bridge.h"
+#include "hs_cloud.h"
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_engagement.h"
@@ -175,8 +176,10 @@ namespace
     {
     public:
         HsQueueLifecycleWorldScript() : WorldScript("HsQueueLifecycleWorldScript") {}
-        void OnStartup() override { Hs_QueueStartup(); }
-        void OnShutdown() override { Hs_QueueShutdown(); }
+        // The cloud-fact thread (hs_cloud.h) shares this lifecycle: the
+        // worker is its only producer, so it starts first and stops last.
+        void OnStartup() override { Hs_CloudStartup(); Hs_QueueStartup(); }
+        void OnShutdown() override { Hs_QueueShutdown(); Hs_CloudShutdown(); }
     };
 
     // Same lifecycle shape for the idle-time generator's background thread.

@@ -114,6 +114,18 @@ struct HsReplyRequest
     // player whose message triggers the abort.
     uint64_t chainScopeId = 0;
     uint32_t chainSeq     = 0;
+
+    // ---- cloud facts (hs_cloud.h) ----
+    // Set only by hs_handler.cpp, for a real player's own chat (or a GM ask
+    // with Cloud.AllowGmAsk): the account the daily limit is counted against.
+    // 0 = this request may never reach the cloud. Hs_TryEnqueue and
+    // hs_cloud.cpp each re-check it independently; see the plan's fail-safe.
+    uint32_t    cloudAccountId = 0;
+    // Filled by the cloud thread: "Title -- sentence." for the prompt, or
+    // empty. cloudDone marks a request that has already been through it, so
+    // the worker routes each request at most once.
+    std::string cloudFact;
+    bool        cloudDone = false;
 };
 
 // World thread only. Fills the identity and bot-state halves of a request

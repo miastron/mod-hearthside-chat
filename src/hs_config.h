@@ -499,6 +499,35 @@ extern bool         g_HsHttpControlEnable;        // gates the routes that chang
 extern std::string g_HsHttpAllowedNetworks;       // comma-separated IPv4 CIDRs; empty allows nobody
 extern std::string g_HsHttpConvoLogPath;          // the file /api/replies reads
 
+// --------------------------------------------
+// Cloud facts (hs_cloud.h, Claude/PLAN-CLOUD-FACTS.md): a real player's
+// off-topic question gets one fact from a cloud model, which the tuned model
+// then voices. All live-reload. The strings are read on the worker and cloud
+// threads, so go through Hs_CloudStringsSnapshot.
+// --------------------------------------------
+extern bool         g_HsCloudEnable;
+extern std::string g_HsCloudApiKey;               // empty keeps the feature off
+extern std::string g_HsCloudModel;
+extern std::string g_HsCloudEffort;               // low | medium | high
+extern std::string g_HsCloudRouter;               // local | model
+extern uint32_t     g_HsCloudTimeoutSeconds;
+extern uint32_t     g_HsCloudDailyLimitPerAccount;
+extern uint32_t     g_HsCloudCacheDays;           // answers given without a search
+extern bool         g_HsCloudWebSearchEnable;
+extern std::string g_HsCloudWebSearchDomain;
+extern uint32_t     g_HsCloudWebSearchMaxCacheDays;
+extern bool         g_HsCloudAllowGmAsk;          // .hearthside ask / POST /api/ask may reach the cloud
+
+struct HsCloudStrings
+{
+    std::string apiKey;
+    std::string model;
+    std::string effort;
+    std::string router;
+    std::string webSearchDomain;
+};
+HsCloudStrings Hs_CloudStringsSnapshot();
+
 void Hs_LoadHearthsideChatConfig();
 
 class HsConfigWorldScript : public WorldScript

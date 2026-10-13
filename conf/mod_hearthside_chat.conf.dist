@@ -1237,3 +1237,96 @@ HearthsideChat.HttpAllowedNetworks = 127.0.0.1/32
 #     Default:     hearthside_convo.log
 HearthsideChat.HttpConvoLogPath = hearthside_convo.log
 
+
+# --------------------------------------------
+# CLOUD FACTS
+# --------------------------------------------
+# When a real player asks a bot a question that isn't about the game ("is pluto
+# a planet?"), a cloud model (Claude Haiku) supplies one fact sentence, and the
+# bot's own model then answers in its own voice using that fact. The cloud
+# model never writes the reply. If anything goes wrong -- limit reached, the
+# cloud is down, it doesn't know -- the bot just answers as it always has.
+#
+# Only real players' own messages are ever sent. Bot chat, events, and bot-to-
+# bot conversations never are. Everything here takes effect on `.reload config`.
+# Off by default.
+
+# HearthsideChat.Cloud.Enable
+#     Description: Master switch. Also needs Cloud.ApiKey.
+#     Default:     0 (false)
+HearthsideChat.Cloud.Enable = 0
+
+# HearthsideChat.Cloud.ApiKey
+#     Description: Anthropic API key (platform.claude.com, Settings > API
+#                  Keys). Left blank, the feature stays off.
+#     Default:     (empty)
+HearthsideChat.Cloud.ApiKey =
+
+# HearthsideChat.Cloud.Model
+#     Default:     claude-haiku-5-5
+HearthsideChat.Cloud.Model = claude-haiku-5-5
+
+# HearthsideChat.Cloud.Effort
+#     Description: How hard the cloud model thinks: low, medium or high.
+#                  medium measured fastest for a one-line answer (~0.9s).
+#     Default:     medium
+HearthsideChat.Cloud.Effort = medium
+
+# HearthsideChat.Cloud.Router
+#     Description: What decides which questions go out.
+#                  local - every question a player asks a bot that isn't
+#                          about the bot itself goes out, and the cloud model
+#                          answers "unknown" to anything about the game. About
+#                          1 in 5 player lines to bots.
+#                  model - the bot's own model decides first, and only
+#                          questions it marks as real-world go out. Needs a
+#                          model trained with the ROUTE mode; on one that
+#                          isn't, nothing goes out.
+#     Default:     local
+HearthsideChat.Cloud.Router = local
+
+# HearthsideChat.Cloud.TimeoutSeconds
+#     Default:     10
+HearthsideChat.Cloud.TimeoutSeconds = 10
+
+# HearthsideChat.Cloud.DailyLimitPerAccount
+#     Description: Answered questions per player account per day (resets at
+#                  server midnight). Only answers that returned a fact, or
+#                  used a web search, count. Over the limit, bots answer as
+#                  they always have; the player sees no message about it.
+#     Default:     20
+HearthsideChat.Cloud.DailyLimitPerAccount = 20
+
+# HearthsideChat.Cloud.CacheDays
+#     Description: How long an answer given without a web search is kept and
+#                  reused for the same or a reworded question. Saved answers
+#                  survive restarts and cost nothing.
+#     Default:     60
+HearthsideChat.Cloud.CacheDays = 60
+
+# HearthsideChat.Cloud.WebSearch.Enable
+#     Description: Lets the cloud model look up answers that may have changed
+#                  since it was trained (scores, office holders, releases).
+#                  About 1.2 cents per searched question and 3-4 seconds;
+#                  questions it already knows don't trigger a search.
+#     Default:     0 (false)
+HearthsideChat.Cloud.WebSearch.Enable = 0
+
+# HearthsideChat.Cloud.WebSearch.Domain
+#     Description: The one site searches are limited to.
+#     Default:     en.wikipedia.org
+HearthsideChat.Cloud.WebSearch.Domain = en.wikipedia.org
+
+# HearthsideChat.Cloud.WebSearch.MaxCacheDays
+#     Description: Upper limit on how long a searched answer is kept. The
+#                  cloud model says how long each one stays true (a score: a
+#                  day; a past result: much longer); 1 day if it doesn't.
+#                  Questions about "today"/"last night" are kept 6 hours.
+#     Default:     30
+HearthsideChat.Cloud.WebSearch.MaxCacheDays = 30
+
+# HearthsideChat.Cloud.AllowGmAsk
+#     Description: Lets `.hearthside ask` and POST /api/ask reach the cloud,
+#                  counted against the named sender's account. For testing.
+#     Default:     0 (false)
+HearthsideChat.Cloud.AllowGmAsk = 0

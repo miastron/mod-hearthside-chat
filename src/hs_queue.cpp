@@ -2,6 +2,7 @@
 #include "hs_archetype.h"
 #include "hs_bot.h"
 #include "hs_botchain.h"
+#include "hs_cloud.h"
 #include "hs_config.h"
 #include "hs_corpus.h"        // Hs_ClassNameFor
 #include "hs_engagement.h"
@@ -639,6 +640,26 @@ namespace
             LOG_ERROR(kHsLogLlm, "[HearthsideChat] Circuit breaker opened after {} consecutive failures.", failures);
     }
 
+    // A request back from the cloud thread (hs_cloud.h), with or without a
+    // fact. To the front: it was admitted, and has already waited its turn
+    // once. The original enqueue time is kept, so the TTL and the typing-delay
+    // residual both count the time it spent out. Not re-checked against the
+    // depth cap, for the same reason.
+    void ResumeAfterCloud(HsReplyRequest request, Clock::time_point enqueuedAt, bool isProbe)
+    {
+        {
+            std::lock_guard<std::mutex> lock(g_QueueMutex);
+            if (g_StopWorker)
+                return;
+            HsQueuedRequest job;
+            job.request    = std::move(request);
+            job.enqueuedAt = enqueuedAt;
+            job.isProbe    = isProbe;
+            g_Queue.push_front(std::move(job));
+        }
+        g_QueueCv.notify_one();
+    }
+
     void WorkerLoop()
     {
         for (;;)
@@ -677,6 +698,22 @@ namespace
                 continue;
             }
             RecordTtlOutcome(/*dropped=*/false);
+
+            // Cloud facts (hs_cloud.h): a real player's off-topic question
+            // leaves here once and comes back through ResumeAfterCloud,
+            // carrying a fact or not. Decided on this thread because
+            // Cloud.Router = model asks the tuned model, and the GPU should
+            // still see one request at a time.
+            if (Hs_CloudWantsRequest(req))
+            {
+                Clock::time_point const enqueuedAt = job.enqueuedAt;
+                bool const              isProbe    = job.isProbe;
+                Hs_CloudSubmit(std::move(job.request), [enqueuedAt, isProbe](HsReplyRequest back)
+                {
+                    ResumeAfterCloud(std::move(back), enqueuedAt, isProbe);
+                });
+                continue;
+            }
 
             // The bot's archetype, drawn deterministically from its GUID
             // alone -- level stopped gating the draw on 2026-09-03, so a
@@ -784,6 +821,12 @@ namespace
                 if (!ragLine.empty())
                     personaLine += "\n" + ragLine;
             }
+
+            // The cloud fact (hs_cloud.h), where a RAG block goes: the router
+            // only sends lines that are not about the game, so the two rarely
+            // meet, and the fact is the more specific of them when they do.
+            if (!req.cloudFact.empty())
+                personaLine += "\n" + std::string(kHsCloudFactPrefix) + req.cloudFact;
 
             // Grounds a reply in what this bot itself said publicly (a
             // corpus/ambient WTS line, a reflex/grounded answer, an opener)
@@ -1342,6 +1385,17 @@ Player* Hs_FindInWorld(ObjectGuid guid)
 bool Hs_TryEnqueue(HsReplyRequest request)
 {
     uint64_t const botGuid = request.botGuid;
+
+    // Cloud facts, the fail-safe's second layer (hs_cloud.h): whatever set
+    // cloudAccountId, a bot sender or a bot-initiated request never keeps it.
+    // World thread, so the live bot test is available here and nowhere later.
+    if (request.cloudAccountId != 0 &&
+        (request.isEvent || request.isFollowUp || request.chainScopeId != 0 || Hs_IsBotGuid(request.senderGuid)))
+    {
+        LOG_ERROR(kHsLogChat, "[HearthsideChat] Cloud eligibility set on a request from a bot or a bot-initiated "
+            "request (bot {}, sender {}); cleared.", request.botName, request.senderGuid);
+        request.cloudAccountId = 0;
+    }
 
     bool const isEvent = request.isEvent;
 

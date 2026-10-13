@@ -285,6 +285,25 @@ bool         g_HsHttpControlEnable        = false;
 std::string g_HsHttpAllowedNetworks       = "127.0.0.1/32";
 std::string g_HsHttpConvoLogPath          = "hearthside_convo.log";
 
+bool         g_HsCloudEnable                 = false;
+std::string g_HsCloudApiKey                 = "";
+std::string g_HsCloudModel                  = "claude-haiku-5-5";
+std::string g_HsCloudEffort                 = "medium";
+std::string g_HsCloudRouter                 = "local";
+uint32_t     g_HsCloudTimeoutSeconds         = 10;
+uint32_t     g_HsCloudDailyLimitPerAccount   = 20;
+uint32_t     g_HsCloudCacheDays              = 60;
+bool         g_HsCloudWebSearchEnable        = false;
+std::string g_HsCloudWebSearchDomain        = "en.wikipedia.org";
+uint32_t     g_HsCloudWebSearchMaxCacheDays  = 30;
+bool         g_HsCloudAllowGmAsk             = false;
+
+HsCloudStrings Hs_CloudStringsSnapshot()
+{
+    std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
+    return { g_HsCloudApiKey, g_HsCloudModel, g_HsCloudEffort, g_HsCloudRouter, g_HsCloudWebSearchDomain };
+}
+
 HsLLMStrings Hs_LLMStringsSnapshot()
 {
     std::lock_guard<std::mutex> lock(g_ConfigStringMutex);
@@ -503,6 +522,25 @@ void Hs_LoadHearthsideChatConfig()
     g_HsHttpControlEnable         = sConfigMgr->GetOption<bool>("HearthsideChat.HttpControlEnable", false);
     g_HsHttpAllowedNetworks       = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpAllowedNetworks", "127.0.0.1/32");
     g_HsHttpConvoLogPath          = sConfigMgr->GetOption<std::string>("HearthsideChat.HttpConvoLogPath", "hearthside_convo.log");
+
+    g_HsCloudEnable                = sConfigMgr->GetOption<bool>("HearthsideChat.Cloud.Enable", false);
+    g_HsCloudApiKey                = sConfigMgr->GetOption<std::string>("HearthsideChat.Cloud.ApiKey", "");
+    g_HsCloudModel                 = sConfigMgr->GetOption<std::string>("HearthsideChat.Cloud.Model", "claude-haiku-5-5");
+    g_HsCloudEffort                = sConfigMgr->GetOption<std::string>("HearthsideChat.Cloud.Effort", "medium");
+    g_HsCloudRouter                = sConfigMgr->GetOption<std::string>("HearthsideChat.Cloud.Router", "local");
+    if (g_HsCloudRouter != "local" && g_HsCloudRouter != "model")
+    {
+        LOG_ERROR(kHsLog, "[HearthsideChat] HearthsideChat.Cloud.Router = '{}' is not local or model; using local.",
+            g_HsCloudRouter);
+        g_HsCloudRouter = "local";
+    }
+    g_HsCloudTimeoutSeconds        = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Cloud.TimeoutSeconds", 10);
+    g_HsCloudDailyLimitPerAccount  = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Cloud.DailyLimitPerAccount", 20);
+    g_HsCloudCacheDays             = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Cloud.CacheDays", 60);
+    g_HsCloudWebSearchEnable       = sConfigMgr->GetOption<bool>("HearthsideChat.Cloud.WebSearch.Enable", false);
+    g_HsCloudWebSearchDomain       = sConfigMgr->GetOption<std::string>("HearthsideChat.Cloud.WebSearch.Domain", "en.wikipedia.org");
+    g_HsCloudWebSearchMaxCacheDays = sConfigMgr->GetOption<uint32_t>("HearthsideChat.Cloud.WebSearch.MaxCacheDays", 30);
+    g_HsCloudAllowGmAsk            = sConfigMgr->GetOption<bool>("HearthsideChat.Cloud.AllowGmAsk", false);
 
 }
 
