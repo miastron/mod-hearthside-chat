@@ -14,6 +14,7 @@
 #include "hs_command.h"
 #include "hs_http_server.h"
 #include "hs_identity_store.h"
+#include "hs_life.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
 #include "hs_metrics.h"
@@ -332,6 +333,9 @@ namespace
 void Addmod_hearthside_chatScripts()
 {
     LOG_INFO(kHsLog, "[HearthsideChat] Registering mod-hearthside-chat scripts.");
+    // Before any module reads its config: City and PvP parse their archetype
+    // lists against this provider (hs_life.h).
+    Hs_RegisterWithLife();
     new HsConfigWorldScript();
     new HsArchetypeLifecycleWorldScript();
     new HsGroundedLifecycleWorldScript();

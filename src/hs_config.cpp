@@ -13,6 +13,7 @@
 bool g_HsEnable       = true;
 bool g_HsDebugEnabled = false;
 bool g_HsBridgeEnable = true;
+bool g_HsLifeEnable   = true;
 bool g_HsConversationLogEnabled = false;
 
 std::string g_HsLLMApiType  = "llamacpp";
@@ -340,6 +341,7 @@ void Hs_LoadHearthsideChatConfig()
     g_HsEnable       = sConfigMgr->GetOption<bool>("HearthsideChat.Enable", true);
     g_HsDebugEnabled = sConfigMgr->GetOption<bool>("HearthsideChat.DebugEnabled", false);
     g_HsBridgeEnable = sConfigMgr->GetOption<bool>("HearthsideChat.Bridge.Enable", true);
+    g_HsLifeEnable   = sConfigMgr->GetOption<bool>("HearthsideChat.Life.Enable", true);
 
     g_HsLLMApiType         = NormalizeApiType("HearthsideChat.LLM.ApiType",
         sConfigMgr->GetOption<std::string>("HearthsideChat.LLM.ApiType", "llamacpp"));

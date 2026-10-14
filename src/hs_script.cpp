@@ -5,6 +5,7 @@
 #include "hs_config.h"
 #include "hs_corpus.h"
 #include "hs_identity_store.h" // review C13: Hs_LookupCardSnapshot for the carded verbal tic
+#include "hs_life.h"           // busy marks for the cast (City/PvP leave them be)
 #include "hs_log.h"
 #include "hs_prune.h"
 #include "hs_proximity.h"
@@ -53,6 +54,9 @@ namespace
     constexpr uint32_t kFirstTurnDelayMaxMs     = 2000;
     constexpr uint32_t kTurnGapMinSeconds       = 4;
     constexpr uint32_t kTurnGapMaxSeconds       = 7;
+    // Past the last scheduled turn: how long the cast's busy marks
+    // (hs_life.h) outlast a scene that somehow never clears them.
+    constexpr uint32_t kBusyMarkSlackMs         = 15000;
 
     struct HsActiveScriptRun
     {
@@ -281,7 +285,8 @@ namespace
                                                        static_cast<uint32_t>(turns.size()) };
         }
 
-        Clock::time_point deliverAt = Clock::now() + std::chrono::milliseconds(urand(kFirstTurnDelayMinMs, kFirstTurnDelayMaxMs));
+        Clock::time_point start = Clock::now();
+        Clock::time_point deliverAt = start + std::chrono::milliseconds(urand(kFirstTurnDelayMinMs, kFirstTurnDelayMaxMs));
         {
             std::lock_guard<std::mutex> lock(g_ScheduleMutex);
             for (auto const& turn : turns)
@@ -291,6 +296,13 @@ namespace
                 deliverAt += std::chrono::seconds(urand(kTurnGapMinSeconds, kTurnGapMaxSeconds));
             }
         }
+
+        // Neither bot is moved, given an antic or released by City/PvP until
+        // the scene ends (DeliverOneTurn clears the marks) or this runs out.
+        uint32_t busyMs = static_cast<uint32_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(deliverAt - start).count()) + kBusyMarkSlackMs;
+        Hs_LifeMarkBusy(bot0Guid, busyMs);
+        Hs_LifeMarkBusy(bot1Guid, busyMs);
 
         MarkWitnessCooldown(witnessGuid);
     }
@@ -367,6 +379,7 @@ namespace
     void DeliverOneTurn(const HsScheduledTurn& scheduled)
     {
         bool     aborted = false;
+        bool     lastTurn = false;
         uint64_t bot0Guid = 0, bot1Guid = 0, witnessGuid = 0;
 
         {
@@ -381,7 +394,19 @@ namespace
             witnessGuid = run.witnessGuid;
 
             if (--run.turnsRemaining == 0)
+            {
                 g_ActiveRuns.erase(it); // last turn of this run, free the participants either way
+                lastTurn = true;
+            }
+        }
+
+        // The scene is over for its cast once it aborted or this is its last
+        // line: City and PvP may move them again (a last line still goes out
+        // below; a relocation starts on their next tick at the earliest).
+        if (aborted || lastTurn)
+        {
+            Hs_LifeClearBusy(bot0Guid);
+            Hs_LifeClearBusy(bot1Guid);
         }
 
         if (aborted)
@@ -402,10 +427,14 @@ namespace
             // Mark aborted so any later turns of this run still pending
             // (the run may not have been erased above if this wasn't the
             // last one) skip too, rather than resurrecting a broken scene.
-            std::lock_guard<std::mutex> lock(g_RunsMutex);
-            auto it = g_ActiveRuns.find(scheduled.runId);
-            if (it != g_ActiveRuns.end())
-                it->second.aborted = true;
+            {
+                std::lock_guard<std::mutex> lock(g_RunsMutex);
+                auto it = g_ActiveRuns.find(scheduled.runId);
+                if (it != g_ActiveRuns.end())
+                    it->second.aborted = true;
+            }
+            Hs_LifeClearBusy(bot0Guid);
+            Hs_LifeClearBusy(bot1Guid);
             return;
         }
 

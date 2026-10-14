@@ -18,6 +18,10 @@ extern bool g_HsDebugEnabled;
 // while the chat/reply pipeline itself is off, or vice versa.
 extern bool g_HsBridgeEnable;
 
+// HearthsideChat.Life.Enable: the bridge to mod-hearthside-life (hs_life.h).
+// Only matters when that module is in the build.
+extern bool g_HsLifeEnable;
+
 // Both sides of every player-bot exchange, one JSON object per line, to the
 // module.hearthside.convo logger (hs_queue.cpp Hs_ConvoLog).
 extern bool g_HsConversationLogEnabled;

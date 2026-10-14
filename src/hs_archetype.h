@@ -94,7 +94,8 @@ bool Hs_ArchetypeForName(const std::string& enumName, HsArchetype& out);
 // with bit `1u << HsArchetype` set per listed archetype. Names matching
 // nothing are appended to `unknown` for the caller to log. An empty list
 // gives 0, which callers read as "no filter". For mod-hearthside-city/-pvp,
-// which pick the bots they borrow by archetype (their *.Archetypes keys).
+// which pick the bots they borrow by archetype (their *.Archetypes keys),
+// reached through mod-hearthside-life's LifeArchetypes (hs_life.cpp).
 uint32_t Hs_ArchetypeMaskForNames(const std::string& csv, std::vector<std::string>& unknown);
 
 // GM override: pins a bot to one specific stock archetype, bypassing the

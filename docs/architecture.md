@@ -218,12 +218,18 @@ touch:
 ## Life modules
 
 `mod-hearthside-city` and `mod-hearthside-pvp` (forks of `mod-playerbots-city-life`/`-pvp-life`)
-borrow bots for city crowds and world PvP and share one claim registry (`LifeBotReservation.h`) so
-they never take each other's bots. Each picks *which* bots by archetype in its own candidate loader:
-`CityLife.Bots.Archetypes` / `PvPLife.Bots.Archetypes` list the enum names it may borrow, checked
-against `Hs_ArchetypeForBot` via `Hs_ArchetypeMaskForNames`. This module exports those two
-functions and nothing else to them; they find `hs_archetype.h` with `__has_include`, so each still
-builds, unfiltered, without it.
+borrow bots for city crowds and world PvP. Their shared code and state live in
+`mod-hearthside-life` (one claim registry, `LifeBotReservation.h`, so they never take each other's
+bots). They never include this module: `hs_life.cpp` plugs into Life when it is installed
+(`__has_include`), and every call there is a no-op without it.
+
+- **Archetypes:** `CityLife.Bots.Archetypes` / `PvPLife.Bots.Archetypes` list the enum names each
+  may borrow. Life's `LifeArchetypes` asks the provider this module registers, which wraps
+  `Hs_ArchetypeForBot` and `Hs_ArchetypeMaskForNames` unchanged. With no provider (this module
+  absent, `HearthsideChat.Enable` or `HearthsideChat.Life.Enable` off) every bot fits.
+- **Busy marks:** a bot cast in a /say scene (`hs_script.cpp`) is marked busy in Life's
+  `LifeActivity` until the scene ends or aborts, so City and PvP do not relocate it, start an antic
+  or release it mid-line.
 
 ## Identity rings
 

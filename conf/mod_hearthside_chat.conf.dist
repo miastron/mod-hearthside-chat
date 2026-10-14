@@ -74,6 +74,17 @@ HearthsideChat.DebugEnabled = 0
 #     Default:     1 (true)
 HearthsideChat.Bridge.Enable = 1
 
+# HearthsideChat.Life.Enable
+#     Description: Only matters when mod-hearthside-life is installed beside
+#                  this module. Lets City Life and PvP Life pick bots by this
+#                  module's personalities (their *.Bots.Archetypes settings)
+#                  and keeps them from moving a bot while it is in the middle
+#                  of a conversation. Off (or HearthsideChat.Enable off), they
+#                  act as if this module were not installed: every bot fits
+#                  their archetype lists.
+#     Default:     1 (true)
+HearthsideChat.Life.Enable = 1
+
 # --------------------------------------------
 # LLM ENDPOINT
 # --------------------------------------------

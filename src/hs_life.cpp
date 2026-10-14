@@ -1,0 +1,59 @@
+#include "hs_life.h"
+#include "hs_archetype.h"
+#include "hs_config.h"
+#include "hs_log.h"
+
+#include "Log.h"
+
+#if __has_include("../../mod-hearthside-life/src/LifeArchetypes.h")
+#define HS_HAS_LIFE 1
+#include "../../mod-hearthside-life/src/LifeActivity.h"
+#include "../../mod-hearthside-life/src/LifeArchetypes.h"
+#endif
+
+bool Hs_LifeActive()
+{
+#ifdef HS_HAS_LIFE
+    return g_HsEnable && g_HsLifeEnable;
+#else
+    return false;
+#endif
+}
+
+void Hs_RegisterWithLife()
+{
+#ifdef HS_HAS_LIFE
+    // Hs_ArchetypeForBot and Hs_ArchetypeMaskForNames are exactly what City
+    // and PvP called before Life: no bot changes archetype. Both are
+    // thread-safe (the table and the overrides are mutex-guarded).
+    LifeArchetypes::Provider provider;
+    provider.ForBot = [](std::uint64_t guidRaw) { return static_cast<int>(Hs_ArchetypeForBot(guidRaw)); };
+    provider.MaskForNames = [](std::string const& csv, std::vector<std::string>& unknown)
+        { return Hs_ArchetypeMaskForNames(csv, unknown); };
+    provider.Enabled = [] { return Hs_LifeActive(); };
+    LifeArchetypes::Register(std::move(provider));
+    LOG_INFO(kHsLog, "[HearthsideChat] mod-hearthside-life found: archetype provider registered.");
+#endif
+}
+
+void Hs_LifeMarkBusy(uint64_t botGuid, uint32_t durationMs)
+{
+#ifdef HS_HAS_LIFE
+    if (Hs_LifeActive())
+        LifeActivity::Mark(botGuid, durationMs);
+#else
+    (void)botGuid;
+    (void)durationMs;
+#endif
+}
+
+void Hs_LifeClearBusy(uint64_t botGuid)
+{
+#ifdef HS_HAS_LIFE
+    // Cleared even with the bridge off, so a mark set before a reload
+    // switched it off does not outlive its scene.
+    LifeActivity::Clear(botGuid);
+#else
+    (void)botGuid;
+#endif
+}
