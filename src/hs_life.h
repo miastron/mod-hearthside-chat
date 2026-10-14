@@ -2,6 +2,8 @@
 #define MOD_HS_LIFE_H
 
 #include <cstdint>
+#include <string>
+#include <unordered_set>
 
 // The bridge to mod-hearthside-life, the coordinator City and PvP share.
 // Everything Chat does with Life goes through here, and hs_life.cpp only
@@ -31,5 +33,18 @@ bool Hs_LifeActive();
 // where it is.
 void Hs_LifeMarkBusy(uint64_t botGuid, uint32_t durationMs);
 void Hs_LifeClearBusy(uint64_t botGuid);
+
+// Carded bots' level holds (hs_identity_store.cpp). With the bridge active,
+// hands Life the whole set as Chat's holding (replacing the last one) and
+// returns true: Life keeps the union of every holder's names on
+// mod-playerbots' exclude lists, so Chat letting a name go never drops one
+// City or PvP still holds. Returns false, having done nothing, when the
+// bridge is off or Life absent: the caller then writes the lists itself, as
+// before Life existed. World thread only.
+bool Hs_LifeHoldLevels(std::unordered_set<std::string> const& names);
+
+// Drops Chat's whole holding in Life, whatever the bridge's state: for the
+// switch back to writing the lists directly. World thread only.
+void Hs_LifeReleaseLevels();
 
 #endif // MOD_HS_LIFE_H

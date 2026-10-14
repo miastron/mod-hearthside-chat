@@ -3,6 +3,7 @@
 #include "hs_config.h"
 #include "hs_identity.h"
 #include "hs_json.h"
+#include "hs_life.h"
 #include "hs_log.h"
 #include "hs_memory_store.h"
 
@@ -20,6 +21,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace
@@ -122,6 +124,35 @@ namespace
 
     std::mutex                    g_PendingExcludeMutex;
     std::vector<PendingExcludeOp> g_PendingExcludeOps;
+
+    // World thread only. Every carded bot name this module wants held, and
+    // whether that holding currently lives in mod-hearthside-life (hs_life.h)
+    // rather than in direct writes to the vectors. Through Life, a name City
+    // or PvP also holds stays on the lists when this module lets it go.
+    std::unordered_set<std::string> g_HeldNames;
+    bool                            g_HeldViaLife = false;
+
+    // World-thread-only. Hands the whole set to Life when its bridge is on;
+    // otherwise (or after a switch away from Life) writes the vectors
+    // directly, as before Life existed.
+    void SyncHeldNames()
+    {
+        if (Hs_LifeHoldLevels(g_HeldNames))
+        {
+            g_HeldViaLife = true;
+            return;
+        }
+        if (g_HeldViaLife)
+        {
+            Hs_LifeReleaseLevels(); // Life takes back the names it added
+            g_HeldViaLife = false;
+        }
+        for (std::string const& name : g_HeldNames)
+        {
+            AppendIfMissing(sPlayerbotAIConfig.LevelBracketsExcludeNames, name);
+            AppendIfMissing(sPlayerbotAIConfig.ResetBotLevelExcludeNames, name);
+        }
+    }
 
     // World-thread-only: writes sPlayerbotAIConfig's vectors directly.
     void ApplyPushNameIntoExcludeVectors(const std::string& botName)
@@ -379,17 +410,20 @@ void Hs_ApplyExcludeVectorsFromIdentityTable()
 {
     QueryResult result = CharacterDatabase.Query(
         "SELECT c.name FROM hside_identity hi JOIN characters c ON c.guid = hi.bot_guid WHERE hi.card_active = 1");
-    if (!result)
-        return;
 
-    uint32_t count = 0;
-    do
-    {
-        // Direct, not queued: this function is world-thread-only (startup,
-        // `.reload config`, and the 300s reconcile, all from hs_main.cpp).
-        ApplyPushNameIntoExcludeVectors((*result)[0].Get<std::string>());
-        ++count;
-    } while (result->NextRow());
+    // Direct, not queued: this function is world-thread-only (startup,
+    // `.reload config`, and the 300s reconcile, all from hs_main.cpp). The
+    // table is the truth, so the held set is rebuilt from it; held through
+    // Life, a name no longer carded is let go here too.
+    std::unordered_set<std::string> carded;
+    if (result)
+        do
+        {
+            carded.insert((*result)[0].Get<std::string>());
+        } while (result->NextRow());
+    g_HeldNames.swap(carded);
+    SyncHeldNames();
+    uint32_t count = static_cast<uint32_t>(g_HeldNames.size());
 
     if (g_HsDebugEnabled)
         LOG_INFO(kHsLog, "[HearthsideChat] Re-applied {} carded bot name(s) to playerbots' recycling-exclusion vectors.", count);
@@ -407,14 +441,22 @@ void Hs_DrainExcludeVectorQueue()
 
     // Applied in submission order, so a push followed by a remove for the
     // same name lands the same way it would have if each had been applied
-    // inline.
+    // inline. Held through Life, the set is handed over once at the end.
     for (auto const& op : ops)
     {
+        if (op.push)
+            g_HeldNames.insert(op.name);
+        else
+            g_HeldNames.erase(op.name);
+        if (g_HeldViaLife)
+            continue;
         if (op.push)
             ApplyPushNameIntoExcludeVectors(op.name);
         else
             ApplyRemoveNameFromExcludeVectors(op.name);
     }
+    if (g_HeldViaLife)
+        SyncHeldNames();
 }
 
 void Hs_PushBotIntoExcludeVectors(uint64_t botGuid)

@@ -11,6 +11,7 @@
 #include "../../mod-hearthside-life/src/LifeActivity.h"
 #include "../../mod-hearthside-life/src/LifeArchetypes.h"
 #include "../../mod-hearthside-life/src/LifeEvents.h"
+#include "../../mod-hearthside-life/src/LifeLevels.h"
 #endif
 
 bool Hs_LifeActive()
@@ -71,5 +72,25 @@ void Hs_LifeClearBusy(uint64_t botGuid)
     LifeActivity::Clear(botGuid);
 #else
     (void)botGuid;
+#endif
+}
+
+bool Hs_LifeHoldLevels(std::unordered_set<std::string> const& names)
+{
+#ifdef HS_HAS_LIFE
+    if (!Hs_LifeActive())
+        return false;
+    LifeBots::HoldLevelsFor(LifeBots::LevelHolderChat, names);
+    return true;
+#else
+    (void)names;
+    return false;
+#endif
+}
+
+void Hs_LifeReleaseLevels()
+{
+#ifdef HS_HAS_LIFE
+    LifeBots::HoldLevelsFor(LifeBots::LevelHolderChat, {});
 #endif
 }

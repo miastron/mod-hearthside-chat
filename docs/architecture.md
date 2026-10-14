@@ -231,6 +231,9 @@ bots). They never include this module: `hs_life.cpp` plugs into Life when it is 
   queues. `CrowdPair` (City stood two residents together near a real player) is offered to the
   /say script runner ahead of its own scan. `RaidDefenseStarted` is dropped until it has dataset
   rows. Duels are not published: this module's own duel hooks already see every one.
+- **Level holds:** carded bots' names go to Life as one of its level holders rather than straight
+  onto mod-playerbots' exclude lists, so a card retiring never drops a name City or PvP still
+  holds. Without Life (or with the bridge off) this module writes the lists itself.
 - **Busy marks:** a bot cast in a /say scene (`hs_script.cpp`) is marked busy in Life's
   `LifeActivity` until the scene ends or aborts, so City and PvP do not relocate it, start an antic
   or release it mid-line.
