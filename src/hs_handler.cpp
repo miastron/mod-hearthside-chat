@@ -90,6 +90,38 @@ namespace
                (std::strchr("+-~?*@#|[", param) || std::isdigit(static_cast<unsigned char>(param)));
     }
 
+    // mod-playerbots' permission refusal (PlayerbotSecurity::CheckLevelFor).
+    // Every whisper from a non-GM player who isn't the bot's master runs
+    // its command parser, and plain chat ("hey") fails the ALLOW_ALL check
+    // with a whispered refusal: "Invite me to your group first" from any
+    // ungrouped random bot (realm 2026-10-14). GM accounts pass the check,
+    // so testing on one never shows it. The refusal goes out through
+    // Player::Whisper, which asks this hook first, so returning false drops
+    // it without patching mod-playerbots. The texts are its switch,
+    // verbatim; the four with a value after them match as prefixes.
+    bool IsPlayerbotRefusal(const std::string& msg)
+    {
+        static const std::set<std::string> kExact = {
+            "I'm kind of busy now", "I'll do it later", "I have a master already", "You are a bot",
+            "You are the enemy", "I'm dead. Will do it later", "Invite me to your group first",
+            "I am in a full group. Will do it later",
+            "I am currently leading a group. I can invite you if you want.",
+            "I am in a group with someone else. You can ask him for invite.",
+            "I am in a queue for BG. Will do it later", "I am in a queue for dungeon. Will do it later",
+            "I can't do that",
+        };
+        static const char* const kPrefixes[] = {
+            "You are too low level: ", "Your gearscore is too low: ",
+            "You must be closer to invite me to your group. I am in ", "I am in a group with ",
+        };
+        if (kExact.count(msg))
+            return true;
+        for (const char* prefix : kPrefixes)
+            if (msg.rfind(prefix, 0) == 0)
+                return true;
+        return false;
+    }
+
     // Copper -> the way a player writes a price: "2g50s", "80s", "35c".
     // Trailing zero denominations are dropped, so a round 5 gold is "5g" and
     // not "5g0s0c".
@@ -647,7 +679,7 @@ bool HsChatHandler::OnPlayerCanUseChat(Player* player, uint32_t type, uint32_t l
     if (!player || !receiver || player == receiver)
         return true;
     if (Hs_IsBot(player))
-        return true; // sender-aware (bot-initiated) chatter is not wired up yet
+        return !IsPlayerbotRefusal(msg); // otherwise: sender-aware (bot-initiated) chatter is not wired up yet
 
     // Whisper is a full engagement-follow-up surface, unlike scripted
     // bot-to-bot which is only ever witnessed via /say, so this handler
