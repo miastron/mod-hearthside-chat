@@ -2267,10 +2267,10 @@ void Hs_ConvoLogPlayerLine(uint64_t botGuid, const std::string& botName, uint64_
 }
 
 void Hs_ConvoLogScriptLine(uint64_t botGuid, const std::string& botName, uint64_t toGuid, const std::string& toName,
-                           const std::string& text, uint32_t runId)
+                           const std::string& text, uint32_t runId, HsReplyChannel channel)
 {
     if (g_HsConversationLogEnabled)
-        ConvoLog(/*fromPlayer=*/false, botGuid, botName, toGuid, toName, HsReplyChannel::Channel, text, "script",
+        ConvoLog(/*fromPlayer=*/false, botGuid, botName, toGuid, toName, channel, text, "script",
                  hs_json{ { "script_run", runId } });
 }
 

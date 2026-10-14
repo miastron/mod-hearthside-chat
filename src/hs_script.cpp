@@ -124,6 +124,23 @@ namespace
     // MaxTier (checked per kind at fire time, not here).
     constexpr uint32_t kChannelScanFireChancePercent = 3;
 
+    // Crowd pairs City offered through mod-hearthside-life (Hs_OfferScriptPair),
+    // queued by the listener and tried on this file's own tick. An offer not
+    // taken within kOfferMaxAgeMs is dropped: City only holds a pair so long.
+    struct HsPairOffer
+    {
+        uint64_t          bot0Guid;
+        uint64_t          bot1Guid;
+        uint64_t          witnessGuid;
+        Clock::time_point offeredAt;
+    };
+
+    constexpr uint32_t kOfferMaxAgeMs   = 5000;
+    constexpr size_t   kMaxQueuedOffers = 32;
+
+    std::mutex              g_OfferMutex;
+    std::deque<HsPairOffer> g_Offers;
+
     // Review C14: how many nearby settled bots TryFireNearPlayer collects
     // before it stops walking. Two is the minimum a scene needs; a slightly
     // larger pool is what makes the cast vary between scenes.
@@ -371,6 +388,47 @@ namespace
         ClaimAndSchedule(cast.first, cast.second, player);
     }
 
+    // A pair City has already stood together near a real player: the same
+    // gates as TryFireNearPlayer except its fire-chance roll and the settled
+    // check (City holds the pair still, and the busy marks keep it there).
+    // The witness cooldown and the ambient budget in ClaimScript still apply.
+    void TryOfferedPair(HsPairOffer const& offer)
+    {
+        if (!HsTierAllows(g_HsMaxTierBotToBot, HsTier::Corpus))
+            return;
+        Player* witness = ObjectAccessor::FindPlayer(ObjectGuid(offer.witnessGuid));
+        if (!witness || !witness->IsInWorld() || !witness->IsAlive() || Hs_IsBot(witness))
+            return;
+        if (!WitnessCooldownOk(offer.witnessGuid))
+            return;
+        Player* cast[2] = { ObjectAccessor::FindPlayer(ObjectGuid(offer.bot0Guid)),
+                            ObjectAccessor::FindPlayer(ObjectGuid(offer.bot1Guid)) };
+        for (Player* bot : cast)
+        {
+            if (!bot || !bot->IsInWorld() || !bot->IsAlive() || bot->IsInCombat() || !Hs_IsBot(bot) ||
+                !Hs_IsEligibleBot(bot) || !bot->IsWithinDistInMap(witness, g_HsSayDistance) ||
+                IsBotInActiveRun(bot->GetGUID().GetRawValue()))
+                return;
+        }
+        ClaimAndSchedule(cast[0], cast[1], witness);
+        if (g_HsDebugEnabled && IsBotInActiveRun(offer.bot0Guid))
+            LOG_INFO(kHsLog, "[HearthsideChat] Crowd pair {} and {} took a scripted scene near {}.",
+                cast[0]->GetName(), cast[1]->GetName(), witness->GetName());
+    }
+
+    void TryOfferedPairs()
+    {
+        std::deque<HsPairOffer> offers;
+        {
+            std::lock_guard<std::mutex> lock(g_OfferMutex);
+            offers.swap(g_Offers);
+        }
+        Clock::time_point now = Clock::now();
+        for (HsPairOffer const& offer : offers)
+            if (now - offer.offeredAt <= std::chrono::milliseconds(kOfferMaxAgeMs))
+                TryOfferedPair(offer);
+    }
+
     // Re-checks every abort condition immediately before sending: schedule
     // time and delivery time can be minutes apart for a script's later
     // turns, and a participant leaving range, entering combat, or dying
@@ -469,6 +527,8 @@ namespace
 
         speakerAI->Say(style.text);
         Hs_RecordBotUtterance(scheduled.speakerGuid, style.text);
+        Hs_ConvoLogScriptLine(scheduled.speakerGuid, speaker->GetName(), listener->GetGUID().GetRawValue(),
+                              listener->GetName(), style.text, scheduled.runId, HsReplyChannel::Say);
     }
 
     void DeliverPendingTurns()
@@ -630,7 +690,14 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
     DeliverPendingChannelTurns();
 
     if (!g_HsEnable)
+    {
+        std::lock_guard<std::mutex> lock(g_OfferMutex);
+        g_Offers.clear();
         return;
+    }
+
+    // Offered pairs first: City has them standing together right now.
+    TryOfferedPairs();
 
     if (HsTierAllows(g_HsMaxTierBotToBot, HsTier::Corpus)) // corpus-only in v1
     {
@@ -680,6 +747,15 @@ void HsScriptRunnerWorldScript::OnUpdate(uint32_t diff)
         TryFireChannelScript(HsChannelKind::Trade);
         TryFireChannelScript(HsChannelKind::General);
     }
+}
+
+void Hs_OfferScriptPair(uint64_t bot0Guid, uint64_t bot1Guid, uint64_t witnessGuid)
+{
+    if (!bot0Guid || !bot1Guid || bot0Guid == bot1Guid || !witnessGuid)
+        return;
+    std::lock_guard<std::mutex> lock(g_OfferMutex);
+    if (g_Offers.size() < kMaxQueuedOffers)
+        g_Offers.push_back({ bot0Guid, bot1Guid, witnessGuid, Clock::now() });
 }
 
 void Hs_AbortScriptsWitnessedBy(uint64_t playerGuid)

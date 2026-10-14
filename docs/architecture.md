@@ -227,6 +227,10 @@ bots). They never include this module: `hs_life.cpp` plugs into Life when it is 
   may borrow. Life's `LifeArchetypes` asks the provider this module registers, which wraps
   `Hs_ArchetypeForBot` and `Hs_ArchetypeMaskForNames` unchanged. With no provider (this module
   absent, `HearthsideChat.Enable` or `HearthsideChat.Life.Enable` off) every bot fits.
+- **Events:** City and PvP publish plain facts on Life's `LifeEvents`; this module's listener only
+  queues. `CrowdPair` (City stood two residents together near a real player) is offered to the
+  /say script runner ahead of its own scan. `RaidDefenseStarted` is dropped until it has dataset
+  rows. Duels are not published: this module's own duel hooks already see every one.
 - **Busy marks:** a bot cast in a /say scene (`hs_script.cpp`) is marked busy in Life's
   `LifeActivity` until the scene ends or aborts, so City and PvP do not relocate it, start an antic
   or release it mid-line.

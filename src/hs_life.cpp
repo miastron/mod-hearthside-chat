@@ -2,6 +2,7 @@
 #include "hs_archetype.h"
 #include "hs_config.h"
 #include "hs_log.h"
+#include "hs_script.h"
 
 #include "Log.h"
 
@@ -9,6 +10,7 @@
 #define HS_HAS_LIFE 1
 #include "../../mod-hearthside-life/src/LifeActivity.h"
 #include "../../mod-hearthside-life/src/LifeArchetypes.h"
+#include "../../mod-hearthside-life/src/LifeEvents.h"
 #endif
 
 bool Hs_LifeActive()
@@ -32,7 +34,21 @@ void Hs_RegisterWithLife()
         { return Hs_ArchetypeMaskForNames(csv, unknown); };
     provider.Enabled = [] { return Hs_LifeActive(); };
     LifeArchetypes::Register(std::move(provider));
-    LOG_INFO(kHsLog, "[HearthsideChat] mod-hearthside-life found: archetype provider registered.");
+
+    LifeEvents::Listen([](LifeEvents::Event const& event)
+    {
+        if (!Hs_LifeActive())
+            return;
+        switch (event.Type)
+        {
+            case LifeEvents::Kind::CrowdPair:
+                Hs_OfferScriptPair(event.Actor, event.Other, event.Witness);
+                break;
+            default: // RaidDefenseStarted: no dataset rows yet
+                break;
+        }
+    });
+    LOG_INFO(kHsLog, "[HearthsideChat] mod-hearthside-life found: archetype provider and event listener registered.");
 #endif
 }
 

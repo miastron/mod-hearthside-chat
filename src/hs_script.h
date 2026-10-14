@@ -26,6 +26,11 @@ public:
     void OnUpdate(uint32_t diff) override;
 };
 
+// A pair of bots another module (City, through mod-hearthside-life) has
+// stood together near a real player: queued, and on the next tick offered a
+// /say script ahead of the regular scan. Any thread; it only queues.
+void Hs_OfferScriptPair(uint64_t bot0Guid, uint64_t bot1Guid, uint64_t witnessGuid);
+
 // Marks every currently active script run witnessed by this real player as
 // aborted: a player speaking aborts the script, finishing the line in
 // flight and stopping there. Called from hs_handler.cpp's real-player /say

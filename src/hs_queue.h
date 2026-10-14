@@ -298,10 +298,12 @@ bool Hs_DeliverCorpusLine(Player* bot, std::string line, uint64_t senderGuid, co
 void Hs_ConvoLogPlayerLine(uint64_t botGuid, const std::string& botName, uint64_t playerGuid,
                            const std::string& playerName, HsReplyChannel channel, const std::string& text);
 
-// A channel script turn, spoken outside Hs_DeliverPending, so the
-// conversation log holds every General line; runId groups a scene's turns.
+// A script turn (a channel scene, or a /say scene with channel = Say),
+// spoken outside Hs_DeliverPending, so the conversation log holds every
+// scripted line too; runId groups a scene's turns.
 void Hs_ConvoLogScriptLine(uint64_t botGuid, const std::string& botName, uint64_t toGuid, const std::string& toName,
-                           const std::string& text, uint32_t runId);
+                           const std::string& text, uint32_t runId,
+                           HsReplyChannel channel = HsReplyChannel::Channel);
 
 // Records that this bot said `text` somewhere with no bounded/membership
 // audience (Say or Channel; see hs_queue.cpp's g_RecentUtterances comment

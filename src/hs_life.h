@@ -14,8 +14,13 @@
 // (every bot fits their filters) and no busy marks, as on a server without
 // Chat. HearthsideChat.Enable = 0 does the same.
 
-// Hands Life the archetype provider. From Addmod_hearthside_chatScripts,
-// before any module reads its config.
+// Hands Life the archetype provider and the event listener. From
+// Addmod_hearthside_chatScripts, before any module reads its config.
+//
+// The listener only queues: a CrowdPair (City stood two residents together
+// near a real player) becomes an offer to the /say script runner
+// (Hs_OfferScriptPair), which tries it on its own tick. RaidDefenseStarted
+// is dropped until it has dataset rows and an event type of its own.
 void Hs_RegisterWithLife();
 
 // True when Life is in this build and the bridge is switched on.
