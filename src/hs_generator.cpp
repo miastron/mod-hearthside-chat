@@ -406,6 +406,15 @@ namespace
                    "always a complaint -- never a specific item, quest, or exact gold price the "
                    "other person could check and find wrong, and nothing that assumes the reader "
                    "is in the same place as you.";
+        // The ambient group categories (hside_corpus_category_ambient_group.sql) used to fall
+        // through to the General text below, which tells the model its line is read by a whole
+        // zone of strangers.
+        if (channel == "party" || channel == "raid")
+            return std::string(" This line is for ") + (channel == "party" ? "party" : "raid") +
+                   " chat -- read only by the players grouped with you, during a run or on the way "
+                   "to one. Write exactly ONE short line, the way a real player would actually type "
+                   "it, about the pull, the group, the road, or a short break -- never a specific "
+                   "item, quest, or boss the others could check and find wrong.";
         // general
         return " This line is for the General channel for the zone the character is standing in "
                "-- read by the other players in that same zone, not someone standing next to "

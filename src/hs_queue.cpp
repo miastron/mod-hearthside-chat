@@ -921,6 +921,11 @@ namespace
             // want" (realm 2026-10-07).
             if (req.isFollowUp && history.size() > 1)
                 history.erase(history.begin(), history.end() - 1);
+            // An event reaction is trained with no history at all (every event row is
+            // system + trigger + reply); a chat with the event's counterpart in the last
+            // hour would otherwise put it off shape.
+            if (req.triggerIsStateLine)
+                history.clear();
 
             g_ReactiveWorkerBusy.store(true);
             HsLLMResult result = Hs_CallLLM(cfg, llm.systemPrompt, personaLine, history, modelTrigger);

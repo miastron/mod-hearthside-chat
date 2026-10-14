@@ -320,7 +320,10 @@ std::string Hs_ExpandChatShorthand(const std::string& rawText)
         while (j < text.size() && (std::isalpha(static_cast<unsigned char>(text[j])) || text[j] == '\''))
             ++j;
         std::string word = text.substr(i, j - i);
-        auto it = kExpand.find(HsText::Hs_ToLowerAscii(word));
+        // Letters glued to a number are part of it: "500k", "lf2m", "2r" stay as typed.
+        bool const nextToDigit = (i > 0 && std::isdigit(static_cast<unsigned char>(text[i - 1]))) ||
+                                 (j < text.size() && std::isdigit(static_cast<unsigned char>(text[j])));
+        auto it = nextToDigit ? kExpand.end() : kExpand.find(HsText::Hs_ToLowerAscii(word));
         out += (it != kExpand.end()) ? it->second : word;
         i = j;
     }
