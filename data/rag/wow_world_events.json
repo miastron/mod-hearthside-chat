@@ -2,9 +2,9 @@
   {
     "id": "event_hallows_end",
     "title": "Hallow's End",
-    "content": "Hallow's End runs each year from October 18 to October 31, decorating capital cities with pumpkins and letting players trick-or-treat at candy buckets in every inn for random treats, including a small chance at the flying Magic Broom mount. Its centerpiece is a fight against the Headless Horseman, summoned in Scarlet Monastery's graveyard; since patch 3.3.3 he can be queued for directly through the Dungeon Finder instead of forming a group by hand. Players can also throw Weighted Jack-o'-Lanterns and pick up a costume wand that turns them into a ghost, ninja, pirate, skeleton, bat, wisp, or leper gnome for the duration of the holiday.",
+    "content": "Hallow's End runs each year from October 18 to October 31, decorating capital cities with pumpkins and candy buckets in inns for trick-or-treating. Its centerpiece is the Headless Horseman, who appears in Scarlet Monastery's graveyard and can be queued for through the Dungeon Finder. He drops one of three epic rings (Ring of Ghoulish Glee, The Horseman's Seal or Wicked Witch's Band) and Weighted Jack-o'-Lanterns, and the run rewards a Loot-Filled Pumpkin that can hold the Magic Broom, the Flying Broom or, rarely, The Horseman's Reins mount.",
     "keywords": ["hallow's end", "headless horseman", "magic broom", "trick or treat", "candy bucket", "scarlet monastery"],
-    "questions": ["when is hallow's end", "when does hallows end start", "how do i get the headless horseman", "where is the headless horseman", "how do i get the magic broom", "where are the candy buckets", "how do i trick or treat", "is the horseman in the dungeon finder", "what do i get from the headless horseman", "how do i get a halloween costume", "what is the halloween event", "how do i turn into a ghost or pirate", "what are the costume wands", "how do i get the broom mount", "where do i summon the headless horseman"],
+    "questions": ["when is hallow's end", "when does hallows end start", "how do i get the headless horseman", "where is the headless horseman", "how do i get the magic broom", "where are the candy buckets", "how do i trick or treat", "is the horseman in the dungeon finder", "what do i get from the headless horseman", "how do i get a halloween costume", "what is the halloween event", "how do i turn into a ghost or pirate", "what are the costume wands", "how do i get the broom mount", "where do i summon the headless horseman", "what does the headless horseman drop", "what loot does the horseman give", "what rings drop from the headless horseman", "how do i get the horseman's reins", "what is in the loot filled pumpkin", "what is a loot-filled pumpkin", "where does the magic broom come from", "how do i get the flying broom", "does the horseman drop a mount", "what is the ring of ghoulish glee", "what is the horseman's seal", "what is the wicked witch's band"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -62,5 +62,21 @@
     "keywords": ["pilgrim's bounty", "turkinator", "pilgrim's paunch", "cranberry chutney", "thanksgiving"],
     "questions": ["when is pilgrim's bounty", "when does thanksgiving start in wow", "what is pilgrim's bounty", "how do i get the turkinator", "what is the pilgrim's paunch", "how do i get cranberry chutney", "how do i serve the feast", "where is the pilgrim's bounty feast table", "how do i kill wild turkeys", "what is the food coma buff", "how long does pilgrim's bounty last", "how do i get pilgrim's bounty buckets", "what is the turkey achievement", "how do i cook for pilgrim's bounty", "what is the thanksgiving event"],
     "tags": ["event", "holiday", "seasonal", "wotlk"]
+  },
+  {
+    "id": "event_darkmoon_faire",
+    "title": "Darkmoon Faire",
+    "content": "The Darkmoon Faire is a travelling carnival with games, vendors and the fortune teller Sayge. It sets up for about a week in Elwynn Forest, Mulgore or Terokkar Forest, and each of those three places gets it once every three months. Silas Darkmoon is there, Selina Dourman gives information, Gelvas Grimegate redeems Darkmoon Faire Prize Tickets, and Lhara and Professor Thaddeus Paleo sell exotic goods and cards.",
+    "keywords": ["darkmoon faire", "darkmoon", "dmf", "sayge", "silas darkmoon", "gelvas grimegate", "darkmoon faire prize ticket", "darkmoon prize ticket", "prize tickets"],
+    "questions": ["where is the darkmoon faire", "when is the darkmoon faire", "when does dmf start", "is the darkmoon faire up", "where is dmf right now", "how often does the darkmoon faire come", "how long does the darkmoon faire last", "who is sayge", "what do prize tickets do", "where do i turn in darkmoon prize tickets", "who is gelvas grimegate", "is the darkmoon faire in elwynn", "is the darkmoon faire in mulgore", "is dmf in terokkar", "what can i do at the darkmoon faire", "who is silas darkmoon"],
+    "tags": ["event", "darkmoon", "faire"]
+  },
+  {
+    "id": "event_argent_tournament",
+    "title": "Argent Tournament",
+    "content": "The Argent Tournament is the Argent Crusade's jousting hub in Icecrown, with daily quests from level 77. Dailies pay Champion's Seals, which each faction's quartermaster there takes: 100 seals buy the city's racial mount (Stormwind Steed, Ironforge Ram, Gnomeregan Mechanostrider, Exodar Elekk, Darnassian Nightsaber, Orgrimmar Wolf, Thunder Bluff Kodo, Silvermoon Hawkstrider, Darkspear Raptor or Forsaken Warhorse) and 150 buy the Argent Hippogryph mount.",
+    "keywords": ["argent tournament", "champions seal", "champion's seal", "champions seals", "argent hippogryph", "tournament mount", "mariel trueheart"],
+    "questions": ["what is the argent tournament", "what level for the argent tournament", "how do i get champion's seals", "what are champion's seals for", "how do i get the argent hippogryph", "how many seals for the argent hippogryph", "how do i get the stormwind steed", "how do i get the orgrimmar wolf", "what mounts can i buy at the argent tournament", "how many champions seals for a mount", "who sells the tournament mounts", "who is justicar mariel trueheart", "what are the argent tournament dailies", "what is the argent tournament for", "where do i buy the darkspear raptor"],
+    "tags": ["event", "icecrown", "mounts", "reputation"]
   }
 ]

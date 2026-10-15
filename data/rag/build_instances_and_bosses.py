@@ -530,7 +530,10 @@ BOSSES = [
     ("Lord Jaraxxus", "Trial of the Crusader", "a boss",
      "An eredar lord accidentally summoned into the arena partway through the event."),
     ("The Lich King", "Icecrown Citadel", "the final boss",
-     "Arthas Menethil, fought on the roof of the Frozen Throne; it is the last encounter of Wrath of the Lich King. He also appears unkillable at the end of Halls of Reflection."),
+     "Arthas Menethil, fought on the roof of the Frozen Throne. Phase 1 has Necrotic Plague, Infest, Shambling "
+     "Horrors and Drudge Ghouls. At 70 percent a transition with Raging Spirits and Ice Spheres leads to phase 2 "
+     "(Defile, Soul Reaper, Val'kyr); at 40 percent another leads to phase 3 (Defile, Soul Reaper, Vile Spirits, "
+     "Harvest Soul). At 10 percent the final scene starts with Tirion Fordring, and he enrages at 15 minutes."),
     ("Sindragosa", "Icecrown Citadel", "the boss before the Lich King",
      "Sapphiron's risen mate, who stacks a frost debuff that forces players to hide behind ice tombs."),
     ("Professor Putricide", "Icecrown Citadel", "a boss",
@@ -654,6 +657,11 @@ def level_phrase(title, lo, hi, kind):
 #   * anything already reachable through the entry's own content or roster,
 #     which retrieves at content weight and needs no duplicate handle.
 EXTRA_KEYWORDS = {
+    # Apostrophe names typed as two words: Normalize joins "zul'gurub" into one
+    # token, so "zul gurub" matched nothing (2026-10-15 path audit).
+    "Zul'Aman":             ["zul aman"],
+    "Drak'Tharon Keep":     ["drak tharon"],
+    "Ahn'kahet: The Old Kingdom":["ahn kahet"],
     "Deadmines":            ["mine cart", "van cleef", "defias"],
     "Wailing Caverns":      ["naralex", "emerald dream"],
     "Blackfathom Deeps":    ["twilight hammer"],
@@ -669,10 +677,10 @@ EXTRA_KEYWORDS = {
     "Dire Maul":            ["warpwood quarter", "capital gardens", "gordok commons", "ogres", "pusillin"],
     "Maraudon":             ["centaur", "valley of spears"],
     "Sunken Temple":        ["atal'ai", "avatar of hakkar"],
-    "Zul'Farrak":           ["sandfury", "antusul"],
-    "Zul'Gurub":            ["gurubashi"],
-    "Ruins of Ahn'Qiraj":   ["qiraji", "silithid"],
-    "Ahn'Qiraj Temple":     ["qiraji", "silithid"],
+    "Zul'Farrak":           ["sandfury", "antusul", "zul farrak"],
+    "Zul'Gurub":            ["gurubashi", "zul gurub"],
+    "Ruins of Ahn'Qiraj":   ["qiraji", "silithid", "ruins of ahn qiraj"],
+    "Ahn'Qiraj Temple":     ["qiraji", "silithid", "temple of ahn qiraj"],
 }
 
 def instance_entry(title, lo, hi, kind, where, flavour, bosses, words):

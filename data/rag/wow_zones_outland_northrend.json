@@ -75,7 +75,7 @@
     "id": "zone_zuldrak",
     "title": "Zul'Drak",
     "content": "Zul'Drak is a level 74 to 76 Northrend zone, the ice troll homeland, where the Drakkari are killing their own gods for power. The Argent Crusade holds Light's Breach and the Ebon Blade operates at Ebon Watch. Gundrak sits at the northern end of the zone, and the Amphitheater of Anguish runs a well-known gauntlet of group quests.",
-    "keywords": ["zuldrak", "drakkari", "gundrak", "lights breach", "ebon watch", "amphitheater of anguish"],
+    "keywords": ["zuldrak", "drakkari", "gundrak", "lights breach", "ebon watch", "amphitheater of anguish", "zul drak"],
     "questions": ["what level is zul'drak", "where is zul'drak", "where is light's breach", "where is ebon watch", "where is gundrak", "what is the amphitheater of anguish", "where do i go at level 74 to 76", "zul'drak level range", "who are the drakkari", "what are the ice trolls doing in zul'drak", "zuldrak quest hubs", "where is the troll zone in northrend", "where do i do group quests in zul'drak"],
     "tags": ["zone", "contested", "northrend", "leveling"]
   },
@@ -90,17 +90,17 @@
   {
     "id": "zone_storm_peaks",
     "title": "The Storm Peaks",
-    "content": "The Storm Peaks is a level 76 to 80 Northrend zone of high mountains and titan architecture in the north, home to the Sons of Hodir. K3 is the goblin hub and Dun Niffelem the Sons of Hodir's. The Sons of Hodir reputation is the only source of shoulder enchants in Wrath, and Ulduar opens from the western side of the zone.",
+    "content": "The Storm Peaks is a level 76 to 80 Northrend zone of high mountains and titan architecture, home to the Sons of Hodir. Flight masters at K3, Dun Niffelem, Bouldercrag's Refuge and Ulduar serve both factions; Frosthold is Alliance only, and Camp Tunka'lo and Grom'arsh Crash-Site are Horde only. Dalaran flies straight to K3, the goblin hub. Sons of Hodir reputation is the only source of shoulder enchants in Wrath, and Ulduar opens at the northern end of the zone.",
     "keywords": ["the storm peaks", "storm peaks", "sons of hodir", "dun niffelem", "k3", "ulduar entrance", "brunnhildar", "shoulder enchants", "hyldnir"],
-    "questions": ["what level is the storm peaks", "where is storm peaks", "where is k3", "where is dun niffelem", "where is ulduar", "how do i get to ulduar", "how do i get shoulder enchants", "where do i get sons of hodir rep", "who are the sons of hodir", "storm peaks level range", "where are the titan ruins in northrend", "where do i go at level 76 to 80", "uld entrance where"],
+    "questions": ["what level is the storm peaks", "where is storm peaks", "where is k3", "where is dun niffelem", "where is ulduar", "how do i get to ulduar", "how do i get shoulder enchants", "where do i get sons of hodir rep", "who are the sons of hodir", "storm peaks level range", "where are the titan ruins in northrend", "where do i go at level 76 to 80", "uld entrance where", "does the storm peaks have flight paths", "are there flight masters in the storm peaks", "how do i get to the storm peaks", "how do i get to k3", "where are the flight paths in the storm peaks", "how do i get to ulduar from dalaran", "is there a flight path to ulduar", "what flight paths do horde have in the storm peaks", "what flight paths do alliance have in the storm peaks", "how do i get to frosthold", "how do i get to dun niffelem", "where is the flight master in k3"],
     "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
   },
   {
     "id": "zone_icecrown",
     "title": "Icecrown",
-    "content": "Icecrown is the level 77 to 80 Northrend zone below the Lich King's fortress, and the last leveling zone of Wrath. The Argent Crusade, the Knights of the Ebon Blade, and the Alliance and Horde all hold camps here. The Argent Tournament grounds run mounted daily quests, and Icecrown Citadel with the Trial of the Crusader sits at the zone's heart.",
-    "keywords": ["icecrown", "icecrown citadel", "lich king", "argent tournament", "knights of the ebon blade", "trial of the crusader", "shadow vault"],
-    "questions": ["what level is icecrown", "where is icecrown", "where is icecrown citadel", "where is icc", "where is the argent tournament", "where is trial of the crusader", "where is toc", "where are the argent tournament dailies", "what is the last leveling zone in wrath", "icecrown level range", "where is the lich king's fortress", "where do i go at level 77 to 80", "icecrown quest hubs", "where is the argent crusade camp"],
+    "content": "Icecrown is the level 77 to 80 Northrend zone below the Lich King's fortress, and the last leveling zone of Wrath. The Argent Crusade, the Knights of the Ebon Blade, and the Alliance and Horde all hold camps here, and the Argent Tournament grounds run mounted dailies and host the Trial of the Crusader. Icecrown Citadel is a separate level 80 raid with the Lich King at its top. No flight path lands at its door; Dalaran flies to Crusaders' Pinnacle, the Argent Tournament Grounds and the Argent Vanguard, and you ride or fly on from there.",
+    "keywords": ["icecrown", "icecrown citadel", "lich king", "knights of the ebon blade", "trial of the crusader", "shadow vault"],
+    "questions": ["what level is icecrown", "where is icecrown", "where is icecrown citadel", "where is icc", "where is the argent tournament", "where is trial of the crusader", "where is toc", "where are the argent tournament dailies", "what is the last leveling zone in wrath", "icecrown level range", "where is the lich king's fortress", "where do i go at level 77 to 80", "icecrown quest hubs", "where is the argent crusade camp", "how do i get to icecrown", "how do i get to icecrown citadel", "how do i get to the top of icc", "how do i get to the lich king", "how do i get to icc from dalaran", "is there a flight path to icecrown citadel", "what level do i need for icecrown citadel", "where is the entrance to icc", "how do i get to the argent tournament", "where do i fly for icc", "can i walk to icecrown citadel"],
     "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
   },
   {
@@ -114,9 +114,9 @@
   {
     "id": "zone_wintergrasp",
     "title": "Wintergrasp",
-    "content": "Wintergrasp is a level 77 to 80 Northrend zone that works as an open world PvP battleground rather than a leveling zone. Alliance and Horde fight over the Wintergrasp Fortress on a timer using siege vehicles and destructible walls. Holding the fortress grants the winning faction access to the Vault of Archavon raid and a damage buff, and losing it locks that out until the next battle.",
+    "content": "Wintergrasp is a level 77 to 80 Northrend zone that is an open world PvP battleground rather than a leveling zone. The factions fight over the fortress with siege vehicles and destructible walls; the holder gets the Vault of Archavon and a damage buff, and the loser is locked out of both until the next battle. Dalaran flies to Valiance Landing Camp (Alliance) or Warsong Camp (Horde) and has a Wintergrasp portal in each faction's enclave. On this realm a battle lasts 30 minutes with 150 minutes between battles, and joining needs level 75.",
     "keywords": ["wintergrasp", "wintergrasp fortress", "vault of archavon", "tenacity", "pvp zone"],
-    "questions": ["what level is wintergrasp", "where is wintergrasp", "what is wg", "how does wintergrasp work", "how do i get into the vault of archavon", "where is vault of archavon", "what does winning wintergrasp give", "is wintergrasp a battleground", "wg timer how often", "who owns wintergrasp", "what happens if i lose wintergrasp", "what are siege vehicles in wg", "wintergrasp fortress where", "is wg open world pvp"],
+    "questions": ["what level is wintergrasp", "where is wintergrasp", "what is wg", "how does wintergrasp work", "how do i get into the vault of archavon", "where is vault of archavon", "what does winning wintergrasp give", "is wintergrasp a battleground", "wg timer how often", "who owns wintergrasp", "what happens if i lose wintergrasp", "what are siege vehicles in wg", "wintergrasp fortress where", "is wg open world pvp", "how do i get to wintergrasp from dalaran", "is there a flight path to wintergrasp", "is there a portal to wintergrasp", "how do i get to wg", "where is the wg portal in dalaran", "how often is wintergrasp", "how long does a wintergrasp battle last", "what level do i need for wintergrasp", "what level do i need for wg", "how do i join wintergrasp", "when is the next wintergrasp battle"],
     "tags": ["zone", "contested", "northrend", "pvp", "endgame"]
   }
 ]

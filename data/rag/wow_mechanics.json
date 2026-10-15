@@ -2,9 +2,9 @@
   {
     "id": "mechanic_reputation",
     "title": "Reputation System",
-    "content": "Reputation levels run Hated, Hostile, Unfriendly, Neutral, Friendly, Honored, Revered, Exalted. From Neutral it takes 3,000 points to Friendly, 6,000 to Honored, 12,000 to Revered and 21,000 to Exalted, 42,000 in all. Each faction's quartermaster sells more as you climb, and humans gain 10% extra reputation.",
+    "content": "Reputation levels run Hated, Hostile, Unfriendly, Neutral, Friendly, Honored, Revered, Exalted. From Neutral it takes 3,000 points to Friendly, then 6,000 to Honored, 12,000 to Revered and 21,000 to Exalted, 42,000 in all. See your standings in the Reputation tab of the Character window (C). Quartermasters sell more as you climb; humans gain 10% extra, and this realm gives five times the normal reputation from every source.",
     "keywords": ["reputation", "rep", "exalted", "revered", "standing", "faction standing"],
-    "questions": ["how does rep work", "how do i get exalted", "how much rep for exalted", "what are the reputation levels", "how much rep to revered", "how much rep to honored", "what is neutral to friendly", "what is the rep order", "how do i check my standing with a faction", "why are quartermasters locked", "how do i unlock the rep vendor", "do humans get extra rep", "how much rep to friendly", "what is the human rep bonus", "what comes after revered", "how do i raise my reputation", "what is hated and hostile"],
+    "questions": ["how does rep work", "how do i get exalted", "how much rep for exalted", "what are the reputation levels", "how much rep to revered", "how much rep to honored", "what is neutral to friendly", "what is the rep order", "how do i check my standing with a faction", "why are quartermasters locked", "how do i unlock the rep vendor", "do humans get extra rep", "how much rep to friendly", "what is the human rep bonus", "what comes after revered", "how do i raise my reputation", "what is hated and hostile", "where do i see my reputation", "how do i check my reputation", "where is the reputation tab", "what key opens reputation", "how do i see my rep", "how fast is rep gain here", "is rep boosted on this realm", "how much faster is reputation here", "does this realm have boosted rep"],
     "tags": ["mechanic", "reputation", "factions", "progression"]
   },
   {
@@ -78,9 +78,9 @@
   {
     "id": "mechanic_guilds",
     "title": "Guild System",
-    "content": "The Guild tab of the Social window (O) lists the members and who is online. A member whose rank allows it invites a player with /ginvite and their name, or the tab's Add Member button; /gquit leaves. To found a guild, buy a guild charter from a guild master in a capital, collect signatures and turn it in. The guild leader sets ranks and what each may do, including guild bank withdrawals. Guilds in Wrath have no levels or perks.",
+    "content": "The Guild tab of the Social window (O) lists the members and who is online. A member whose rank allows it invites a player with /ginvite and their name, or the tab's Add Member button; /gquit leaves. To found a guild, buy a charter for 10 silver from a Guild Master in a capital or Dalaran, get 3 other players from different accounts, either faction, to sign it, and turn it in at the same NPC. The leader sets ranks and bank rights. Guilds in Wrath have no levels or perks.",
     "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions", "make a guild", "guild roster", "guild members", "ginvite", "gquit"],
-    "questions": ["how do i join a guild", "how do i make a guild", "how do i start a guild", "how do i get a guild charter", "where do i buy a guild charter", "how do i invite someone to my guild", "what is ginvite", "how do i leave my guild", "how do i see my guild roster", "how do i see who is online in guild", "how do i open the guild window", "how do i check my guild members", "what key opens the guild tab", "how do i see guild members", "how many signatures for a guild", "how do guild ranks work", "how do i give guild bank access", "do guilds have levels", "does wrath have guild perks", "how do i set guild permissions"],
+    "questions": ["how do i join a guild", "how do i make a guild", "how do i start a guild", "how do i get a guild charter", "where do i buy a guild charter", "how do i invite someone to my guild", "what is ginvite", "how do i leave my guild", "how do i see my guild roster", "how do i see who is online in guild", "how do i open the guild window", "how do i check my guild members", "what key opens the guild tab", "how do i see guild members", "how many signatures for a guild", "how do guild ranks work", "how do i give guild bank access", "do guilds have levels", "does wrath have guild perks", "how do i set guild permissions", "how much does a guild charter cost", "how many signatures do i need for a guild", "who can sign my guild charter", "can the other faction sign my guild charter", "where do i turn in a guild charter", "can my alts sign my guild charter", "how many people do i need to start a guild", "can i join a guild of the other faction", "how much does it cost to make a guild", "where do i find a guild master npc"],
     "tags": ["mechanic", "social", "guilds", "community"]
   },
   {
@@ -88,13 +88,13 @@
     "title": "Death and Your Corpse",
     "content": "When you die, release your spirit and you appear as a ghost at the nearest graveyard; run back to your corpse and resurrect there for free. The spirit healer at the graveyard revives you on the spot instead, but from level 11 that costs extra durability on your gear and gives resurrection sickness, weaker stats for up to ten minutes. Every death wears your gear, which a repair vendor fixes for gold.",
     "keywords": ["corpse", "graveyard", "resurrection sickness", "res sickness", "rez sickness"],
-    "questions": ["how do i get my corpse back", "where do i go when i die", "i died now what", "how do i res", "how do i get my body", "lost my corpse", "where is my corpse", "how do i release spirit", "what is a spirit healer", "is the spirit healer worth it", "what is resurrection sickness", "how do i get rid of res sickness", "do i lose durability when i die", "how do i repair my gear", "how do i run back to my body", "what happens when i die", "where do ghosts go", "how do i resurrect", "can i res for free", "why is my gear broken"],
+    "questions": ["how do i get my corpse back", "where do i go when i die", "i died now what", "how do i res", "how do i get my body", "lost my corpse", "where is my corpse", "how do i release spirit", "what is a spirit healer", "is the spirit healer worth it", "what is resurrection sickness", "how do i get rid of res sickness", "how do i run back to my body", "what happens when i die", "where do ghosts go", "how do i resurrect", "can i res for free"],
     "tags": ["mechanic", "death", "basics"]
   },
   {
     "id": "mechanic_instances",
     "title": "Instance System",
-    "content": "Dungeons are five-player and Wrath raids are 10 or 25. Heroic dungeon lockouts reset daily and raid lockouts weekly; a normal dungeon can be reset from your portrait menu, but you can enter at most five instances per hour.",
+    "content": "Dungeons are five-player and Wrath raids are 10 or 25. Heroic dungeon lockouts reset daily and raid lockouts weekly; a normal dungeon can be reset from your portrait menu, and on this realm you can enter at most ten instances per hour.",
     "keywords": ["instance", "instances", "lockout", "raid lockout", "raid id", "instance reset", "reset instance", "too many instances", "saved to"],
     "questions": ["how do dungeons work", "how many people in a dungeon", "how many in a raid", "how many people in a 25 man", "when do heroic lockouts reset", "when do raids reset", "how do i reset an instance", "how do i reset a dungeon", "can i reset instances", "what is the instance limit per hour", "why cant i enter the instance", "how many instances per hour", "what is a lockout", "what is a saved raid", "what is the 5 instance limit", "how often do heroics reset", "how do i reset my dungeon", "what is a 10 man", "how long is the raid lockout"],
     "tags": ["mechanic", "instances", "group_content", "difficulty"]
@@ -122,5 +122,125 @@
     "keywords": ["currency", "currencies", "badge", "badges", "stone keepers shard", "stone keepers shards", "champions seal", "champions seals", "arena points"],
     "questions": ["what currencies are there", "what is honor for", "what are arena points", "what are emblems", "what is emblem of frost", "what are stone keeper's shards", "what are champion's seals", "what is the honor cap", "how many honor can i hold", "what is the max honor", "what currency do i need for pve gear", "what currency for pvp gear", "where do i see my currency", "how do i get champion's seals", "where do i get stone keeper's shards", "what do i spend wintergrasp shards on", "which tokens buy gear"],
     "tags": ["mechanic", "currency", "gearing", "progression"]
+  },
+  {
+    "id": "mechanic_raid_item_level",
+    "title": "Raid and Dungeon Gear Requirements",
+    "content": "Trial of the Crusader asks only for level 80: no item level or gear score is enforced for it, nor for Icecrown Citadel, Ulduar or Naxxramas, and groups set their own bar. Heroic Trial of the Crusader needs the Call of the Crusade achievement for that raid size, and heroic Icecrown Citadel needs The Frozen Throne. Heroic Northrend five-mans need an average item level of 180, or 200 for Forge of Souls, Pit of Saron and Trial of the Champion and 219 for Halls of Reflection.",
+    "keywords": ["ilvl", "gearscore", "gear score", "heroic requirements", "call of the crusade"],
+    "questions": ["what ilvl do i need for toc", "gear score for trial of the crusader", "what item level for toc 10", "what gearscore for icc", "is there a gear requirement for toc", "what do i need to enter toc heroic", "how do i unlock heroic toc", "what ilvl for heroic dungeons", "item level needed for heroics", "min gearscore for ulduar", "what gear do i need for icc", "what ilvl for halls of reflection", "do i need gear for naxx", "how do i unlock heroic icc", "what is the item level requirement for forge of souls", "what ilvl for pit of saron heroic", "how much gear for trial of the crusader"],
+    "tags": ["mechanic", "raid", "gear"]
+  },
+  {
+    "id": "mechanic_xp_to_level",
+    "title": "Experience Needed to Level",
+    "content": "Going from level 1 to 80 takes 24,067,200 experience in all: 3,379,400 to reach 60, 4,722,000 more to reach 70, and 15,965,800 more from 70 to 80. One level costs 400 at level 1, 290,000 at 60, 717,000 at 69, 1,523,800 at 70 and 1,670,800 at 79. Kills, quests and discovering new areas give XP; gathering herbs, ore or skins does not. This realm pays triple XP for kills and quests and quadruple for exploring and Dungeon Finder quests.",
+    "keywords": ["xp to level", "xp per level", "gathering xp", "xp for gathering", "xp to 80"],
+    "questions": ["how much xp to reach 80", "how much xp do i need to hit 80", "how much xp is level 80", "how much xp from 70 to 80", "how much xp per level", "how much exp for level 60", "how many xp to level 70", "do you get xp for gathering", "does mining give xp", "does herbalism give xp", "do i get xp from herbs", "do gathering professions give experience", "can i level by mining", "how much xp does it take to get to 80", "total xp to max level", "how much exp from 1 to 80", "do you get xp for skinning", "how much xp for the next level"],
+    "tags": ["mechanic", "leveling", "xp"]
+  },
+  {
+    "id": "mechanic_chat_commands",
+    "title": "Whispers and Chat Commands",
+    "content": "To whisper someone, type /w, /whisper or /tell, then their name and your message, like /w Name hello; /r answers the last person who whispered you. The other channels are /s say, /y yell, /p party, /g guild and /raid for raid chat. The target has to be online, and on this realm Horde and Alliance can whisper, say and yell to each other.",
+    "keywords": ["whisper", "whispers", "whispering", "private message", "chat command", "slash command"],
+    "questions": ["how do i whisper", "what is the whisper command", "how do i send a private message", "how do i reply to a whisper", "what does /r do", "what is /w", "how do i tell someone something privately", "how do i talk in party chat", "what is the command for guild chat", "how do i yell", "how do i talk in raid chat", "can i whisper the other faction", "can horde whisper alliance", "what are the chat commands", "how do i message a player", "how do i say something to nearby players", "what is the slash command for party chat"],
+    "tags": ["mechanic", "social", "chat"]
+  },
+  {
+    "id": "mechanic_chat_channels",
+    "title": "Chat Channels",
+    "content": "Chat channels are numbered: General is local to your zone, LocalDefense is the zone's defense channel, and Trade, for buying and selling, only exists in cities. You join them automatically as you travel; type /1, /2 and so on to speak in one (General is usually /1), or /join and a channel's name to get back into one you left. Horde and Alliance share the same channels on this realm. The LookingForGroup channel only opens while you are queued in the LFG tool.",
+    "keywords": ["chat channel", "chat channels", "general chat", "trade chat", "trade channel", "local defense", "localdefense"],
+    "questions": ["how do i talk in general chat", "how do i join the trade channel", "how do i use trade chat", "where is trade chat", "why cant i see trade chat", "why is there no trade channel outside cities", "what is localdefense", "what is the local defense channel", "how do i speak in channel 1", "what is /1", "how do i rejoin a chat channel", "how do i join a channel", "what chat channels are there", "do horde and alliance share general chat", "can the other faction see my general chat", "how do i type in trade", "what is the general channel"],
+    "tags": ["mechanic", "social", "chat", "channels"]
+  },
+  {
+    "id": "mechanic_trading",
+    "title": "Trading Between Players",
+    "content": "To trade, stand within about 11 yards of the other player, right-click them and choose Trade. Each side adds up to six items and some gold, plus a seventh slot whose item isn't handed over, and both must accept to finish. Most soulbound items can't be traded, and Horde and Alliance can't trade with each other.",
+    "keywords": ["trade window", "trade request", "trade items", "trade a player", "trading with"],
+    "questions": ["how do i trade an item to another player", "how do i give someone an item", "how do i give gold to a player", "how do i open a trade window", "how far can i be to trade", "why wont the trade window open", "how many items can i trade at once", "what is the last slot in the trade window", "how do i trade gold", "what is the seventh trade slot", "how do i hand someone my gold", "how do i do a trade", "how do i start a trade", "how many slots in a trade", "do both players have to accept a trade"],
+    "tags": ["mechanic", "social", "trading"]
+  },
+  {
+    "id": "mechanic_party_raid",
+    "title": "Parties and Raid Groups",
+    "content": "Invite a player with /invite and their name, or right-click them and choose Invite; only the leader or a raid assistant can invite. A party holds 5 players, and the leader can convert it to a raid once it has two members, all level 10 or higher; a raid group holds up to 40. Logging out normally takes you out of a party, though not a raid or a Dungeon Finder group.",
+    "keywords": ["party invite", "group invite", "invite to party", "convert to raid", "raid group", "party leader"],
+    "questions": ["how do i invite a player to group", "what is /invite", "how do i make a party", "how do i form a group with someone", "how do i convert my party to a raid", "how do i turn a party into a raid", "how many people can be in a party", "how many players in a raid group", "why cant i convert to a raid", "can anyone invite to the party", "why did i get kicked from my party when i logged out", "why am i not in my group anymore", "what level do you need for a raid group", "how do i start a raid", "can an assistant invite people", "do i stay in my party when i log off", "how many can i invite to a party"],
+    "tags": ["mechanic", "social", "groups"]
+  },
+  {
+    "id": "mechanic_loot_methods",
+    "title": "Group Loot Methods",
+    "content": "A new party uses Group Loot: items at or above the loot threshold, green by default, are rolled for, and lower ones aren't. The party leader can change it from their own portrait's right-click menu: Master Looter lets one chosen player hand out every threshold item, Need Before Greed is a roll, Round Robin takes turns on corpses, and Free For All lets anyone grab anything. Dungeon Finder groups always use Need Before Greed, and their leader can't change it.",
+    "keywords": ["loot method", "loot threshold", "group loot", "master loot", "master looter", "round robin", "ffa loot", "need before greed"],
+    "questions": ["how do i set loot to master looter", "how do i change the loot method", "how do i change loot rules", "what is master looter", "what is group loot", "what is need before greed", "what is round robin loot", "what is free for all loot", "how do i change the loot threshold", "what is the loot threshold", "who decides loot in a group", "how does loot work in a party", "what loot method does the dungeon finder use", "why cant i change loot in lfd", "how do i become master looter", "how do i set party loot", "what is the default loot setting", "who can change the loot method", "what does ffa loot mean"],
+    "tags": ["mechanic", "loot", "groups"]
+  },
+  {
+    "id": "mechanic_loot_rolls",
+    "title": "Need, Greed and Disenchant Rolls",
+    "content": "When a loot roll pops up, each player picks Need, Greed, Disenchant or Pass within 60 seconds, and the server rolls a random 1 to 100 for everyone who chose. Any Need beats every Greed, so Need is for gear you will actually use; Disenchant shows only when someone in the group has Enchanting skill high enough for the item, and it ranks with Greed. In Dungeon Finder groups you can only Need gear your class can use. /roll gives a random 1 to 100 on its own.",
+    "keywords": ["greed", "greeding", "need or greed"],
+    "questions": ["what does need mean in loot rolls", "when should i roll need", "when should i roll greed", "what is greed", "what does disenchant mean in a roll", "why is there no disenchant option", "what happens if i pass on loot", "what is the difference between need and greed", "does need beat greed", "how long do i have to roll", "how do loot rolls work", "how do rolls work", "what is /roll", "how do i roll a random number", "can i roll need on gear i cant use", "why cant i click need", "who wins a loot roll", "how do i roll on loot", "what do i pick for loot i dont need"],
+    "tags": ["mechanic", "loot", "groups", "rolls"]
+  },
+  {
+    "id": "mechanic_item_binding",
+    "title": "Bind on Pickup and Bind on Equip",
+    "content": "Bind on Pickup (BoP) items become soulbound the moment you loot or receive them, and can't be traded, mailed or auctioned, only sold to a vendor. Bind on Equip (BoE) items stay tradable until you equip them, and Bind on Use items bind when used. Bind to Account (BoA) items, mostly heirlooms, can be mailed between your own characters but never traded to anyone else. Here, soulbound gear that dropped for a group can still be traded to players who could have looted it, for 2 hours of played time.",
+    "keywords": ["bind on pickup", "bind on equip", "bind on use", "bind to account", "bound to account", "account bound", "soulbound", "bop", "boe", "boa"],
+    "questions": ["what does bop mean", "what does boe mean", "what does boa mean", "what is bind on pickup", "what is bind on equip", "what is bind on use", "what is bind to account", "what does soulbound mean", "can i trade a soulbound item", "can i trade bop items in a group", "how long can i trade a boss drop to someone", "can i sell bop gear on the ah", "can i mail a bop item", "can i mail heirlooms to other players", "what happens when i equip a boe", "why cant i trade this item", "how do i trade a drop to someone who needs it", "can a boe be sold on the ah"],
+    "tags": ["mechanic", "items", "binding"]
+  },
+  {
+    "id": "mechanic_mail",
+    "title": "Mail, Gold and COD",
+    "content": "At a mailbox, the Send Mail tab takes a recipient, a message, up to 12 attached items and either gold or a cash-on-delivery price, not both. Postage is 30 copper per attached item, or 30 copper for text alone. A COD recipient must pay the price to take the items, and it comes back to you by mail. Items sent to a character on another account arrive after 5 minutes; gold, text and mail between your own characters are instant. Mail lasts 30 days, COD mail 3, and soulbound items can't be sent.",
+    "keywords": ["mailbox", "mailboxes", "send mail", "mail attachments", "cod", "cash on delivery", "return to sender", "postage"],
+    "questions": ["how do i send mail", "how do i send gold to someone", "how do i send an item to a player", "how do i mail gold", "what is cod", "what does cod mean in mail", "how do i send a cod", "how much does mail cost", "how much is postage", "how many items can i attach to mail", "how long until mail expires", "why hasnt my mail arrived", "how long does it take for mail to arrive", "can i mail soulbound items", "why is my mail delayed", "can i send gold and a cod together", "how do i mail someone who is offline"],
+    "tags": ["mechanic", "social", "mail", "economy"]
+  },
+  {
+    "id": "mechanic_cross_faction",
+    "title": "Cross-Faction Play",
+    "content": "On this realm Horde and Alliance can whisper, say and yell to each other, share chat channels, party and raid together, queue for dungeons together, join and sign for the same guild, and use one auction house. They cannot trade with each other, and mail only crosses factions between your own characters on one account.",
+    "keywords": ["cross faction", "crossfaction", "other faction", "opposite faction", "enemy faction"],
+    "questions": ["can i group with the other faction", "can horde and alliance party together", "can i trade with horde", "can i trade with the other faction", "can i mail the other faction", "can i mail my alt on the other faction", "can i invite horde to my guild", "can alliance and horde be in the same guild", "can i talk to the other faction", "can horde and alliance chat", "can i do dungeons with the other faction", "can i raid with the other faction", "is this a cross faction realm", "what can horde and alliance do together here", "why cant i trade with an alliance player", "can i send gold to the other faction"],
+    "tags": ["mechanic", "social", "factions"]
+  },
+  {
+    "id": "mechanic_durability",
+    "title": "Durability and Repairs",
+    "content": "Armor and weapons have durability that wears as you fight. On this realm dying costs every equipped item 5% of its durability, even when another player kills you, and a spirit healer resurrection takes another 25% from everything you carry. An item at zero is broken and its stats stop working until it is repaired at a repair vendor, which costs twice the usual rate here.",
+    "keywords": ["durability", "broken gear", "broken item", "repair bill", "repair cost", "gear wear"],
+    "questions": ["what is durability", "how much durability do i lose when i die", "what happens when my gear breaks", "what does broken gear do", "why are my stats lower", "why did my gear turn red", "how much does repair cost", "why is repair so expensive", "does dying break my gear", "does pvp death cost durability", "how much durability does the spirit healer cost", "can i fight with broken gear", "what happens at zero durability", "how do i fix broken gear", "how fast does gear wear out", "do i lose durability when i get killed by a player", "do i lose durability when i die", "how do i repair my gear", "why is my gear broken"],
+    "tags": ["mechanic", "durability", "repair", "death"]
+  },
+  {
+    "id": "mechanic_combat_state",
+    "title": "Leaving Combat",
+    "content": "You stay in combat until no enemy is still fighting you: kill them, or get far enough away that they give up and reset. After a fight with another player, combat drops 5 seconds after the last hostile action. A rogue's Vanish and a hunter's Feign Death can drop you out of combat early, and you can't mount or stealth until you are out of it.",
+    "keywords": ["leave combat", "out of combat", "drop combat", "stuck in combat", "exit combat", "end combat", "combat timer"],
+    "questions": ["how do i leave combat", "how long does combat last", "why cant i mount im in combat", "why am i still in combat", "how do i drop combat", "how do i stop being in combat", "how long until i leave combat", "can i drop combat with vanish", "how do i get out of combat fast", "does feign death drop combat", "why cant i stealth in combat", "how long is the pvp combat timer", "stuck in combat what do i do", "how do i reset combat", "how do i end combat"],
+    "tags": ["mechanic", "combat", "basics"]
+  },
+  {
+    "id": "mechanic_orgrimmar_stormwind_travel",
+    "title": "Orgrimmar to Stormwind",
+    "content": "Orgrimmar and Stormwind are rival capitals, so no boat, zeppelin or portal joins them. Horde take the zeppelin from Orgrimmar to Grom'gol in Stranglethorn Vale, then ride north through Duskwood and Elwynn Forest to Stormwind. Alliance fly from Stormwind to Booty Bay, sail the neutral boat to Ratchet in the Barrens, then ride across the Barrens to Orgrimmar. Horde can also fly from Orgrimmar to Ratchet and sail to Booty Bay.",
+    "keywords": ["orgrimmar to stormwind", "stormwind to orgrimmar", "between orgrimmar and stormwind"],
+    "questions": ["how do i get from orgrimmar to stormwind", "how do i get from stormwind to orgrimmar", "how do i get to orgrimmar from stormwind", "how to get to sw from og", "how to get from sw to og", "how do i get from org to sw", "is there a zeppelin from orgrimmar to stormwind", "is there a boat from stormwind to orgrimmar", "is there a portal from orgrimmar to stormwind", "can horde get to stormwind", "can alliance get to orgrimmar", "what is the fastest way from orgrimmar to stormwind", "route from stormwind to orgrimmar", "how do i travel between orgrimmar and stormwind", "how do i get to stormwind as horde", "how do i get to orgrimmar as alliance", "how do i cross from orgrimmar to stormwind"],
+    "tags": ["mechanic", "travel", "horde", "alliance"]
+  },
+  {
+    "id": "mechanic_death_gate",
+    "title": "Death Gate",
+    "content": "Death Gate is the death knight spell that returns you to Acherus: The Ebon Hold. It is taught by the level 55 quest The Light of Dawn, near the end of the starting chain, and it has a one-minute cooldown. In Acherus a portal on the platform southeast of Highlord Mograine leads to Stormwind or Orgrimmar for the quests Where Kings Walk (Alliance) and Warchief's Blessing (Horde).",
+    "keywords": ["death gate", "ebon hold", "acherus", "back to ebon hold", "return to acherus"],
+    "questions": ["how do death knights get back to ebon hold", "how do i get back to ebon hold", "how do i get back to acherus", "what is death gate", "where do i learn death gate", "when do death knights get death gate", "what level is death gate", "how long is the death gate cooldown", "how do dks go to ebon hold", "dk death gate where", "how do i leave ebon hold", "how do i get from ebon hold to stormwind", "how do i get from ebon hold to orgrimmar", "where is the portal in ebon hold", "i lost death gate how do i get it", "how do i get to acherus as a dk", "dk how to return to ebon hold", "what quest gives death gate"],
+    "tags": ["mechanic", "death_knight", "travel"]
   }
 ]

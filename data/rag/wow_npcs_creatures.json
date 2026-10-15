@@ -66,9 +66,9 @@
   {
     "id": "npc_lore_figures",
     "title": "Important Lore Figures",
-    "content": "Wrath's story centers on Arthas Menethil, the Lich King, waiting on the Frozen Throne atop Icecrown Citadel. Along the way players face Malygos, the blue Dragon Aspect, in the Eye of Eternity and the Old God Yogg-Saron beneath Ulduar, while Tirion Fordring leads the Argent Crusade and Darion Mograine the Knights of the Ebon Blade.",
+    "content": "Wrath's story centers on Arthas Menethil, the Lich King, waiting on the Frozen Throne atop Icecrown Citadel. Along the way players face Malygos, the blue Dragon Aspect, in the Eye of Eternity and the Old God Yogg-Saron beneath Ulduar. Tirion Fordring leads the Argent Crusade, and is found at the Argent Vanguard and Crusaders' Pinnacle in Icecrown (in Eastern Plaguelands before that); Darion Mograine leads the Knights of the Ebon Blade.",
     "keywords": ["lore", "lich king lore", "arthas", "tirion fordring", "darion mograine", "malygos lore", "yogg saron lore"],
-    "questions": ["who is the lich king", "who is arthas", "who is tirion fordring", "who is darion mograine", "who is malygos", "who is yogg saron", "what is the wotlk story", "who is the main villain in wrath", "where is the frozen throne", "what is the argent crusade", "what are the knights of the ebon blade", "lich king lore", "who leads the ebon blade", "where is malygos", "where do you fight yogg"],
+    "questions": ["who is the lich king", "who is arthas", "who is tirion fordring", "who is darion mograine", "who is malygos", "who is yogg saron", "what is the wotlk story", "who is the main villain in wrath", "where is the frozen throne", "what is the argent crusade", "what are the knights of the ebon blade", "lich king lore", "who leads the ebon blade", "where is malygos", "where do you fight yogg", "where is tirion fordring", "where is highlord tirion fordring", "where is tirion in icecrown", "where is tirion fordring in northrend", "where is crusaders pinnacle", "where did tirion fordring live before northrend"],
     "tags": ["npcs", "lore", "story", "characters"]
   },
   {
@@ -98,9 +98,33 @@
   {
     "id": "npc_transport",
     "title": "Transportation NPCs",
-    "content": "Boats and zeppelins are free. To Northrend, Alliance sail from Stormwind Harbor to Valiance Keep in Borean Tundra or from Menethil Harbor to Valgarde in Howling Fjord; Horde fly from Orgrimmar to Warsong Hold or from the Undercity to Vengeance Landing. The neutral Booty Bay-Ratchet boat links the old continents, and Shattrath has portals to your faction's capitals.",
+    "content": "Boats and zeppelins are free. Alliance boats: Stormwind Harbor to Auberdine and to Valiance Keep (Northrend); Auberdine to Rut'theran Village and Azuremyst Isle; Menethil Harbor to Theramore and Valgarde (Northrend). Horde zeppelins: Orgrimmar to Undercity, Grom'gol, Thunder Bluff and Warsong Hold (Northrend); Undercity to Grom'gol and Vengeance Landing (Northrend). The neutral boat links Booty Bay and Ratchet. Shattrath has portals to your capitals.",
     "keywords": ["boat", "boats", "zeppelin", "zeppelins", "zep", "get to northrend", "go to northrend", "transport", "transportation"],
-    "questions": ["how do i get to northrend", "where is the boat to northrend", "where is the zeppelin to northrend", "how do i get to valiance keep", "how do i get to howling fjord", "how do i get to borean tundra", "where is the boat to valgarde", "where do horde zeps go to warsong hold", "how do i get to vengeance landing", "are boats free", "how do i get from booty bay to ratchet", "where are the portals in shattrath", "how do i get to my capital from shattrath", "how do i get to northrend as horde", "how do i get to northrend as alliance", "how do i get to menethil harbor"],
+    "questions": ["how do i get to northrend", "where is the boat to northrend", "where is the zeppelin to northrend", "how do i get to valiance keep", "how do i get to howling fjord", "how do i get to borean tundra", "where is the boat to valgarde", "where do horde zeps go to warsong hold", "how do i get to vengeance landing", "are boats free", "how do i get from booty bay to ratchet", "where are the portals in shattrath", "how do i get to my capital from shattrath", "how do i get to northrend as horde", "how do i get to northrend as alliance", "how do i get to menethil harbor", "how do i get to darkshore", "how do i get to azuremyst isle", "where is the boat to theramore", "how do i get to kalimdor from stormwind", "where is the zeppelin to thunder bluff", "how do i get from orgrimmar to thunder bluff", "how do i get from undercity to orgrimmar", "where do boats from stormwind go", "what boats leave from menethil harbor", "how do i get from auberdine to the exodar", "which zeppelins leave from orgrimmar", "do boats and zeppelins cost gold", "how do i get from booty bay to ratchet by boat", "how do i get from stranglethorn to the barrens", "how do i get to grom'gol from orgrimmar"],
     "tags": ["npcs", "transport", "travel", "convenience"]
+  },
+  {
+    "id": "npc_old_gods",
+    "title": "The Old Gods",
+    "content": "Wrath has no single Old Gods questline: the Old Gods are ancient evil beings, and you meet them as raid bosses. Yogg-Saron waits at the bottom of Ulduar in The Storm Peaks, and the Val'anyr quest is finished by throwing its pieces into his maw. The other Old God in the game is C'Thun, in the Temple of Ahn'Qiraj in Silithus.",
+    "keywords": ["old gods", "old god", "yogg-saron lore", "n'zoth", "nzoth", "y'shaarj", "yshaarj"],
+    "questions": ["who are the old gods", "what are the old gods", "is there an old gods questline", "old gods quest line wotlk", "which old gods are in wrath", "where do i fight an old god", "where is yogg saron", "where is c'thun", "is yogg saron an old god", "is c'thun an old god", "what is the old god in ulduar", "what is the old god in ahn'qiraj", "how do i find the old gods", "do the old gods have a quest chain"],
+    "tags": ["lore", "npcs", "story"]
+  },
+  {
+    "id": "npc_riding_trainers",
+    "title": "Riding Trainers",
+    "content": "Riding is taught by racial trainers: Randal Hunter in Elwynn Forest for humans, Ultham Ironhorn in Dun Morogh for dwarves, Binjy Featherwhistle in Dun Morogh for gnomes, Jartsam in Darnassus for night elves, Aalun in the Exodar for draenei, Kildar in Orgrimmar for orcs, Xar'Ti in Sen'jin Village for trolls, Kar Stormsinger in Bloodhoof Village for tauren, Velma Warnam in Brill for the Forsaken and Perascamin in Eversong Woods for blood elves. They teach Apprentice at level 20 for 4 gold and Journeyman at 40 for 50 gold.",
+    "keywords": ["riding trainer", "mount trainer", "randal hunter", "ultham ironhorn", "binjy featherwhistle", "jartsam", "aalun", "kildar", "xarti", "kar stormsinger", "velma warnam", "perascamin"],
+    "questions": ["where do i learn riding", "where is the riding trainer", "where do i train apprentice riding", "where is the riding trainer in stormwind", "where do i learn to ride as a human", "where is the riding trainer in orgrimmar", "where do orcs learn riding", "where do tauren learn riding", "where do i learn riding as undead", "where is the blood elf riding trainer", "where do dwarves learn riding", "where do gnomes learn to ride", "where do night elves learn riding", "where do draenei learn riding", "where do trolls learn riding", "where do i buy my first mount skill", "who teaches journeyman riding", "where do i go at 20 to learn riding"],
+    "tags": ["npc", "mount", "trainer"]
+  },
+  {
+    "id": "npc_flying_trainers",
+    "title": "Flying and Cold Weather Flying Trainers",
+    "content": "Expert and Artisan riding, the flying ranks, are taught in Outland and Northrend: Hargen Bronzewing (Alliance) and Wind Rider Jahubo (Horde) in Hellfire Peninsula, Ilsa Blusterbrew (Alliance) and Olrokk (Horde) in Terokkar Forest, and Maigra Keenfeather (Alliance) and Wind Rider Sabamba (Horde) in Borean Tundra. Cold Weather Flying is taught by Hira Snowdawn in Dalaran, Roxi Ramrocket at K3 in the Storm Peaks and Pilot Vic at River's Heart in Sholazar Basin.",
+    "keywords": ["flying trainer", "flight trainer", "hargen bronzewing", "wind rider jahubo", "ilsa blusterbrew", "olrokk", "maigra keenfeather", "wind rider sabamba", "hira snowdawn", "roxi ramrocket", "pilot vic"],
+    "questions": ["where do i learn to fly", "where is the flying trainer", "where do i learn expert riding", "where do i learn artisan riding", "where do i train flying in outland", "where is the flying trainer in hellfire", "where do i learn cold weather flying", "where is the cold weather flying trainer", "where is hira snowdawn", "where do i learn epic flying", "where do i get flying skill", "where do horde learn flying", "where do alliance learn flying", "who teaches cold weather flying in dalaran", "where is the flying trainer in northrend", "where do i learn 280 flying"],
+    "tags": ["npc", "mount", "trainer"]
   }
 ]

@@ -308,6 +308,25 @@ lines): answerable game questions retrieving the right entry went from 78% to 84
 retrieving anything from 15% to 17%. `rag_recall_audit.py` went from 518 to 525 of 535.
 `Tests/test_hs_rag_questions.cpp` pins the mechanics.
 
+**Never copy a line from `Tests/path_eval_lines.jsonl` into `questions`.** It is the one measurement
+not tuned against the keywords or the questions.
+
+## Content gaps filled (2026-10-15)
+
+The same audit found that a quarter of the blind game questions had **no entry holding the answer**,
+so no retrieval could help them: travel routes, whisper/channels/trade/party basics, loot rules and
+item binding, mail, durability, profession ranks and trainers, riding trainers, class mount, demon
+and totem quests, Darkmoon Faire, the Argent Tournament and more. 35 entries were added and about 20
+edited, every realm-specific fact checked against the realm's world DB, `worldserver.conf` or the
+core source. Facts this realm sets differently from retail, now stated in the entries: 3 charter
+signatures, 5x reputation, 5% durability per death and 2x repair cost, mail delay 5 minutes, no
+cross-faction trade or mail (RBAC, despite the `AllowTwoSide.*` keys), four primary professions,
+3x/4x XP, no Deserter, ten instances per hour, no cross-realm Dungeon Finder.
+
+Relabeled against the new corpus, right path on all 502 lines: 73.1% shipping before this work,
+77.7% with example questions, 84.3% with the new content; game questions answered with the right
+entry 67% -> 73% -> 85%.
+
 ## Why the scoring looks like this
 
 `mod-ollama-chat`'s RAG scores cosine similarity over a corpus-wide vocabulary, normalized by the

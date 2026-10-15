@@ -108,9 +108,9 @@
   {
     "id": "general_finding_groups",
     "title": "Finding Groups for Content",
-    "content": "The Dungeon Finder builds a group for five-man dungeons automatically, cross-realm. Raids aren't queued: they're formed in trade chat, the LookingForGroup channel or the Raid Browser, where you list yourself for a raid and leaders can invite you. Saying your role and gear level up front gets invites faster.",
+    "content": "The Dungeon Finder builds a group for five-man dungeons automatically. Raids aren't queued: they're formed in trade chat or the Raid Browser, where you list yourself for a raid and leaders can invite you. On this realm the LookingForGroup channel only opens while you're queued or listed in the LFG tool. Saying your role and gear level up front gets invites faster.",
     "keywords": ["looking for group", "lfg", "lfm", "find a group", "find group", "pug", "pugs", "raid browser", "lookingforgroup"],
-    "questions": ["how do i find a group", "how do i find a raid", "how do i get into a raid", "how do i find a dungeon group", "where do i look for group", "what is the raid browser", "what is the lfg channel", "how do i find players for icc", "how do i join a raid group", "how do i find a pug", "where do pugs form", "how do i get invited to raids", "how do i list myself for a raid", "does lfd work for raids", "how do i get a pug raid", "how do i find people for a 10 man", "how do i get picked for a group", "what is the lookingforgroup channel", "can i queue for raids"],
+    "questions": ["how do i find a group", "how do i find a raid", "how do i get into a raid", "how do i find a dungeon group", "where do i look for group", "what is the raid browser", "what is the lfg channel", "how do i find players for icc", "how do i join a raid group", "how do i find a pug", "where do pugs form", "how do i get invited to raids", "how do i list myself for a raid", "does lfd work for raids", "how do i get a pug raid", "how do i find people for a 10 man", "how do i get picked for a group", "what is the lookingforgroup channel", "can i queue for raids", "how do i join the lookingforgroup channel", "why cant i join the lfg channel", "why is lfg chat closed", "how do i get into the lookingforgroup channel", "why cant i talk in lfg chat", "how do i join lfg chat"],
     "tags": ["general", "groups", "social", "content"]
   },
   {
@@ -168,5 +168,21 @@
     "tags": ["general", "pvp", "preparation", "combat"],
     "expert_domain": "pvp",
     "expert_content": "Set up macros before you queue: focus target, cast-at-focus for crowd control and interrupts, and a stopcasting interrupt. Trinket the crowd control that would get you killed, not the first one you see, and save your defensive cooldowns for the moment your team is at its lowest. Having healers on a different target than your damage keeps a fight under control."
+  },
+  {
+    "id": "general_loremaster",
+    "title": "The Loremaster Achievement",
+    "content": "The Loremaster achievement needs the four regional Loremaster achievements: Eastern Kingdoms and Kalimdor, each a count of several hundred completed quests, and Outland and Northrend, each a set of zone quest achievements such as Nothing Boring About Borean and To Hellfire and Back. It gives the Loremaster title and the Loremaster's Colors tabard, mailed from Darnassus for the Alliance and Thunder Bluff for the Horde.",
+    "keywords": ["loremaster", "the loremaster", "loremaster title", "loremasters colors", "loremaster of azeroth"],
+    "questions": ["what is loremaster", "how do i get loremaster", "how do i become loremaster", "what does the loremaster achievement need", "what is the loremaster title", "how many quests for loremaster", "what do i get for loremaster", "what is loremaster's colors", "how do i get the loremaster tabard", "what is loremaster of northrend", "what is loremaster of outland", "what is loremaster of kalimdor", "what is loremaster of eastern kingdoms", "how long does loremaster take", "is loremaster hard", "do i have to do every quest for loremaster"],
+    "tags": ["achievement", "quests", "title", "goals"]
+  },
+  {
+    "id": "general_spell_power_gear",
+    "title": "Spell Power Gear",
+    "content": "Casters can buy spell power gear from the Emblem vendors in Dalaran: Rueben Lauren, the cloth armor merchant, sells pieces for Emblems of Triumph (item level 232, 30 to 50 emblems each) and Emblems of Frost (item level 251, 60 to 95 each). Tailors craft Frostsavage (item level 187) and Ebonweave, Moonshroud and Spellweave robes and gloves (200), and heroic dungeon and raid bosses drop more. Gems and enchants add spell power too.",
+    "keywords": ["spellpower", "spell power gear", "caster gear", "frostsavage", "rueben lauren"],
+    "questions": ["where do i get caster gear", "best gear for casters", "how do i gear up my mage", "where to get cloth gear at 80", "spell power gear for healers", "how do i get spellpower", "caster gear from emblems", "what emblem vendor sells cloth", "where to buy cloth armor with emblems", "tailoring spell power gear", "how do i gear my priest", "how do i gear a warlock", "what gear should my mage wear", "how do i gear my healer", "where can i get spell power items", "what is frostsavage"],
+    "tags": ["general", "gear", "caster"]
   }
 ]

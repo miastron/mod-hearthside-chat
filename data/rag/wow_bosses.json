@@ -1206,7 +1206,7 @@
   {
     "id": "boss_the_lich_king",
     "title": "The Lich King",
-    "content": "The Lich King is the final boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. Arthas Menethil, fought on the roof of the Frozen Throne; it is the last encounter of Wrath of the Lich King. He also appears unkillable at the end of Halls of Reflection.",
+    "content": "The Lich King is the final boss of Icecrown Citadel, a level 80 ten- and twenty-five-player raid in Icecrown. Arthas Menethil, fought on the roof of the Frozen Throne. Phase 1 has Necrotic Plague, Infest, Shambling Horrors and Drudge Ghouls. At 70 percent a transition with Raging Spirits and Ice Spheres leads to phase 2 (Defile, Soul Reaper, Val'kyr); at 40 percent another leads to phase 3 (Defile, Soul Reaper, Vile Spirits, Harvest Soul). At 10 percent the final scene starts with Tirion Fordring, and he enrages at 15 minutes.",
     "keywords": [
       "the lich king",
       "icecrown citadel"

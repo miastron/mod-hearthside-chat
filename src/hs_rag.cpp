@@ -174,7 +174,10 @@ namespace
                 // the elders" -> Elder Nadox, "i'll pass" -> Deadwind Pass,
                 // "what level are you" -> Leveling Strategies, "how do i find a
                 // raid" -> Dwarf Race ("find treasure"), "out" like "off"
-                "land", "elder", "pass", "level", "many", "find", "out"
+                "land", "elder", "pass", "level", "many", "find", "out",
+                // measured 2026-10-15 (example questions): "found it" ->
+                // Human Race ("who founded the alliance", folded to "found")
+                "found"
             };
 
             std::vector<std::unordered_set<std::string>> out(2);
@@ -269,7 +272,8 @@ namespace
         // "you" is a stopword to the authored fields, but here it is evidence:
         // example questions ask about the game, and a line addressed to the
         // bot ("do you want to join my guild") is about the bot. Kept as a
-        // term, it is one that no question accounts for.
+        // line term that no question accounts for (Hs_SetRagTable never
+        // indexes it).
         static const std::unordered_set<std::string> kYou = { "you", "u", "ur", "your", "youre", "yourself" };
         std::vector<std::string> out;
         for (size_t i = 0, j; i < normalized.size(); i = j + 1)
@@ -540,7 +544,12 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
         std::unordered_set<std::string> seen;
         for (const std::string& q : idx.entries[i].questions)
         {
+            // "you" is never indexed, so on a line it is always unmatched and
+            // weighs as the rarest term: a question saying it generically
+            // ("what level do you need for a raid group") must not pair with
+            // every line addressed to the bot ("you with a group now?").
             std::vector<std::string> terms = QuestionTerms(Normalize(q));
+            terms.erase(std::remove(terms.begin(), terms.end(), "you"), terms.end());
             if (terms.empty())
                 continue;
             const uint32_t qi = static_cast<uint32_t>(idx.questionTerms[i].size());

@@ -70,5 +70,45 @@
     "keywords": ["daily", "dailies", "daily quest", "daily quests", "repeatable", "repeatable quest", "daily reset", "weekly quest", "how many dailies"],
     "questions": ["what are dailies", "how many dailies can i do a day", "what is the daily quest limit", "when do dailies reset", "when is daily reset", "what is the 25 daily cap", "what are weekly quests", "when does the weekly reset", "how many daily quests per day", "what are the best daily hubs in northrend", "can i repeat quests", "are there repeatable quests", "where do i do dailies in wotlk", "how do the dalaran dailies work", "how often do dailies reset"],
     "tags": ["quests", "repeatable", "daily", "grinding"]
+  },
+  {
+    "id": "quest_paladin_mount",
+    "title": "Paladin Class Mount",
+    "content": "Paladins earn their mount through class quests. On this realm the Warhorse quest, The Tome of Nobility, needs level 40 and is handed in to Duthorian Rall in Stormwind; blood elf paladins do The Thalassian Warhorse with Knight-Lord Bloodvalor in Silvermoon. The paladin trainer then teaches the Charger at level 40, once you know the Warhorse and have Journeyman Riding.",
+    "keywords": ["paladin mount", "pally mount", "warhorse", "charger", "thalassian warhorse", "tome of nobility", "duthorian rall"],
+    "questions": ["how do i get my paladin mount", "where do i get the paladin warhorse", "what level do pallies get a mount", "paladin class mount quest", "where does the pally mount quest start", "how do i get the charger as a paladin", "what level is the paladin charger", "who teaches the paladin charger", "what is the tome of nobility", "where is duthorian rall", "do paladins need a quest for a mount", "how do blood elf paladins get their mount", "what is the thalassian warhorse", "where do i get the thalassian charger", "do i need riding for the charger", "when do paladins get warhorse"],
+    "tags": ["quest", "class", "paladin", "mount"]
+  },
+  {
+    "id": "quest_warlock_mount",
+    "title": "Warlock Class Mount",
+    "content": "Warlocks earn their mount through class quests. On this realm the Summon Felsteed quest chain needs level 40 and ends with Strahad Farsan in Ratchet, in the Barrens, who teaches you to summon the Felsteed. The warlock trainer then teaches the Dreadsteed at level 40, once you know the Felsteed and have Journeyman Riding.",
+    "keywords": ["warlock mount", "lock mount", "felsteed", "dreadsteed", "strahad farsan", "summon felsteed"],
+    "questions": ["where do i get the felsteed", "what level do locks get a mount", "warlock class mount quest", "where does the felsteed quest start", "how do i get the dreadsteed", "what level is the dreadsteed", "who teaches the warlock dreadsteed", "who is strahad farsan", "where is strahad farsan", "do warlocks need a quest for a mount", "where is ratchet for the felsteed", "do i need riding for the dreadsteed", "when do warlocks get felsteed", "what is the summon felsteed quest", "where do i learn the lock mount"],
+    "tags": ["quest", "class", "warlock", "mount"]
+  },
+  {
+    "id": "quest_warlock_demons",
+    "title": "Warlock Demon Summoning Quests",
+    "content": "A warlock has the imp at level 1. The voidwalker comes from a level 10 quest called The Binding, the succubus from a level 20 one, and the felhunter from a level 30 one. The first two are given by Gakin the Darkbinder in Stormwind, Gan'rul Bloodeye in Orgrimmar or Carendin Halgar in Undercity; blood elves hand in their voidwalker quest to Talionia in Silvermoon. The felhunter quest is Strahad Farsan's in Ratchet, in the Barrens.",
+    "keywords": ["voidwalker", "succubus", "felhunter", "the binding", "gakin the darkbinder", "gakin", "carendin halgar", "gan'rul bloodeye", "talionia", "warlock demon quest"],
+    "questions": ["how do i get a voidwalker", "what level do locks get a voidwalker", "how do i get the succubus", "what level is the succubus", "how do i get a felhunter", "what level do warlocks get the felhunter", "where do i get my warlock demons", "what is the binding quest", "where is gakin the darkbinder", "where is gan'rul bloodeye", "where is carendin halgar", "where does the felhunter quest start", "warlock pet quest voidwalker where", "which demon at level 20", "do warlocks need quests for demons", "where do blood elf warlocks get a voidwalker", "what level is the imp for locks"],
+    "tags": ["quest", "class", "warlock", "pets"]
+  },
+  {
+    "id": "quest_shaman_totems",
+    "title": "Shaman Totem Quests",
+    "content": "Each shaman totem element has a class quest: Call of Earth at level 4 gives the Stoneskin Totem, Call of Fire at 10 the Searing Totem, Call of Water at 20 the Healing Stream Totem and Call of Air at 30 the air totem. Orcs and trolls start Earth with Canaga Earthcaller in the Valley of Trials and tauren with Seer Ravenfeather in Camp Narache. Fire ends at Kranal Fiss in the Barrens, Water at Islen Waterseer there, and Air with Prate Cloudseer in Thousand Needles.",
+    "keywords": ["call of earth", "call of fire", "call of water", "call of air", "totem quest", "totem quests", "stoneskin totem", "searing totem", "healing stream totem", "kranal fiss", "islen waterseer", "prate cloudseer"],
+    "questions": ["how do i get my first totem", "where do shamans get their totems", "what level are the shaman totem quests", "what is call of earth", "what is call of fire", "what is call of water", "what is call of air", "where do i start the earth totem quest", "where is kranal fiss", "where is islen waterseer", "where is prate cloudseer", "how do i get the water totem", "how do i get the fire totem", "how do i get the air totem", "what level do shamans get the earth totem", "do shamans have to quest for totems", "how do i get the searing totem", "how do i get stoneskin totem"],
+    "tags": ["quest", "class", "shaman", "totems"]
+  },
+  {
+    "id": "quest_hunter_pet_training",
+    "title": "Hunter Pet Leveling and Training",
+    "content": "A hunter's pet quests start at level 10: Taming the Beast has you use a Taming Rod on a beast near your starting zone and report back, then Training the Beast, or Beast Training for blood elves and draenei, sends you to your hunter trainer in the capital to learn Beast Training, which is how a pet is taught abilities. A pet earns experience when you kill things, never goes above your own level, and this realm triples pet experience. You can tame only beasts at or below your level.",
+    "keywords": ["taming the beast", "training the beast", "beast training", "taming rod", "pet leveling", "level my pet", "pet experience"],
+    "questions": ["how do i level my pet", "how does hunter pet leveling work", "how do i tame my first pet", "what is taming the beast", "what is the taming rod", "where do hunters learn beast training", "how do i train my pet abilities", "what is training the beast", "what level can my pet be", "can my pet be higher level than me", "how fast does my pet level", "how does pet xp work", "what level can i tame a beast", "can i tame a higher level beast", "where do i go after taming the beast", "how do i teach my pet new skills", "what level do hunters get a pet"],
+    "tags": ["quest", "class", "hunter", "pets"]
   }
 ]

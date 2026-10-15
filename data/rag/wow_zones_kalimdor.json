@@ -74,9 +74,9 @@
   {
     "id": "zone_tanaris",
     "title": "Tanaris",
-    "content": "Tanaris is a level 40 to 50 contested desert in southern Kalimdor, with the neutral goblin port of Gadgetzan as its hub and an auction house. The Caverns of Time open in the Tanaris cliffs, and Zul'Farrak lies in the northwest. Silithid, pirates at Lost Rigger Cove, and basilisks fill the sands.",
+    "content": "Tanaris is a level 40 to 50 contested desert in southern Kalimdor, with the neutral goblin port of Gadgetzan as its hub and an auction house. The Caverns of Time open in the Tanaris cliffs, and Zul'Farrak lies in the northwest. Once you know its flight path, Gadgetzan connects to Orgrimmar and Thunder Bluff for the Horde and to Theramore and Thalanaar for the Alliance; on foot from Orgrimmar it is south through the Barrens and Thousand Needles. Dalaran has a portal to the Caverns of Time.",
     "keywords": ["tanaris", "gadgetzan", "caverns of time", "zulfarrak entrance", "lost rigger cove", "steamwheedle port", "noggenfogger"],
-    "questions": ["what level is tanaris", "where is tanaris", "where is gadgetzan", "where is zul'farrak", "how do i get to zul'farrak", "where are the caverns of time", "how do i get to the caverns of time", "where is lost rigger cove", "does gadgetzan have an ah", "tanaris level range", "where is zf entrance", "is gadgetzan neutral"],
+    "questions": ["what level is tanaris", "where is tanaris", "where is gadgetzan", "where is zul'farrak", "how do i get to zul'farrak", "where are the caverns of time", "how do i get to the caverns of time", "where is lost rigger cove", "does gadgetzan have an ah", "tanaris level range", "where is zf entrance", "is gadgetzan neutral", "how do i get to tanaris from orgrimmar", "how do i get from orgrimmar to gadgetzan", "how do i get to gadgetzan as horde", "how do i get to gadgetzan as alliance", "how do i get to tanaris from theramore", "is there a flight path from orgrimmar to gadgetzan", "how do i walk from orgrimmar to tanaris", "how do i get to tanaris from thunder bluff", "how do i get to the caverns of time from dalaran", "how do i get to tanaris as alliance", "how do i get to tanaris as horde", "which way is tanaris from the barrens"],
     "tags": ["zone", "contested", "kalimdor", "leveling"]
   },
   {
@@ -99,7 +99,7 @@
     "id": "zone_ungoro_crater",
     "title": "Un'Goro Crater",
     "content": "Un'Goro Crater is a level 48 to 55 contested prehistoric basin south of Silithus, full of devilsaurs, raptors, and elementals. Marshal's Refuge in the middle is the neutral hub, and the crater is one of the best places in the old world for herbs, ore, and power crystals. A devilsaur will kill an unprepared player of its level range.",
-    "keywords": ["ungoro crater", "ungoro", "marshals refuge", "devilsaur", "power crystals", "fire plume ridge", "golakka hot springs"],
+    "keywords": ["ungoro crater", "ungoro", "marshals refuge", "devilsaur", "power crystals", "fire plume ridge", "golakka hot springs", "un goro"],
     "questions": ["what level is un'goro crater", "where is ungoro", "where is marshal's refuge", "where do i farm devilsaurs", "where do i get power crystals", "good place to farm herbs ungoro", "un'goro level range", "how do i get to un'goro crater", "where do i mine ore in ungoro", "what zone is south of silithus", "are devilsaurs dangerous", "where do i go at level 48 to 55"],
     "tags": ["zone", "contested", "kalimdor", "leveling"]
   },

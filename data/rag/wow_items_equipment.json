@@ -122,5 +122,37 @@
     "keywords": ["relic", "relics", "libram", "librams", "idol", "idols", "sigil", "sigils", "totem relic"],
     "questions": ["what is a relic", "what is a libram", "what is an idol", "what is a totem", "what is a sigil", "why cant i equip a gun as a paladin", "what goes in the ranged slot for a pally", "what is the ranged slot for druids", "what ranged slot item for dk", "what ranged slot for shamans", "which libram should i use", "which idol for feral", "which sigil for my dk", "which totem should i use", "what do relics do", "do i need a relic"],
     "tags": ["items", "relics", "class", "bonuses"]
+  },
+  {
+    "id": "item_vault_of_archavon_loot",
+    "title": "Vault of Archavon Loot",
+    "content": "Archavon the Stone Watcher drops two items on 10-player or four on 25-player, picked from Wrath tier 7 armor pieces and Gladiator PvP gear: item level 200 (Heroes' and Hateful Gladiator's) on 10 and 213 (Valorous and Deadly Gladiator's) on 25. He also gives two Emblems of Triumph, and there is a 1 percent chance of the Reins of the Grand Black War Mammoth, an Alliance or Horde version.",
+    "keywords": ["archavon loot", "archavon drops", "voa loot", "voa drops", "grand black war mammoth", "black war mammoth"],
+    "questions": ["what does archavon drop", "what loot does archavon give", "what drops in vault of archavon", "voa loot table", "does archavon drop tier gear", "how many items does archavon drop", "does archavon drop emblems", "how do i get the grand black war mammoth", "what drops from archavon 25", "what drops from archavon 10", "is there a mount in the vault of archavon", "does voa drop pvp gear", "what item level is voa gear", "does archavon drop a mount", "how many emblems from archavon", "what gear comes from voa"],
+    "tags": ["items", "raid", "wintergrasp", "loot"]
+  },
+  {
+    "id": "item_mithril_bar",
+    "title": "Mithril Bars",
+    "content": "No vendor sells Mithril Bars and no creature drops them: you smelt them from Mithril Ore, one ore per bar, at a forge with Smelt Mithril, which a mining trainer teaches at skill 175 for 50 silver. Mithril Deposits need 175 Mining and are common in the Hinterlands, Searing Gorge, Arathi Highlands, Desolace, Felwood, Alterac Mountains, Stranglethorn Vale, Tanaris and the Badlands. Otherwise buy bars at the auction house.",
+    "keywords": ["mithril", "mithril bar", "mithril bars", "mithril ore", "mithril deposit", "smelt mithril"],
+    "questions": ["where do i get mithril bars", "how do i make mithril bars", "where to buy mithril bars", "how to smelt mithril", "where do i find mithril ore", "what mining skill for mithril", "where is mithril ore", "who sells mithril bars", "how many mithril ore per bar", "what do i need to smelt mithril", "where to farm mithril", "how do i get mithril for blacksmithing", "mithril bars for engineering", "where can i find mithril deposits", "should i buy mithril bars or smelt them", "what level do i need to mine mithril"],
+    "tags": ["item", "profession", "mining"]
+  },
+  {
+    "id": "item_badge_of_justice",
+    "title": "Badge of Justice",
+    "content": "Badge of Justice is the Burning Crusade gear currency. It drops from Outland heroic dungeon bosses and from raid bosses from Karazhan to the Sunwell Plateau, and the heroic Wanted daily quests pay 2. It is spent in Shattrath City with G'eras, Anwehu and Ontuvo, and on the Isle of Quel'Danas with Kayri. Nothing in Northrend drops it: Emblems of Triumph and Frost took over there.",
+    "keywords": ["badge of justice", "badges of justice", "justice badge", "justice badges"],
+    "questions": ["what is a badge of justice", "where do i get badges of justice", "where do i spend badges of justice", "who sells badge gear", "what are bc badges", "do badges of justice still drop", "how do i farm badges of justice", "where is the badge vendor in shattrath", "what gear can i buy with badges of justice", "do badges drop in northrend", "what replaced badges of justice", "where do i get badges in outland", "badge of justice vs emblems", "which bosses drop badges of justice", "where do i turn in badges of justice", "is there a badge vendor on quel danas"],
+    "tags": ["item", "currency", "outland"]
+  },
+  {
+    "id": "item_travelers_tundra_mammoth",
+    "title": "Traveler's Tundra Mammoth",
+    "content": "Reins of the Traveler's Tundra Mammoth are sold by Mei Francis, the Exotic Mounts vendor in Dalaran, for 20,000 gold. It needs character level 40 and Journeyman riding (skill 150), and each faction has its own version, one for the Alliance races and one for the Horde races. It is a very fast ground mount that carries three riders and vendors.",
+    "keywords": ["travelers tundra mammoth", "travelers mammoth", "tundra mammoth", "mammoth", "mei francis", "mammoth mount"],
+    "questions": ["where do i buy the traveler's mammoth", "how much is the traveler's tundra mammoth", "where do i get the mammoth mount", "who sells the mammoth", "traveler's mammoth price", "what do i need for the traveler's tundra mammoth", "is the traveler's mammoth alliance or horde", "where is mei francis", "how do i get a mammoth with vendors", "what level for the traveler's mammoth", "can horde buy the traveler's mammoth", "where do i get a 3 person mount", "how much gold for the mammoth", "is there a mount that carries vendors", "where do i buy a tundra mammoth", "what riding skill for the mammoth"],
+    "tags": ["item", "mount", "dalaran"]
   }
 ]
