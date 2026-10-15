@@ -320,7 +320,7 @@ and totem quests, Darkmoon Faire, the Argent Tournament and more. 35 entries wer
 edited, every realm-specific fact checked against the realm's world DB, `worldserver.conf` or the
 core source. Facts this realm sets differently from retail, now stated in the entries: 3 charter
 signatures, 5x reputation, 5% durability per death and 2x repair cost, mail delay 5 minutes, no
-cross-faction trade or mail (RBAC, despite the `AllowTwoSide.*` keys), four primary professions,
+cross-faction trade or mail (RBAC, despite the `AllowTwoSide.*` keys),
 3x/4x XP, no Deserter, ten instances per hour, no cross-realm Dungeon Finder.
 
 Relabeled against the new corpus, right path on all 502 lines: 73.1% shipping before this work,
