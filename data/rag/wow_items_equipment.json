@@ -4,6 +4,7 @@
     "title": "Item Quality Colors",
     "content": "An item's name is colored by its quality: grey is poor, junk sold to vendors; white is common; green is uncommon; blue is rare; purple is epic; orange is legendary; and light gold marks bind-to-account heirlooms. Higher quality means better stats for the item level, and purple gear mostly comes from heroics and raids.",
     "keywords": ["item quality", "item colors", "item colours", "colors on item", "color of items", "item rarity", "green items", "blue items", "purple items", "grey items", "gray items", "white items", "orange items", "greens", "blues", "purples", "epics"],
+    "questions": ["what do the item colors mean", "what does purple gear mean", "what is a blue item", "what color is epic", "what is a green item", "what color is legendary", "what are grey items", "can i sell grey items to a vendor", "what is orange gear", "what is the light gold item color", "what does gold item text mean", "what is the difference between rare and epic", "where does purple gear drop", "what is an uncommon item", "what is junk gear", "which items are heirlooms by color"],
     "tags": ["items", "quality", "basics"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Tier Sets",
     "content": "Each class's tier set gives a bonus at 2 and at 4 pieces worn. Wrath has Tier 7 from Naxxramas, Tier 8 from Ulduar, Tier 9 from Trial of the Crusader and Tier 10 from Icecrown Citadel. Tier 9 is bought with Emblems of Triumph and Tier 10 with Emblems of Frost, then upgraded with Marks of Sanctification from ICC bosses.",
     "keywords": ["tier sets", "tier set", "tier", "t7", "t8", "t9", "t10", "set bonus", "tier bonus", "2pc", "4pc", "marks of sanctification", "tier token", "tier tokens"],
+    "questions": ["what is tier gear", "what is t7", "what is t8", "what is t9", "what is t10", "where do i get t10", "where does tier 9 come from", "how do i get tier sets", "what is a 2 piece bonus", "what are set bonuses", "how do i upgrade tier gear", "what are marks of sanctification", "how do i buy t9 with triumph", "which raid drops t7", "what are 4 piece bonuses", "tier 8 from ulduar"],
     "tags": ["items", "equipment", "raid", "tier"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Legendary Weapons",
     "content": "Wrath's legendaries are Val'anyr, Hammer of Ancient Kings, a healer's mace built from 30 Fragments of Val'anyr from 25-player Ulduar, and Shadowmourne, a two-handed axe for warriors, paladins and death knights from a 25-player Icecrown Citadel quest chain. Older ones include Thunderfury, Sulfuras, the Warglaives of Azzinoth from Illidan and Thori'dal from the Sunwell.",
     "keywords": ["legendary", "legendaries", "shadowmourne", "valanyr", "val anyr", "thunderfury", "sulfuras", "atiesh", "warglaives", "glaives", "thoridal"],
+    "questions": ["what are the legendary weapons", "how do i get shadowmourne", "how do i get val'anyr", "what is shadowmourne", "who can use shadowmourne", "what is the healer legendary mace", "what are fragments of val'anyr", "how do i get thunderfury", "where does sulfuras drop", "how do i get warglaives", "where does thori'dal come from", "what legendaries are in wotlk", "legendary axe icc quest", "is there a legendary for healers", "legendary weapon quest chain", "where do i get a legendary"],
     "tags": ["items", "weapons", "legendary", "rare"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Profession Tools",
     "content": "Some professions need a tool in the bags before their recipes work: blacksmiths a Blacksmith Hammer, engineers an Arclight Spanner, enchanters a runed rod matched to their skill, miners a Mining Pick and skinners a Skinning Knife. Smithing and smelting also need you standing beside an anvil or a forge. Crafting never fails.",
     "keywords": ["profession tool", "profession tools", "blacksmith hammer", "skinning knife", "mining pick", "runed rod", "arclight spanner", "anvil", "forge"],
+    "questions": ["what tools do i need for my profession", "why cant i craft anything", "what do blacksmiths need", "do i need a hammer for blacksmithing", "what is an arclight spanner", "what do enchanters need", "what is a runed rod", "do i need a mining pick", "do i need a skinning knife", "why is my smelting not working", "do i need to be at a forge", "do i need an anvil for blacksmithing", "can crafting fail", "why cant i smelt", "where do i get a skinning knife", "which tool for engineering"],
     "tags": ["items", "professions", "tools", "crafting"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Mount Collection",
     "content": "Famous rare mount drops include Invincible from the heroic 25-player Lich King, Mimiron's Head from Yogg-Saron on 25 with no Keepers, the Blue Proto-Drake from Skadi in heroic Utgarde Pinnacle, Ashes of Al'ar from Kael'thas and Deathcharger's Reins from Baron Rivendare in Stratholme. Owning 50 mounts earns the Albino Drake.",
     "keywords": ["mount collection", "rare mount", "rare mounts", "invincible", "mimirons head", "ashes of alar", "deathcharger", "deathchargers reins", "blue proto drake", "albino drake", "mount drop", "50 mounts", "100 mounts"],
+    "questions": ["what are the rare mounts", "how do i get the invincible mount", "how do i get mimiron's head", "how do i get the blue proto drake", "where does the blue drake drop", "how do i get ashes of al'ar", "where does deathcharger drop", "how do i get the albino drake", "how many mounts for the albino drake", "rare mount drops wotlk", "how do i get the deathcharger", "which boss drops the skull mount", "how do i get a drake mount", "what mounts drop from raids", "mount farming tips", "how do i get a rare mount", "where do i farm for mounts"],
     "tags": ["items", "mounts", "collection", "rare"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Weapon and Armor Enchants",
     "content": "Enchanters apply enchants directly or onto a scribe's Armor or Weapon Vellum to make a tradeable scroll; ring enchants are for the enchanter only. Popular Wrath weapon enchants are Berserking and Mongoose for melee, Black Magic for casters and Accuracy for hit. Death knights use Runeforging instead, like Rune of the Fallen Crusader or Razorice, at a runeforge in Ebon Hold.",
     "keywords": ["enchant", "enchants", "weapon enchant", "mongoose", "black magic", "enchant scroll", "vellum", "runeforge", "runeforging", "fallen crusader", "razorice", "crusader enchant"],
+    "questions": ["what enchants should i use", "best weapon enchant", "what is berserking", "what is mongoose", "what is black magic enchant", "best enchant for casters", "best chest enchant", "best cloak enchant", "best leg enchant", "what enchant for tanks", "how do death knights enchant weapons", "what is runeforging", "what is razorice", "what is fallen crusader", "where is the runeforge", "how do i get an enchant scroll", "can i enchant someone's gear", "what is massacre enchant", "ench for my two hander", "how do i get icescale leg armor"],
     "tags": ["items", "enchants", "enchanting", "improvement"],
     "expert_domain": "pve",
     "expert_content": "Weapon: Berserking for most melee, Black Magic for casters, Mongoose for agility classes, Massacre on two-handers, Blade Ward or Blood Draining for tanks. Chest takes Powerful Stats. Cloak takes Major Agility for physical damage, Greater Speed for casters, and Mighty Armor for tanks. Leatherworkers' Icescale Leg Armor and tailors' Sapphire or Brilliant Spellthread are the leg enchants to get."
@@ -48,6 +54,7 @@
     "title": "Socketed Gems",
     "content": "Sockets are red, yellow, blue or meta. Red gems carry strength, agility, attack power or spell power; yellow carry crit, haste or hit; blue carry stamina, spirit or mana regen; orange, purple and green count as both colors. Matching every socket turns on the item's socket bonus, and a meta gem works only if you meet its color requirement.",
     "keywords": ["gems", "gem", "sockets", "socket", "gemming", "meta gem", "socket bonus", "cardinal ruby", "kings amber", "majestic zircon", "red gem", "yellow gem", "blue gem", "prismatic"],
+    "questions": ["what do the gem colors mean", "what gems should i use", "what gems for my dps", "what is a socket bonus", "do i need to match socket colors", "what is a meta gem", "why is my meta gem not working", "what is an orange gem", "what do red gems do", "what do yellow gems do", "what do blue gems do", "which gem gives hit", "what is a purple gem", "what is a green gem", "how do i get a meta gem to activate", "best gems for tanks", "should i match sockets"],
     "tags": ["items", "gems", "jewelcrafting", "optimization"]
   },
   {
@@ -55,6 +62,7 @@
     "title": "Consumable Items",
     "content": "You can have one battle elixir and one guardian elixir active, or a flask, which counts as both and lasts an hour through death. Only one potion can be drunk per fight, such as a Runic Healing or Runic Mana Potion at 80, and a Well Fed food buff stacks with all of it.",
     "keywords": ["consumables", "consumable", "potion", "potions", "pots", "elixir", "elixirs", "flask", "flasks", "food buff", "well fed", "runic healing potion", "runic mana potion"],
+    "questions": ["what is a flask", "what is the difference between flasks and elixirs", "how long does a flask last", "does a flask last through death", "what is battle elixir", "what is a guardian elixir", "can i use two potions in a fight", "how many potions can i drink in combat", "what is well fed", "which flask should i use", "do i need flasks for raids", "do flasks stack with food", "what is a runic healing potion", "should i use a flask or elixirs", "what potion do i use at 80", "what consumables do i need"],
     "tags": ["items", "consumables", "buffs", "performance"],
     "expert_domain": "pve",
     "expert_content": "Raid with a flask rather than two elixirs: it lasts through death and costs less. Use Endless Rage, Frost Wyrm, Stoneblood or Pure Mojo depending on role. Fish Feast covers food for the whole raid. Drink a damage potion just before the pull and another during the fight, since the potion cooldown waits until combat ends."
@@ -64,6 +72,7 @@
     "title": "Trade Goods and Materials",
     "content": "Trade goods are crafting materials: cloth drops from humanoids (Frostweave in Northrend), leather comes from skinning beasts (Borean Leather), ore from mining (Cobalt, Saronite, Titanium) and herbs from herbalism. Eternals and Frozen Orbs go into high-end crafts. Gatherers make steady gold selling them on the auction house.",
     "keywords": ["trade goods", "materials", "mats", "crafting materials", "frostweave", "frostweave cloth", "borean leather", "eternals", "eternal", "frozen orb", "make gold"],
+    "questions": ["what are trade goods", "what is frostweave", "where do i get cloth", "where does leather come from", "what are eternals", "what is a frozen orb", "what are crafting materials", "what do i do with mats", "what sells on the ah mats", "where do i farm cloth", "how do i get ore and herbs to sell", "can i sell gathered mats on the ah", "what are eternals used for", "where do i get saronite", "what are cobalt and saronite", "what is frostweave cloth used for"],
     "tags": ["items", "materials", "trading", "economy"]
   },
   {
@@ -71,6 +80,7 @@
     "title": "Dungeon and Raid Keys",
     "content": "Northrend heroic dungeons need no key, only the level cap. Older keys in use include the Crescent Key from Dire Maul, which opens its locked doors, and the Shadowforge Key for the Shadowforge City gate in Blackrock Depths; rogues can pick many of these locks instead.",
     "keywords": ["key", "keys", "attunement", "attuned", "crescent key", "shadowforge key", "heroic key", "dungeon key"],
+    "questions": ["what key do i need for dire maul", "what is the crescent key", "what is the shadowforge key", "do heroics need a key", "do i need a key for northrend heroics", "how do i open the brd gate", "how do i get into shadowforge city", "can rogues pick the lock instead of a key", "how do i open locked doors in dm", "what keys are still used", "are there attunement keys for heroics", "where do i get the dm key", "what do i need to enter a heroic", "how do i get into dire maul"],
     "tags": ["items", "keys", "access", "attunement"]
   },
   {
@@ -78,6 +88,7 @@
     "title": "Special Containers",
     "content": "Locked boxes such as the Froststeel Lockbox drop from Northrend monsters and open with a rogue's Pick Lock or a blacksmith's skeleton key (the Titanium Skeleton Key is the highest). Rogues also pickpocket junkboxes from humanoids.",
     "keywords": ["lockbox", "lockboxes", "locked box", "junkbox", "pick lock", "lockpicking", "skeleton key", "titanium skeleton key", "froststeel lockbox"],
+    "questions": ["how do i open a lockbox", "what is a froststeel lockbox", "how do i open locked boxes", "what is a skeleton key", "what is the titanium skeleton key", "can blacksmiths open lockboxes", "what is a junkbox", "how do rogues get junkboxes", "how do i pick a lock", "what is pick lock", "i have a locked chest how do i open it", "who can open my lockbox", "where do lockboxes drop", "what do i do with a lockbox", "how do i pickpocket boxes"],
     "tags": ["items", "containers", "loot", "collection"]
   },
   {
@@ -85,6 +96,7 @@
     "title": "Guild and Faction Tabards",
     "content": "Tabards are cosmetic chest-overs. A guild designs its tabard at a guild tabard vendor, and members wear it to show the emblem. Faction tabards are sold by quartermasters; in Northrend the Argent Crusade, Kirin Tor, Knights of the Ebon Blade and Wyrmrest Accord tabards also send dungeon reputation to their faction at level 80.",
     "keywords": ["tabard", "tabards", "guild tabard", "faction tabard"],
+    "questions": ["what is a tabard", "how do i get a guild tabard", "where do i buy a guild tabard", "how do i make a guild tabard", "what does the argent crusade tabard do", "what is the kirin tor tabard", "what tabard gives rep in dungeons", "what is the ebon blade tabard", "what is the wyrmrest accord tabard", "do tabards give stats", "how do i wear a tabard", "where do i get a faction tabard", "is a tabard cosmetic", "which tabards give reputation", "how do i show my guild emblem"],
     "tags": ["items", "cosmetic", "guild", "faction"]
   },
   {
@@ -92,6 +104,7 @@
     "title": "Quest Reward Items",
     "content": "Many quests let you choose one reward from a list; pick the piece for your armor type and spec, since the rest only sells to a vendor. Famous quest rewards include Quel'Serrar from a Dire Maul chain and, in Wrath, Quel'Delar, a level-80 sword chain started by the Battered Hilt that drops in the Frozen Halls dungeons.",
     "keywords": ["quest reward", "quest rewards", "quel delar", "queldelar", "battered hilt", "quel serrar", "quelserrar"],
+    "questions": ["which quest reward should i pick", "how do i pick a quest reward", "what quest reward is best", "what do i choose from quest rewards", "can i take more than one quest reward", "what is quel'delar", "how do i get quel'delar", "what is the battered hilt", "how do i get quel'serrar", "where do i start the quel'delar quest", "what is the sword from frozen halls", "what is quel'serrar", "should i pick the vendor item", "whats the best reward for my spec", "which quest item for my class"],
     "tags": ["items", "quests", "lore", "story"]
   },
   {
@@ -99,6 +112,7 @@
     "title": "Cosmetic Items",
     "content": "There is no wardrobe or appearance-change system yet -- an item's look is simply whatever is equipped, so cosmetic collecting mostly means non-combat companion pets, which follow a player around and do nothing else. Pets are earned from vendors, quest rewards, holiday events, and rare drops, and many players collect them purely for their own sake. Some weapon enchants add a visual glow or proc animation as a side effect of their stat bonus, which is the closest thing to a customizable weapon appearance available this expansion. Holiday events also hand out costume items, like Hallow's End's wand that temporarily transforms the user into a ghost, ninja, pirate, skeleton, or leper gnome.",
     "keywords": ["cosmetic", "companion pet", "companion pets", "vanity pet", "vanity pets", "minipet", "minipets", "costume", "transmog", "transmogrification", "appearance"],
+    "questions": ["is there transmog", "can i change my gear look", "is there a wardrobe", "how do i change my armor appearance", "is there transmogrification", "how do i collect pets", "how do i get companion pets", "what are vanity pets", "what do non combat pets do", "how do i get a costume", "what is the hallow's end wand", "how do i turn into a ghost", "where do i get cute pets", "is there a way to change how my weapon looks", "which enchants glow", "how do i get a pet that follows me", "cosmetic items wotlk"],
     "tags": ["items", "cosmetic", "appearance", "collection"]
   },
   {
@@ -106,6 +120,7 @@
     "title": "Relics and Artifacts",
     "content": "Paladins, druids, shamans and death knights carry a relic in the ranged slot instead of a ranged weapon: librams for paladins, idols for druids, totems for shamans and sigils for death knights. Each boosts specific class spells, so the right one depends on spec.",
     "keywords": ["relic", "relics", "libram", "librams", "idol", "idols", "sigil", "sigils", "totem relic"],
+    "questions": ["what is a relic", "what is a libram", "what is an idol", "what is a totem", "what is a sigil", "why cant i equip a gun as a paladin", "what goes in the ranged slot for a pally", "what is the ranged slot for druids", "what ranged slot item for dk", "what ranged slot for shamans", "which libram should i use", "which idol for feral", "which sigil for my dk", "which totem should i use", "what do relics do", "do i need a relic"],
     "tags": ["items", "relics", "class", "bonuses"]
   }
 ]

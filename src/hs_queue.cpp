@@ -778,7 +778,11 @@ namespace
             // Taldaram."), so both surfaces are served by the one call --
             // event triggers name a boss or an item precisely so this can
             // find it.
-            if (g_HsRagEnable)
+            // Not for a line the router sent to the cloud: it is not about the
+            // game, so a block could only be a near-miss riding along with the
+            // fact ("who's the king of england" -> The Lich King, "how far is
+            // the moon" -> Darnassus; Tests/rag_path_audit.py).
+            if (g_HsRagEnable && !req.cloudDone)
             {
                 const bool inConversation = !req.isEvent && !HistorySnapshot(req.botGuid, req.senderGuid).empty();
 
@@ -829,9 +833,8 @@ namespace
                     personaLine += "\n" + ragLine;
             }
 
-            // The cloud fact (hs_cloud.h), where a RAG block goes: the router
-            // only sends lines that are not about the game, so the two rarely
-            // meet, and the fact is the more specific of them when they do.
+            // The cloud fact (hs_cloud.h), where a RAG block goes: a line the
+            // router sent out gets no RAG block (above), so the two never meet.
             if (!req.cloudFact.empty())
                 personaLine += "\n" + std::string(kHsCloudFactPrefix) + req.cloudFact;
 

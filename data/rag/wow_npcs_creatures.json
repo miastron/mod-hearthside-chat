@@ -4,6 +4,7 @@
     "title": "World Bosses",
     "content": "World bosses spawn in the open world and anyone can attack them: Doom Lord Kazzak roams Hellfire Peninsula, Doomwalker walks Shadowmoon Valley, and Azuregos, a blue dragon, guards Azshara. They need a raid-sized group and respawn on long timers.",
     "keywords": ["world boss", "world bosses", "kazzak", "doom lord kazzak", "azuregos", "doomwalker"],
+    "questions": ["what are the world bosses", "where is kazzak", "where is doomwalker", "where is azuregos", "how do i kill doom lord kazzak", "can i solo a world boss", "world boss locations", "where does kazzak spawn", "how often do world bosses respawn", "what is the blue dragon in azshara", "how many people for kazzak", "is there a world boss in shadowmoon valley", "world bosses in outland", "which bosses are in the open world"],
     "tags": ["npcs", "bosses", "world", "loot"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Rare Elite Creatures",
     "content": "Rare monsters show a silver dragon on their portrait and spawn rarely at fixed spots; elites have a gold dragon and need a group. Killing every Northrend rare earns the Frostbitten achievement, and the most hunted is the Time-Lost Proto-Drake in the Storm Peaks, which drops its own mount.",
     "keywords": ["rare", "rares", "rare elite", "rare spawn", "elite", "elites", "silver dragon", "frostbitten", "time lost proto drake", "tlpd"],
+    "questions": ["what is a rare spawn", "what is a rare elite", "what is the silver dragon on a mob portrait", "gold dragon portrait what does it mean", "where is the time lost proto drake", "how do i get tlpd", "what is the frostbitten achievement", "where do rares spawn", "how do i find rare mobs", "how do i get the proto drake mount", "is tlpd in the storm peaks", "what is an elite mob", "do i need a group for elites", "rare mob hunting in northrend", "how often do rares spawn"],
     "tags": ["npcs", "rare", "elite", "achievements"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Class and Profession Trainers",
     "content": "Class trainers stand in the capitals and in each starting zone's main town, and teach new spells and ranks for gold, with new ones every two levels. Profession trainers are in the capitals too, and the Grand Master ranks for Northrend (skill 350 to 450) are taught in Dalaran. Class trainers also reset talents and sell dual spec at 40.",
     "keywords": ["trainer", "trainers", "class trainer", "profession trainer", "training", "spell ranks", "grand master trainer"],
+    "questions": ["where is my class trainer", "where do i learn new spells", "how do i train spells", "where do i get new ranks", "where is the grand master trainer", "where do i learn 450 skill", "where do i train northrend professions", "how do i reset talents", "where do i get dual spec", "how much is dual spec", "how do i unlearn talents", "where do profession trainers hang out", "at what level do i get new spells", "can i train my class in dalaran", "where do i get 350 to 450 skill"],
     "tags": ["npcs", "training", "progression", "skills"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Special Vendors",
     "content": "Reputation quartermasters sell recipes, enchants and gear as your standing rises: the Kirin Tor's is Archmage Alvareaux in Dalaran, the Sons of Hodir's is Lillehoff at Dun Niffelem in the Storm Peaks, and the Wyrmrest Accord's is Cielstrasza at Wyrmrest Temple in Dragonblight.",
     "keywords": ["quartermaster", "quartermasters", "rep vendor", "reputation vendor", "faction vendor", "special vendor", "kirin tor quartermaster"],
+    "questions": ["where is the kirin tor quartermaster", "who is the sons of hodir vendor", "where is lillehoff", "who sells wyrmrest accord stuff", "where is cielstrasza", "where is archmage alvareaux", "where do i buy rep recipes", "where do i spend my reputation", "where is dun niffelem", "where is wyrmrest temple", "who is the rep vendor for sons of hodir", "where do i buy rep gear", "what is a quartermaster", "where do i buy kirin tor enchants", "where is the faction vendor in dalaran"],
     "tags": ["npcs", "vendors", "items", "reputation"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Flight Masters",
     "content": "Speak to a flight master once to learn that flight path; after that you can fly between any paths you know for a fee that grows with distance. Alliance ride gryphons and hippogryphs, Horde ride wyverns, bats and dragonhawks, and Northrend's flight masters serve both factions in places like Dalaran.",
     "keywords": ["flight master", "flight masters", "flight path", "flight paths", "fp", "gryphon", "wyvern", "taxi"],
+    "questions": ["how do flight paths work", "how do i unlock a flight path", "where do i get a flight path", "what is a flight master", "how much does flying cost", "do i need to learn every fp", "what do alliance fly on", "what do horde fly on", "are there flight masters in dalaran", "can i fly between any two fps", "gryphon or wyvern", "how do i fly to another town", "how do i get a taxi", "why can't i fly to this fp", "how do i discover flight points"],
     "tags": ["npcs", "travel", "flight", "exploration"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Innkeepers and Hearthstones",
     "content": "Speak to any innkeeper and make the inn your home to bind your Hearthstone there; the Hearthstone then brings you back to that inn on a 30-minute cooldown. Logging out in an inn or a capital builds rested experience, and innkeepers also sell food and drink.",
     "keywords": ["innkeeper", "inn", "hearthstone", "hearth", "hs", "set hearth", "set my hearth", "bind hearth"],
+    "questions": ["how do i set my hearth", "how do i bind my hearthstone", "how do i change my hearthstone location", "what is the hearthstone cooldown", "how long is the hs cooldown", "how do i get rested xp", "where do i go to log out for rested", "what does an innkeeper do", "how do i make this inn my home", "where do i hearth to", "hearth cd", "does logging out in an inn give rested", "can i buy food from innkeepers", "how do i set hs in dalaran", "my hearthstone takes me to the wrong place"],
     "tags": ["npcs", "travel", "rest", "hearthstone"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Bankers and Guild Banks",
     "content": "Bankers in every capital and in Dalaran hold your personal bank: 28 slots plus seven bag slots bought with gold. Each character has its own bank and bags, nothing is shared between characters, so items go to an alt by mail. A guild bank, opened at a guild vault, has up to six tabs of 98 slots, bought with gold, and the guild leader sets who can withdraw from each.",
     "keywords": ["bank", "banker", "bank slots", "bank bag", "bank space", "shared bank", "guild bank", "gbank", "guild vault"],
+    "questions": ["where is the bank", "how many bank slots do i have", "how do i get more bank space", "how much are bank bag slots", "where is the guild bank", "how many guild bank tabs", "can my alts use my bank", "how do i move items to my alt", "is the bank shared between characters", "how do i set guild bank permissions", "how many slots in a gbank tab", "is there a bank in dalaran", "how do i get items to another character", "how do i buy gbank tabs", "who can withdraw from the guild vault"],
     "tags": ["npcs", "storage", "guild", "inventory"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Stable Masters",
     "content": "Stable masters hold a hunter's tamed beasts, letting one hunter keep several pets and swap between them. They do nothing for mounts, which live in the spellbook once learned. Stables are found in most towns and every capital. Swapping at a stable is how a hunter changes to a pet better suited to the fight ahead.",
     "keywords": ["stable master", "stable", "stabled pet", "swap pet", "stable slot", "stable slots"],
+    "questions": ["where is the stable master", "how do i stable my pet", "how do i swap pets", "how many pet slots do hunters have", "how do i get my old pet back", "can i stable mounts", "how do i change pets as a hunter", "what does a stable master do", "how many stable slots can i have", "where do i keep multiple pets", "hunter pet stable location", "do mounts go in the stable", "how do i store my pet", "how do i switch hunter pets"],
     "tags": ["npcs", "mounts", "pets", "storage"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Important Lore Figures",
     "content": "Wrath's story centers on Arthas Menethil, the Lich King, waiting on the Frozen Throne atop Icecrown Citadel. Along the way players face Malygos, the blue Dragon Aspect, in the Eye of Eternity and the Old God Yogg-Saron beneath Ulduar, while Tirion Fordring leads the Argent Crusade and Darion Mograine the Knights of the Ebon Blade.",
     "keywords": ["lore", "lich king lore", "arthas", "tirion fordring", "darion mograine", "malygos lore", "yogg saron lore"],
+    "questions": ["who is the lich king", "who is arthas", "who is tirion fordring", "who is darion mograine", "who is malygos", "who is yogg saron", "what is the wotlk story", "who is the main villain in wrath", "where is the frozen throne", "what is the argent crusade", "what are the knights of the ebon blade", "lich king lore", "who leads the ebon blade", "where is malygos", "where do you fight yogg"],
     "tags": ["npcs", "lore", "story", "characters"]
   },
   {
@@ -67,6 +76,7 @@
     "title": "Faction Leaders",
     "content": "Alliance leaders: King Varian Wrynn in Stormwind, King Magni Bronzebeard in Ironforge, High Tinker Mekkatorque for the gnomes, Tyrande Whisperwind in Darnassus and Prophet Velen in the Exodar. Horde leaders: Warchief Thrall in Orgrimmar, Cairne Bloodhoof in Thunder Bluff, Sylvanas Windrunner in the Undercity, Lor'themar Theron in Silvermoon and Vol'jin of the Darkspear trolls.",
     "keywords": ["faction leader", "faction leaders", "who leads", "who rules", "mekkatorque", "voljin", "lorthemar", "lor themar", "cairne", "varian"],
+    "questions": ["who is the horde leader", "who leads the alliance", "who is the warchief", "who rules ironforge", "who is the leader of the undercity", "who is the leader of silvermoon", "who is the leader of thunder bluff", "who leads the darkspear trolls", "who is the leader of darnassus", "who is the leader of the exodar", "who is the king of stormwind", "who is mekkatorque", "who is voljin", "who is lor themar", "who leads the gnomes", "who is sylvanas"],
     "tags": ["npcs", "factions", "leaders", "politics"]
   },
   {
@@ -74,6 +84,7 @@
     "title": "Specialized Merchants",
     "content": "General goods vendors sell food, drink and bags, and reagent vendors carry class reagents. Rogues buy poisons from poison vendors and hunters buy arrows and bullets from ammo vendors. Armorers and weaponsmiths repair your gear, and any vendor buys your loot.",
     "keywords": ["reagent vendor", "reagents", "poison vendor", "poisons", "ammo", "ammo vendor", "arrows", "bullets", "repair", "repairs", "general goods"],
+    "questions": ["where do i buy reagents", "where do i buy poisons", "where can i buy arrows", "where do i buy bullets", "where do i buy ammo", "where do i repair my gear", "who sells bags", "who sells food and drink", "where do i get reagents for my class", "where do rogues buy poison", "where do i sell my loot", "who repairs armor", "where is the general goods vendor", "where do hunters buy ammo", "where can i fix my gear"],
     "tags": ["npcs", "merchants", "goods", "supplies"]
   },
   {
@@ -81,6 +92,7 @@
     "title": "City Guards and Sentries",
     "content": "Guards in capitals and towns attack enemy-faction players who are flagged and hostile creatures that wander in. Ask any guard for directions and it marks the nearest bank, inn, trainer, flight master or auction house on your minimap.",
     "keywords": ["guard", "guards", "city guard", "ask a guard", "directions"],
+    "questions": ["what do guards do", "how do i ask a guard for directions", "how do i find the bank in a city", "how do i find the nearest inn", "how do i find the auction house", "how do i find my trainer", "guard marks nearest flight master", "do guards attack enemy players", "will guards protect me", "where is the flight master in this city", "i am lost in the city how do i find stuff", "can guards show me the nearest bank", "city guards help me find things", "do guards kill flagged players"],
     "tags": ["npcs", "guards", "security", "cities"]
   },
   {
@@ -88,6 +100,7 @@
     "title": "Transportation NPCs",
     "content": "Boats and zeppelins are free. To Northrend, Alliance sail from Stormwind Harbor to Valiance Keep in Borean Tundra or from Menethil Harbor to Valgarde in Howling Fjord; Horde fly from Orgrimmar to Warsong Hold or from the Undercity to Vengeance Landing. The neutral Booty Bay-Ratchet boat links the old continents, and Shattrath has portals to your faction's capitals.",
     "keywords": ["boat", "boats", "zeppelin", "zeppelins", "zep", "get to northrend", "go to northrend", "transport", "transportation"],
+    "questions": ["how do i get to northrend", "where is the boat to northrend", "where is the zeppelin to northrend", "how do i get to valiance keep", "how do i get to howling fjord", "how do i get to borean tundra", "where is the boat to valgarde", "where do horde zeps go to warsong hold", "how do i get to vengeance landing", "are boats free", "how do i get from booty bay to ratchet", "where are the portals in shattrath", "how do i get to my capital from shattrath", "how do i get to northrend as horde", "how do i get to northrend as alliance", "how do i get to menethil harbor"],
     "tags": ["npcs", "transport", "travel", "convenience"]
   }
 ]

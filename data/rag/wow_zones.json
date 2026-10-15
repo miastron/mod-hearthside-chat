@@ -4,6 +4,7 @@
     "title": "Elwynn Forest",
     "content": "Elwynn Forest is the level 1-10 starting zone for humans, just outside Stormwind City. New characters begin at Northshire Abbey, then move to Goldshire, the main town, with its Lion's Pride Inn. Common enemies are wolves, kobolds in the mines and Defias bandits.",
     "keywords": ["elwynn", "elwynn forest", "goldshire", "northshire", "northshire abbey", "northshire valley", "lions pride inn"],
+    "questions": ["where do humans start", "what level is elwynn forest", "what is the human starting zone", "where is northshire abbey", "where do i go after northshire", "where is goldshire", "what level is elwynn", "where is the lion's pride inn", "elwynn forest mobs", "what do i kill in elwynn", "how do i get to elwynn from stormwind", "is elwynn the human newbie zone", "what are the kobolds in elwynn mines", "where is the human starter area"],
     "tags": ["zone", "starting_area", "human", "leveling"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Durotar",
     "content": "Durotar is the level 1-10 starting zone for orcs and trolls, outside Orgrimmar. New characters begin in the Valley of Trials, then quest from Razor Hill and Sen'jin Village near the Echo Isles. Common enemies are boars, scorpids, Razormane quilboar and Burning Blade cultists.",
     "keywords": ["durotar", "razor hill", "valley of trials", "sen jin village", "echo isles"],
+    "questions": ["where do orcs start", "what level is durotar", "where is the valley of trials", "what is the troll starting zone", "where is razor hill", "how do i get to sen'jin village", "where do trolls start", "where do i go after valley of trials", "what do i kill in durotar", "durotar quests what level", "is durotar the orc newbie zone", "where are the echo isles", "what are razormane", "where is durotar from orgrimmar"],
     "tags": ["zone", "starting_area", "horde", "leveling"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Teldrassil",
     "content": "Teldrassil is the level 1-10 starting zone for night elves, on the giant tree that holds Darnassus. New characters begin in Shadowglen beneath Aldrassil, then quest from Dolanaar. Common enemies are nightsabers, spiders and corrupted furbolgs, and the boat at Rut'theran Village goes to Darkshore.",
     "keywords": ["teldrassil", "shadowglen", "dolanaar", "aldrassil"],
+    "questions": ["where do night elves start", "what level is teldrassil", "where is shadowglen", "what is the nelf starting zone", "where is dolanaar", "how do i leave teldrassil", "where is the boat to darkshore", "where is rut'theran village", "where do i go after shadowglen", "what mobs are in teldrassil", "what is the giant tree zone", "tel'drassil level range", "where is aldrassil", "how do i get to darkshore from teldrassil"],
     "tags": ["zone", "starting_area", "alliance", "night_elf", "leveling"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Mulgore",
     "content": "Mulgore is the level 1-10 starting zone for tauren, below Thunder Bluff. New characters begin at Camp Narache on Red Cloud Mesa, then quest from Bloodhoof Village. Common enemies are plainstriders, prairie wolves, Palemane gnolls, Bristleback quilboar and Venture Company miners.",
     "keywords": ["mulgore", "bloodhoof village", "camp narache", "red cloud mesa"],
+    "questions": ["where do tauren start", "what level is mulgore", "where is camp narache", "where is bloodhoof village", "what is the tauren starting zone", "where is red cloud mesa", "what do i kill in mulgore", "where do i go after camp narache", "what are palemane gnolls", "mulgore quest level", "how do i get to mulgore", "where is mulgore relative to thunder bluff", "what are venture company miners in mulgore"],
     "tags": ["zone", "starting_area", "horde", "tauren", "leveling"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Dun Morogh",
     "content": "Dun Morogh is the level 1-10 starting zone for dwarves and gnomes, around Ironforge. New characters begin at Anvilmar in Coldridge Valley, then quest from Kharanos and its Thunderbrew Distillery inn. Common enemies are Rockjaw troggs, Frostmane trolls, boars and wolves.",
     "keywords": ["dun morogh", "kharanos", "coldridge valley", "anvilmar", "thunderbrew distillery"],
+    "questions": ["where do dwarves start", "where do gnomes start", "what level is dun morogh", "where is coldridge valley", "where is anvilmar", "where is kharanos", "what is the dwarf starting zone", "where is thunderbrew distillery", "what do i kill in dun morogh", "what are rockjaw troggs", "where do i go after coldridge", "dun morogh level range", "gnome starting zone where", "where is dun morogh from ironforge"],
     "tags": ["zone", "starting_area", "alliance", "dwarf", "gnome", "leveling"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Tirisfal Glades",
     "content": "Tirisfal Glades is the level 1-10 starting zone for the undead, above the Undercity. New characters rise in Deathknell, then quest from the town of Brill. Common enemies are mindless zombies, Scourge, and the Scarlet Crusade, whose monastery sits in the zone's north.",
     "keywords": ["tirisfal", "tirisfal glades", "deathknell", "brill"],
+    "questions": ["where do undead start", "what level is tirisfal glades", "where is deathknell", "where is brill", "what is the forsaken starting zone", "where is the scarlet monastery in tirisfal", "what do i kill in tirisfal", "where do i go after deathknell", "tirisfal level range", "where is tirisfal relative to undercity", "what are the mindless zombies", "how do i get to tirisfal", "where do ud start"],
     "tags": ["zone", "starting_area", "horde", "undead", "leveling"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Azuremyst Isle",
     "content": "Azuremyst Isle is the level 1-10 starting zone for draenei, beside the Exodar. New characters begin in Ammen Vale by the Crash Site, then quest from Azure Watch. Common enemies are owlkin, Bristlelimb furbolgs and crash-mutated wildlife; the next zone is Bloodmyst Isle.",
     "keywords": ["azuremyst", "azuremyst isle", "ammen vale", "azure watch", "crash site"],
+    "questions": ["where do draenei start", "what level is azuremyst isle", "where is ammen vale", "where is azure watch", "what is the draenei starting zone", "where is the crash site", "what do i kill in azuremyst", "where do i go after azuremyst", "what zone is after azuremyst", "azuremyst level range", "where is azuremyst relative to the exodar", "what are owlkin", "where do i go after ammen vale"],
     "tags": ["zone", "starting_area", "alliance", "draenei", "leveling"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Eversong Woods",
     "content": "Eversong Woods is the level 1-10 starting zone for blood elves, outside Silvermoon City. New characters begin on Sunstrider Isle, then quest from Falconwing Square and Fairbreeze Village. Common enemies are mana wyrms, arcane wraiths and Wretched elves; the next zone is the Ghostlands.",
     "keywords": ["eversong", "eversong woods", "sunstrider isle", "falconwing square", "fairbreeze village"],
+    "questions": ["where do blood elves start", "what level is eversong woods", "where is sunstrider isle", "where is falconwing square", "what is the blood elf starting zone", "where is fairbreeze village", "what do i kill in eversong", "where do i go after sunstrider isle", "what zone is after eversong", "eversong level range", "what are mana wyrms", "where is eversong from silvermoon", "where do belfs start", "how do i get to ghostlands from eversong"],
     "tags": ["zone", "starting_area", "horde", "blood_elf", "leveling"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Borean Tundra",
     "content": "Borean Tundra is a level 68-72 Northrend zone. Alliance arrive by boat at Valiance Keep and Horde by zeppelin at Warsong Hold. Its quests fight the Scourge, nerubians and the blue dragonflight, whose Nexus stands on Coldarra in the zone's west.",
     "keywords": ["borean", "borean tundra", "valiance keep", "warsong hold", "coldarra", "riplash", "amber ledge"],
+    "questions": ["what level is borean tundra", "how do i get to borean tundra as alliance", "how do i get to borean tundra as horde", "where is valiance keep", "where is warsong hold", "what is the first zone in northrend", "where is the nexus in borean tundra", "what level do i need for northrend", "where do i start questing in northrend", "borean tundra or howling fjord", "what is coldarra", "how do i get to northrend", "what zone should i go to in northrend first"],
     "tags": ["zone", "northrend", "leveling", "wrath", "contested"]
   },
   {
@@ -67,6 +76,7 @@
     "title": "Howling Fjord",
     "content": "Howling Fjord is a level 68-72 Northrend zone. Alliance arrive by boat at Valgarde and Horde by zeppelin at Vengeance Landing. Its quests fight the vrykul, whose stronghold Utgarde Keep is the zone's dungeon, and the Forsaken's plague works at New Agamand.",
     "keywords": ["howling fjord", "valgarde", "vengeance landing", "camp winterhoof", "new agamand", "westguard keep"],
+    "questions": ["what level is howling fjord", "how do i get to howling fjord as alliance", "how do i get to howling fjord as horde", "where is valgarde", "where is vengeance landing", "where is utgarde keep", "where is new agamand", "borean tundra or howling fjord", "what is the first zone in northrend", "hfjord or borean which first", "how do i get to northrend", "where do i start in northrend", "who do i fight in howling fjord"],
     "tags": ["zone", "northrend", "leveling", "wrath", "contested"]
   }
 ]

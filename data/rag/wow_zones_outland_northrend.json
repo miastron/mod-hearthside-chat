@@ -4,6 +4,7 @@
     "title": "Hellfire Peninsula",
     "content": "Hellfire Peninsula is the level 58 to 63 entry zone of Outland, the red broken land on the far side of the Dark Portal. Honor Hold serves the Alliance and Thrallmar the Horde. Hellfire Citadel sits at the center with Ramparts, Blood Furnace, Shattered Halls, and Magtheridon's Lair, and the zone has a heavy world PvP presence around its towers.",
     "keywords": ["hellfire peninsula", "hellfire", "honor hold", "thrallmar", "dark portal", "hellfire citadel", "ramparts", "blood furnace", "magtheridon"],
+    "questions": ["what level is hellfire peninsula", "where is hellfire", "how do i start outland", "where is honor hold", "where is thrallmar", "where is hellfire citadel", "where are ramparts and blood furnace", "where is magtheridon's lair", "what is the first zone in outland", "is hellfire peninsula pvp", "hellfire level range", "where do i go after the dark portal", "hellfire pen quests", "where is shattered halls"],
     "tags": ["zone", "contested", "outland", "leveling"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Zangarmarsh",
     "content": "Zangarmarsh is a level 60 to 64 Outland zone of giant mushrooms and standing water, home to the Cenarion Expedition at Cenarion Refuge and the sporeggar mushroom folk. Telredor serves the Alliance and Zabra'jin the Horde. The Coilfang Reservoir instances, including Slave Pens, Underbog, Steamvault, and Serpentshrine Cavern, all open here.",
     "keywords": ["zangarmarsh", "cenarion expedition", "sporeggar", "telredor", "zabrajin", "coilfang reservoir", "slave pens", "underbog", "steamvault", "serpentshrine cavern"],
+    "questions": ["what level is zangarmarsh", "where is zangarmarsh", "where is cenarion refuge", "where is telredor", "where is zabra'jin", "where is coilfang reservoir", "where are slave pens and underbog", "where is steamvault", "where is serpentshrine cavern", "what is sporeggar", "where do i get cenarion expedition rep", "zangar level range", "zangarmarsh quest hubs", "what are the giant mushroom zone"],
     "tags": ["zone", "contested", "outland", "leveling"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Terokkar Forest",
     "content": "Terokkar Forest is a level 62 to 65 Outland zone of tall bone-white trees, and it surrounds Shattrath City. Allerian Stronghold serves the Alliance and Stonebreaker Hold the Horde. Auchindoun sits in the Bone Wastes at its center with four wings, and the Skettis arakkoa hold the southeast.",
     "keywords": ["terokkar forest", "terokkar", "shattrath", "allerian stronghold", "stonebreaker hold", "auchindoun", "bone wastes", "skettis", "lower city"],
+    "questions": ["what level is terokkar forest", "where is terokkar", "where is shattrath in terokkar", "where is allerian stronghold", "where is stonebreaker hold", "where is auchindoun", "where is the bone wastes", "who are the skettis", "terokkar level range", "where do arakkoa live in terokkar", "terokkar quest hubs", "where is skettis", "what zone surrounds shattrath", "how many wings does auchindoun have"],
     "tags": ["zone", "contested", "outland", "leveling"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Nagrand",
     "content": "Nagrand is a level 64 to 67 Outland zone of green plains and floating islands, widely considered the best-looking zone of the Burning Crusade. Telaar serves the Alliance and Garadar the Horde, and the Mag'har orcs quest chain runs from Garadar. Halaa in the center is a world PvP objective, and the Ring of Blood is a well-known group quest gauntlet.",
     "keywords": ["nagrand", "telaar", "garadar", "maghar orcs", "halaa", "ring of blood", "throne of the elements"],
+    "questions": ["what level is nagrand", "where is nagrand", "where is telaar", "where is garadar", "what is the best zone in outland", "what is the ring of blood", "where is halaa", "is halaa pvp", "nagrand level range", "where do mag'har orcs quest", "best looking zone in tbc", "what are the floating islands in nagrand", "nagrand quest hubs", "where do i go at level 64 to 67"],
     "tags": ["zone", "contested", "outland", "leveling", "pvp"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Blade's Edge Mountains",
     "content": "Blade's Edge Mountains is a level 65 to 68 Outland zone of jagged spires, ogre holds, and dragon bones driven into the rock. Sylvanaar serves the Alliance and Thunderlord Stronghold the Horde. Gruul's Lair opens in the northwest and the Ogri'la plateau in the east unlocks daily quests at level 70.",
     "keywords": ["blades edge mountains", "blades edge", "sylvanaar", "thunderlord stronghold", "gruuls lair", "ogrila", "bladespire", "skyguard"],
+    "questions": ["what level is blade's edge mountains", "where is blade's edge", "where is sylvanaar", "where is thunderlord stronghold", "where is gruul's lair", "where is ogri'la", "what are the ogri'la dailies", "bem level range", "where are the ogre holds", "where do i do dailies at 70 in blade's edge", "blades edge quest hubs", "where is the plateau in the east of bem", "where do i go at level 65 to 68"],
     "tags": ["zone", "contested", "outland", "leveling"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Netherstorm",
     "content": "Netherstorm is a level 67 to 70 Outland zone of shattered floating landmass and arcane storms in the northeast. Area 52 is the neutral goblin hub, and the Consortium and Kirin Tor both operate here. Tempest Keep, with the Arcatraz, Botanica, Mechanar, and Eye, sits at the zone's western edge as Kael'thas Sunstrider's stronghold.",
     "keywords": ["netherstorm", "area 52", "tempest keep", "arcatraz", "botanica", "mechanar", "the eye", "kaelthas sunstrider", "manaforge"],
+    "questions": ["what level is netherstorm", "where is netherstorm", "where is area 52", "where is tempest keep", "where is the arcatraz", "where is botanica", "where is the mechanar", "where is the eye", "where is kael'thas", "netherstorm level range", "what is the consortium in netherstorm", "where is netherstorm in outland", "where do i go at level 67 to 70", "who are the kirin tor in netherstorm"],
     "tags": ["zone", "contested", "outland", "leveling", "endgame"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Shadowmoon Valley",
     "content": "Shadowmoon Valley is a level 67 to 70 Outland zone of black rock and lava in the southeast, and the last leveling zone of the Burning Crusade. Wildhammer Stronghold serves the Alliance and Shadowmoon Village the Horde. The Black Temple, Illidan Stormrage's fortress, dominates the middle of the zone, and the Netherwing ledge offers drake mount dailies at level 70.",
     "keywords": ["shadowmoon valley", "black temple", "illidan stormrage", "wildhammer stronghold", "shadowmoon village", "netherwing ledge", "netherwing drake", "altar of sha", "coilskar"],
+    "questions": ["what level is shadowmoon valley", "where is shadowmoon valley", "where is wildhammer stronghold", "where is shadowmoon village", "where is the black temple", "where is illidan", "what is the last leveling zone in tbc", "where do i get the netherwing drake mount", "what are netherwing dailies", "smv level range", "where is the netherwing ledge", "where do i go at level 67 to 70 in outland", "shadowmoon quest hubs"],
     "tags": ["zone", "contested", "outland", "leveling", "endgame"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Dragonblight",
     "content": "Dragonblight is a level 71 to 74 Northrend zone at the center of the continent, where dragons come to die. Wintergarde Keep serves the Alliance and Agmar's Hammer the Horde, with the neutral Wyrmrest Temple rising at the middle. Azjol-Nerub and the Old Kingdom open in the north, Naxxramas floats in the northeast, and the Wrathgate questline plays out here.",
     "keywords": ["dragonblight", "wyrmrest temple", "wintergarde keep", "agmars hammer", "azjolnerub", "old kingdom", "naxxramas entrance", "wrathgate", "dragon graveyard"],
+    "questions": ["what level is dragonblight", "where is dragonblight", "where is wintergarde keep", "where is agmar's hammer", "where is wyrmrest temple", "where is azjol-nerub", "where is naxxramas in northrend", "where is the wrathgate", "dragonblight level range", "where do i go after borean tundra", "where is the old kingdom entrance", "what zone has the wrathgate quest", "dragonblight quest hubs", "where do i go at level 71 to 74"],
     "tags": ["zone", "contested", "northrend", "leveling"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Grizzly Hills",
     "content": "Grizzly Hills is a level 73 to 75 Northrend zone of dense pine forest and logging camps, known for its music. Amberpine Lodge serves the Alliance and Conquest Hold the Horde. The Drakkari trolls, the Venture Company, and the worgen of Grizzlemaw drive most of the questing, and Drak'Tharon Keep sits on the border with Zul'Drak.",
     "keywords": ["grizzly hills", "amberpine lodge", "conquest hold", "grizzlemaw", "draktharon keep"],
+    "questions": ["what level is grizzly hills", "where is grizzly hills", "where is amberpine lodge", "where is conquest hold", "where is drak'tharon keep", "what zone has the best music in northrend", "who are the drakkari in grizzly hills", "grizzly hills level range", "what are the worgen at grizzlemaw", "what zone borders zul'drak", "where do i go at level 73 to 75", "grizzly hills quest hubs", "where is datk entrance"],
     "tags": ["zone", "contested", "northrend", "leveling"]
   },
   {
@@ -67,6 +76,7 @@
     "title": "Zul'Drak",
     "content": "Zul'Drak is a level 74 to 76 Northrend zone, the ice troll homeland, where the Drakkari are killing their own gods for power. The Argent Crusade holds Light's Breach and the Ebon Blade operates at Ebon Watch. Gundrak sits at the northern end of the zone, and the Amphitheater of Anguish runs a well-known gauntlet of group quests.",
     "keywords": ["zuldrak", "drakkari", "gundrak", "lights breach", "ebon watch", "amphitheater of anguish"],
+    "questions": ["what level is zul'drak", "where is zul'drak", "where is light's breach", "where is ebon watch", "where is gundrak", "what is the amphitheater of anguish", "where do i go at level 74 to 76", "zul'drak level range", "who are the drakkari", "what are the ice trolls doing in zul'drak", "zuldrak quest hubs", "where is the troll zone in northrend", "where do i do group quests in zul'drak"],
     "tags": ["zone", "contested", "northrend", "leveling"]
   },
   {
@@ -74,6 +84,7 @@
     "title": "Sholazar Basin",
     "content": "Sholazar Basin is a level 76 to 78 Northrend zone, a tropical valley sealed inside the ice and untouched by the Lich King. Nesingwary's camp runs the hunting quests, and the Oracles and the Frenzyheart Tribe are opposed reputations: siding with one locks out the other, and each offers its own dailies and pets.",
     "keywords": ["sholazar basin", "sholazar", "the oracles", "frenzyheart tribe", "nesingwary"],
+    "questions": ["what level is sholazar basin", "where is sholazar", "who are the oracles and frenzyheart", "oracles or frenzyheart which one", "can i do both frenzyheart and oracles", "where is nesingwary's camp", "how do i get pets from sholazar", "what are the sholazar dailies", "sholazar level range", "where do i go at level 76 to 78", "where is the tropical zone in northrend", "what is the sealed valley in northrend", "sholazar rep choice"],
     "tags": ["zone", "neutral", "northrend", "leveling"]
   },
   {
@@ -81,6 +92,7 @@
     "title": "The Storm Peaks",
     "content": "The Storm Peaks is a level 76 to 80 Northrend zone of high mountains and titan architecture in the north, home to the Sons of Hodir. K3 is the goblin hub and Dun Niffelem the Sons of Hodir's. The Sons of Hodir reputation is the only source of shoulder enchants in Wrath, and Ulduar opens from the western side of the zone.",
     "keywords": ["the storm peaks", "storm peaks", "sons of hodir", "dun niffelem", "k3", "ulduar entrance", "brunnhildar", "shoulder enchants", "hyldnir"],
+    "questions": ["what level is the storm peaks", "where is storm peaks", "where is k3", "where is dun niffelem", "where is ulduar", "how do i get to ulduar", "how do i get shoulder enchants", "where do i get sons of hodir rep", "who are the sons of hodir", "storm peaks level range", "where are the titan ruins in northrend", "where do i go at level 76 to 80", "uld entrance where"],
     "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
   },
   {
@@ -88,6 +100,7 @@
     "title": "Icecrown",
     "content": "Icecrown is the level 77 to 80 Northrend zone below the Lich King's fortress, and the last leveling zone of Wrath. The Argent Crusade, the Knights of the Ebon Blade, and the Alliance and Horde all hold camps here. The Argent Tournament grounds run mounted daily quests, and Icecrown Citadel with the Trial of the Crusader sits at the zone's heart.",
     "keywords": ["icecrown", "icecrown citadel", "lich king", "argent tournament", "knights of the ebon blade", "trial of the crusader", "shadow vault"],
+    "questions": ["what level is icecrown", "where is icecrown", "where is icecrown citadel", "where is icc", "where is the argent tournament", "where is trial of the crusader", "where is toc", "where are the argent tournament dailies", "what is the last leveling zone in wrath", "icecrown level range", "where is the lich king's fortress", "where do i go at level 77 to 80", "icecrown quest hubs", "where is the argent crusade camp"],
     "tags": ["zone", "contested", "northrend", "leveling", "endgame"]
   },
   {
@@ -95,6 +108,7 @@
     "title": "Crystalsong Forest",
     "content": "Crystalsong Forest is a level 77 to 80 Northrend zone of crystalline trees at the center of the continent, directly beneath the floating city of Dalaran. It has very few quests of its own and exists mostly as the approach to Dalaran and a passage between Dragonblight, Zul'Drak, and the Storm Peaks.",
     "keywords": ["crystalsong forest", "crystalsong", "crystalline trees", "windrunners overlook", "sunreavers command"],
+    "questions": ["what level is crystalsong forest", "where is crystalsong", "where is dalaran", "how do i get to dalaran", "what is under dalaran", "does crystalsong have quests", "crystalsong level range", "how do i get from dragonblight to the storm peaks", "how do i get to zul'drak", "where is the crystal forest", "what zone is dalaran floating over", "how do i get to dalaran on foot", "where do i go at level 77 to 80"],
     "tags": ["zone", "contested", "northrend"]
   },
   {
@@ -102,6 +116,7 @@
     "title": "Wintergrasp",
     "content": "Wintergrasp is a level 77 to 80 Northrend zone that works as an open world PvP battleground rather than a leveling zone. Alliance and Horde fight over the Wintergrasp Fortress on a timer using siege vehicles and destructible walls. Holding the fortress grants the winning faction access to the Vault of Archavon raid and a damage buff, and losing it locks that out until the next battle.",
     "keywords": ["wintergrasp", "wintergrasp fortress", "vault of archavon", "tenacity", "pvp zone"],
+    "questions": ["what level is wintergrasp", "where is wintergrasp", "what is wg", "how does wintergrasp work", "how do i get into the vault of archavon", "where is vault of archavon", "what does winning wintergrasp give", "is wintergrasp a battleground", "wg timer how often", "who owns wintergrasp", "what happens if i lose wintergrasp", "what are siege vehicles in wg", "wintergrasp fortress where", "is wg open world pvp"],
     "tags": ["zone", "contested", "northrend", "pvp", "endgame"]
   }
 ]

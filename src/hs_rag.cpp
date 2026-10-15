@@ -90,6 +90,23 @@ namespace
         return t;
     }
 
+    // The example-question channel's extra fold (QuestionTerms): "trainer",
+    // "training" and "train" meet, as do "enchanter" and "enchanting".
+    std::string Fold(std::string t)
+    {
+        static const char* const kSuffixes[] = { "ing", "er", "ed" };
+        for (const char* s : kSuffixes)
+        {
+            const size_t n = std::char_traits<char>::length(s);
+            if (t.size() >= n + 4 && t.compare(t.size() - n, n, s) == 0)
+            {
+                t.erase(t.size() - n);
+                break;
+            }
+        }
+        return t;
+    }
+
     // Terms that cannot, on their own, identify one entry. Two different
     // things land in here and the gate below treats them the same way:
     //
@@ -117,9 +134,10 @@ namespace
     // fantasy nouns ("light", "storm", "dark") were tried and left off for
     // exactly that reason -- none of them produced a false positive, and
     // "where is the dark portal" needs "dark" to keep pulling its weight.
-    bool IsAmbiguousTerm(const std::string& t)
+    // `folded`: `t` is a QuestionTerms term, so the list is matched folded too.
+    bool IsAmbiguousTerm(const std::string& t, bool folded = false)
     {
-        static const std::unordered_set<std::string> kAmbiguous = []{
+        static const std::vector<std::unordered_set<std::string>> kAmbiguous = []{
             // Stemmed on the way in, because the scorer stems query terms:
             // "arms" reaches the gate as "arm", and a raw list never matches.
             static const char* const kRaw[] = {
@@ -159,14 +177,17 @@ namespace
                 "land", "elder", "pass", "level", "many", "find", "out"
             };
 
-            std::unordered_set<std::string> out;
+            std::vector<std::unordered_set<std::string>> out(2);
             for (const char* w : kRaw)
-                out.insert(Stem(w));
+            {
+                out[0].insert(Stem(w));
+                out[1].insert(Fold(Stem(w)));
+            }
 
             return out;
         }();
 
-        return kAmbiguous.count(t) != 0;
+        return kAmbiguous[folded ? 1 : 0].count(t) != 0;
     }
 
     std::string Normalize(const std::string& s)
@@ -223,6 +244,54 @@ namespace
         return out;
     }
 
+    // Example questions, measured with Tests/rag_path_audit.py (2026-10-15).
+    // kQuestionMin is the match at which a question alone makes an entry
+    // eligible and retrieved: 0.6 let one-word lines ("back", "wow") through
+    // on a two-word question. kQuestionWeight is what a match adds to the
+    // ranking score (0.25 to 2.0 measured the same). kQuestionBeta > 1 weighs
+    // "how much of the question did the player say" above "how much of the
+    // player's line does the question account for": 1.5 kept recall and
+    // retrieved on the fewest small-talk lines.
+    constexpr float kQuestionMin    = 0.70f;
+    constexpr float kQuestionWeight = 0.50f;
+    constexpr float kQuestionBeta   = 1.50f;
+
+    // Terms for the example-question channel: Terms, minus chat filler, then
+    // Fold. Kept to this channel: the authored fields above are scored with
+    // Stem alone, and their measured margins depend on it.
+    std::vector<std::string> QuestionTerms(const std::string& normalized)
+    {
+        static const std::unordered_set<std::string> kFiller = {
+            "hey", "hi", "yo", "lol", "lmao", "ok", "okay", "man", "dude", "bro", "mate", "pls", "please",
+            "thanks", "ty", "um", "uh", "hmm", "ya", "yeah", "yes", "anyone", "anybody", "someone", "really",
+            "actually", "again", "still", "now", "here", "even", "ever", "also", "btw", "tho", "though",
+        };
+        // "you" is a stopword to the authored fields, but here it is evidence:
+        // example questions ask about the game, and a line addressed to the
+        // bot ("do you want to join my guild") is about the bot. Kept as a
+        // term, it is one that no question accounts for.
+        static const std::unordered_set<std::string> kYou = { "you", "u", "ur", "your", "youre", "yourself" };
+        std::vector<std::string> out;
+        for (size_t i = 0, j; i < normalized.size(); i = j + 1)
+        {
+            j = std::min(normalized.find(' ', i), normalized.size());
+            if (kYou.count(normalized.substr(i, j - i)))
+            {
+                out.push_back("you");
+                break;
+            }
+        }
+        for (std::string t : Terms(normalized))
+        {
+            if (kFiller.count(t))
+                continue;
+            t = Fold(t);
+            if (std::find(out.begin(), out.end(), t) == out.end())
+                out.push_back(t);
+        }
+        return out;
+    }
+
     struct RagIndex
     {
         std::vector<HsRagEntry> entries;
@@ -259,6 +328,20 @@ namespace
         // rather than scanned per lookup because the keyed path is the one
         // the generator hits once per bucket per cycle.
         std::unordered_map<std::string, uint32_t> byKey;
+
+        // The example-question channel (HsRagEntry::questions), kept apart
+        // from everything above so questions never change an authored
+        // field's idf, handle count or eligibility: per entry, per question,
+        // its distinct QuestionTerms...
+        std::vector<std::vector<std::vector<std::string>>> questionTerms;
+
+        // ...term -> (entry, question) carrying it...
+        std::unordered_map<std::string, std::vector<std::pair<uint32_t, uint32_t>>> questionPostings;
+
+        // ...and idf over entries' question sets, so "level" or "where", which
+        // many entries' questions share, weigh less than "corpse".
+        std::unordered_map<std::string, float> questionIdf;
+        float questionUnknownIdf = 0.0f;
     };
 
     RagIndex& Index()
@@ -303,6 +386,77 @@ namespace
     {
         auto it = idx.idf.find(term);
         return it != idx.idf.end() ? it->second : idx.unknownIdf;
+    }
+
+    float QuestionIdfFor(const RagIndex& idx, const std::string& term)
+    {
+        auto it = idx.questionIdf.find(term);
+        return it != idx.questionIdf.end() ? it->second : idx.questionUnknownIdf;
+    }
+
+    // entry -> its best example-question match in [0, 1]: an idf-weighted
+    // F-score of the share of the player's line a question accounts for and
+    // the share of the question the line says. Both sides count, so one
+    // shared word cannot carry a long line ("my arms are killing me") or a
+    // long question.
+    std::unordered_map<uint32_t, float> QuestionMatchLocked(const RagIndex& idx, const std::vector<std::string>& terms)
+    {
+        std::unordered_map<uint32_t, float> best;
+
+        float lineMass = 0.0f;
+        for (const std::string& t : terms)
+            lineMass += QuestionIdfFor(idx, t);
+        if (lineMass <= 0.0f)
+            return best;
+
+        struct Overlap
+        {
+            float    mass  = 0.0f;
+            uint32_t terms = 0;
+            bool     named = false; // a shared term that is not IsAmbiguousTerm
+        };
+        std::unordered_map<uint64_t, Overlap> overlap;
+        for (const std::string& t : terms)
+        {
+            auto post = idx.questionPostings.find(t);
+            if (post == idx.questionPostings.end())
+                continue;
+            const float w     = QuestionIdfFor(idx, t);
+            // A number names nothing on its own: "im 80", "at 10".
+            const bool  named = !IsAmbiguousTerm(t, /*folded=*/true) &&
+                                !std::all_of(t.begin(), t.end(), [](unsigned char c) { return std::isdigit(c); });
+            for (const auto& eq : post->second)
+            {
+                Overlap& o = overlap[(static_cast<uint64_t>(eq.first) << 32) | eq.second];
+                o.mass += w;
+                o.terms++;
+                o.named = o.named || named;
+            }
+        }
+
+        const float b2 = kQuestionBeta * kQuestionBeta;
+        for (const auto& kv : overlap)
+        {
+            // The same gate as the authored fields: "arms" against the
+            // question "arms?" shares one word that identifies nothing.
+            if (!kv.second.named && kv.second.terms < 2)
+                continue;
+
+            const uint32_t e  = static_cast<uint32_t>(kv.first >> 32);
+            const uint32_t qi = static_cast<uint32_t>(kv.first & 0xffffffffu);
+
+            float questionMass = 0.0f;
+            for (const std::string& t : idx.questionTerms[e][qi])
+                questionMass += QuestionIdfFor(idx, t);
+
+            const float ofLine     = kv.second.mass / lineMass;
+            const float ofQuestion = kv.second.mass / questionMass;
+            const float f = (1.0f + b2) * ofLine * ofQuestion / (b2 * ofLine + ofQuestion);
+
+            float& slot = best[e];
+            slot = std::max(slot, f);
+        }
+        return best;
     }
 }
 
@@ -375,6 +529,37 @@ void Hs_SetRagTable(const std::vector<HsRagEntry>& rows)
     }
 
     idx.unknownIdf = idx.idf.empty() ? 0.0f : idfSum / static_cast<float>(idx.idf.size());
+
+    idx.questionTerms.assign(rows.size(), {});
+    idx.questionPostings.clear();
+    idx.questionIdf.clear();
+
+    std::unordered_map<std::string, uint32_t> questionDf;
+    for (uint32_t i = 0; i < idx.entries.size(); ++i)
+    {
+        std::unordered_set<std::string> seen;
+        for (const std::string& q : idx.entries[i].questions)
+        {
+            std::vector<std::string> terms = QuestionTerms(Normalize(q));
+            if (terms.empty())
+                continue;
+            const uint32_t qi = static_cast<uint32_t>(idx.questionTerms[i].size());
+            for (const std::string& t : terms)
+            {
+                idx.questionPostings[t].push_back({ i, qi });
+                if (seen.insert(t).second)
+                    questionDf[t]++;
+            }
+            idx.questionTerms[i].push_back(std::move(terms));
+        }
+    }
+
+    // A query term no example question carries is something the player said
+    // that no phrasing accounts for, so it weighs as much as the rarest term:
+    // "how tall is mount everest" must not ride "mount" into Riding.
+    idx.questionUnknownIdf = std::log(1.0f + n);
+    for (const auto& kv : questionDf)
+        idx.questionIdf[kv.first] = std::log(1.0f + n / static_cast<float>(kv.second));
 }
 
 size_t Hs_RagEntryCount()
@@ -522,9 +707,19 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         }
     }
 
+    // The example-question channel, then every entry either channel reached:
+    // a line can match a question while sharing no authored field with it.
+    const std::unordered_map<uint32_t, float> questionMatch =
+        QuestionMatchLocked(idx, QuestionTerms(normalizedQuery));
+    for (const auto& kv : questionMatch)
+        covered.emplace(kv.first, 0.0f);
+
     for (const auto& kv : covered)
     {
         float score = kv.second / queryMass;
+        auto qm = questionMatch.find(kv.first);
+        const float question = qm != questionMatch.end() ? qm->second : 0.0f;
+        const bool  asked    = question >= kQuestionMin;
 
         // Aboutness: how much of this entry's title did the player ask for.
         const std::vector<std::string>& title = idx.titleTerms[kv.first];
@@ -576,7 +771,9 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         const uint32_t namedMatches  = unambiguousHandleHits.count(kv.first)
                                      ? unambiguousHandleHits[kv.first] : 0u;
 
-        if (namedMatches == 0 && handleMatches < 2)
+        // A close example question is its own eligibility: it matched a
+        // whole phrasing, not one word.
+        if (namedMatches == 0 && handleMatches < 2 && !asked)
             continue;
 
         // A statement retrieves only a named entry, and only on a handle that
@@ -587,8 +784,8 @@ std::vector<HsRagHit> RetrieveLocked(const std::string& query, uint32_t maxEntri
         if (!asking && (!IsNamedEntry(idx.entries[kv.first].id) || !namesIt))
             continue;
 
-        if (score >= minScore)
-            hits.push_back({ &idx.entries[kv.first], score });
+        if (score >= minScore || asked)
+            hits.push_back({ &idx.entries[kv.first], score + kQuestionWeight * question });
     }
 
     std::sort(hits.begin(), hits.end(), [](const HsRagHit& a, const HsRagHit& b) {

@@ -4,6 +4,7 @@
     "title": "Hallow's End",
     "content": "Hallow's End runs each year from October 18 to October 31, decorating capital cities with pumpkins and letting players trick-or-treat at candy buckets in every inn for random treats, including a small chance at the flying Magic Broom mount. Its centerpiece is a fight against the Headless Horseman, summoned in Scarlet Monastery's graveyard; since patch 3.3.3 he can be queued for directly through the Dungeon Finder instead of forming a group by hand. Players can also throw Weighted Jack-o'-Lanterns and pick up a costume wand that turns them into a ghost, ninja, pirate, skeleton, bat, wisp, or leper gnome for the duration of the holiday.",
     "keywords": ["hallow's end", "headless horseman", "magic broom", "trick or treat", "candy bucket", "scarlet monastery"],
+    "questions": ["when is hallow's end", "when does hallows end start", "how do i get the headless horseman", "where is the headless horseman", "how do i get the magic broom", "where are the candy buckets", "how do i trick or treat", "is the horseman in the dungeon finder", "what do i get from the headless horseman", "how do i get a halloween costume", "what is the halloween event", "how do i turn into a ghost or pirate", "what are the costume wands", "how do i get the broom mount", "where do i summon the headless horseman"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Feast of Winter Veil",
     "content": "The Feast of Winter Veil is WoW's Christmas-themed holiday, running from December 15 through January 2. Players collect a daily gift from under the tree beside Greatfather Winter in Ironforge or Orgrimmar, buy toys and treats from the traveling Smokywood Pastures vendor, and can start snowball fights or use a Handful of Snowflakes to turn friends into reindeer. There is no dedicated Winter Veil mount, but achievements like Merrymaker (completing every holiday task) award a title, and the classic 'Metzen the Reindeer' summon is a well-known joke item tied to the season.",
     "keywords": ["feast of winter veil", "winter veil", "greatfather winter", "smokywood pastures", "reindeer", "snowball"],
+    "questions": ["when is winter veil", "when does feast of winter veil start", "where is greatfather winter", "how do i get winter veil gifts", "what is the christmas event", "where is smokywood pastures", "how do i turn into a reindeer", "how do i get the winter veil gift under the tree", "is there a winter veil mount", "what is metzen the reindeer", "what is merrymaker", "how do i start a snowball fight", "how long does winter veil last", "what do i get from winter veil", "what is the handful of snowflakes"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Brewfest",
     "content": "Brewfest runs from September 20 to October 4 at fairgrounds outside Ironforge and Orgrimmar, where players ram-race, sample brews from the Brewfest quartermaster for tokens, and fight the drunken boss Coren Direbrew inside Blackrock Depths (also queueable through the Dungeon Finder). Defeating Direbrew drops a loot bag with a chance at the Great Brewfest Kodo or the Swift Brewfest Ram mount, making his fight the event's main draw for collectors. Brewfest carries no reputation of its own; the daily quests and the ram race pay Brewfest Prize Tokens, spent with a Token Redeemer on holiday-only gear, steins, and trinkets.",
     "keywords": ["brewfest", "coren direbrew", "brewfest kodo", "brewfest ram", "ram racing", "blackrock depths"],
+    "questions": ["when is brewfest", "when does brewfest start", "how do i get the brewfest kodo", "how do i get the brewfest ram", "who is coren direbrew", "how do i kill coren direbrew", "where do i fight coren direbrew", "how does ram racing work", "what are brewfest prize tokens", "where is the brewfest fairground", "can i queue for direbrew in dungeon finder", "what do i get from brewfest", "does brewfest have a reputation", "what is the token redeemer", "how do i get a stein"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Midsummer Fire Festival",
     "content": "The Midsummer Fire Festival burns from June 21 to July 4 around bonfires placed in most major cities and zones. Players tend their own faction's flame, try to douse the rival faction's fire and relight their own from it, and dance around the Ribbon Pole for a festive buff; visiting every bonfire and completing the fire-themed dailies works toward the Fire Festival meta-achievement and title. Rewards are mostly cosmetic -- torch-tossing toys and a Brazier of Dancing Flames trinket -- with no dedicated mount tied to the holiday.",
     "keywords": ["midsummer fire festival", "bonfire", "ribbon pole", "torch", "brazier of dancing flames"],
+    "questions": ["when is midsummer", "when does fire festival start", "what is the midsummer fire festival", "what are the bonfires for", "what is the ribbon pole", "how do i douse the enemy bonfire", "how do i get the brazier of dancing flames", "is there a midsummer mount", "how long does midsummer last", "what are the rewards for midsummer", "how do i get the fire festival title", "what do i do at the bonfire", "how do i get the midsummer meta achievement", "what are the fire festival dailies", "where do i dance for the ribbon pole buff"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Lunar Festival",
     "content": "Lunar Festival runs from February 1 to February 14 and centers on visiting Elders scattered across nearly every zone on both continents, each granting the Elders' Blessing buff and a bit of Lunar Festival lore. Players also toss coins into the fountain at Moonglade for a random small reward, and can take on Omen, an enormous spectral beast that spawns as a group-killable target in Moonglade for the duration of the event. Collecting blessings from enough Elders unlocks the elder title and a fireworks-launching trinket.",
     "keywords": ["lunar festival", "elders", "elders' blessing", "moonglade", "omen", "coin toss"],
+    "questions": ["when is lunar festival", "when does the lunar festival start", "what are the elders for", "how do i get the elders blessing", "where do i find lunar festival elders", "what is omen", "where is omen", "how do i kill omen", "what is the coin toss in moonglade", "how do i get the lunar festival title", "what does the lunar festival trinket do", "what is the fireworks trinket", "how long does the lunar festival last", "what do i get from lunar festival"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Love is in the Air",
     "content": "Love is in the Air runs from February 10 to February 23; Wrath of the Lich King's patch 3.3 expanded it from a minor vanilla holiday into a full event centered on a farcical boss fight against Apothecary Hummel and his two partners in Shadowfang Keep, queued through the Dungeon Finder. Defeating Hummel drops a loot bag with a small chance at the Big Love Rocket, one of the game's most sought-after rare mounts. Players also collect Lovely Charms from monsters everywhere to trade for perfume, cologne, and the companion pet Peddlefeet, and can propose to friends with a Silver Bell or invite them to disco-dance atop a caged Love Fool.",
     "keywords": ["love is in the air", "apothecary hummel", "big love rocket", "lovely charms", "peddlefeet"],
+    "questions": ["when is love is in the air", "how do i get the big love rocket", "who is apothecary hummel", "where is hummel", "where do i fight hummel", "can i queue for hummel in dungeon finder", "what are lovely charms", "how do i get peddlefeet", "what is the valentines event", "how do i get perfume or cologne", "how do i propose with a silver bell", "what is the love fool", "how long does love is in the air last", "what drops from apothecary hummel", "is the big love rocket rare"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Children's Week",
     "content": "Children's Week runs from April 30 to May 6. Players adopt a war orphan from the Orphan Matron in their faction's capital and escort it on a tour of iconic locations, including a Northrend leg added for Wrath of the Lich King that has players take their orphan through Icecrown or Borean Tundra. It is also when the School of Hard Knocks achievement is available, which sends players into the battlegrounds with the orphan following them to capture a flag, assault a tower, and the like -- a notoriously unpopular week for battleground regulars. Completing the full questline awards a faction-specific orphan companion pet.",
     "keywords": ["children's week", "orphan", "orphan matron", "school of hard knocks", "companion pet"],
+    "questions": ["when is children's week", "where is the orphan matron", "how do i adopt an orphan", "what is the school of hard knocks", "how do i get the orphan pet", "how do i do children's week in northrend", "is children's week in bgs annoying", "what do i get from children's week", "how long does children's week last", "what does the war orphan do", "how do i do the school of hard knocks achievement", "where do i take the orphan in icecrown", "where do i take the orphan in borean tundra", "how do i get a companion pet from children's week", "what is the orphan questline"],
     "tags": ["event", "holiday", "seasonal"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Pilgrim's Bounty",
     "content": "Pilgrim's Bounty is WoW's Thanksgiving-themed holiday, added with Wrath of the Lich King and running from November 21 to November 27 at a feast table set up outside every major city. Players cook and serve dishes like Cranberry Chutney, Pumpkin Pie, and Slow-Roasted Turkey to seated guests of both factions for reputation and Pilgrim's Bounty Buckets, and can earn the Pilgrim's Paunch food-coma buff for overeating. The Turkinator achievement, earned by killing wild turkeys that spawn worldwide during the event, rounds out the holiday's meta-achievement.",
     "keywords": ["pilgrim's bounty", "turkinator", "pilgrim's paunch", "cranberry chutney", "thanksgiving"],
+    "questions": ["when is pilgrim's bounty", "when does thanksgiving start in wow", "what is pilgrim's bounty", "how do i get the turkinator", "what is the pilgrim's paunch", "how do i get cranberry chutney", "how do i serve the feast", "where is the pilgrim's bounty feast table", "how do i kill wild turkeys", "what is the food coma buff", "how long does pilgrim's bounty last", "how do i get pilgrim's bounty buckets", "what is the turkey achievement", "how do i cook for pilgrim's bounty", "what is the thanksgiving event"],
     "tags": ["event", "holiday", "seasonal", "wotlk"]
   }
 ]

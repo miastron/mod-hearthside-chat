@@ -4,6 +4,7 @@
     "title": "Battlegrounds",
     "content": "3.3.5 has six battlegrounds: Warsong Gulch (capture the flag, from level 10), Arathi Basin (five nodes, from 20), Alterac Valley (40 a side, from 51), Eye of the Storm (from 61), and Strand of the Ancients and Isle of Conquest (both from 71). Queue from a Battlemaster or the PvP window. Wintergrasp is a zone, not a battleground.",
     "keywords": ["battleground", "battlegrounds", "bg", "bgs", "queue for bg", "pvp queue"],
+    "questions": ["what bgs are there in wotlk", "how many battlegrounds are there", "list of battlegrounds", "which bgs are there", "how do i queue for a bg", "is wintergrasp a bg", "what level does each bg start at", "best bg for honor farming", "how do i win node bgs", "why do we lose ab when we chase kills", "should i do random bg", "how many nodes should we hold in bg", "what bgs open at 71", "bg tips for newbies", "do i need to call incoming in bg"],
     "tags": ["pvp", "battlegrounds", "teamwork", "honor"],
     "expert_domain": "pvp",
     "expert_content": "Do the random battleground for its daily first-win bonus. In node maps like Arathi Basin and Eye of the Storm, holding three nodes and defending them wins; chasing a five-cap loses. Fight on objectives, not in the middle of the road, and call out incoming players in chat."
@@ -13,6 +14,7 @@
     "title": "Arena Combat",
     "content": "Arena teams fight 2v2, 3v3 or 5v5 in Nagrand Arena, Blade's Edge Arena, the Ruins of Lordaeron, the Dalaran sewers and the Ring of Valor. Rated matches move your team rating, and Arena Points are paid out weekly by rating if you played at least 10 games that week; skirmishes are unrated practice.",
     "keywords": ["arena", "arenas", "2v2", "3v3", "5v5", "arena team", "arena rating", "skirmish", "skirmishes", "ring of valor", "dalaran arena"],
+    "questions": ["how do arenas work", "what arenas are there", "what is a skirmish", "how do i get arena points", "how many games for arena points", "best 3v3 comp", "best 2v2 comp", "what comp should i run in arena", "how do i start arena", "what is an arena team", "how does arena rating work", "what is ring of valor", "where is the dalaran arena", "arena tips", "when should i use my trinket in arena", "2v2 or 3v3 easier", "how do i make an arena team"],
     "tags": ["pvp", "arena", "skill", "competition"],
     "expert_domain": "pvp",
     "expert_content": "The strong 3v3 teams are Rogue, Mage and Priest, Warrior or Death Knight with a Holy Paladin, and two casters with a healer. In 2v2 a damage dealer with a healer is the easy start. Arena Points need 10 games a week, and you must play at least 30% of your team's games to get them. Focus one target, chain crowd control through diminishing returns, and save your trinket for the stun that would actually kill you."
@@ -22,6 +24,7 @@
     "title": "World PvP",
     "content": "World PvP happens anywhere outside sanctuaries: classic hot spots are Tarren Mill against Southshore in Hillsbrad Foothills and the Gurubashi Arena in Stranglethorn Vale, and Wintergrasp is Northrend's open-world PvP zone, where the attackers besiege the fortress with siege vehicles on a timer.",
     "keywords": ["world pvp", "wpvp", "tarren mill", "southshore", "gurubashi arena", "open world pvp"],
+    "questions": ["where is good world pvp", "what is tarren mill vs southshore", "where do i do open world pvp", "what is gurubashi arena", "how does wintergrasp work", "wpvp spots", "where can i find pvp fights outside bgs", "is there world pvp in northrend", "what is tm vs ss", "where do the horde and alliance fight in hillsbrad", "where is gurubashi", "is wg open world pvp", "how do attackers win wintergrasp"],
     "tags": ["pvp", "world", "open_world", "rivalries"]
   },
   {
@@ -29,6 +32,7 @@
     "title": "PvP Ranks and Titles",
     "content": "The old Vanilla system of 14 numbered PvP ranks was replaced when the honor system was overhauled in the Burning Crusade: honor points are now spent directly on gear instead of being ground through ranks. The prestigious 'Grand Marshal' (Alliance) and 'High Warlord' (Horde) titles still exist, but are now awarded to the single highest-rated arena player of each class and faction at the end of a PvP season, alongside seasonal Gladiator titles for the top-rated teams. Titles are prestigious and show PvP dedication.",
     "keywords": ["pvp rank", "pvp ranks", "pvp title", "pvp titles", "grand marshal", "high warlord", "gladiator", "rank 14", "duelist"],
+    "questions": ["how do pvp ranks work", "are there still pvp ranks", "how do i get grand marshal", "how do i get high warlord", "what happened to rank 14", "how do i get the gladiator title", "pvp titles in wotlk", "how do you get a pvp title", "is rank 14 still a thing", "what is the old honor system", "who gets grand marshal now", "do i need to grind ranks for pvp gear"],
     "tags": ["pvp", "ranks", "titles", "prestige"]
   },
   {
@@ -36,6 +40,7 @@
     "title": "PvP Gear Progression",
     "content": "PvP gear carries resilience, which lowers the chance to be crit and the damage taken from players. Entry pieces are bought with Honor, the season's best pieces need Arena Points, and the top items also require a personal arena rating. Honor caps at 75,000, so spend it before hitting the cap.",
     "keywords": ["pvp gear", "honor gear", "arena gear", "resilience", "resil", "resi", "gladiator gear", "pvp set", "pvp sets"],
+    "questions": ["how do i gear for pvp", "what is resilience", "what does resil do", "how do i get pvp gear", "best way to get arena gear", "honor gear or arena gear first", "what gear should i buy with honor", "what is the honor cap", "do i need rating for pvp weapons", "how do i get gladiator gear", "is resi worth stacking", "which pvp pieces need arena points", "pvp set bonus worth it", "how do i get pvp shoulders", "what pvp gear do i buy first"],
     "tags": ["pvp", "gear", "progression", "equipment"],
     "expert_domain": "pvp",
     "expert_content": "Buy honor gear for the off-pieces first, neck, rings, cloak, belt, bracers and boots, then get the five-piece set with Arena Points, since the set bonuses matter. The season's best weapons and shoulders need a personal rating, so climb in 3v3 where rating is easiest to earn."
@@ -45,6 +50,7 @@
     "title": "Faction Conflicts",
     "content": "The faction war flared at the Wrathgate in Dragonblight, where Grand Apothecary Putress unleashed a plague that killed both Bolvar Fordragon and Dranosh Saurfang. Varimathras seized the Undercity at the same time, and Thrall and King Varian Wrynn retook it together in the Battle for the Undercity.",
     "keywords": ["wrathgate", "battle for the undercity", "putress", "faction war", "alliance vs horde", "horde vs alliance"],
+    "questions": ["what happened at the wrathgate", "who killed bolvar", "what is the battle for the undercity", "who is putress", "who took over the undercity", "who killed saurfang", "what is the faction war about", "what happened to varimathras", "alliance vs horde story", "where is the wrathgate", "who is grand apothecary putress", "did thrall and varian retake the undercity", "what is the lore behind horde vs alliance in wotlk", "how did bolvar fordragon die"],
     "tags": ["pvp", "factions", "conflicts", "lore"]
   },
   {
@@ -52,6 +58,7 @@
     "title": "Honor System",
     "content": "Honor comes from honorable kills, battleground wins and objectives, and Wintergrasp; a player low enough to show grey to you gives none. Honor doesn't decay and caps at 75,000, and it's spent with PvP vendors on gear.",
     "keywords": ["honor", "honor points", "honor cap", "honor farm", "farm honor", "honor system", "honorable kills", "hks"],
+    "questions": ["how do i farm honor", "fastest way to get honor", "what is the honor cap", "does honor decay", "how do i get honor points", "best bg for honor", "what gives honor", "do grey kills give honor", "what do i spend honor on", "how much honor does the random bg give", "does wintergrasp give honor", "is av good for honor", "honor farm tips", "what is a hk"],
     "tags": ["pvp", "honor", "system", "rewards"],
     "expert_domain": "pvp",
     "expert_content": "The fastest honor is the random battleground: the first win each day pays a big bonus and Arena Points, and later wins pay less. Winning Alterac Valley and Isle of Conquest is the most honor per match, and holding Wintergrasp gives honor plus Vault of Archavon access. Spend honor before you reach the 75,000 cap."
@@ -61,6 +68,7 @@
     "title": "Ganking and Ambush Tactics",
     "content": "Ganking is a much higher-level player killing a low-level one, common on PvP realms in contested zones like Stranglethorn Vale and Hillsbrad Foothills. It earns the ganker nothing, since a target low enough to show grey gives no honor. The usual answers are calling friends or a guard, or leaving the area.",
     "keywords": ["gank", "ganking", "ganked", "ganker", "gankers", "corpse camping", "corpse camped", "camping"],
+    "questions": ["what is ganking", "how do i stop getting ganked", "someone keeps ganking me", "how do i deal with a ganker", "what is corpse camping", "i got corpse camped help", "is ganking worth honor", "do you get honor for ganking low levels", "how do i avoid gankers in stv", "gankers in hillsbrad what do i do", "why do high levels gank", "how do i stop being camped", "what to do when a high level is camping me"],
     "tags": ["pvp", "tactics", "ganking", "controversy"]
   },
   {
@@ -68,6 +76,7 @@
     "title": "Battleground Objectives",
     "content": "How each battleground is won: Warsong Gulch, capture the enemy flag three times; Arathi Basin, hold more of the five nodes to win the resource race; Alterac Valley, kill the enemy general, Drek'Thar or Vanndar; Eye of the Storm, hold towers and carry the center flag; Strand of the Ancients, reach the relic faster; Isle of Conquest, break the keep and kill its general.",
     "keywords": ["bg objectives", "battleground objectives", "flag carrier", "efc", "capture flag", "cap a node", "nodes"],
+    "questions": ["how do you win each bg", "what is the objective in av", "what is the objective in wsg", "what does efc mean", "what is a flag carrier", "how do i win sota", "how do you win ioc", "how do i cap a node", "what do i do in eots", "how many flag caps to win", "what is the goal in arathi basin", "who do i kill to win av", "what is the objective of each battleground", "how do you win a bg"],
     "tags": ["pvp", "objectives", "battlegrounds", "strategy"]
   },
   {
@@ -75,6 +84,7 @@
     "title": "PvP Rewards and Incentives",
     "content": "Beyond gear, PvP pays titles and mounts: each season's top arena teams earn the Gladiator title and that season's frost wyrm, the Deadly, Furious, Relentless and Wrathful Gladiator's Frost Wyrm in Wrath, and the For the Alliance and For the Horde achievements, killing the enemy faction's leaders, award a Black War Bear.",
     "keywords": ["pvp rewards", "pvp mount", "gladiator mount", "frost wyrm", "black war bear"],
+    "questions": ["what are the pvp rewards", "how do i get a gladiator mount", "how do i get the frost wyrm", "how do i get a black war bear", "what are pvp mounts", "what mounts can i get from pvp", "how do i get the for the horde achievement", "how do i get the for the alliance achievement", "what is the deadly gladiator frost wyrm", "pvp titles and mounts", "is the black war bear still available", "what do top arena teams get", "how do you get the wrathful gladiator's frost wyrm", "what do i get for killing faction leaders"],
     "tags": ["pvp", "rewards", "incentives", "motivation"]
   }
 ]

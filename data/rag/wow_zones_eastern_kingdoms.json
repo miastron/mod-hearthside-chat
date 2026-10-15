@@ -12,6 +12,21 @@
       "deadmines entrance",
       "moonbrook"
     ],
+    "questions": [
+      "what level is westfall",
+      "where is westfall",
+      "where do i go after elwynn forest",
+      "where is sentinel hill",
+      "where is the deadmines entrance",
+      "what is the defias questline",
+      "where do alliance quest after elwynn",
+      "who are the harvest golems",
+      "westfall level range",
+      "how do i get to westfall from stormwind",
+      "where is the people's militia",
+      "is westfall alliance or horde",
+      "where to level 10 to 20 alliance"
+    ],
     "tags": [
       "zone",
       "alliance",
@@ -30,6 +45,21 @@
       "the loch",
       "ironbands excavation",
       "farstrider lodge"
+    ],
+    "questions": [
+      "what level is loch modan",
+      "where is loch modan",
+      "where is thelsamar",
+      "where is stonewrought dam",
+      "how do i get to loch modan from ironforge",
+      "where do i go after dun morogh",
+      "what are the dark iron dwarves doing in loch modan",
+      "where is farstrider lodge",
+      "loch modan quest hub",
+      "where do dwarves quest after dun morogh",
+      "loch modan level range",
+      "where is ironband's excavation site",
+      "what zone is east of dun morogh"
     ],
     "tags": [
       "zone",
@@ -50,6 +80,21 @@
       "pyrewood village",
       "ambermill"
     ],
+    "questions": [
+      "what level is silverpine forest",
+      "where is silverpine",
+      "where is the sepulcher",
+      "where is shadowfang keep",
+      "where is pyrewood village",
+      "where do horde go after tirisfal",
+      "where do undead quest after tirisfal glades",
+      "silverpine level range",
+      "how do i get to silverpine from undercity",
+      "what is the worgen zone for horde",
+      "where are the dalaran mages in silverpine",
+      "where to level 10 to 20 as forsaken",
+      "who lives at the sepulcher"
+    ],
     "tags": [
       "zone",
       "horde",
@@ -67,6 +112,21 @@
       "dead scar",
       "quelthalas",
       "zulaman entrance"
+    ],
+    "questions": [
+      "what level is ghostlands",
+      "where is ghostlands",
+      "where is tranquillien",
+      "where do blood elves go after eversong",
+      "what is the dead scar",
+      "how do i get to zul'aman",
+      "what zone comes after eversong woods",
+      "ghostlands level range",
+      "how do i get from silvermoon to ghostlands",
+      "where do belfs quest after eversong",
+      "ghostlands quest hub",
+      "where is zul aman entrance",
+      "what level is the ghostlands for belf"
     ],
     "tags": [
       "zone",
@@ -87,6 +147,21 @@
       "renders camp",
       "lake everstill",
       "stonewatch"
+    ],
+    "questions": [
+      "what level is redridge",
+      "where is redridge mountains",
+      "where is lakeshire",
+      "where is the broken bridge",
+      "where is render's camp",
+      "how do i get to redridge from elwynn",
+      "what zone is south of redridge",
+      "what zone is north of redridge",
+      "redridge level range",
+      "where do i go after redridge",
+      "what are the blackrock orcs doing in redridge",
+      "where is redridge relative to burning steppes",
+      "where do alliance quest at level 15 to 25"
     ],
     "tags": [
       "zone",
@@ -109,6 +184,22 @@
       "stalvan mistmantle",
       "twilight grove"
     ],
+    "questions": [
+      "what level is duskwood",
+      "where is duskwood",
+      "where is darkshire",
+      "why is duskwood always night",
+      "where is raven hill cemetery",
+      "stalvan mistmantle quest",
+      "how do i get to duskwood from elwynn",
+      "what is mor'ladim",
+      "duskwood level range",
+      "where is deadwind pass entrance",
+      "what zone is south of elwynn",
+      "who is the night watch",
+      "what mobs are in duskwood",
+      "where do i quest at level 18 to 30"
+    ],
     "tags": [
       "zone",
       "alliance",
@@ -127,6 +218,21 @@
       "southshore",
       "durnholde keep",
       "azurelode mine"
+    ],
+    "questions": [
+      "what level is hillsbrad",
+      "where is hillsbrad foothills",
+      "where is tarren mill",
+      "where is southshore",
+      "how do i get to southshore",
+      "how do i get to tarren mill",
+      "where is durnholde keep",
+      "is hillsbrad pvp",
+      "tarren mill vs southshore pvp",
+      "hillsbrad level range",
+      "where is hillsbrad relative to alterac",
+      "who are the syndicate",
+      "where do i level 20 to 30"
     ],
     "tags": [
       "zone",
@@ -147,6 +253,21 @@
       "grim batol",
       "boat to theramore"
     ],
+    "questions": [
+      "what level is wetlands",
+      "where is wetlands",
+      "where is menethil harbor",
+      "how do i get to theramore",
+      "how do i get to howling fjord from wetlands",
+      "where is the boat to theramore",
+      "where is the boat to northrend as alliance",
+      "wetlands level range",
+      "what zone is north of dun morogh",
+      "how do i get to kalimdor from menethil",
+      "what mobs are in the wetlands",
+      "where do i level 20 to 30 as alliance",
+      "where is the menethil boat"
+    ],
     "tags": [
       "zone",
       "alliance",
@@ -166,6 +287,21 @@
       "stromgarde keep",
       "boulderfist ogres"
     ],
+    "questions": [
+      "what level is arathi highlands",
+      "where is arathi highlands",
+      "where is refuge pointe",
+      "where is hammerfall",
+      "where is stromgarde keep",
+      "what zone is arathi basin named after",
+      "arathi highlands level range",
+      "where is arathi relative to hillsbrad",
+      "who are the boulderfist ogres",
+      "where do i quest at 30 to 40",
+      "is arathi highlands pvp",
+      "who holds stromgarde",
+      "where is the horde base in arathi"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -183,6 +319,20 @@
       "ruins of alterac",
       "alterac valley entrance",
       "dalaran crater"
+    ],
+    "questions": [
+      "what level is alterac mountains",
+      "where is alterac valley entrance",
+      "how do i get to alterac valley",
+      "where is the av entrance",
+      "where is alterac mountains",
+      "is alterac worth questing",
+      "what zone is between hillsbrad and the hinterlands",
+      "who holds alterac city",
+      "where are the yetis near alterac",
+      "alterac mountains level range",
+      "where do i enter av",
+      "why dont people quest in alterac"
     ],
     "tags": [
       "zone",
@@ -206,6 +356,21 @@
       "bloodsail buccaneers",
       "stv"
     ],
+    "questions": [
+      "what level is stranglethorn vale",
+      "where is stv",
+      "where is booty bay",
+      "how do i get to stv as horde",
+      "how do i get to stv as alliance",
+      "where is grom'gol base camp",
+      "where is rebel camp",
+      "where is zul'gurub entrance",
+      "is stv pvp",
+      "where is the zeppelin to stv",
+      "stv level range",
+      "does booty bay have an auction house",
+      "where is zg"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -225,6 +390,20 @@
       "angor fortress",
       "lethlor ravine"
     ],
+    "questions": [
+      "what level is badlands",
+      "where is badlands",
+      "where is uldaman entrance",
+      "where is kargath",
+      "how do i get to badlands as alliance",
+      "how do i get to badlands as horde",
+      "where is the dwarven district of thelsamar",
+      "badlands level range",
+      "what zone is south of loch modan",
+      "who fights over the badlands excavation sites",
+      "where do i level 35 to 45",
+      "where is uldaman"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -243,6 +422,20 @@
       "temple of atalhakkar",
       "misty valley",
       "pool of tears"
+    ],
+    "questions": [
+      "what level is swamp of sorrows",
+      "where is swamp of sorrows",
+      "where is stonard",
+      "where is the sunken temple entrance",
+      "where is the temple of atal'hakkar",
+      "how do i get to the swamp as horde",
+      "does alliance have a base in swamp of sorrows",
+      "where is the dark portal from swamp of sorrows",
+      "swamp of sorrows level range",
+      "what zone is east of duskwood",
+      "why is swamp of sorrows foggy",
+      "where do i level 35 to 45 as horde"
     ],
     "tags": [
       "zone",
@@ -265,6 +458,20 @@
       "witherbark",
       "jintha alor"
     ],
+    "questions": [
+      "what level is the hinterlands",
+      "where is the hinterlands",
+      "where is aerie peak",
+      "where are the wildhammer dwarves",
+      "where is revantusk village",
+      "where are the trolls in the hinterlands",
+      "where is the flight path at aerie peak",
+      "hinterlands level range",
+      "where is seradane",
+      "who are the vilebranch",
+      "what zone is north of the plaguelands",
+      "where do i level 40 to 50 alliance"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -282,6 +489,20 @@
       "thorium brotherhood",
       "the slag pit",
       "blackrock depths approach"
+    ],
+    "questions": [
+      "what level is searing gorge",
+      "where is searing gorge",
+      "where is thorium point",
+      "how do i get to blackrock depths",
+      "where is the brd entrance",
+      "where is the slag pit",
+      "where do i mine thorium",
+      "where is the thorium brotherhood",
+      "searing gorge level range",
+      "what zone is between badlands and burning steppes",
+      "where do i farm thorium ore",
+      "who is the thorium brotherhood"
     ],
     "tags": [
       "zone",
@@ -303,6 +524,20 @@
       "portal to outland",
       "rise of the defiler"
     ],
+    "questions": [
+      "what level is blasted lands",
+      "where is blasted lands",
+      "where is the dark portal",
+      "how do i get to outland",
+      "how do i get to the dark portal",
+      "where is nethergarde keep",
+      "where is dreadmaul hold",
+      "what level do i need for outland",
+      "where do i go at level 58",
+      "blasted lands level range",
+      "what zone is at the southern tip of the eastern kingdoms",
+      "where is the portal to hellfire peninsula"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -322,6 +557,20 @@
       "blackrock mountain",
       "blackrock spire entrance",
       "molten core entrance"
+    ],
+    "questions": [
+      "what level is burning steppes",
+      "where is burning steppes",
+      "where is morgan's vigil",
+      "where is flame crest",
+      "how do i get to blackrock spire",
+      "how do i get to molten core",
+      "where is the entrance to brs",
+      "where is the mc entrance",
+      "burning steppes level range",
+      "what zone is north of redridge",
+      "who are the dark iron dwarves at burning steppes",
+      "where do i level 50 to 58"
     ],
     "tags": [
       "zone",
@@ -344,6 +593,20 @@
       "the bulwark",
       "wpl"
     ],
+    "questions": [
+      "what level is western plaguelands",
+      "where is wpl",
+      "where is chillwind camp",
+      "where is andorhal",
+      "where is the bulwark",
+      "where is hearthglen",
+      "how do i get to scholomance",
+      "where is scholo entrance",
+      "where is caer darrow",
+      "wpl level range",
+      "who are the scarlet crusade in wpl",
+      "where do i level 51 to 58"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -363,6 +626,20 @@
       "corins crossing",
       "epl"
     ],
+    "questions": [
+      "what level is eastern plaguelands",
+      "where is epl",
+      "where is light's hope chapel",
+      "where is stratholme",
+      "how do i get to stratholme",
+      "where is strat entrance",
+      "where was naxxramas before northrend",
+      "what is the argent dawn",
+      "epl level range",
+      "where is the plaguewood",
+      "what is the blackwood",
+      "where do i level 53 to 60"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -381,6 +658,20 @@
       "medivhs tower",
       "deadwind"
     ],
+    "questions": [
+      "what level is deadwind pass",
+      "where is deadwind pass",
+      "where is karazhan",
+      "how do i get to karazhan",
+      "where is kara entrance",
+      "where is medivh's tower",
+      "does deadwind pass have quests",
+      "where is deadwind relative to swamp of sorrows",
+      "deadwind pass level range",
+      "what zone is between duskwood and swamp of sorrows",
+      "where is the entrance to the first burning crusade raid",
+      "how do i get to deadwind"
+    ],
     "tags": [
       "zone",
       "contested",
@@ -398,6 +689,20 @@
       "sunwell plateau",
       "magisters terrace",
       "sunwell"
+    ],
+    "questions": [
+      "what level is isle of quel'danas",
+      "where is quel'danas",
+      "how do i get to the sunwell",
+      "where is the sunwell plateau",
+      "where is magisters terrace",
+      "where is the shattered sun offensive base",
+      "what are the quel'danas dailies",
+      "how do i get to quel danas",
+      "where is the isle north of quel'thalas",
+      "is quel'danas for both factions",
+      "sunwell entrance where",
+      "where do i do shattered sun dailies"
     ],
     "tags": [
       "zone",

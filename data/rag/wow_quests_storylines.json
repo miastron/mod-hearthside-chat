@@ -4,6 +4,7 @@
     "title": "Class-Specific Storylines",
     "content": "The best-known class storyline is the Death Knight's: starting at level 55 in Acherus, the Ebon Hold, death knights serve the Lich King in the Scarlet Enclave of the Eastern Plaguelands, earn the Acherus Deathcharger, and break free at the Battle for Light's Hope Chapel before being sent to their faction's capital.",
     "keywords": ["class quest", "class quests", "class storyline", "death knight quests", "dk starting zone", "acherus", "ebon hold", "scarlet enclave"],
+    "questions": ["do classes have their own quest lines", "what is the dk starting zone", "where do death knights start", "what is acherus", "what is ebon hold", "what level do dks start at", "how do i get the acherus deathcharger", "where is the scarlet enclave", "what is the battle for light's hope chapel", "where do dks go after the starting zone", "dk quest line", "what is the dk story", "are there class quests", "how long is the death knight storyline", "how do i get my dk mount"],
     "tags": ["quests", "story", "class", "lore"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Zone Story Arcs",
     "content": "Each Northrend zone follows its own story: the vrykul of Utgarde in Howling Fjord, the blue dragonflight and the Nexus in Borean Tundra, the Wrathgate in Dragonblight, the Drakkari trolls' dying gods in Zul'Drak, Thorim and the secrets of Ulduar in the Storm Peaks, and the war on the Lich King's doorstep in Icecrown.",
     "keywords": ["zone story", "zone storyline", "zone storylines", "storyline", "storylines", "story quests"],
+    "questions": ["what is the story of each northrend zone", "what are the storylines in northrend", "what is the story in howling fjord", "what is the story in borean tundra", "what is the story in zul'drak", "what is the story in the storm peaks", "what is the story in icecrown", "what is the story in dragonblight", "which zone has the wrathgate", "which zone is about the vrykul", "what are the story quests in wotlk", "zone story arcs in wrath", "where is the thorim story"],
     "tags": ["quests", "story", "zones", "progression"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Reputation Quest Hubs",
     "content": "Northrend's reputation dailies: the Argent Tournament in Icecrown, the Sons of Hodir at Dun Niffelem in the Storm Peaks, the Kalu'ak at their fishing villages, and in Sholazar Basin either the Oracles or the Frenzyheart, since siding with one turns the other hostile.",
     "keywords": ["rep dailies", "reputation dailies", "reputation quests", "daily hub", "kaluak", "argent tournament dailies"],
+    "questions": ["what are the rep dailies in northrend", "where do i farm reputation dailies", "where are the argent tournament dailies", "where do i do sons of hodir dailies", "what are kalu'ak dailies", "what is the oracles vs frenzyheart choice", "can i be friends with both oracles and frenzyheart", "which rep daily hubs are there", "where is dun niffelem", "where do i get kaluak rep", "how do i grind rep in northrend", "what are the daily hubs in wotlk", "which sholazar faction should i pick", "where do i do argent tournament", "best rep grind in northrend"],
     "tags": ["quests", "reputation", "grinding", "rewards"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Dungeon and Raid Quests",
     "content": "Dungeons usually have quests from NPCs at or just inside the entrance, so check before zoning in. In Dalaran, Archmage Lan'dalock gives the weekly raid quest to kill a named boss, such as Patchwerk Must Die! or Lord Marrowgar Must Die!, for extra Emblems.",
     "keywords": ["dungeon quest", "dungeon quests", "landalock", "lan dalock"],
+    "questions": ["do dungeons have quests", "where do i get dungeon quests", "who is lan'dalock", "where is landalock", "what is the weekly raid quest", "what is patchwerk must die", "what is lord marrowgar must die", "where do i get the weekly raid quest", "how do i get extra emblems from a raid", "do i check for quests before a dungeon", "how do i pick up the raid weekly", "where do i get weekly raid quest in dalaran", "are there quests inside instances", "what is the weekly boss quest"],
     "tags": ["quests", "dungeons", "raids", "lore"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Epic Quest Chains",
     "content": "A quest chain is a series where each quest unlocks the next. Wrath's long ones include the Wrathgate and the Battle for the Undercity, the Sons of Hodir chain in the Storm Peaks, Quel'Delar from the Battered Hilt, and Shadowmourne for Icecrown Citadel raiders.",
     "keywords": ["quest chain", "quest chains", "questline", "questlines", "epic quest", "chain quest", "long quest"],
+    "questions": ["what are the long quest chains in wotlk", "what is a quest chain", "how do i get quel'delar", "what is the battered hilt", "how do i get shadowmourne", "what is the sons of hodir quest chain", "which questlines are the longest", "what are the epic questlines in wrath", "what is the wrathgate questline", "how do i start the shadowmourne quest", "is shadowmourne a quest", "what is the battle for the undercity quest", "quel'delar questline help", "what are the best quest chains", "do i need icc for shadowmourne"],
     "tags": ["quests", "epic", "storylines", "rewards"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Profession Quest Lines",
     "content": "Dalaran has the Northrend profession dailies: the Grand Master cooking trainers, Katherine Lee for the Alliance and Awilo Lon'gomba for the Horde, give cooking dailies paying Dalaran Cooking Awards; Marcia Chase gives a fishing daily; and Timothy Jones gives a jewelcrafting daily paying Dalaran Jewelcrafter's Tokens.",
     "keywords": ["profession quest", "profession quests", "profession dailies", "cooking daily", "cooking dailies", "fishing daily", "jewelcrafting daily", "jc daily", "dalaran cooking award", "jewelcrafters token"],
+    "questions": ["what are the profession dailies", "where do i do the cooking daily", "where do i do the fishing daily", "where is the jewelcrafting daily", "who gives the jc daily", "who gives the cooking daily in dalaran", "who is katherine lee", "who is awilo lon'gomba", "who is marcia chase", "who is timothy jones", "what are dalaran cooking awards", "what are jewelcrafter's tokens", "what do cooking awards buy", "where do i get dalaran jewelcrafting tokens", "profession dailies in dalaran", "cooking dailies worth it"],
     "tags": ["quests", "professions", "lore", "recipes"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Escort and Protection Quests",
     "content": "In an escort quest the NPC walks a fixed route and fights beside you; if it dies the quest fails, and you abandon it and take it again once the NPC is back. Party members on the same quest who stay nearby all get credit.",
     "keywords": ["escort", "escort quest", "escort quests", "escorting"],
+    "questions": ["how do escort quests work", "what happens if the escort npc dies", "how do i redo a failed escort", "i failed my escort quest what now", "do party members get credit for escorts", "can i do an escort quest in a group", "escort quest tips", "my escort npc died can i restart", "do escort npcs fight", "why did my escort quest fail", "do i abandon an escort quest", "how do i retry an escort"],
     "tags": ["quests", "escort", "protection", "challenging"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Group and Raid Quests",
     "content": "Quests tagged Group in the log suggest a party size because their targets are elites, which show a gold dragon on their portrait. While you're in a raid group, ordinary quest kills and items don't count, only quests tagged Raid do, so convert back to a party to finish quests.",
     "keywords": ["group quest", "group quests", "elite quest", "raid quest", "raid quests", "quest in raid", "party quest"],
+    "questions": ["what is a group quest", "what does group mean on a quest", "how many people for a group quest", "why can't i complete quests in a raid", "do quest kills count in a raid group", "quests don't count when in raid", "why is my quest not updating in a raid", "can i do quests in a raid group", "what is a raid quest", "do i need to leave raid for quests", "why do group quests have elites", "how do i finish quests while in raid", "how do i convert raid to party for quests"],
     "tags": ["quests", "group", "raid", "coordination"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Repeatable and Daily Quests",
     "content": "Daily quests can be done once per day and reset at the realm's daily reset; you can finish up to 25 of them a day. Big Northrend daily hubs are the Argent Tournament, the Sons of Hodir and Wyrmrest Temple, plus the Dalaran cooking and fishing dailies. Some quests, like the raid weekly, reset once a week.",
     "keywords": ["daily", "dailies", "daily quest", "daily quests", "repeatable", "repeatable quest", "daily reset", "weekly quest", "how many dailies"],
+    "questions": ["what are dailies", "how many dailies can i do a day", "what is the daily quest limit", "when do dailies reset", "when is daily reset", "what is the 25 daily cap", "what are weekly quests", "when does the weekly reset", "how many daily quests per day", "what are the best daily hubs in northrend", "can i repeat quests", "are there repeatable quests", "where do i do dailies in wotlk", "how do the dalaran dailies work", "how often do dailies reset"],
     "tags": ["quests", "repeatable", "daily", "grinding"]
   }
 ]

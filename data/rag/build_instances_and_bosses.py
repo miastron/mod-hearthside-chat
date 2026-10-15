@@ -717,6 +717,16 @@ def main():
         raise SystemExit(f"duplicate ids: {sorted(dupes)}")
 
     for name, path in (("wow_instances.json", instances), ("wow_bosses.json", bosses)):
+        # Example questions are hand-authored (or added from log reviews), so
+        # they are carried over from the current file by id, after keywords.
+        old = {}
+        if (OUT / name).exists():
+            old = {e["id"]: e.get("questions") for e in json.load(io.open(OUT / name, encoding="utf-8"))}
+        for i, e in enumerate(path):
+            if old.get(e["id"]):
+                items = list(e.items())
+                at = [k for k, _ in items].index("keywords") + 1
+                path[i] = dict(items[:at] + [("questions", old[e["id"]])] + items[at:])
         io.open(OUT / name, "w", encoding="utf-8").write(
             json.dumps(path, indent=2, ensure_ascii=False) + "\n")
         print(f"{len(path):>4} entries -> data/rag/{name}")

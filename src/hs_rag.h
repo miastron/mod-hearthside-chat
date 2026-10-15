@@ -56,6 +56,13 @@ struct HsRagEntry
     std::string              content;  // the fact paragraph handed to the model
     std::vector<std::string> keywords; // authored retrieval handles: the strongest signal
 
+    // How players actually ask for this entry ("how do i get my body back").
+    // Scored as whole phrasings, apart from the fields above: a line close to
+    // one of them retrieves the entry even when it shares no keyword, and a
+    // long list costs nothing, unlike keywords (see hs_rag.cpp's
+    // QuestionMatch). Never part of the prompt block.
+    std::vector<std::string> questions;
+
     // The best-known answer to the same question, for a bot whose archetype
     // is expert in `expertDomain` (hside_archetype.expertise) talking to a
     // player who has earned it. Both empty on most entries. Never indexed:

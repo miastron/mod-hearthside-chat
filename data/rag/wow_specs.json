@@ -4,6 +4,7 @@
     "title": "Arms Warrior",
     "content": "Arms is the two-handed warrior tree, built around Mortal Strike and the healing debuff it leaves. Overpower punishes a target that dodges and Rend bleeds it, while Sweeping Strikes spreads damage across a pack. Bladestorm is the deep talent: a channelled spin that hits everything nearby and cannot be interrupted by most crowd control.",
     "keywords": ["arms warrior", "mortal strike", "bladestorm", "sweeping strikes", "overpower", "two handed warrior"],
+    "questions": ["what does arms warrior do", "arms warr guide", "how does mortal strike work", "what is bladestorm", "arms warrior two hander build", "what does sweeping strikes do", "is arms warrior good for pvp", "how do i play arms warrior", "what is overpower for arms", "arms or fury warrior", "arms warrior rend and overpower", "arms warrior talents", "mortal strike healing debuff", "what is the deep talent for arms", "arms warr dps worth it"],
     "tags": ["spec", "warrior"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Fury Warrior",
     "content": "Fury dual-wields and runs on Bloodthirst and Whirlwind, spending rage about as fast as it builds. Titan's Grip is the tree's signature: it allows two-handed weapons in both hands at a hit penalty. Death Wish and Rampage push damage higher, the first by taking more of it.",
     "keywords": ["fury warrior", "bloodthirst", "titans grip", "death wish", "rampage", "dual wield warrior"],
+    "questions": ["what does fury warrior do", "fury warr guide", "what is titans grip", "how does fury dual wield", "what is bloodthirst", "fury warrior rotation", "what does whirlwind do for fury", "what is death wish", "what does rampage do", "is fury warrior good", "fury warr 2h in both hands", "fury or arms warrior", "how do i play fury warrior", "fury warrior rage problems", "fury warr talents"],
     "tags": ["spec", "warrior"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Protection Warrior",
     "content": "Protection is the warrior tanking tree. Shield Slam and Devastate hold threat, and Shockwave stuns everything in a cone ahead of you. Last Stand and Spell Reflection are the survival cooldowns, and Vigilance hands threat back from whoever is pulling too much.",
     "keywords": ["protection warrior", "prot warrior", "warrior tank", "shield slam", "devastate", "shockwave", "vigilance", "spell reflection"],
+    "questions": ["what does prot warrior do", "prot warr tanking guide", "how do i tank as a warrior", "what is shield slam", "what does devastate do", "what is shockwave", "what is last stand", "what does spell reflection do", "what is vigilance warrior", "prot warrior survival cooldowns", "how does prot warrior hold threat", "is prot warrior a good tank", "prot warrior talents", "how to play prot warr", "what does vigilance do for tank"],
     "tags": ["spec", "warrior"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Holy Paladin",
     "content": "Holy is the paladin healing tree, built on Holy Light and Flash of Light with Holy Shock as the instant. Beacon of Light defines it: heals landed on one target are duplicated onto the beacon, so healing the tank also heals whoever is beaconed. Sacred Shield and Divine Favor fill out the kit, and it runs on mana like every paladin spec.",
     "keywords": ["holy paladin", "holy pally", "paladin healer", "beacon of light", "holy shock", "holy light", "flash of light", "sacred shield"],
+    "questions": ["what does holy paladin do", "holy pally healing guide", "how does beacon of light work", "what is holy shock", "how to heal as a paladin", "holy light and flash of light", "what does sacred shield do", "what is divine favor", "is holy pally a good healer", "holy pally talents", "how do i play holy paladin", "what does beacon do", "paladin healer spec which", "holy pally mana problems", "holy pally vs resto druid"],
     "tags": ["spec", "paladin"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Protection Paladin",
     "content": "Protection is the paladin tanking tree and the best in the game at holding several targets at once. Avenger's Shield pulls at range, Hammer of the Righteous strikes three targets, and Holy Shield turns blocked hits into damage. Ardent Defender and Righteous Fury are what keep the plate standing.",
     "keywords": ["protection paladin", "prot paladin", "prot pally", "paladin tank", "avengers shield", "hammer of the righteous", "holy shield", "ardent defender"],
+    "questions": ["what does prot paladin do", "prot pally tanking guide", "how do i tank as a paladin", "what is avengers shield", "what is hammer of the righteous", "what does holy shield do", "what is ardent defender", "what is righteous fury", "is prot pally a good tank", "best tank for aoe pulls", "prot pally talents", "how to play prot pally", "prot pally aoe threat", "who tanks multiple mobs best", "what does righteous fury do"],
     "tags": ["spec", "paladin"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Retribution Paladin",
     "content": "Retribution is the paladin melee damage tree. Crusader Strike and Divine Storm are the core, and Divine Storm hits everything around you while healing part of the group. Seal of Command and Repentance come from this tree too.",
     "keywords": ["retribution paladin", "ret paladin", "ret pally", "crusader strike", "divine storm", "seal of command", "repentance"],
+    "questions": ["what does ret paladin do", "ret pally guide", "what is crusader strike", "what is divine storm", "how do i play ret pally", "what does seal of command do", "what is repentance", "is ret pally good", "ret pally talents", "ret paladin rotation", "ret pally dps worth it", "which paladin spec for melee damage", "what does divine storm heal", "ret pally leveling spec", "ret or holy pally"],
     "tags": ["spec", "paladin"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Beast Mastery Hunter",
     "content": "Beast Mastery pushes the pet as far as it will go: extra pet talent points, exotic pets no other tree can tame, and Bestial Wrath as a burst window. The Beast Within extends that window to the hunter as well. Kill Command and Intimidation come from here, and it is the easiest hunter tree to level alone with.",
     "keywords": ["beast mastery", "bm hunter", "beast mastery hunter", "bestial wrath", "kill command", "the beast within", "exotic pet", "pet hunter"],
+    "questions": ["what does bm hunter do", "bm hunter guide", "what is bestial wrath", "what is the beast within", "how do exotic pets work", "what is kill command", "what does intimidation do", "is bm hunter good for leveling", "best hunter spec for leveling alone", "bm hunter talents", "how do i play bm hunter", "which hunter tree tames exotic pets", "bm hunter pet talent points", "bm hunter pvp worth it", "bm or survival hunter"],
     "tags": ["spec", "hunter"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Marksmanship Hunter",
     "content": "Marksmanship is the ranged damage tree, built on Aimed Shot and Chimera Shot. Trueshot Aura raises the group's attack power, Silencing Shot interrupts casters, and Readiness resets the hunter's shot cooldowns outright. It leans on the hunter rather than the pet.",
     "keywords": ["marksmanship hunter", "mm hunter", "marksman hunter", "aimed shot", "chimera shot", "silencing shot", "trueshot aura", "readiness"],
+    "questions": ["what does mm hunter do", "marksmanship hunter guide", "what is aimed shot", "what is chimera shot", "what is trueshot aura", "what does silencing shot do", "what does readiness do", "how do i play mm hunter", "mm hunter talents", "marks hunter rotation", "is mm hunter good for raids", "best hunter spec for dps", "mm or bm hunter", "mm hunter pvp", "what does trueshot aura give the group"],
     "tags": ["spec", "hunter"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Survival Hunter",
     "content": "Survival is the traps-and-fire tree. Explosive Shot is its core attack and Lock and Load refunds it from traps and periodic damage. Black Arrow and Wyvern Sting come from here, and the tree raises the whole group's melee critical strike chance.",
     "keywords": ["survival hunter", "sv hunter", "explosive shot", "lock and load", "black arrow", "wyvern sting"],
+    "questions": ["what does surv hunter do", "survival hunter guide", "what is explosive shot", "what is lock and load", "what is black arrow", "what is wyvern sting", "how do i play survival hunter", "surv hunter talents", "is survival hunter good", "hunter spec for traps", "survival hunter crit buff for group", "surv hunter rotation", "survival or marksmanship hunter", "surv hunter pvp", "how does lock and load work for hunter"],
     "tags": ["spec", "hunter"]
   },
   {
@@ -67,6 +76,7 @@
     "title": "Assassination Rogue",
     "content": "Assassination is the poison and dagger tree, built on Mutilate, which strikes with both weapons at once and requires daggers. Envenom spends combo points as poison damage, Hunger For Blood ramps it up, and Cold Blood guarantees a critical strike. It is at its best on a single target.",
     "keywords": ["assassination rogue", "mutilate rogue", "mutilate", "envenom", "cold blood", "hunger for blood", "poison rogue", "dagger rogue"],
+    "questions": ["what does assassination rogue do", "assa rogue guide", "what is mutilate", "what is envenom", "what is hunger for blood", "what is cold blood", "do i need daggers for mutilate", "assassination rogue poisons", "how do i play assassination rogue", "assa rogue talents", "is assassination rogue good", "rogue spec for single target dps", "assa or combat rogue", "assa rogue rotation", "what does cold blood do"],
     "tags": ["spec", "rogue"]
   },
   {
@@ -74,6 +84,7 @@
     "title": "Combat Rogue",
     "content": "Combat is the steady damage tree and the one indifferent to which weapons you carry. Sinister Strike builds combo points, Blade Flurry adds a second target, and Adrenaline Rush floods energy. Killing Spree is the deep talent: the rogue teleports between nearby targets, swinging at each.",
     "keywords": ["combat rogue", "sinister strike", "blade flurry", "adrenaline rush", "killing spree"],
+    "questions": ["what does combat rogue do", "combat rogue guide", "what is blade flurry", "what is adrenaline rush", "what is killing spree", "what is sinister strike", "what weapons for combat rogue", "how do i play combat rogue", "combat rogue talents", "is combat rogue good for raids", "combat rogue rotation", "best rogue spec for leveling", "combat or assassination rogue", "rogue spec that hits two targets", "what does blade flurry do"],
     "tags": ["spec", "rogue"]
   },
   {
@@ -81,6 +92,7 @@
     "title": "Subtlety Rogue",
     "content": "Subtlety is the stealth and burst tree and the strongest rogue tree in PvP. Shadowstep closes from behind, Hemorrhage replaces the standard builder, and Preparation resets the escape cooldowns. Shadow Dance is the deep talent: a window where stealth-only abilities work in the open.",
     "keywords": ["subtlety rogue", "sub rogue", "shadow dance", "shadowstep", "hemorrhage", "premeditation", "stealth rogue"],
+    "questions": ["what does sub rogue do", "subtlety rogue guide", "what is shadowstep", "what is shadow dance", "what is preparation rogue", "what does hemorrhage do", "best rogue spec for pvp", "how do i play sub rogue", "sub rogue talents", "is sub rogue good", "sub rogue stealth burst", "sub rogue arena", "what does preparation reset", "sub or combat rogue", "subtlety rogue rotation"],
     "tags": ["spec", "rogue"]
   },
   {
@@ -88,6 +100,7 @@
     "title": "Discipline Priest",
     "content": "Discipline heals by preventing damage rather than repairing it: Power Word: Shield absorbs the hit before it lands and Rapture returns mana when the shield breaks. Penance is the tree's signature, a channelled three-tick heal that can also be aimed at an enemy. Pain Suppression and Power Infusion are the cooldowns that earn it a raid slot.",
     "keywords": ["discipline priest", "disc priest", "penance", "power word shield", "pain suppression", "power infusion", "rapture", "shield healer"],
+    "questions": ["what does disc priest do", "disc priest guide", "what is penance", "what is pain suppression", "what does power word shield do", "what is rapture", "what is power infusion", "how do i play disc priest", "disc priest talents", "is disc priest good for raids", "how does disc healing work", "disc or holy priest", "disc priest pvp", "disc priest absorbs", "can penance hit enemies"],
     "tags": ["spec", "priest"]
   },
   {
@@ -95,6 +108,7 @@
     "title": "Holy Priest",
     "content": "Holy is the priest throughput tree, built for keeping several people up at once. Circle of Healing hits a target's whole party, Prayer of Mending bounces to whoever takes damage next, and Lightwell is the tree's much-ignored free heal. Guardian Spirit is the emergency button: it prevents one death outright.",
     "keywords": ["holy priest", "circle of healing", "guardian spirit", "prayer of mending", "lightwell", "priest healer"],
+    "questions": ["what does holy priest do", "holy priest guide", "what is circle of healing", "what is prayer of mending", "what is lightwell", "what is guardian spirit", "how do i play holy priest", "holy priest talents", "is holy priest good for raids", "best priest spec for group healing", "holy priest raid healing", "holy or disc priest", "what does guardian spirit do", "holy priest aoe heals", "does anyone use lightwell"],
     "tags": ["spec", "priest"]
   },
   {
@@ -102,6 +116,7 @@
     "title": "Shadow Priest",
     "content": "Shadow is the priest damage tree and it is played entirely in Shadowform. Shadow Word: Pain, Vampiric Touch and Mind Flay keep damage rolling while Mind Blast fills the gaps. Vampiric Embrace and Vampiric Touch feed health and mana back to the group, which is most of why raids bring one. Dispersion is the escape and mana cooldown.",
     "keywords": ["shadow priest", "shadowform", "mind flay", "vampiric touch", "vampiric embrace", "shadow word pain", "mind blast", "dispersion"],
+    "questions": ["what does shadow priest do", "spriest guide", "what is vampiric touch", "what is mind flay", "what is vampiric embrace", "what is dispersion", "how do i play shadow priest", "shadow priest talents", "is shadow priest good", "why do raids want a shadow priest", "shadow priest rotation", "shadowform dps priest", "shadow word pain and mind blast", "shadow priest mana for group", "shadow priest pvp"],
     "tags": ["spec", "priest"]
   },
   {
@@ -109,6 +124,7 @@
     "title": "Blood Death Knight",
     "content": "Blood is the self-healing death knight tree, and in this expansion it is a damage tree that happens to be very hard to kill. Heart Strike is the core strike, Vampiric Blood and Rune Tap keep it standing, and Dancing Rune Weapon summons a copy of the weapon to fight alongside it. It is the usual choice for levelling alone.",
     "keywords": ["blood death knight", "blood dk", "heart strike", "vampiric blood", "dancing rune weapon", "rune tap"],
+    "questions": ["what does blood dk do", "blood death knight guide", "what is heart strike", "what is vampiric blood", "what is rune tap", "what is dancing rune weapon", "how do i play blood dk", "blood dk talents", "is blood dk good", "best dk spec for leveling", "best dk spec for solo", "blood dk tank or dps", "blood dk self heal", "blood or frost dk", "what does dancing rune weapon do"],
     "tags": ["spec", "death knight"]
   },
   {
@@ -116,6 +132,7 @@
     "title": "Frost Death Knight",
     "content": "Frost is the dual-wield and burst death knight tree. Obliterate and Frost Strike are the core, Howling Blast hits everything around the target, and Killing Machine and Rime make those strikes free or guaranteed to crit. Hungering Cold freezes everything nearby. It also tanks perfectly well.",
     "keywords": ["frost death knight", "frost dk", "obliterate", "howling blast", "frost strike", "killing machine", "hungering cold"],
+    "questions": ["what does frost dk do", "frost death knight guide", "what is obliterate", "what is frost strike", "what is howling blast", "what is killing machine", "what is hungering cold", "how do i play frost dk", "frost dk talents", "is frost dk good", "frost dk dual wield", "can frost dk tank", "frost dk rime", "frost or unholy dk", "frost dk burst damage"],
     "tags": ["spec", "death knight"]
   },
   {
@@ -123,6 +140,7 @@
     "title": "Unholy Death Knight",
     "content": "Unholy is the disease and pet tree. Scourge Strike scales with the diseases already on the target and Unholy Blight spreads damage around it. Master of Ghouls makes the ghoul a permanent pet rather than a short summon, Summon Gargoyle is the deep cooldown, and Bone Shield keeps the death knight alive while it works.",
     "keywords": ["unholy death knight", "unholy dk", "scourge strike", "summon gargoyle", "bone shield", "unholy blight", "permanent ghoul"],
+    "questions": ["what does unholy dk do", "unholy death knight guide", "what is scourge strike", "what is summon gargoyle", "what is master of ghouls", "what is bone shield", "what is unholy blight", "how do i play unholy dk", "unholy dk talents", "is unholy dk good", "unholy dk ghoul pet", "unholy dk diseases", "dk spec with a pet", "frost or unholy dk", "what does gargoyle do"],
     "tags": ["spec", "death knight"]
   },
   {
@@ -130,6 +148,7 @@
     "title": "Elemental Shaman",
     "content": "Elemental is the caster shaman tree. Lightning Bolt and Chain Lightning are the filler and Lava Burst is the payoff, since it always critically strikes a target burning from Flame Shock. Thunderstorm knocks everything back and returns mana, and Elemental Mastery guarantees a critical strike. Its totems buff the whole group.",
     "keywords": ["elemental shaman", "ele shaman", "lava burst", "chain lightning", "thunderstorm", "elemental mastery", "caster shaman"],
+    "questions": ["what does ele shaman do", "elemental shammy guide", "what is lava burst", "what is thunderstorm", "what is elemental mastery", "what is chain lightning", "how do i play ele shaman", "ele shaman talents", "is ele shaman good", "ele shaman rotation", "flame shock and lava burst", "caster shaman spec", "ele shaman totems", "ele or enhance shaman", "ele shaman pvp"],
     "tags": ["spec", "shaman"]
   },
   {
@@ -137,6 +156,7 @@
     "title": "Enhancement Shaman",
     "content": "Enhancement is the melee shaman tree, dual-wielding behind Windfury Weapon for extra attacks. Stormstrike and Lava Lash are the strikes, and Maelstrom Weapon turns melee swings into instant Lightning Bolts and Chain Heals. Feral Spirit calls two wolves as a cooldown.",
     "keywords": ["enhancement shaman", "enh shaman", "stormstrike", "lava lash", "feral spirit", "maelstrom weapon", "windfury weapon", "melee shaman"],
+    "questions": ["what does enh shaman do", "enhancement shammy guide", "what is maelstrom weapon", "what is stormstrike", "what is feral spirit", "what is windfury weapon", "what is lava lash", "how do i play enhance shaman", "enh shaman talents", "is enhancement shaman good", "enhance shaman rotation", "melee shaman spec", "enh shaman dual wield", "enhance or ele shaman", "best shaman spec for leveling"],
     "tags": ["spec", "shaman"]
   },
   {
@@ -144,6 +164,7 @@
     "title": "Restoration Shaman",
     "content": "Restoration is the shaman healing tree and the strongest party healer of this expansion. Chain Heal bounces between injured group members, Riptide is the instant that strengthens the next Chain Heal, and Earth Shield sits on the tank soaking hits. Mana Tide Totem gives the group its mana back.",
     "keywords": ["restoration shaman", "resto shaman", "chain heal", "riptide", "earth shield", "mana tide totem", "earthliving weapon", "shaman healer"],
+    "questions": ["what does resto shaman do", "resto shammy guide", "what is chain heal", "what is riptide", "what is earth shield", "what is mana tide totem", "how do i play resto shaman", "resto shaman talents", "is resto shaman good", "best party healer in wrath", "resto shaman raid healing", "shaman healer spec", "what does earth shield do", "resto shaman vs holy priest", "resto shaman pvp"],
     "tags": ["spec", "shaman"]
   },
   {
@@ -151,6 +172,7 @@
     "title": "Arcane Mage",
     "content": "Arcane is the burst and mana-management tree. Arcane Blast hits harder with every stack and costs more mana for it, so the spec is a constant decision about when to dump the stack with Arcane Barrage or Arcane Missiles. Presence of Mind and Arcane Power are the burst cooldowns. It has the highest ceiling and the worst mana problems.",
     "keywords": ["arcane mage", "arcane blast", "arcane barrage", "arcane missiles", "arcane power", "presence of mind", "missile barrage"],
+    "questions": ["what does arcane mage do", "arcane mage guide", "what is arcane blast", "what is arcane barrage", "what is presence of mind", "what is arcane power", "how do i play arcane mage", "arcane mage talents", "is arcane mage good", "arcane mage mana problems", "arcane mage rotation", "arcane missiles when to use", "arcane or fire mage", "arcane mage burst", "mage spec with highest ceiling"],
     "tags": ["spec", "mage"]
   },
   {
@@ -158,6 +180,7 @@
     "title": "Fire Mage",
     "content": "Fire is built on critical strikes feeding themselves: Hot Streak turns two crits in a row into an instant Pyroblast. Fireball and Scorch are the fillers, Living Bomb ticks and then explodes, and Combustion is the burst cooldown. Without critical strike rating the whole tree stalls.",
     "keywords": ["fire mage", "hot streak", "living bomb", "pyroblast", "combustion", "fireball"],
+    "questions": ["what does fire mage do", "fire mage guide", "what is hot streak", "what is living bomb", "what is combustion", "what does pyroblast do", "how do i play fire mage", "fire mage talents", "is fire mage good", "fire mage rotation", "fire mage crit rating", "fireball and scorch rotation", "fire or frost mage", "fire mage pvp", "why does fire mage need crit"],
     "tags": ["spec", "mage"]
   },
   {
@@ -165,6 +188,7 @@
     "title": "Frost Mage",
     "content": "Frost is the survivable mage tree and the usual choice for levelling alone. Frostbolt slows whatever it hits and Frost Nova roots, while Shatter turns frozen targets into guaranteed critical strikes for Ice Lance. Summon Water Elemental gives Frost a pet, and Deep Freeze is a stun that instead deals heavy damage to anything immune to stuns.",
     "keywords": ["frost mage", "frostbolt", "ice lance", "deep freeze", "icy veins", "water elemental", "fingers of frost", "frost nova"],
+    "questions": ["what does frost mage do", "frost mage guide", "what is shatter", "what is deep freeze", "what is frost nova", "what is ice lance", "how do i play frost mage", "frost mage talents", "is frost mage good", "best mage spec for leveling", "best mage spec for solo", "frost mage water elemental", "frost mage rotation", "frost or fire mage", "frost mage pvp"],
     "tags": ["spec", "mage"]
   },
   {
@@ -172,6 +196,7 @@
     "title": "Affliction Warlock",
     "content": "Affliction is the damage-over-time tree. Corruption, Curse of Agony and Unstable Affliction tick on the target while Haunt raises all of that damage and returns the healing to the warlock. Drain Soul hits far harder on a target about to die. Strong on one target and unforgiving if the timers are left to lapse.",
     "keywords": ["affliction warlock", "affli warlock", "unstable affliction", "haunt", "curse of agony", "drain soul", "dot warlock", "affli lock", "aff lock"],
+    "questions": ["what does affliction lock do", "aff lock guide", "what is haunt", "what is unstable affliction", "what is drain soul", "how do dots work for warlock", "what is curse of agony", "how do i play affliction warlock", "affliction warlock talents", "is aff lock good", "affliction warlock rotation", "warlock spec for dots", "aff lock corruption", "aff or destro lock", "affliction lock pvp"],
     "tags": ["spec", "warlock"]
   },
   {
@@ -179,6 +204,7 @@
     "title": "Demonology Warlock",
     "content": "Demonology is the pet tree. The Felguard is its own summon, Demonic Empowerment buffs whatever demon is out, and Soul Link splits damage between warlock and pet. Metamorphosis is the deep talent: the warlock becomes a demon with its own abilities. Demonic Pact hands the raid spell power off the pet's critical strikes.",
     "keywords": ["demonology warlock", "demo warlock", "felguard", "metamorphosis", "demonic empowerment", "soul link", "demonic pact", "pet warlock", "demo lock"],
+    "questions": ["what does demo lock do", "demonology warlock guide", "what is metamorphosis", "what is the felguard", "what is demonic pact", "what is demonic empowerment", "what is soul link", "how do i play demo lock", "demonology warlock talents", "is demo lock good", "warlock pet spec", "demo lock felguard leveling", "demo or destro lock", "demo lock pvp", "what does metamorphosis do"],
     "tags": ["spec", "warlock"]
   },
   {
@@ -186,6 +212,7 @@
     "title": "Destruction Warlock",
     "content": "Destruction is the direct damage tree, built on Immolate and Incinerate with Conflagrate consuming the Immolate for a burst. Chaos Bolt is the deep talent: it cannot be resisted and ignores absorption shields. Backdraft speeds up casting afterwards and Shadowburn is the finisher.",
     "keywords": ["destruction warlock", "destro warlock", "chaos bolt", "conflagrate", "incinerate", "immolate", "shadowburn", "backdraft", "destro lock"],
+    "questions": ["what does destro lock do", "destruction warlock guide", "what is chaos bolt", "what is conflagrate", "what is backdraft", "what is shadowburn", "what does immolate do for destro", "how do i play destro lock", "destro lock talents", "is destro lock good", "destro lock rotation", "warlock spec for direct damage", "incinerate and immolate", "destro or aff lock", "destro lock pvp"],
     "tags": ["spec", "warlock"]
   },
   {
@@ -193,6 +220,7 @@
     "title": "Balance Druid",
     "content": "Balance is the caster druid tree, played in Moonkin Form, which is why everyone calls it boomkin. Eclipse alternates a bonus between Starfire and Wrath, so the spec swings between arcane and nature damage. Moonfire and Insect Swarm keep damage ticking, Starfall rains on everything nearby, and Typhoon knocks targets back.",
     "keywords": ["balance druid", "boomkin", "moonkin", "moonkin form", "starfall", "eclipse", "starfire", "insect swarm", "typhoon", "caster druid"],
+    "questions": ["what does balance druid do", "boomkin guide", "what is moonkin form", "what is eclipse", "what is starfall", "what is typhoon", "how do i play boomkin", "balance druid talents", "is boomkin good", "balance druid rotation", "moonfire and insect swarm", "starfire and wrath eclipse", "druid caster spec", "boomy pvp", "why is it called boomkin"],
     "tags": ["spec", "druid"]
   },
   {
@@ -200,6 +228,7 @@
     "title": "Feral Druid",
     "content": "Feral covers both melee roles: cat form for damage, dire bear form for tanking. As a cat it builds combo points with Rake and Shred and spends them on Rip and Savage Roar; as a bear it holds threat with Maul and Mangle. Mangle is the tree's shared signature and Berserk is its cooldown in either form.",
     "keywords": ["feral druid", "cat form", "bear form", "dire bear form", "mangle", "shred", "savage roar", "rake", "kitty druid", "feral tank"],
+    "questions": ["what does feral druid do", "feral druid guide", "how do i tank as a druid", "what is mangle", "what is savage roar", "what is berserk", "cat or bear feral", "how do i play feral", "feral druid talents", "is feral druid good", "feral cat rotation", "rake shred and rip", "druid bear tank spec", "feral dps or tank", "feral druid leveling"],
     "tags": ["spec", "druid"]
   },
   {
@@ -207,6 +236,7 @@
     "title": "Restoration Druid",
     "content": "Restoration heals with rolling periodic spells rather than large casts: Rejuvenation and Lifebloom tick away while Nourish and Regrowth cover the gaps. Wild Growth is the tree's raid heal and Swiftmend consumes a Rejuvenation or Regrowth for an instant one. Tree of Life is the form the spec heals in.",
     "keywords": ["restoration druid", "resto druid", "tree of life", "wild growth", "swiftmend", "rejuvenation", "lifebloom", "nourish", "druid healer"],
+    "questions": ["what does resto druid do", "resto druid guide", "what is lifebloom", "what is wild growth", "what is swiftmend", "what is tree of life", "how do i play resto druid", "resto druid talents", "is resto druid good", "resto druid hots", "rejuvenation and regrowth", "nourish when to use", "druid healer spec", "resto druid raid healing", "resto druid pvp"],
     "tags": ["spec", "druid"]
   }
 ]

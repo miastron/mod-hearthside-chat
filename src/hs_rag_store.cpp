@@ -13,7 +13,8 @@
 
 namespace
 {
-    // hside_rag.keywords is a comma-separated list because the retriever
+    // hside_rag.keywords is a comma-separated list (questions, which contain
+    // commas, are '|'-separated) because the retriever
     // wants an ordered vector of authored handles and a side table would buy
     // nothing: nothing ever queries by a single keyword, the whole list is
     // read together on every load and never written by the server.
@@ -22,14 +23,14 @@ namespace
     // "a, b,, c" loads as three handles rather than four with one blank --
     // a blank normalizes to no terms and would silently inflate the entry's
     // handleCount, weakening its own specificity bonus.
-    std::vector<std::string> SplitKeywords(const std::string& csv)
+    std::vector<std::string> SplitList(const std::string& csv, char sep)
     {
         std::vector<std::string> out;
         size_t start = 0;
 
         while (start <= csv.size())
         {
-            size_t comma = csv.find(',', start);
+            size_t comma = csv.find(sep, start);
             if (comma == std::string::npos)
                 comma = csv.size();
 
@@ -53,7 +54,7 @@ namespace
 void Hs_LoadRagFromDb()
 {
     QueryResult result = CharacterDatabase.Query(
-        "SELECT id, title, content, keywords, expert_domain, expert_content FROM hside_rag");
+        "SELECT id, title, content, keywords, expert_domain, expert_content, questions FROM hside_rag");
 
     // `tags` is deliberately not selected: data/rag/README.md documents it as
     // carried for future filtering and parsed by nothing, and selecting a
@@ -83,9 +84,10 @@ void Hs_LoadRagFromDb()
         entry.id       = (*result)[0].Get<std::string>();
         entry.title    = (*result)[1].Get<std::string>();
         entry.content  = (*result)[2].Get<std::string>();
-        entry.keywords = SplitKeywords((*result)[3].Get<std::string>());
+        entry.keywords = SplitList((*result)[3].Get<std::string>(), ',');
         entry.expertDomain  = (*result)[4].Get<std::string>();
         entry.expertContent = (*result)[5].Get<std::string>();
+        entry.questions     = SplitList((*result)[6].Get<std::string>(), '|');
 
         if (entry.id.empty() || entry.title.empty() || entry.content.empty())
         {

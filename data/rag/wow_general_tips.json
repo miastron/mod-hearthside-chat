@@ -4,6 +4,7 @@
     "title": "Leveling Strategies",
     "content": "Resting in an inn or a capital city builds rested experience, which doubles the experience from kills until it runs out. From level 15 the Dungeon Finder queues random dungeons, which pay well for leveling, and bind-to-account heirloom shoulders and chests add 10% experience each. The level cap is 80; Death Knights start at 55.",
     "keywords": ["leveling", "level up", "lvling", "xp", "exp", "rested xp", "rested experience", "leveling fast", "heirloom", "heirlooms", "level fast", "fastest leveling"],
+    "questions": ["how do i level fast", "best way to level", "fastest way to level up", "what is rested xp", "how do i get rested exp", "how does rested work", "are heirlooms worth it", "how much xp do heirlooms give", "what level do i go to outland", "when do i go to northrend", "when should i leave outland", "what level is the cap", "what level do dks start at", "tips for leveling", "should i grind dungeons for xp", "how to power level", "do random dungeons give good xp", "how do i level my alt quickly", "is questing or dungeons faster", "why am i getting so little xp"],
     "tags": ["general", "leveling", "progression", "efficiency"],
     "expert_domain": "general",
     "expert_content": "The fastest way to level is the random dungeon queue mixed with questing while you wait, with heirlooms on and rested XP banked; an heirloom chest and shoulders add 20% XP between them. At 58 go to Outland and at 68 Northrend, skipping old zones you have outlevelled. Don't grind dungeons that have turned grey; the XP falls off fast."
@@ -13,6 +14,7 @@
     "title": "Gold Making Methods",
     "content": "Steady gold at 80 comes from daily quests, up to 25 a day, and from gathering: Saronite and Titanium ore, Frost Lotus and Lichbloom, and Frostweave Cloth always sell on the auction house. Crafters earn by selling glyphs, cut gems, flasks and enchanting materials like Infinite Dust.",
     "keywords": ["gold making", "make gold", "farm gold", "gold farming", "earn gold", "making money", "money"],
+    "questions": ["how do i make gold", "best way to farm gold", "how do i get rich", "how do i make money at 80", "what sells on the ah", "what should i farm for gold", "best gold farm at 80", "how much do dailies pay", "how many dailies a day", "what should i sell", "is inscription good for gold", "what are the best gold professions", "where do i farm gold", "gold making tips", "what mats sell well", "how do i get 5000 gold for epic flying", "what sells the best on the auction house", "how do i earn gold quickly", "best gold per hour"],
     "tags": ["general", "economy", "gold", "professions"],
     "expert_domain": "gold",
     "expert_content": "The best steady gold at 80 is Inscription: mill Northrend herbs and keep the auction house stocked with every glyph, since glyphs sell one at a time all day. Next best is gathering with two gathering professions, Mining and Herbalism, in Sholazar Basin and the Storm Peaks, where Titanium, Frost Lotus and Eternals turn up. Fill the rest of the 25 dailies with the Argent Tournament and Sons of Hodir, and sell Frozen Orbs from heroics rather than spending them."
@@ -22,6 +24,7 @@
     "title": "Interface Customization",
     "content": "Interface Options in the Escape menu can turn on four extra action bars beside the main one, and Key Bindings lets you put any spell on any key. /macro opens the macro window, with 36 general macros shared by the account and 18 more per character.",
     "keywords": ["ui", "interface", "interface options", "action bars", "action bar", "key bindings", "keybinds", "keybind", "macro", "macros"],
+    "questions": ["how do i change my ui", "how do i get more action bars", "how do i turn on extra bars", "how do i rebind keys", "how do i change keybinds", "how do i bind a spell to a key", "how do i make a macro", "what is /macro", "how many macros can i have", "where is the macro window", "how do i add bars to my screen", "how do i customize my interface", "where are the key bindings", "how do i use more hotkeys", "how many action bars can i have", "how do i set up my keybinds", "how do i open interface options"],
     "tags": ["general", "interface", "customization", "addons"]
   },
   {
@@ -29,6 +32,7 @@
     "title": "Essential Addons",
     "content": "Popular 3.3.5 addons: Deadly Boss Mods or BigWigs for boss timers, Omen for threat, Recount or Skada for damage meters, QuestHelper or Carbonite for quest routes, Auctioneer or Auctionator for the auction house, Gatherer for herb and ore nodes, and Bartender4 for action bars. An addon has to be the 3.3.5 version (interface 30300); retail builds won't load. Each addon installs as its own folder in Interface\\AddOns.",
     "keywords": ["addons", "addon", "dbm", "deadly boss mods", "bigwigs", "recount", "skada", "omen", "questhelper", "auctioneer", "auctionator", "gatherer", "bartender", "damage meter", "threat meter"],
+    "questions": ["what addons should i use", "best addons", "what is dbm", "what is deadly boss mods", "what is bigwigs", "what is omen", "what addon shows threat", "what is recount", "what is skada", "what addon shows damage", "what is questhelper", "what is carbonite", "what is auctioneer", "what is auctionator", "what is bartender", "what addon for boss timers", "do retail addons work", "why wont my addon load", "which addons work on 3.3.5", "where do i put addons"],
     "tags": ["general", "addons", "tools", "enhancement"]
   },
   {
@@ -36,6 +40,7 @@
     "title": "Server Types and Population",
     "content": "On a PvP realm, entering a contested zone flags you for PvP automatically, so enemy players can attack you anywhere outside your own faction's zones and sanctuaries. On a PvE realm you can only be attacked once you flag yourself with /pvp or attack an enemy player; the flag wears off five minutes after you turn it off.",
     "keywords": ["pvp server", "pve server", "pvp realm", "pve realm", "realm type", "server type", "pvp flag", "flagged", "pvp flagged"],
+    "questions": ["is this a pvp server", "is this a pve realm", "am i going to get ganked", "what is a pvp realm", "what is a pve realm", "what does pvp realm mean", "how long does pvp flag last", "when does my pvp flag wear off", "why am i flagged for pvp", "can people attack me here", "can i be attacked in this zone", "what is the difference between pvp and pve servers", "what is /pvp", "how do i avoid pvp", "can enemy players attack me anywhere", "what are sanctuaries"],
     "tags": ["general", "servers", "population", "rules"]
   },
   {
@@ -43,6 +48,7 @@
     "title": "Character Creation Tips",
     "content": "You can play ten races: Alliance humans, dwarves, gnomes, night elves and draenei; Horde orcs, trolls, tauren, undead and blood elves. Only night elves and tauren can be druids, shamans are orcs, trolls, tauren or draenei, and paladins are humans, dwarves, draenei or blood elves. A Death Knight unlocks once you have a level 55 character on the realm.",
     "keywords": ["character creation", "new character", "make a character", "create a character", "reroll", "race and class", "which race", "what race", "race class combo"],
+    "questions": ["what races are in the game", "what race can be a druid", "what races can be shamans", "what races can be paladins", "can orcs be paladins", "can humans be shamans", "what classes can dwarves be", "can tauren be druids", "can blood elves be paladins", "can undead be druids", "what should i make a new character", "how do i unlock death knights", "how do i make a death knight", "what race is best for my class", "how do i unlock a dk", "can night elves be shamans", "can gnomes be paladins", "what races are alliance", "what races are horde", "can draenei be shamans"],
     "tags": ["general", "character", "creation", "planning"]
   },
   {
@@ -50,6 +56,7 @@
     "title": "Gear Optimization",
     "content": "Gear is tuned with gems and enchants, including the off-hand. Head enchants are arcanums sold at Revered by factions like the Argent Crusade, Kirin Tor and Knights of the Ebon Blade; shoulder inscriptions come from the Sons of Hodir at Honored and Exalted; and a blacksmith's Eternal Belt Buckle adds one more socket to any belt.",
     "keywords": ["gear", "gearing", "stat priority", "stats", "upgrade", "upgrades", "bis", "best in slot", "arcanum", "head enchant", "shoulder enchant", "inscription for shoulders", "belt buckle", "eternal belt buckle", "gem", "off", "offhand", "hit cap"],
+    "questions": ["how do i optimize my gear", "how do i min max my gear", "what is hit cap", "how much hit do i need", "what is the hit cap for casters", "what is expertise cap", "how much expertise do i need", "what is the def cap", "how much defense for a tank", "how do i get crit immune", "what meta gem should i use", "best meta gem for dps", "best meta gem for tanks", "how do i get head enchants", "how do i get a head enchant", "how do i get shoulder enchants", "what is the belt buckle", "how do i add a belt socket", "should i follow the socket bonus", "what is arcanum"],
     "tags": ["general", "gear", "optimization", "stats"],
     "expert_domain": "pve",
     "expert_content": "Get to the hit cap first: 263 rating for melee special attacks and 446 for spells against a raid boss. Melee also wants 26 expertise, and tanks need 540 defense, 689 rating, to be crit-immune. Gem your main stat in every socket and only follow a socket bonus if it is worth more than the stat you give up. For the meta gem, use Relentless Earthsiege for physical damage, Chaotic Skyflare for casters and Austere Earthsiege for tanks."
@@ -59,6 +66,7 @@
     "title": "Understanding Patches",
     "content": "The realm runs patch 3.3.5a, the final patch of Wrath of the Lich King. Patch 3.3 added Icecrown Citadel, the Forge of Souls, Pit of Saron and Halls of Reflection dungeons and the Dungeon Finder, and 3.3.5 added the Ruby Sanctum raid against Halion.",
     "keywords": ["patch", "patches", "patch notes", "335", "nerf", "nerfs", "nerfed", "expansion"],
+    "questions": ["what patch is this", "what patch is the realm on", "what version is this server", "what is 3.3.5", "what is 3.3.5a", "what did patch 3.3 add", "what did 3.3.5 add", "when did icc come out", "what is the final wotlk patch", "is ruby sanctum in the game", "is halion in the game", "is icc out", "are the frozen halls dungeons out", "what is pit of saron", "what is the forge of souls", "is this the last patch of wrath", "what content is out"],
     "tags": ["general", "patches", "updates", "balance"]
   },
   {
@@ -66,6 +74,7 @@
     "title": "Achievement Collecting",
     "content": "The big meta achievements pay mounts: Glory of the Hero (heroic dungeon feats) gives the Red Proto-Drake, Glory of the Raider gives the Black Proto-Drake on 10-player and the Plagued Proto-Drake on 25, Glory of the Ulduar Raider gives the Rusted or Ironbound Proto-Drake, and What a Long, Strange Trip It's Been, for every holiday meta, gives the Violet Proto-Drake.",
     "keywords": ["achievement hunting", "meta achievement", "glory of the hero", "glory of the raider", "glory of the ulduar raider", "glory of the icecrown raider", "what a long strange trip", "proto drake", "achievement mount"],
+    "questions": ["how do i get the red proto drake", "how do i get the black proto drake", "how do i get the plagued proto drake", "what is glory of the hero", "what is glory of the raider", "what is glory of the ulduar raider", "how do i get the violet proto drake", "how do i get the ironbound proto drake", "how do i get the rusted proto drake", "what is the holiday meta achievement", "what is what a long strange trip it's been", "which achievements give mounts", "how do i get a proto drake", "what are the meta achievements", "what achievement gives a proto drake", "how do i get a drake from achievements", "how do i get a mount from an achievement"],
     "tags": ["general", "achievements", "goals", "collection"]
   },
   {
@@ -73,6 +82,7 @@
     "title": "Managing Multiple Characters",
     "content": "You can have up to 10 characters on a realm and 50 across the account. Bind-to-account heirlooms can be mailed between your characters on the realm, and a Death Knight unlocks once one of them reaches level 55. Banks and bags are not shared between characters; the mailbox moves items between them. Many players park a bank alt in a capital to hold materials and run auctions.",
     "keywords": ["alt", "alts", "altoholic", "bank alt", "alt character", "character slots", "how many characters"],
+    "questions": ["how many characters can i have", "how many alts can i make", "how many chars per realm", "how many characters per account", "how do i share items between alts", "how do i send gear to my alt", "can i mail heirlooms to alts", "do alts share a bank", "is the bank shared between characters", "what is a bank alt", "how do i move items to my alt", "how do i unlock a dk with an alt", "tips for managing alts", "how do i send stuff to my alt", "which professions on alts", "how do i organize my alts", "do alts share gold"],
     "tags": ["general", "alts", "management", "utility"],
     "expert_domain": "general",
     "expert_content": "Keep one bank alt in a capital with a mailbox and auction house for materials and sales. Mail heirlooms to each new alt, and pick professions that feed your main, such as gathering on alts and crafting on the main. Rest every alt in an inn so they always have rested XP."
@@ -82,6 +92,7 @@
     "title": "Endgame and Raids",
     "content": "At level 80 the endgame is heroic five-mans, raids, arenas, Wintergrasp, daily quests and reputation. The raids are Naxxramas, Obsidian Sanctum, Eye of Eternity, Vault of Archavon, Ulduar, Trial of the Crusader, Onyxia's Lair, Icecrown Citadel and Ruby Sanctum; Icecrown Citadel is the top tier and ends with the Lich King.",
     "keywords": ["endgame", "end game", "max level", "level cap", "raids"],
+    "questions": ["what is there to do at 80", "what do i do at max level", "what is the endgame", "what raids are there", "what raids are in wotlk", "what is the top raid", "what is the best raid", "where do i raid at 80", "what is the last raid", "who is the final boss", "what raid should i start with", "should i skip naxx", "should i do ulduar", "what is the raid order", "what should a fresh 80 do", "how do i gear up for icc", "what is the vault of archavon", "what do i do after hitting 80", "what is the endgame like"],
     "tags": ["general", "endgame", "content", "variety"],
     "expert_domain": "pve",
     "expert_content": "Fresh 80s should skip straight past Naxxramas and Ulduar: run heroics and the Icecrown five-mans, buy tier 9 with Triumph, then go into Trial of the Crusader and Icecrown Citadel, where the gear is. Hit the weekly raid quest and Vault of Archavon every week, and get attuned to the content your guild is actually on rather than doing it in order."
@@ -91,6 +102,7 @@
     "title": "Learning the Basics",
     "content": "New characters start at level 1 in their race's starting zone. Class trainers in towns and capitals teach new spells and ranks every two levels for gold. Talent points start at level 10, riding at 20, and dual specialization at 40; the cap is 80.",
     "keywords": ["new player", "beginner", "just started", "how to play", "basics"],
+    "questions": ["how do i start playing", "i am new to wow", "new player tips", "how do i learn new spells", "where do i learn spells", "where is my class trainer", "how often do i get new spells", "what level do i get talents", "when do i get riding", "tips for a new player", "how do i get started", "beginner guide", "where do i start", "what do i do at level 1", "how do i train my abilities", "how much do spells cost to learn", "when do i get dual spec"],
     "tags": ["general", "basics", "learning", "beginners"]
   },
   {
@@ -98,6 +110,7 @@
     "title": "Finding Groups for Content",
     "content": "The Dungeon Finder builds a group for five-man dungeons automatically, cross-realm. Raids aren't queued: they're formed in trade chat, the LookingForGroup channel or the Raid Browser, where you list yourself for a raid and leaders can invite you. Saying your role and gear level up front gets invites faster.",
     "keywords": ["looking for group", "lfg", "lfm", "find a group", "find group", "pug", "pugs", "raid browser", "lookingforgroup"],
+    "questions": ["how do i find a group", "how do i find a raid", "how do i get into a raid", "how do i find a dungeon group", "where do i look for group", "what is the raid browser", "what is the lfg channel", "how do i find players for icc", "how do i join a raid group", "how do i find a pug", "where do pugs form", "how do i get invited to raids", "how do i list myself for a raid", "does lfd work for raids", "how do i get a pug raid", "how do i find people for a 10 man", "how do i get picked for a group", "what is the lookingforgroup channel", "can i queue for raids"],
     "tags": ["general", "groups", "social", "content"]
   },
   {
@@ -105,6 +118,7 @@
     "title": "Managing Addons Effectively",
     "content": "Addons go in World of Warcraft\\Interface\\AddOns, one folder per addon, and are switched on per character from the AddOns button on the character select screen; tick Load out of date AddOns if one is flagged out of date. Their settings are saved in the WTF folder, so copying it backs up your setup, and /reload reloads the interface.",
     "keywords": ["install addons", "install addon", "addon folder", "out of date addons", "load out of date", "wtf folder", "reload ui", "reloadui", "addon broken"],
+    "questions": ["how do i install addons", "where do addons go", "how do i enable an addon", "why is my addon out of date", "how do i load out of date addons", "how do i reload my ui", "what is /reload", "how do i back up my addon settings", "where are addon settings saved", "what is the wtf folder", "how do i back up my ui", "where is the addons folder", "how do i fix a broken addon", "how do i turn addons off", "why wont my addon show up", "how do i update addons", "how do i copy my ui to another computer", "how do i reset my addons"],
     "tags": ["general", "addons", "management", "technical"]
   },
   {
@@ -112,6 +126,7 @@
     "title": "Questing Efficiently",
     "content": "Since patch 3.3 the world map and minimap show where each tracked quest's objectives are, so a quest addon is optional. The quest log holds 25 quests, and up to 25 daily quests can be completed per day. Picking up every quest in a hub before heading out saves the most travel.",
     "keywords": ["questing", "quest tracking", "quest objectives", "quest map", "daily cap", "quest tracker"],
+    "questions": ["how do i quest faster", "how do i quest efficiently", "best way to do quests", "how do i find quest objectives", "do i need a quest addon", "how do i see where to go for a quest", "how many dailies can i do", "how many quests in the log", "where is the quest marker", "should i grab all the quests first", "how do i save travel time questing", "should i skip group quests", "where do i set my hearthstone", "should i abandon a quest", "tips for questing", "how do i use the quest tracker", "how do i level through quests", "how do i find a quest npc on the map"],
     "tags": ["general", "questing", "efficiency", "progression"],
     "expert_domain": "general",
     "expert_content": "Grab every quest in a hub, kill along the way to quest objectives, and turn in everything at once before moving on. Skip group quests if you are alone, and abandon anything that sends you far from your route. Set your hearthstone to the hub you will come back to most."
@@ -121,6 +136,7 @@
     "title": "Managing Inventory and Bags",
     "content": "Characters carry a backpack plus four bag slots; tailors make the 20-slot Frostweave Bag, and profession bags hold more but only their own material. The bank adds 28 slots and seven more bag slots bought with gold. Items have no weight, only slot count matters.",
     "keywords": ["bags", "bag", "bag space", "inventory", "inventory full", "bag slots", "bigger bags", "frostweave bag", "profession bag"],
+    "questions": ["how do i get more bag space", "how many bag slots do i have", "how many slots in the bank", "how many bank slots can i buy", "what is the biggest bag", "what is a frostweave bag", "what are profession bags", "what goes in a herb bag", "do items have weight", "how do i get bigger bags", "my bags are full", "where do i buy bags", "how do i buy more bank slots", "what bags hold the most", "how do i make a 20 slot bag", "can i put anything in a profession bag", "how many bags can i carry", "how do i manage my inventory"],
     "tags": ["general", "inventory", "management", "organization"]
   },
   {
@@ -128,6 +144,7 @@
     "title": "Reputation Grinding Strategies",
     "content": "In Northrend, wearing the tabard of the Argent Crusade, Kirin Tor, Knights of the Ebon Blade or Wyrmrest Accord in a level-80 dungeon sends that dungeon's reputation to the faction, called championing. Factions without a tabard, like the Sons of Hodir, rise only through quests and dailies, and humans gain 10% more reputation from Diplomacy.",
     "keywords": ["rep grind", "reputation grind", "grind rep", "rep farm", "farm rep", "championing", "champion tabard", "kirin tor rep", "hodir rep", "sons of hodir rep", "diplomacy"],
+    "questions": ["how do i grind rep", "fastest way to get rep", "how do i farm reputation", "what is championing", "how do i champion a faction", "how do i get rep from dungeons", "how do i get argent crusade rep", "how do i get kirin tor rep", "how do i get ebon blade rep", "how do i get wyrmrest accord rep", "how do i get sons of hodir rep", "do tabards give rep", "what tabard do i wear for rep", "where do i get head enchants", "who sells head enchants", "how do i get exalted with sons of hodir", "how do i get shoulder enchants from sons of hodir", "how do i get exalted fast", "how do i farm rep for head enchants"],
     "tags": ["general", "reputation", "grinding", "progression"],
     "expert_domain": "general",
     "expert_content": "Wear the tabard of the faction you need when you run level-80 heroics: championing gives far more reputation than the dailies alone. Sons of Hodir is dailies only, so start it early. Kirin Tor, Argent Crusade, Wyrmrest Accord and Knights of the Ebon Blade sells the head enchants at Revered, and Sons of Hodir at Exalted gives the best shoulder enchant."
@@ -137,6 +154,7 @@
     "title": "Preparing for Raids",
     "content": "Raiders bring a flask, which lasts an hour and stays through death, plus food; a cook's Fish Feast feeds the whole raid at once. Repair before the first pull, and since raid lockouts reset once a week, check whether the group is on a fresh or a saved raid ID before joining.",
     "keywords": ["raid prep", "raid ready", "pre raid", "fish feast", "raid consumables", "raid requirements"],
+    "questions": ["how do i prepare for a raid", "what do i bring to a raid", "what do i need for raid night", "raid prep tips", "what flask should i bring", "what flask for tanks", "what flask for healers", "what flask for dps", "what is the best flask for casters", "what should i eat before a raid", "what is a raid id", "how do raid lockouts work", "what is a saved raid id", "should i use a potion before the pull", "when do i use a pot", "do i need to repair before a raid", "what do i do before the first pull", "what potion do i use in raids", "what reagents do i need for raids", "how do i get ready for a raid"],
     "tags": ["general", "raids", "preparation", "strategy"],
     "expert_domain": "pve",
     "expert_content": "Flask for your role: Endless Rage for physical damage, Frost Wyrm for spell power, Stoneblood for tanks, Pure Mojo for healers who need mana. Eat the raid's Fish Feast, drink a Potion of Speed or Wild Magic just before the pull and another during the fight, since the potion cooldown does not start until combat ends. Show up repaired, gemmed and enchanted, with reagents, having read the boss fights."
@@ -146,6 +164,7 @@
     "title": "PvP Preparation Tips",
     "content": "For PvP, wear gear with resilience, which cuts critical strikes and damage taken from players, and carry the PvP trinket: the Medallion of the Alliance or Medallion of the Horde. It breaks stuns, fears and other crowd control on a 2-minute cooldown; humans' Every Man for Himself does the same.",
     "keywords": ["pvp trinket", "medallion of the alliance", "medallion of the horde", "pvp prep", "break cc", "cc break"],
+    "questions": ["how do i prepare for pvp", "what do i need for pvp", "what is resilience", "what is the pvp trinket", "what is a medallion", "what does the pvp trinket do", "how do i break stuns", "how do i get out of a fear", "how do i get the horde medallion", "how do i get the alliance medallion", "what is every man for himself", "how long is the trinket cooldown", "what macros do i need for pvp", "what is a focus macro", "tips for pvp", "should i use my trinket on the first cc", "pvp tips for arenas", "how do i win in pvp", "how do i set up pvp macros", "what does resil do"],
     "tags": ["general", "pvp", "preparation", "combat"],
     "expert_domain": "pvp",
     "expert_content": "Set up macros before you queue: focus target, cast-at-focus for crowd control and interrupts, and a stopcasting interrupt. Trinket the crowd control that would get you killed, not the first one you see, and save your defensive cooldowns for the moment your team is at its lowest. Having healers on a different target than your damage keeps a fight under control."

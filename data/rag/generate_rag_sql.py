@@ -66,6 +66,7 @@ CREATE TABLE `hside_rag` (
   `tags`     VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Carried for future filtering; read by nothing today.',
   `expert_domain`  VARCHAR(16) NOT NULL DEFAULT '' COMMENT 'gold|pve|pvp|general: which hside_archetype.expertise gets expert_content. Empty on most rows.',
   `expert_content` TEXT        NOT NULL COMMENT 'The best-known answer, swapped in for content for an expert bot talking to a player who earned it. Never indexed. Empty on most rows.',
+  `questions`      TEXT        NOT NULL COMMENT '|-separated example player questions, matched as whole phrasings beside keywords (hs_rag.cpp). Never part of the prompt.',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
   COMMENT='Authored world-knowledge corpus retrieved into LLM prompts. Generated from data/rag/*.json.';
@@ -104,6 +105,9 @@ def main():
                 problems.append(f"{path.name}: {row.get('id')!r} expert_domain {row['expert_domain']!r} not in {sorted(EXPERT_DOMAINS)}")
             if has_txt and len(row["expert_content"]) + len(row.get("title", "")) > EXPERT_MAX_CHARS:
                 problems.append(f"{path.name}: {row.get('id')!r} title + expert_content is over {EXPERT_MAX_CHARS} chars")
+            for question in row.get("questions", []):
+                if "|" in question or not question.strip():
+                    problems.append(f"{path.name}: {row.get('id')!r} question {question!r} is empty or contains '|'")
             rid = row.get("id", "")
             if rid in seen:
                 problems.append(f"duplicate id '{rid}' in {path.name} (first seen in {seen[rid]})")
@@ -125,10 +129,11 @@ def main():
             lines.append(f"-- from {filename}\n")
         lines.append(
             "INSERT INTO `hside_rag` (`id`, `title`, `content`, `keywords`, `tags`, "
-            "`expert_domain`, `expert_content`) VALUES "
+            "`expert_domain`, `expert_content`, `questions`) VALUES "
             f"({q(row['id'])}, {q(row['title'])}, {q(row['content'])}, "
             f"{q(','.join(row['keywords']))}, {q(','.join(row.get('tags', [])))}, "
-            f"{q(row.get('expert_domain', ''))}, {q(row.get('expert_content', ''))});\n"
+            f"{q(row.get('expert_domain', ''))}, {q(row.get('expert_content', ''))}, "
+            f"{q('|'.join(row.get('questions', [])))});\n"
         )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)

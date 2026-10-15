@@ -4,6 +4,7 @@
     "title": "Alchemy Profession",
     "content": "Alchemists turn herbs into potions, elixirs and flasks, so the profession pairs with Herbalism. Its Mixology perk makes the flasks and elixirs an alchemist knows stronger and longer-lasting on them, and transmutes turn materials into rarer ones, such as Titanium. Grand Master alchemy is taught in Dalaran.",
     "keywords": ["alchemy", "alchemist", "alch", "transmute", "transmutes", "transmutation", "mixology"],
+    "questions": ["what does alchemy do", "is alchemy worth it", "how do i make flasks", "alch or herbalism", "what is transmute titanium", "where do i learn grand master alchemy", "how do i make potions and elixirs", "what profession makes flasks", "does alch need herbalism", "what is mixology", "best way to make gold with alch", "which flask for raids alch", "transmutation master or elixir master", "what profession do i take for potions", "alchemist perks wotlk", "how do i turn saronite into titanium"],
     "tags": ["profession", "crafting", "consumables", "raiding", "all classes"],
     "expert_domain": "gold",
     "expert_content": "Transmute: Titanium has no cooldown, so run it whenever a Titanium Bar sells for more than the Saronite Bars it uses. Eternal transmutes share the daily transmute cooldown, so spend it on whichever Eternal sells highest. Pick Transmutation Master for procs on transmutes, or Elixir Master to proc extra flasks, and stock Flask of Endless Rage and Flask of the Frost Wyrm before raid nights."
@@ -13,6 +14,7 @@
     "title": "Blacksmithing Profession",
     "content": "Blacksmiths make plate and mail armor, weapons and the Eternal Belt Buckle from bars smelted out of ore, so it pairs with Mining. Trainers are in most capitals, the Grand Master rank (skill 350 to 450) is taught in Dalaran, and at 400 skill a blacksmith can add a socket to their own bracers and gloves.",
     "keywords": ["blacksmithing", "blacksmith", "smithing", "socket bracer", "socket gloves", "plate crafting"],
+    "questions": ["what does blacksmithing do", "is bs worth it", "bs or jc", "where do i train grand master blacksmithing", "how do i add a socket to my bracers", "what profession makes plate armor", "how do i get an extra gem slot on gloves", "what is the eternal belt buckle", "does blacksmithing need mining", "blacksmith perk wotlk", "what can blacksmiths craft", "what profession makes weapons", "how do i get a belt buckle socket", "where is the bs trainer", "what skill do i need for bs sockets"],
     "tags": ["profession", "crafting", "weapons", "armor", "raiding", "warrior", "paladin"]
   },
   {
@@ -20,6 +22,7 @@
     "title": "Enchanting Profession",
     "content": "Enchanters disenchant green and better items into dusts, essences and shards (Infinite Dust, Greater Cosmic Essence and Dream Shards in Northrend, Abyss Crystals from epics) and use them to enchant gear. It needs no gathering profession, and its perk is enchanting your own rings.",
     "keywords": ["enchanting", "enchanter", "disenchant", "disenchanting", "dust", "infinite dust", "dream shard", "abyss crystal", "cosmic essence", "ring enchant", "ench"],
+    "questions": ["what does enchanting do", "is ench worth it", "how do i disenchant stuff", "what is infinite dust", "what do i get from disenching greens", "can i enchant my own rings", "does enchanting need a gathering profession", "how do i get abyss crystals", "how do i make enchant scrolls", "what are dream shards for", "how do i make money with enchanting", "what is greater cosmic essence", "enchanter perk wotlk", "which profession lets me enchant gear", "how do i de items", "can i sell enchants on the ah", "what enchants sell best"],
     "tags": ["profession", "crafting", "enhancements", "auction house", "all classes"],
     "expert_domain": "gold",
     "expert_content": "Disenchant the cheap green and blue items other players list and sell the Infinite Dust, Greater Cosmic Essence and Dream Shards that come out, or use them yourself. Put popular enchants on a scribe's vellum and sell the scrolls: weapon enchants like Berserking and Black Magic and cloak and boot enchants move every day."
@@ -29,6 +32,7 @@
     "title": "Engineering Profession",
     "content": "Engineers build guns, scopes, explosives and gadgets from mined metal, so it pairs with Mining. Their perk is tinkers only engineers can use, like Hyperspeed Accelerators on gloves and Nitro Boosts on boots, plus the Wormhole Generator: Northrend and the Mekgineer's Chopper or Mechano-Hog motorcycle.",
     "keywords": ["engineering", "engineer", "engi", "hyperspeed accelerators", "nitro boosts", "wormhole", "wormhole generator", "mechano hog", "mekgineers chopper", "scope", "scopes"],
+    "questions": ["what does engineering do", "is engi worth it", "how do i get a motorcycle", "how do i get the chopper", "what is mekgineer's chopper", "what are hyperspeed accelerators", "what is a nitro boost", "what is the wormhole generator", "does engineering need mining", "what profession makes guns", "how do i make scopes", "engineer perks wotlk", "what can engineers make", "how do i get the mechano hog", "how do i get gloves with a speed boost", "engi tinkers for boots"],
     "tags": ["profession", "crafting", "devices", "specialized", "all classes"]
   },
   {
@@ -36,6 +40,7 @@
     "title": "Herbalism Profession",
     "content": "Herbalists gather herbs for Alchemy and Inscription, with Find Herbs showing nodes on the minimap. Northrend herbs include Goldclover, Tiger Lily, Adder's Tongue, Lichbloom, Icethorn and the rare Frost Lotus. The perk Lifeblood is a self-heal.",
     "keywords": ["herbalism", "herbalist", "herb", "herbs", "herbing", "frost lotus", "lichbloom", "icethorn", "adders tongue", "goldclover", "lifeblood", "find herbs", "peacebloom", "silverleaf"],
+    "questions": ["what does herbalism do", "is herbalism worth it", "how do i find herbs", "what is find herbs", "where do i farm lichbloom", "where is frost lotus", "where do i get icethorn", "where do i farm adder's tongue", "what herbs are in northrend", "what is lifeblood", "best herb farming spot wotlk", "herbs for alchemy and inscription", "how do i make gold with herbing", "how do i get frost lotus", "tiger lily location", "where do i farm herbs at 80", "what is goldclover"],
     "tags": ["profession", "gathering", "materials", "alchemy", "inscription"],
     "expert_domain": "gold",
     "expert_content": "Farm a loop in Sholazar Basin for Adder's Tongue, or Icecrown and the Storm Peaks for Lichbloom and Icethorn; any Northrend node can also give a Frost Lotus, which sells high. Herbs sell in stacks of 20 to scribes and alchemists."
@@ -45,6 +50,7 @@
     "title": "Inscription Profession",
     "content": "Scribes mill herbs, five at a time, into pigments, turn those into inks, and make glyphs, off-hand books, Darkmoon Cards and vellums. Their perk is Master's Inscription shoulder enchants for themselves, and Grand Master Inscription is taught in Dalaran.",
     "keywords": ["inscription", "scribe", "scribes", "milling", "mill herbs", "pigment", "pigments", "ink", "inks", "darkmoon card", "darkmoon cards", "vellum"],
+    "questions": ["what does inscription do", "is inscription worth it", "how do i make glyphs", "what is milling", "how do i mill herbs", "what do scribes make", "what are pigments and inks", "how do i learn new glyphs", "how do i make darkmoon cards", "how do i make gold with inscription", "what is master's inscription", "scribe perk for shoulders", "where do i learn grand master inscription", "how do i make a vellum", "what is the greatness card", "best profession for glyphs", "how do i make an offhand book"],
     "tags": ["profession", "crafting", "spell mods", "cosmetic", "all classes"],
     "expert_domain": "gold",
     "expert_content": "Glyphs are the money: learn as many as you can through Northrend Inscription Research and Minor Inscription Research, mill the cheapest Northrend herbs for pigments, and list a few of every glyph so you are never out of stock. A finished Darkmoon Card deck, such as the one that makes Greatness, sells for a lot."
@@ -54,6 +60,7 @@
     "title": "Jewelcrafting Profession",
     "content": "Jewelcrafters prospect ore, five at a time, for raw gems, cut them, and make rings, necklaces and trinkets, so it pairs with Mining. Their perk is Dragon's Eye gems only they can socket, up to three. Timothy Jones in Dalaran gives a daily quest paying tokens for new designs.",
     "keywords": ["jewelcrafting", "jewelcrafter", "jc", "prospect", "prospecting", "dragons eye", "dragons eyes", "cut gems"],
+    "questions": ["what does jewelcrafting do", "is jc worth it", "how do i get dragon's eye gems", "what is prospecting", "how do i prospect ore", "how do i cut gems", "who is timothy jones", "what is the jc daily in dalaran", "how do i get epic gems", "what are dragon's eyes", "how many dragon's eye gems can i use", "jewelcrafter perk wotlk", "does jc need mining", "how do i make gold with jc", "how do i learn new gem designs", "what profession makes rings and necklaces", "which gems sell fastest"],
     "tags": ["profession", "crafting", "jewelry", "sockets", "valuable", "all classes"],
     "expert_domain": "gold",
     "expert_content": "Prospect Saronite and Titanium ore for gems; Titanium is the one that gives the epic gems. Cut what raiders actually socket, red strength, agility and spell power gems sell fastest, and do the Timothy Jones daily in Dalaran every day: its tokens buy new designs, Dragon's Eye designs included. Selling cut gems beats selling raw gems almost every time."
@@ -63,6 +70,7 @@
     "title": "Leatherworking Profession",
     "content": "Leatherworkers make leather and mail armor, armor kits, leg armors like Icescale Leg Armor, and drums from skinned leather, so it pairs with Skinning. Their perk is Fur Lining bracer enchants for themselves.",
     "keywords": ["leatherworking", "leatherworker", "lw", "fur lining", "leg armor", "armor kit", "drums"],
+    "questions": ["what does leatherworking do", "is lw worth it", "what is fur lining", "what is icescale leg armor", "how do i get leg armor for my pants", "what profession makes armor kits", "what profession makes mail armor", "how do i make drums", "does leatherworking need skinning", "leatherworker perks wotlk", "what is the lw bracer enchant", "what can leatherworkers make", "lw or skinning", "what profession makes leather gear", "how do i get a leg enchant"],
     "tags": ["profession", "crafting", "armor", "bags", "leather classes", "druid", "rogue", "hunter"]
   },
   {
@@ -70,6 +78,7 @@
     "title": "Mining Profession",
     "content": "Mining is learned from a mining trainer in any capital or large town; a guard will point one out. Miners gather ore and stone from mineral nodes, shown on the minimap with Find Minerals, and smelt it into bars at a forge for Blacksmithing, Engineering and Jewelcrafting. Northrend ores are Cobalt, Saronite and the rare Titanium, and the perk Toughness adds stamina.",
     "keywords": ["mining", "miner", "ore", "ores", "smelting", "smelt", "cobalt", "saronite", "titanium", "toughness", "find minerals", "mining node"],
+    "questions": ["what does mining do", "is mining worth it", "where do i learn mining", "where is the mining trainer", "how do i find ore", "what is find minerals", "how do i smelt ore", "where do i farm saronite", "how do i get titanium", "where do i find titanium ore", "what is toughness", "what ore is in northrend", "best ore farming spot wotlk", "how do i make gold mining", "mining and herbalism together", "where do i learn to mine", "where do i get a mining pick", "which profession smelts bars"],
     "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"],
     "expert_domain": "gold",
     "expert_content": "Saronite is the volume ore, thickest in Sholazar Basin, Icecrown and the Storm Peaks, and a Saronite node can be a Titanium vein at random. Sell Titanium raw, or smelt it only when the bar is worth more than the ore. Mining plus Herbalism is the best pair for pure farming, since you pick up both nodes on one route."
@@ -79,6 +88,7 @@
     "title": "Skinning Profession",
     "content": "Skinners skin dead beasts, and some dragonkin, for leather and hides used in Leatherworking; humanoids drop cloth instead. Northrend gives Borean Leather and the rare Arctic Fur, and the perk Master of Anatomy adds critical strike rating.",
     "keywords": ["skinning", "skinner", "hides", "borean leather", "arctic fur", "master of anatomy"],
+    "questions": ["what does skinning do", "is skinning worth it", "how do i skin mobs", "what is borean leather", "how do i get arctic fur", "where do i farm leather", "what is master of anatomy", "can i skin humanoids", "where is the best place to skin in northrend", "skinning for leatherworking", "how do i make gold skinning", "what is heavy borean leather", "what can i skin", "skinner perk wotlk", "why cant i skin this mob", "skinning with an aoe class"],
     "tags": ["profession", "gathering", "materials", "leatherworking"],
     "expert_domain": "gold",
     "expert_content": "Skinning pays well alongside an AoE class: pull groups of beasts in Sholazar Basin or Zul'Drak and skin them all. Borean Leather sells by the stack, Arctic Fur is the prize, and Heavy Borean Leather is worth making when it sells for more than the leather that goes into it."
@@ -88,6 +98,7 @@
     "title": "Tailoring Profession",
     "content": "Tailors sew cloth gear and bags from cloth looted off humanoids, like Frostweave Cloth in Northrend, and need no gathering profession. Their perk is cloak embroideries only they can use, Lightweave, Darkglow and Swordguard, and they make Moonshroud, Ebonweave and Spellweave cloth for the best tailored gear.",
     "keywords": ["tailoring", "tailor", "frostweave bag", "embroidery", "lightweave", "darkglow", "swordguard", "moonshroud", "ebonweave", "spellweave"],
+    "questions": ["what does tailoring do", "is tailoring worth it", "how do i make bags", "what is frostweave cloth", "what is the glacial bag", "how do i make a 22 slot bag", "what is lightweave embroidery", "what are darkglow and swordguard", "how do i make moonshroud", "what is ebonweave", "what is spellweave", "tailor perks wotlk", "how do i make cloth gear", "does tailoring need a gathering profession", "what profession makes bags", "how do i get cloak embroidery"],
     "tags": ["profession", "crafting", "armor", "bags", "cloth classes", "mage", "priest", "warlock"],
     "expert_domain": "gold",
     "expert_content": "Frostweave Bags always sell, since everyone needs bag space, and the 22-slot Glacial Bag is the prize, though it can only be sewn about once a week. Moonshroud, Ebonweave and Spellweave have no cooldown and go into the best tailored gear, so make them when the cloth is cheap."
@@ -97,6 +108,7 @@
     "title": "Cooking Profession",
     "content": "Cooking is a secondary profession anyone can learn alongside two primaries. Food gives Well Fed buffs, and the Fish Feast feeds a whole raid. Dozens of Northrend recipes are bought with Dalaran Cooking Awards from the cooking dailies of Katherine Lee or Awilo Lon'gomba in Dalaran.",
     "keywords": ["cooking", "cook", "fish feast", "cooking recipe", "cooking recipes", "dalaran cooking award"],
+    "questions": ["what does cooking do", "is cooking worth it", "how do i make food", "what is the fish feast", "what are dalaran cooking awards", "who is katherine lee", "who is awilo lon'gomba", "how do i get cooking recipes in northrend", "how do i get well fed", "can anyone learn cooking", "is cooking a primary profession", "how do i make food for a raid", "where do i get northrend cooking recipes", "what is the cooking daily", "how do i level cooking"],
     "tags": ["profession", "secondary", "consumables", "buffs", "raiding"]
   },
   {
@@ -104,6 +116,7 @@
     "title": "Fishing Profession",
     "content": "Learn Fishing from a fishing trainer, buy a Fishing Pole, and cast in any open water; lures like Nightcrawlers add skill for ten minutes. Marcia Chase in Dalaran gives a daily fishing quest, and Stranglethorn Vale's Fishing Extravaganza runs on Sundays.",
     "keywords": ["fishing", "fish", "fishing pole", "lure", "lures", "fishing skill", "fishing trainer", "fishing extravaganza", "kaluak fishing derby", "nightcrawlers"],
+    "questions": ["what does fishing do", "is fishing worth it", "how do i fish", "where do i learn fishing", "where do i get a fishing pole", "what is a nightcrawler", "how do i use lures", "who gives the fishing daily", "who is marcia chase", "what is the fishing extravaganza", "when is the stv fishing contest", "how do i level fishing", "do i need a pole to fish", "where can i cast my line", "is fishing a secondary profession"],
     "tags": ["profession", "secondary", "gathering", "materials", "consumables"]
   },
   {
@@ -111,6 +124,7 @@
     "title": "First Aid Profession",
     "content": "First Aid is a secondary profession every character can learn, used to make bandages from cloth that heal over a short channel. Damage interrupts a bandage, and Recently Bandaged blocks another for a minute. The best one, Dense Frostweave Bandage, is learned from a manual at 450 skill.",
     "keywords": ["first aid", "bandage", "bandages", "recently bandaged", "frostweave bandage"],
+    "questions": ["what does first aid do", "how do i make bandages", "how do i learn first aid", "what is dense frostweave bandage", "where do i get the frostweave bandage manual", "what is recently bandaged", "why did my bandage stop", "can i bandage in combat", "is first aid a secondary profession", "how do i level first aid", "do i need first aid", "what skill is the best bandage", "can any class use bandages", "what do bandages need"],
     "tags": ["profession", "secondary", "consumables", "healing", "solo"]
   },
   {
@@ -118,6 +132,7 @@
     "title": "Best Professions for Mages",
     "content": "For mages the useful perks are Tailoring's Lightweave Embroidery, a spell power proc on the cloak, and Enchanting's ring enchants, and Tailoring makes cloth gear a mage can wear. Jewelcrafting's Dragon's Eyes are another option.",
     "keywords": ["mage professions", "professions for mage", "best professions for mage", "mage crafting", "mage tradeskills", "mage profession perks"],
+    "questions": ["what profession should my mage take", "best professions for mage", "best prof for a mage", "mage tailoring or enchanting", "what is lightweave for mages", "what should my mage pick", "good professions for a mage", "should my mage do jc", "is tailoring good for mages", "what profession for a mage at 80", "mage professions wotlk", "which professions help casters most"],
     "tags": ["profession", "mage", "cloth classes", "spellcaster"]
   },
   {
@@ -125,6 +140,7 @@
     "title": "Best Professions for Warriors",
     "content": "For warriors, Blacksmithing adds sockets to bracers and gloves and makes plate, Jewelcrafting gives Dragon's Eyes, and Mining's Toughness adds stamina for tanks. Engineering's Hyperspeed Accelerators suit DPS warriors.",
     "keywords": ["warrior professions", "professions for warrior", "best professions for warrior", "warrior crafting", "warrior tradeskills", "warrior profession perks"],
+    "questions": ["what profession should my warrior take", "best professions for warrior", "best prof for a warrior", "warrior bs and mining", "should my warrior be a blacksmith", "good professions for a warrior", "what should a tank warrior pick", "best professions for a tank", "warrior professions wotlk", "should my warrior mine", "is engineering good for dps warriors", "what profession should my war pick"],
     "tags": ["profession", "warrior", "plate classes", "melee"]
   },
   {
@@ -132,6 +148,7 @@
     "title": "Best Professions for Paladins",
     "content": "For paladins, Blacksmithing adds sockets to bracers and gloves and makes plate, and Jewelcrafting gives Dragon's Eyes; holy paladins often add Enchanting for ring enchants or Inscription for shoulder inscriptions.",
     "keywords": ["paladin professions", "professions for paladin", "best professions for paladin", "paladin crafting", "paladin tradeskills", "paladin profession perks"],
+    "questions": ["what profession should my paladin take", "best professions for pally", "best prof for a paladin", "pally blacksmithing or jc", "should my pally be a blacksmith", "good professions for a paladin", "what should a holy pally pick", "what profession for a holy paladin", "paladin professions wotlk", "should my pally take enchanting", "best professions for a ret pally", "what should my pally pick for professions"],
     "tags": ["profession", "paladin", "plate classes", "healer", "tank"]
   },
   {
@@ -139,6 +156,7 @@
     "title": "Best Professions for Hunters",
     "content": "For hunters, Engineering makes guns and scopes and gives Hyperspeed Accelerators, Leatherworking makes mail and Fur Lining, and Jewelcrafting gives Dragon's Eyes. Skinning pairs with Leatherworking.",
     "keywords": ["hunter professions", "professions for hunter", "best professions for hunter", "hunter crafting", "hunter tradeskills", "hunter profession perks"],
+    "questions": ["what profession should my hunter take", "best professions for hunters", "best prof for a hunter", "hunter engineering or lw", "should my hunter do engi", "good professions for a hunter", "what should a hunter pick", "hunter professions wotlk", "does a hunter need skinning", "what profession makes guns and scopes for hunters", "best professions for a bm hunter", "hunter jc or leatherworking"],
     "tags": ["profession", "hunter", "leather classes", "ranged"]
   },
   {
@@ -146,6 +164,7 @@
     "title": "Best Professions for Rogues",
     "content": "For rogues, Leatherworking makes leather gear and gives Fur Lining, Engineering adds Hyperspeed Accelerators and gadgets, and Jewelcrafting gives Dragon's Eyes. Rogues open lockboxes themselves, so they need no key-making profession.",
     "keywords": ["rogue professions", "professions for rogue", "best professions for rogue", "rogue crafting", "rogue tradeskills", "rogue profession perks"],
+    "questions": ["what profession should my rogue take", "best professions for rogue", "best prof for a rogue", "rogue leatherworking or engi", "should my rogue be an engineer", "good professions for a rogue", "do rogues need a key profession", "do rogues need blacksmithing for keys", "rogue professions wotlk", "what should my rogue pick", "can rogues open lockboxes without a profession", "best professions for a combat rogue"],
     "tags": ["profession", "rogue", "leather classes", "melee", "stealth"]
   },
   {
@@ -153,6 +172,7 @@
     "title": "Best Professions for Priests",
     "content": "For priests, Tailoring makes cloth gear and gives Lightweave Embroidery, Enchanting gives ring enchants, and Inscription gives shoulder inscriptions and glyphs. Jewelcrafting gives Dragon's Eyes.",
     "keywords": ["priest professions", "professions for priest", "best professions for priest", "priest crafting", "priest tradeskills", "priest profession perks"],
+    "questions": ["what profession should my priest take", "best professions for priests", "best prof for a priest", "priest tailoring and enchanting", "should my priest do inscription", "good professions for a priest", "best professions for a holy priest", "priest professions wotlk", "what should my priest pick", "is tailoring good for priests", "what profession for a shadow priest", "should my priest take jc"],
     "tags": ["profession", "priest", "cloth classes", "healer", "caster"]
   },
   {
@@ -160,6 +180,7 @@
     "title": "Best Professions for Shamans",
     "content": "For shamans, Leatherworking makes mail and gives Fur Lining, Jewelcrafting gives Dragon's Eyes, and Enchanting gives ring enchants. Skinning or Mining pair with those for materials.",
     "keywords": ["shaman professions", "professions for shaman", "best professions for shaman", "shaman crafting", "shaman tradeskills", "shaman profession perks"],
+    "questions": ["what profession should my shaman take", "best professions for shamans", "best prof for a shaman", "shaman leatherworking or jc", "should my shaman do lw", "good professions for a shaman", "what should my shammy pick", "shaman professions wotlk", "best professions for an ele shaman", "does a shaman need skinning", "best professions for a resto shaman", "what profession makes mail for shamans"],
     "tags": ["profession", "shaman", "leather classes", "healer", "caster", "melee"]
   },
   {
@@ -167,6 +188,7 @@
     "title": "Best Professions for Warlocks",
     "content": "For warlocks, Tailoring makes cloth gear and gives Lightweave Embroidery, Enchanting gives ring enchants, and Jewelcrafting gives Dragon's Eyes. Soulstones and healthstones are warlock spells, not crafts.",
     "keywords": ["warlock professions", "professions for warlock", "best professions for warlock", "warlock crafting", "warlock tradeskills", "warlock profession perks"],
+    "questions": ["what profession should my warlock take", "best professions for warlocks", "best prof for a lock", "lock tailoring or enchanting", "should my lock be a tailor", "good professions for a warlock", "do warlocks craft healthstones", "does a lock need a profession for soulstones", "warlock professions wotlk", "what should my warlock pick", "best professions for a destro lock", "what profession for an affliction lock"],
     "tags": ["profession", "warlock", "cloth classes", "caster"]
   },
   {
@@ -174,6 +196,7 @@
     "title": "Best Professions for Druids",
     "content": "For druids, Leatherworking makes leather gear and gives Fur Lining, Jewelcrafting gives Dragon's Eyes, and Enchanting gives ring enchants. Herbalism also heals with Lifeblood.",
     "keywords": ["druid professions", "professions for druid", "best professions for druid", "druid crafting", "druid tradeskills", "druid profession perks"],
+    "questions": ["what profession should my druid take", "best professions for druids", "best prof for a druid", "druid leatherworking or jc", "should my druid take herbalism", "good professions for a druid", "what should my resto druid pick", "druid professions wotlk", "does a druid need skinning", "best professions for a feral druid", "what profession for a balance druid", "is herbalism good for druids"],
     "tags": ["profession", "druid", "leather classes", "healer", "caster", "melee"]
   },
   {
@@ -181,6 +204,7 @@
     "title": "Professions",
     "content": "A character can have two primary professions, and most fill both: two gathering ones (Herbalism, Mining, Skinning) make the most gold, or one gathering plus the crafting one it feeds (Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking, Tailoring). Cooking, Fishing and First Aid are secondary and don't count. Skill caps at 450, taught by Grand Master trainers in Northrend.",
     "keywords": ["profession", "professions", "prof", "profs", "primary profession", "secondary profession"],
+    "questions": ["how many professions can i have", "how many professions can i learn", "what are the primary professions", "which professions make the most gold", "what is the best profession combo", "what are secondary professions", "best two professions for gold", "which professions go together", "what is the max profession skill", "how high can profession skill go", "which profession should i pick", "can i learn all the professions", "what professions are there", "where do i learn professions in northrend", "should i get two gathering professions", "what is a gathering profession", "which crafting profession goes with mining"],
     "tags": ["profession", "overview"]
   }
 ]

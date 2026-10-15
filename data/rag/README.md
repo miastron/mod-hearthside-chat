@@ -145,8 +145,10 @@ through scored retrieval against something a player actually typed.
 }
 ```
 
-`Hs_SetRagTable` reads `id`, `title`, `content`, `keywords`. **`tags` is parsed by nothing today** —
-it's carried for future filtering only.
+`Hs_SetRagTable` reads `id`, `title`, `content`, `keywords`, `questions`. **`tags` is parsed by
+nothing today** — it's carried for future filtering only.
+
+`questions` is optional: example player questions, covered under "Example questions" below.
 
 Two optional fields, always together: `expert_domain` (`gold`, `pve`, `pvp` or `general`) and
 `expert_content`, covered under "Expert answers" below.
@@ -268,6 +270,43 @@ hits wrong; 8% of the rebuilt 1,633-line set, which adds the grounded bucket's q
 that answers it, with misses grouped by cause. Nothing expands chat abbreviations (`og`, `dal`,
 `stv`, `wpl`): each one has to be a keyword. A short line ending in `where`/`how much`/`tips` also
 counts as a question.
+
+## Example questions (2026-10-15)
+
+Keywords alone fail both ways: one word is too blunt ("fire", "mount" fire on plain English) and
+a long list dilutes the entry's specificity until nothing triggers. So each entry also carries
+`questions`: the ways players actually ask for it ("where do i get my corpse back", "how do i
+get my body back", "where do i train bs"). `hs_rag.cpp` matches the player's line against each
+one as a whole phrasing, in a channel apart from the authored fields:
+
+- **Both sides must match.** The match is an idf-weighted F-score (beta 1.5) of how much of the
+  question the line says and how much of the line the question accounts for. A word no question
+  carries weighs as much as the rarest term, so "how tall is mount everest" does not ride "mount"
+  into Mount System.
+- **At 0.70 a question alone retrieves its entry**, with no keyword shared and no `minScore`;
+  below that it only adds `0.5 x match` to the ranking.
+- **The same gate as keywords:** the shared words must include one that is not on
+  `IsAmbiguousTerm`, or be two words. A number alone names nothing ("im 80", "at 10").
+- **"you" counts against a match.** It is a stopword for the authored fields, but a line addressed
+  to the bot is about the bot, so here it is a term no question accounts for.
+- A slightly stronger fold than `Stem` applies here only: `-ing`/`-er`/`-ed` come off
+  ("trainer", "training", "train" meet).
+- The statement gate (above) still applies: a line that isn't asking retrieves named entries only.
+- Questions never reach the prompt and never change an authored field's idf, handle count or
+  eligibility. A long list costs nothing, unlike keywords.
+
+Authoring: write how a player types it (lowercase, abbreviations, slang), answerable from the
+entry's own `content`, each with at least one word that points at *this* entry ("how do i get
+there" alone is useless). **When a log shows a line that missed, add that line to the entry
+that answers it.** That is the whole fix, with no keyword surgery or margin work. The generated
+instance and boss files carry their questions through `build_instances_and_bosses.py`
+regenerations by id.
+
+The seed set (5,200 questions) was written from each entry's content. Measured with
+`Tests/rag_path_audit.py` on 502 player lines written blind to the keywords (plus real realm log
+lines): answerable game questions retrieving the right entry went from 78% to 84%, small-talk lines
+retrieving anything from 15% to 17%. `rag_recall_audit.py` went from 518 to 525 of 535.
+`Tests/test_hs_rag_questions.cpp` pins the mechanics.
 
 ## Why the scoring looks like this
 

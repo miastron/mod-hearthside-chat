@@ -4,6 +4,7 @@
     "title": "Warrior Class",
     "content": "Warriors are melee fighters who run on rage, built by dealing and taking damage, and switch between Battle, Defensive and Berserker stances. Their trees are Arms and Fury for damage and Protection for tanking. They wear mail until level 40 and plate after, and every race except blood elves can be one.",
     "keywords": ["warrior", "rage", "stance", "stances", "battle stance", "berserker stance", "defensive stance", "charge", "intercept", "taunt", "heroic strike", "execute", "challenging shout"],
+    "questions": ["what does a warrior do", "should i roll a warrior", "how does rage work for warriors", "what are the warrior stances", "warrior stance dance how", "when do warriors get plate", "do warriors wear mail or plate", "what are the warrior talent trees", "which races can be warrior", "can blood elves be warriors", "how does warrior get rage", "is warrior fun to play", "warrior tank or dps", "what does charge do warr", "is arms fury or prot better for warrior", "what is berserker stance for"],
     "tags": ["class", "melee", "tank", "dps", "versatile"]
   },
   {
@@ -11,6 +12,7 @@
     "title": "Paladin Class",
     "content": "Paladins are plate-wearing holy warriors who run on mana: Holy heals, Protection tanks and Retribution deals melee damage. They buff the group with blessings and auras, use seals and judgements in combat, and carry Divine Shield. The races that can be paladins are humans, dwarves, draenei and blood elves.",
     "keywords": ["paladin", "pally", "blessing", "blessings", "judgement", "judgment", "divine shield", "seal of"],
+    "questions": ["what does a paladin do", "should i roll a pally", "which races can be paladin", "can night elves be paladins", "what are pally blessings", "how do seals and judgement work", "what are the paladin talent trees", "can pallys tank and heal", "pally armor type", "what is divine shield", "is pally a good class", "what does a paladin use for resource", "can orcs be pallies", "what are auras for pally", "holy prot ret which is which for pally", "what races can play pally"],
     "tags": ["class", "hybrid", "healer", "tank", "dps"]
   },
   {
@@ -18,6 +20,7 @@
     "title": "Hunter Class",
     "content": "Hunters fight at range with bows, guns or crossbows, which still use arrows or bullets in Wrath, and keep a tamed beast as a pet. They run on mana, wear mail from level 40, and use traps, aspects and Feign Death. Their trees are Beast Mastery, Marksmanship and Survival.",
     "keywords": ["hunter", "huntard", "traps", "feign death", "misdirection", "aspect of the hawk", "aspect of the dragonhawk", "deterrence", "disengage"],
+    "questions": ["what does a hunter do", "should i roll a hunter", "do hunters still need arrows", "do hunters use ammo in wrath", "what is feign death", "what are hunter traps", "how does a hunter pet work", "when do hunters get mail armor", "what are the hunter talent trees", "what is misdirection", "what are aspects for hunters", "hunter bow gun or crossbow", "is hunter easy to level", "what is deterrence", "why do people call hunters huntards", "what does disengage do"],
     "tags": ["class", "ranged", "dps", "pets", "utility"]
   },
   {
@@ -25,6 +28,7 @@
     "title": "Rogue Class",
     "content": "Rogues are leather-wearing melee fighters who run on energy and build combo points to spend on finishers like Eviscerate. They can stealth, sap, pick locks and apply poisons bought from poison vendors. Their trees are Assassination, Combat and Subtlety.",
     "keywords": ["rogue", "energy", "combo points", "stealth", "vanish", "sprint", "backstab", "sap", "kidney shot", "eviscerate", "cloak of shadows"],
+    "questions": ["what does a rogue do", "should i roll a rogue", "how do combo points work", "what is eviscerate", "what armor do rogues wear", "can rogues pick locks", "what do rogues use for resource", "how do rogue poisons work", "where do i buy poisons rogue", "what are the rogue talent trees", "what is sap", "is rogue fun", "how does rogue stealth work", "what is energy for rogue", "assassination combat subtlety which is which", "what are finishers rogue"],
     "tags": ["class", "melee", "dps", "stealth", "control"]
   },
   {
@@ -32,6 +36,7 @@
     "title": "Priest Class",
     "content": "Priests wear cloth and run on mana: Discipline and Holy heal and Shadow deals damage from Shadowform. Their utility includes Power Word: Fortitude, Fear Ward, Mind Control and resurrection. The races that can be priests are humans, dwarves, night elves, draenei, undead, trolls and blood elves.",
     "keywords": ["priest", "mind control", "psychic scream", "fear ward", "power word fortitude", "shackle undead"],
+    "questions": ["what does a priest do", "should i roll a priest", "what races can be priest", "can orcs be priests", "priest armor type", "what is shadowform", "what is fear ward", "what is mind control", "can priests res people", "what is power word fortitude", "what are the priest talent trees", "can a priest dps", "disc holy shadow which is which", "is priest good for healing", "can tauren be priests", "what does priest bring to a group"],
     "tags": ["class", "caster", "healer", "dps", "utility"]
   },
   {
@@ -39,6 +44,7 @@
     "title": "Shaman Class",
     "content": "Shamans run on mana, wear mail from level 40, and drop totems that buff the group; Bloodlust, called Heroism for the Alliance, speeds up the whole party. Elemental casts, Enhancement fights in melee and Restoration heals, and Reincarnation lets them revive themselves. Only four races can be shamans: orcs, tauren, trolls and draenei.",
     "keywords": ["shaman", "shammy", "totem", "totems", "bloodlust", "heroism", "reincarnation", "ankh", "ghost wolf", "purge"],
+    "questions": ["what does a shaman do", "should i roll a shammy", "what is bloodlust", "what is heroism for alliance", "what races can be shaman", "can humans be shamans", "can gnomes play shaman", "how do totems work", "what is reincarnation", "when do shamans get mail", "what are the shaman talent trees", "elemental enhancement resto which is which", "can shammies heal and dps", "alliance shaman which race", "why is shaman wanted in every group", "what does shaman bring to a raid"],
     "tags": ["class", "hybrid", "healer", "dps", "elemental"]
   },
   {
@@ -46,6 +52,7 @@
     "title": "Mage Class",
     "content": "Mages wear cloth, like warlocks and priests, and run on mana: Arcane, Fire and Frost are their three damage trees. They polymorph enemies, conjure food and water, teleport themselves to capitals from level 20 and open portals for others from 40.",
     "keywords": ["mage", "polymorph", "sheep", "teleport", "blink", "counterspell"],
+    "questions": ["what does a mage do", "should i roll a mage", "what is polymorph", "how do mages get food and water", "when do mages get teleports", "when can mages make portals", "what are the mage talent trees", "what armor do mages wear", "what resource do mages use", "arcane fire frost which is which for mage", "is mage easy to level", "mage teleport to capital city level", "can mages open portals", "what is conjure water", "what level do mage portals unlock", "is mage a good class"],
     "tags": ["class", "caster", "ranged", "dps", "control"]
   },
   {
@@ -53,6 +60,7 @@
     "title": "Warlock Class",
     "content": "Warlocks wear cloth, like mages and priests, and run on mana plus soul shards. Affliction, Demonology and Destruction are their three damage trees, and they summon demons such as the imp, voidwalker, succubus and felhunter. They make healthstones and soulstones and can summon party members with Ritual of Summoning, which needs two helpers to click the portal.",
     "keywords": ["warlock", "lock", "summon", "summoning", "soulstone", "healthstone"],
+    "questions": ["what does a warlock do", "should i roll a lock", "what demons can warlocks summon", "what are soul shards", "what is a healthstone", "what is a soulstone", "how does ritual of summoning work", "how many people do you need for a summon", "what are the warlock talent trees", "can locks summon people", "imp voidwalker succubus felhunter which for lock", "what armor do warlocks wear", "affliction demo destro which is which", "is warlock fun", "how to summon party members lock", "what does a warlock bring to a group", "need a summon", "can a lock summon me", "any locks for a summon"],
     "tags": ["class", "caster", "dps", "demonic", "control"]
   },
   {
@@ -60,6 +68,7 @@
     "title": "Druid Class",
     "content": "Druids shapeshift and wear leather: Balance casts in Moonkin Form, Feral fights as a cat or tanks as a bear, and Restoration heals, the only class that can tank, heal or deal damage in either melee or ranged. Rebirth revives an ally in combat and Innervate restores mana. Only two races can be druids: night elves and tauren.",
     "keywords": ["druid", "shapeshift", "shapeshifting", "travel form", "flight form", "innervate", "rebirth", "brez", "battle rez", "hibernate", "cyclone", "entangling roots"],
+    "questions": ["what does a druid do", "should i roll a druid", "what races can be druid", "can humans be druids", "what are druid forms", "what is moonkin form", "druid tank heal or dps", "what is rebirth", "what is innervate", "can druid do everything", "what are the druid talent trees", "cat form or bear form", "balance feral resto which is which", "druid armor type", "can trolls be druids", "how does druid combat res work"],
     "tags": ["class", "hybrid", "versatile", "shapeshift"]
   },
   {
@@ -67,6 +76,7 @@
     "title": "Death Knight Class",
     "content": "Death Knights are Wrath's plate-wearing hero class: they start at level 55 in Ebon Hold and need a level 55 character on the realm to create. They run on runes and runic power, and Blood, Frost and Unholy can each tank or deal damage. Death Grip pulls an enemy to them, and every race can be one.",
     "keywords": ["death knight", "dk", "deathknight", "death grip", "anti magic shell", "antimagic shell", "death coil", "icy touch", "plague strike", "blood strike", "army of the dead", "lichborne", "dks"],
+    "questions": ["what does a death knight do", "should i roll a dk", "how do i make a death knight", "what level do dks start at", "do i need a level 55 to make a dk", "where do death knights start", "what is ebon hold", "what is death grip", "what are runes and runic power", "can dk tank", "what are the dk talent trees", "what races can be death knights", "blood frost unholy which is which", "why cant i create a death knight", "what armor do dks wear", "is dk good for leveling"],
     "tags": ["class", "melee", "tank", "dps", "undead"]
   },
   {
@@ -74,6 +84,7 @@
     "title": "Alliance Faction",
     "content": "The Alliance is one of the two major factions in Azeroth, consisting of noble and honorable races united against the Horde. Member races include Humans, Dwarves, Gnomes, Night Elves, and Draenei. The Alliance values honor, tradition, and protecting Azeroth from threats. Their capital cities include Stormwind, Ironforge, Darnassus, and the Exodar. Alliance players work together to maintain peace and order.",
     "keywords": ["alliance", "alliance races", "alliance side", "alliance capitals"],
+    "questions": ["what races are alliance", "which races are in the alliance", "what are the alliance capital cities", "what does the alliance stand for", "how many races does alliance have", "is draenei alliance", "alliance cities list", "what is the alliance", "which cities can alliance go to", "are gnomes alliance or horde", "what factions are there", "alliance vs horde what is the difference", "alliance playable races", "is the exodar an alliance city"],
     "tags": ["faction", "alliance", "races", "cities"]
   },
   {
@@ -81,6 +92,7 @@
     "title": "Horde Faction",
     "content": "The Horde is a powerful faction of warrior races who fight for survival and strength. Member races include Orcs, Trolls, Tauren, Undead (Forsaken), and Blood Elves. The Horde values strength, honor in battle, and protecting their way of life. Their capital cities include Orgrimmar, Thunder Bluff, Undercity, and Silvermoon City. Horde players are fierce warriors who respect strength and combat prowess.",
     "keywords": ["horde", "horde races", "horde side", "horde capitals", "for the horde"],
+    "questions": ["what races are horde", "which races are in the horde", "what are the horde capital cities", "what does the horde stand for", "how many races does horde have", "are blood elves horde", "horde cities list", "what is the horde", "which cities can horde go to", "are undead horde or alliance", "horde playable races", "is silvermoon a horde city", "is thunder bluff horde", "alliance vs horde what is the difference"],
     "tags": ["faction", "horde", "races", "cities"]
   },
   {
@@ -88,6 +100,7 @@
     "title": "Human Race",
     "content": "Humans are the most widespread and adaptable race in Azeroth, known for their resilience and determination. They founded the Alliance and built the mighty kingdom of Stormwind. Humans excel at all classes and are known for their diplomacy and leadership. Key traits include the Human Spirit (+3% Spirit) and Diplomacy (+10% reputation gains with every faction). Humans start in Elwynn Forest and have access to mounts at level 20.",
     "keywords": ["human", "humans", "human racial", "diplomacy", "every man for himself", "human spirit"],
+    "questions": ["what are humans good at", "should i roll a human", "what is the human racial", "what does human spirit do", "what is diplomacy racial", "where do humans start", "what is the human starting zone", "human racial pve or pvp", "human mount level", "is human good for any class", "what is the human spirit bonus", "who founded the alliance", "is human a good race", "does diplomacy give extra rep"],
     "tags": ["race", "alliance", "human", "versatile"]
   },
   {
@@ -95,6 +108,7 @@
     "title": "Orc Race",
     "content": "Orcs are fierce and honorable warriors from Draenor, brought to Azeroth through the Dark Portal. They form the backbone of the Horde and value strength and combat prowess above all. Orcs have Command (+5% pet damage), Axe Specialization, Hardiness (reduced stun duration), and the activated Blood Fury racial. They start in Durotar and have a rich history of shamanism and warfare. Notable orcs include Thrall, Garrosh Hellscream, and Grommash Hellscream.",
     "keywords": ["orc", "orcs", "orc racial", "blood fury", "hardiness", "axe specialization"],
+    "questions": ["what are orcs good at", "should i roll an orc", "what is blood fury", "what is the orc racial", "what does command do orc", "where do orcs start", "orc starting zone", "is orc good for warrior", "is orc good for pvp", "orc hardiness stun resist", "what is axe specialization", "orc vs troll which racial is better", "who is thrall", "orc hunter or lock racial", "is orc a good race", "what is the best race for horde warrior"],
     "tags": ["race", "horde", "orc", "warrior"]
   },
   {
@@ -102,6 +116,7 @@
     "title": "Dwarf Race",
     "content": "Dwarves are stout, bearded mountain dwellers known for their craftsmanship and love of ale. They are master miners, blacksmiths, and engineers. Dwarves have Gun Specialization, Mace Specialization, passive Frost Resistance, and the activated Stoneform racial, which cures poison, disease, and bleed effects. They start in Dun Morogh and are fiercely loyal to the Alliance. Dwarves excel at warrior, priest, and hunter classes. Famous dwarves include King Magni Bronzebeard and Muradin Bronzebeard.",
     "keywords": ["dwarf", "dwarves", "dwarf racial", "stoneform", "gun specialization", "find treasure"],
+    "questions": ["what are dwarves good at", "should i roll a dwarf", "what is stoneform", "what is the dwarf racial", "what does stoneform cure", "where do dwarves start", "dwarf starting zone", "is dwarf good for hunter", "is dwarf good for priest", "dwarf gun specialization", "dwarf frost resist", "is dwarf good for pvp", "who is muradin", "does stoneform remove bleeds", "what is the best alliance race for hunter", "is dwarf a good race"],
     "tags": ["race", "alliance", "dwarf", "craftsman"]
   },
   {
@@ -109,6 +124,7 @@
     "title": "Night Elf Race",
     "content": "Night Elves are ancient, immortal beings who protect the natural world of Azeroth. They are master druids, hunters, and warriors with a deep connection to nature. Night Elves have Quickness (melee and ranged attackers are 2% less likely to hit them), Nature Resistance (2% less likely to be hit by Nature spells), and Shadowmeld, an activated near-invisibility used while standing still; on death they briefly become a fast-moving wisp. They start on the sacred tree of Teldrassil and are devoted to Elune. Night Elves excel at druid, hunter, and priest classes. Key figures include Tyrande Whisperwind and Malfurion Stormrage.",
     "keywords": ["night elf", "night elves", "nelf", "nelfs", "night elf racial", "shadowmeld", "quickness", "wisp spirit", "elune"],
+    "questions": ["what are night elves good at", "should i roll a night elf", "what is shadowmeld", "what is the night elf racial", "where do night elves start", "night elf starting zone", "is teldrassil the night elf zone", "is night elf good for druid", "is night elf good for hunter", "what is quickness racial", "what happens when a night elf dies", "is night elf good for pvp", "who is tyrande", "what does shadowmeld do", "night elf rogue worth it", "is nelf a good race"],
     "tags": ["race", "alliance", "night elf", "nature"]
   },
   {
@@ -116,6 +132,7 @@
     "title": "Tauren Race",
     "content": "Tauren are massive, peaceful nomads from the plains of Mulgore, devoted to the spirits of nature. They are natural shamans and druids with a deep spiritual connection to the elements. Tauren have Endurance (+5% base health), War Stomp (an activated stun on nearby enemies), Cultivation (+15 Herbalism skill), and Nature Resistance (2% less likely to be hit by Nature spells). They start in Mulgore and have a rich culture of storytelling and herbalism. Tauren excel at druid, shaman, and warrior classes. Cairne Bloodhoof is the tauren high chieftain, ruling from Thunder Bluff.",
     "keywords": ["tauren", "tauren racial", "war stomp", "endurance", "cultivation"],
+    "questions": ["what are tauren good at", "should i roll a tauren", "what is war stomp", "what is the tauren racial", "where do tauren start", "tauren starting zone", "is mulgore the tauren zone", "is tauren good for druid", "is tauren good for shaman", "what does endurance do tauren", "tauren herbalism bonus", "is tauren good for pvp", "who is cairne", "does war stomp stun", "best horde race for warrior", "is tauren a good race"],
     "tags": ["race", "horde", "tauren", "spiritual"]
   },
   {
@@ -123,6 +140,7 @@
     "title": "Troll Race",
     "content": "Trolls are fierce jungle warriors from the islands of the South Seas, known for their regeneration and voodoo magic. They are agile hunters and warriors with a tribal culture. Trolls have Berserking (an activated 20% attack and casting speed burst, a flat amount since the Wrath revamp), Regeneration (faster health regen that partly continues in combat), and Beast Slaying (+5% damage to Beasts). They start in Durotar alongside the orcs. Trolls excel at hunter, mage, priest, rogue, shaman, and warrior classes. Notable trolls include Vol'jin and Zul'jin.",
     "keywords": ["troll", "trolls", "troll racial", "berserking", "regeneration", "beast slaying", "darkspear"],
+    "questions": ["what are trolls good at", "should i roll a troll", "what is berserking", "what is the troll racial", "how much haste does berserking give", "where do trolls start", "troll starting zone", "is troll good for hunter", "is troll good for mage", "what is beast slaying racial", "troll regeneration how does it work", "is troll good for pvp", "who is voljin", "troll vs orc racial", "is troll a good race", "best horde race for mage"],
     "tags": ["race", "horde", "troll", "agile"]
   },
   {
@@ -130,6 +148,7 @@
     "title": "Gnome Race",
     "content": "Gnomes are ingenious tinkerers and inventors from the underground city of Gnomeregan. They are brilliant engineers and mages with a love for technology. Gnomes have Expansive Mind (+5% intellect), a 2% reduced chance to be hit by arcane spells (Arcane Resistance), and Engineering Specialization (+15 engineering skill). They start in Dun Morogh and are loyal Alliance members. Gnomes excel at mage, rogue, and warrior classes. Famous gnomes include High Tinker Mekkatorque and Sicco Thermaplugg.",
     "keywords": ["gnome", "gnomes", "gnome racial", "escape artist", "expansive mind", "engineering specialization"],
+    "questions": ["what are gnomes good at", "should i roll a gnome", "what is the gnome racial", "what is expansive mind", "where do gnomes start", "gnome starting zone", "is gnome good for mage", "is gnome good for rogue", "gnome engineering bonus", "does gnome have arcane resist", "is gnome good for pvp", "who is mekkatorque", "is gnomeregan the gnome city", "is gnome a good race", "best alliance race for mage", "what classes can gnomes be"],
     "tags": ["race", "alliance", "gnome", "ingenious"]
   },
   {
@@ -137,6 +156,7 @@
     "title": "Forsaken (Undead) Race",
     "content": "The Forsaken are undead beings who broke free from the Scourge, fighting for their freedom. They are cunning rogues and warlocks with resistance to fear and sleep. Forsaken have Will of the Forsaken (removes fear, sleep, and charm effects), Cannibalize (health regen from nearby corpses), and passive Shadow Resistance. They start in Tirisfal Glades and rule the Undercity. Forsaken excel at rogue, warlock, priest, mage, and warrior classes. Queen Sylvanas Windrunner leads the Forsaken.",
     "keywords": ["forsaken", "undead", "undead racial", "will of the forsaken", "wotf", "cannibalize"],
+    "questions": ["what are forsaken good at", "should i roll an undead", "what is will of the forsaken", "what is cannibalize", "what is the undead racial", "where do forsaken start", "undead starting zone", "is tirisfal glades the undead zone", "is undead good for rogue", "is undead good for warlock", "does wotf remove fear", "undead racial for pvp", "who is sylvanas", "is forsaken good for priest", "is undead a good race", "best horde race for pvp"],
     "tags": ["race", "horde", "undead", "forsaken"]
   },
   {
@@ -144,6 +164,7 @@
     "title": "Blood Elf Race",
     "content": "Blood Elves are magically addicted survivors of the fallen kingdom of Quel'Thalas. They are powerful mages and paladins with a thirst for magic. Blood Elves have Arcane Torrent (a silence that also restores mana, energy, runic power, or rage), Arcane Affinity (+10 Enchanting skill), and passive Magic Resistance. They start in Eversong Woods and are ruled from Silvermoon by Regent Lord Lor'themar Theron; Kael'thas Sunstrider betrayed them and is now an enemy. Blood Elves excel at mage, paladin, priest, rogue, hunter, and warlock classes.",
     "keywords": ["blood elf", "blood elves", "belf", "belfs", "blood elf racial", "arcane torrent", "arcane affinity"],
+    "questions": ["what are blood elves good at", "should i roll a blood elf", "what is arcane torrent", "what is the blood elf racial", "does arcane torrent silence", "where do blood elves start", "blood elf starting zone", "is eversong woods the belf zone", "is blood elf good for paladin", "is blood elf good for mage", "blood elf enchanting bonus", "is belf good for pvp", "who is lorthemar", "what happened to kaelthas", "is blood elf a good race", "what classes can blood elves be"],
     "tags": ["race", "horde", "blood elf", "magical"]
   },
   {
@@ -151,6 +172,7 @@
     "title": "Draenei Race",
     "content": "Draenei are a tailed, hooved alien race who crashed on Azeroth fleeing demonic pursuers. They are holy paladins and priests with a devotion to the Light. Draenei have Heroic Presence (+1% hit chance for themselves and their party), Gift of the Naaru (an activated heal-over-time), and Gemcutting (+5 Jewelcrafting skill). They start on Azuremyst Isle and have advanced technology. Draenei excel at paladin, priest, shaman, mage, hunter, and warrior classes. Prophet Velen leads the draenei.",
     "keywords": ["draenei", "draenei racial", "gift of the naaru", "heroic presence", "gemcutting"],
+    "questions": ["what are draenei good at", "should i roll a draenei", "what is gift of the naaru", "what is the draenei racial", "what is heroic presence", "where do draenei start", "draenei starting zone", "is azuremyst isle the draenei zone", "is draenei good for paladin", "is draenei good for shaman", "draenei hit bonus for raid", "draenei jewelcrafting bonus", "who is velen", "is draenei a good race", "best alliance race for shaman", "does gift of the naaru heal over time"],
     "tags": ["race", "alliance", "draenei", "holy"]
   }
 ]
