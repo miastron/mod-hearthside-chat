@@ -61,9 +61,9 @@ namespace
         { 60, 38 }, // KILLING_BLOW
         { 45, 52 }, // ROLL_WON                : winners say something more often than not
         { 65, 33 }, // ROLL_LOST
-        { 80, 20 }, // DUEL_START              : heavy bias toward 0 (§2, operator read)
-        { 75, 25 }, // DUEL_WON
-        { 75, 25 }, // DUEL_LOST
+        { 90, 10 }, // DUEL_START              : heavy bias toward 0; bot pairs duel back to back (realm 2026-10-14)
+        { 82, 18 }, // DUEL_WON
+        { 82, 18 }, // DUEL_LOST
         { 40, 55 }, // OPENER_GROUP_FORMED     : reserved; openers are tier-1 corpus today
         { 55, 45 }, // OPENER_REZ
         { 45, 50 }, // OPENER_DUNGEON_COMPLETE

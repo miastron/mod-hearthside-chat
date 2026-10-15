@@ -2,6 +2,7 @@
 #include "hs_archetype.h"
 #include "hs_bot.h"
 #include "hs_config.h"
+#include "hs_corpus.h"
 #include "hs_event_arbiter.h"
 #include "hs_log.h"
 #include "hs_queue.h"
@@ -11,6 +12,11 @@
 #include "hs_style.h"
 
 #include "Battleground.h"
+#include "BattlegroundAB.h"
+#include "BattlegroundAV.h"
+#include "BattlegroundEY.h"
+#include "BattlegroundIC.h"
+#include "BattlegroundWS.h"
 #include "Creature.h"
 #include "GameTime.h"
 #include "Group.h"
@@ -25,11 +31,17 @@
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "PlayerbotAI.h"
+#include "PlayerbotMgr.h"
+#include "AiObjectContext.h"
+#include "PositionValue.h"
 #include "Random.h"
 #include "SharedDefines.h"
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
+#include <optional>
 #include <cctype>
 #include <chrono>
 #include <iterator>
@@ -174,6 +186,7 @@ namespace
         std::string                           line;
         uint64_t                              counterpartGuid = 0;
         std::string                           counterpartName;
+        HsReplyChannel                        channel = HsReplyChannel::Say; // where the event was spoken
         std::chrono::steady_clock::time_point at;
         bool                                  duelEnd  = false; // won or lost a duel against the counterpart
         bool                                  answered = false; // that duel's one comeback is spent (Hs_MaybeAnswerDuelLine)
@@ -188,10 +201,12 @@ namespace
     std::mutex                                  g_RecentEventMutex;
     std::unordered_map<uint64_t, HsRecentEvent> g_RecentEvents;
 
-    void NoteRecentEvent(Player* bot, std::string const& line, Player* counterpart, bool duelEnd = false)
+    void NoteRecentEvent(Player* bot, std::string const& line, Player* counterpart, HsReplyChannel channel,
+                         bool duelEnd = false)
     {
         HsRecentEvent entry;
         entry.line = line;
+        entry.channel = channel;
         entry.duelEnd = duelEnd;
         if (counterpart && counterpart != bot)
         {
@@ -274,11 +289,20 @@ namespace
         if (!g_HsEnable || !origin || !origin->IsInWorld() || actors.empty())
             return;
 
+        // In a battleground or arena only the match talks: its result here,
+        // its progress in OnBattlegroundUpdate. Joining the battleground's raid
+        // read as joining a party ("hey, where are we going"), and achievements
+        // pop every few seconds there (realm 2026-10-14).
+        if (origin->GetMap()->IsBattlegroundOrArena() &&
+            primaryType != HsEventType::BattlegroundWon && primaryType != HsEventType::BattlegroundLost &&
+            primaryType != HsEventType::ArenaWon && primaryType != HsEventType::ArenaLost)
+            return;
+
         // The follow-up fact first, for everyone it happened to, whatever the
         // gates below decide about a reaction (see HsRecentEvent above).
         for (auto const& actor : actors)
             if (EligibleBot(actor.bot))
-                NoteRecentEvent(actor.bot, actor.trigger, actor.counterpart,
+                NoteRecentEvent(actor.bot, actor.trigger, actor.counterpart, channel,
                                 actor.affinityType == HsEventType::DuelWon || actor.affinityType == HsEventType::DuelLost);
 
         // A ceiling is permission, not budget. Events have no corpus
@@ -497,6 +521,14 @@ namespace
         // rule is about DBC/template arrays; this is the object's own
         // resolved name.
         const std::string by = killerName.empty() ? "" : (" by " + killerName);
+
+        // No death reactions in a battleground or arena. The killer is on the
+        // other faction and cannot read it, and a match has a death every few
+        // seconds: ~100 lines in one Warsong Gulch (realm 2026-10-14). The
+        // match's own progress and result speak instead (OnBattlegroundUpdate,
+        // OnBattlegroundEnd).
+        if (player->GetMap()->IsBattlegroundOrArena())
+            return;
 
         Group* group = player->GetGroup();
         std::vector<HsEventActor> actors;
@@ -766,7 +798,7 @@ namespace
         if (!react)
         {
             for (auto const& actor : actors)
-                NoteRecentEvent(actor.bot, actor.trigger, nullptr);
+                NoteRecentEvent(actor.bot, actor.trigger, nullptr, GroupChannelFor(group));
             return;
         }
         FireEvent(HsEventType::BossKilled, player, actors, GroupChannelFor(group));
@@ -1045,7 +1077,9 @@ namespace
 
     void FirePvpKill(Player* killer, std::string const& killedName)
     {
-        if (!EligibleBot(killer))
+        // Same reason as deaths in FireDeathEvent: in a battleground or arena
+        // a kill is routine, and the victim cannot read the reaction.
+        if (!EligibleBot(killer) || killer->GetMap()->IsBattlegroundOrArena())
             return;
 
         std::vector<HsEventActor> actors;
@@ -1518,6 +1552,613 @@ void HsEventGuildHandler::OnRemoveMember(Guild* guild, Player* player, bool isDi
     });
 }
 
+// ---- Battleground progress: canned lines, never the model ---------------
+//
+// Two kinds of callout in a battleground's raid chat, both corpus lines: the
+// tuned model has no rows for mid-match play and answered every probe with
+// "gg" (2026-10-14). Each needs a real player on the speaker's side; bots
+// alone are talking to no one.
+//
+// Flags (Warsong Gulch, Eye of the Storm): a capture or a return, read off the
+// scoreboard's per-player objective counters every couple of seconds, since
+// the core has no hook for either. GetAttr1 is flag captures, GetAttr2 flag
+// returns.
+//
+// Nodes (Arathi Basin, Eye of the Storm's towers, Alterac Valley, Isle of
+// Conquest): what a player standing at a node can see coming, said before it
+// happens, the way people call it: "inc lm 3" as enemies close on a node the
+// side holds, "lm needs help" once they outnumber its defenders there, "lm
+// safe" when they are gone again, "taking gm" when the side outnumbers the
+// other at a node it does not hold. The speaker is a bot at or near that
+// node: it is the one that sees it.
+//
+// All of it runs on the world thread (BattlegroundMgr::Update), so the state
+// needs no lock.
+namespace
+{
+    // Within this of a node's flag: fighting over it.
+    constexpr float    kBgNodeAtRange         = 25.0f;
+    // Within this: seen coming.
+    constexpr float    kBgNodeIncRange        = 65.0f;
+    constexpr uint32_t kBgCheckIntervalMs     = 2000;
+    // At most one callout per side this often, across every node and flag.
+    // Starting judgement, same status as the bias table.
+    constexpr int64_t  kBgSideCooldownSeconds = 8;
+
+    struct HsBgNode
+    {
+        uint8_t     index; // the battleground's own node index
+        char const* name;  // what players type
+        float       x, y, z;
+    };
+
+    // Positions are the core's own banner/trigger positions; names are the
+    // short forms players use in /bg.
+    std::vector<HsBgNode> const& NodesFor(BattlegroundTypeId type)
+    {
+        static std::vector<HsBgNode> const ab = [] {
+            static char const* const names[] = { "st", "bs", "farm", "lm", "gm" };
+            std::vector<HsBgNode> nodes;
+            for (uint8_t i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
+                nodes.push_back({ i, names[i], BG_AB_NodePositions[i][0], BG_AB_NodePositions[i][1], BG_AB_NodePositions[i][2] });
+            return nodes;
+        }();
+        static std::vector<HsBgNode> const ey = [] {
+            static char const* const names[] = { "fr", "be", "dr", "mt" };
+            std::vector<HsBgNode> nodes;
+            for (uint8_t i = 0; i < EY_POINTS_MAX; ++i)
+                nodes.push_back({ i, names[i], BG_EY_TriggerPositions[i][0], BG_EY_TriggerPositions[i][1], BG_EY_TriggerPositions[i][2] });
+            return nodes;
+        }();
+        static std::vector<HsBgNode> const av = [] {
+            // BG_AV_ObjectPos's first fifteen rows are the flags, in BG_AV_Nodes order.
+            static char const* const names[] = { "aid station", "sp gy", "sh gy", "sf", "ib gy", "fw gy", "hut",
+                                                 "dbs", "dbn", "iwb", "shb", "ibt", "tp", "et", "wt" };
+            std::vector<HsBgNode> nodes;
+            for (uint8_t i = 0; i < BG_AV_NODES_MAX; ++i)
+                nodes.push_back({ i, names[i], BG_AV_ObjectPos[i][0], BG_AV_ObjectPos[i][1], BG_AV_ObjectPos[i][2] });
+            return nodes;
+        }();
+        // BattlegroundIC's nodePoint index is the ICNodePointType; the two
+        // keeps are left out. Banner positions from BG_IC_ObjSpawnlocs.
+        static std::vector<HsBgNode> const ic = {
+            { NODE_TYPE_REFINERY, "refinery", 1269.5f,   -400.809f,  37.6253f },
+            { NODE_TYPE_QUARRY,   "quarry",   251.016f,  -1159.32f,  17.2376f },
+            { NODE_TYPE_DOCKS,    "docks",    726.385f,  -360.205f,  17.8153f },
+            { NODE_TYPE_HANGAR,   "hangar",   807.78f,   -1000.07f,  132.381f },
+            { NODE_TYPE_WORKSHOP, "ws",       776.229f,  -804.283f,  6.45052f },
+        };
+        static std::vector<HsBgNode> const none;
+
+        switch (type)
+        {
+            case BATTLEGROUND_AB: return ab;
+            case BATTLEGROUND_EY: return ey;
+            case BATTLEGROUND_AV: return av;
+            case BATTLEGROUND_IC: return ic;
+            default:              return none;
+        }
+    }
+
+    // Whose banner is on the node right now, assaulted or held. `active` false
+    // for a node that no longer matters (a destroyed Alterac Valley tower).
+    TeamId NodeHolder(Battleground* bg, uint8_t index, bool& active)
+    {
+        active = true;
+        switch (bg->GetBgTypeID())
+        {
+            case BATTLEGROUND_AB:
+            {
+                uint8 state = bg->ToBattlegroundAB()->GetCapturePointInfo(index)._state;
+                if (state == BG_AB_NODE_STATE_ALLY_OCCUPIED || state == BG_AB_NODE_STATE_ALLY_CONTESTED)
+                    return TEAM_ALLIANCE;
+                if (state == BG_AB_NODE_STATE_HORDE_OCCUPIED || state == BG_AB_NODE_STATE_HORDE_CONTESTED)
+                    return TEAM_HORDE;
+                return TEAM_NEUTRAL;
+            }
+            case BATTLEGROUND_EY:
+                return bg->ToBattlegroundEY()->GetCapturePointInfo(index)._ownerTeamId;
+            case BATTLEGROUND_AV:
+            {
+                BG_AV_NodeInfo const& info = bg->ToBattlegroundAV()->GetAVNodeInfo(index);
+                active = info.State != POINT_DESTROYED;
+                return info.OwnerId;
+            }
+            case BATTLEGROUND_IC:
+            {
+                ICNodeState state = bg->ToBattlegroundIC()->GetICNodePoint(index).nodeState;
+                if (state == NODE_STATE_CONFLICT_A || state == NODE_STATE_CONTROLLED_A)
+                    return TEAM_ALLIANCE;
+                if (state == NODE_STATE_CONFLICT_H || state == NODE_STATE_CONTROLLED_H)
+                    return TEAM_HORDE;
+                return TEAM_NEUTRAL;
+            }
+            default:
+                active = false;
+                return TEAM_NEUTRAL;
+        }
+    }
+
+    // What a side has already said about one node, so each callout is made
+    // once per situation rather than every check.
+    struct HsBgNodeCall
+    {
+        bool alerted = false; // "inc" or "needs help" said; "safe" pending
+        bool helped  = false; // "needs help" said
+        bool taking  = false; // "taking" said
+    };
+
+    // A Warsong Gulch flag carrier's route so far (CheckWsgRoutes).
+    struct HsWsgCarrier
+    {
+        ObjectGuid guid;
+        int        last    = -1; // last kWsgPoints index it came within range of
+        int        prev    = -1; // the one before that
+        int        pending = -1; // reached, not yet called
+        std::chrono::steady_clock::time_point pendingAt;
+    };
+
+    struct HsBgProgress
+    {
+        uint32_t sinceCheckMs = 0;
+        uint32_t sinceRouteMs = 0;
+        HsWsgCarrier carriers[2]; // by the flag's team
+        // Last-read (attr1, attr2) per player; a player's first reading only
+        // sets the baseline.
+        std::unordered_map<ObjectGuid::LowType, std::pair<uint32_t, uint32_t>> seen;
+        std::chrono::steady_clock::time_point lastSpoke[2] = {}; // per TeamId
+        std::unordered_map<uint8_t, HsBgNodeCall> calls[2];      // per TeamId, by node index
+    };
+
+    std::unordered_map<uint32_t, HsBgProgress> g_BgProgress; // by battleground instance id
+
+    // BattlegroundScore keeps GetAttr1/GetAttr2 protected, and nothing public
+    // exposes those counters. Access is not checked on the template arguments
+    // of an explicit instantiation ([temp.spec.general]), so this yields
+    // pointers to them; a call through one still dispatches to the
+    // battleground's own score type.
+    template <auto Member, typename Tag>
+    struct HsScoreAttrGrant
+    {
+        friend auto HsScoreAttr(Tag) { return Member; }
+    };
+    struct HsAttr1Tag { friend auto HsScoreAttr(HsAttr1Tag); };
+    struct HsAttr2Tag { friend auto HsScoreAttr(HsAttr2Tag); };
+    template struct HsScoreAttrGrant<&BattlegroundScore::GetAttr1, HsAttr1Tag>;
+    template struct HsScoreAttrGrant<&BattlegroundScore::GetAttr2, HsAttr2Tag>;
+
+    bool SideHasRealPlayer(Battleground* bg, TeamId side)
+    {
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player && player->GetBgTeamId() == side && !Hs_IsBot(player))
+                return true;
+        return false;
+    }
+
+    // How often a bot makes a callout when it is the one that sees it: PvP
+    // players call nearly everything, everyone else now and then. Starting
+    // judgements, same status as the bias table.
+    uint32_t BgCalloutPercent(uint64_t botGuid)
+    {
+        switch (Hs_ArchetypeForBot(botGuid))
+        {
+            case HsArchetype::PvpSerious: return 100;
+            case HsArchetype::PvpCasual:  return 75;
+            default:                      return 25;
+        }
+    }
+
+    // One line from `category` (or `fixedText`, when category is null), said
+    // by one of `speakers`, with %node and %n filled in. True when the moment
+    // is handled: the line was said, or the chosen bot let it pass
+    // (BgCalloutPercent) -- rolled once, so the check two seconds later does
+    // not roll again until someone speaks. False when it could not be
+    // attempted (cooldown, no speaker, no line), to retry.
+    bool SpeakBgLine(HsBgProgress& state, TeamId side, std::vector<Player*> const& speakers, char const* category,
+                     char const* node = "", uint32_t count = 0, char const* fixedText = nullptr)
+    {
+        auto const now = std::chrono::steady_clock::now();
+        if (speakers.empty() || now - state.lastSpoke[side] < std::chrono::seconds(kBgSideCooldownSeconds))
+            return false;
+
+        Player*     bot  = speakers[urand(0, static_cast<uint32_t>(speakers.size() - 1))];
+        if (urand(1, 100) > BgCalloutPercent(bot->GetGUID().GetRawValue()))
+            return true;
+        std::string line = category ? Hs_SelectOpenerLine(category, bot->getClass(), bot->GetLevel(),
+                                                          static_cast<uint8_t>(bot->GetTeamId()), bot->GetZoneId())
+                                    : std::string(fixedText ? fixedText : "");
+        if (line.empty())
+            return false;
+        // %node before %n, which is its prefix.
+        for (size_t at; (at = line.find("%node")) != std::string::npos;)
+            line.replace(at, 5, node);
+        for (size_t at; (at = line.find("%n")) != std::string::npos;)
+            line.replace(at, 2, std::to_string(count));
+
+        if (!Hs_DeliverCorpusLine(bot, line, /*senderGuid=*/0, "", GroupChannelFor(bot->GetGroup()),
+                                  HsChannelKind::Trade, bot->IsInCombat(), "bg-progress"))
+            return false;
+        state.lastSpoke[side] = now;
+        return true;
+    }
+
+    std::vector<Player*> SideSpeakers(Battleground* bg, TeamId side)
+    {
+        std::vector<Player*> bots;
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player && player->GetBgTeamId() == side && Hs_IsBot(player) && EligibleBot(player) && player->GetGroup())
+                bots.push_back(player);
+        return bots;
+    }
+
+    // ---- Warsong Gulch: where a flag carrier is going ----------------------
+    //
+    // Points in each base (realm-surveyed with .tele add, 2026-10-15). A
+    // carrier coming within kWsgPointRange of one is about to take that route.
+    // In the base whose flag it holds a carrier is leaving (outbound); in its
+    // own base it is coming home to cap (inbound). The carrier, if a bot, says
+    // the phrase ("going tun"); a bot of the other side that can see it says
+    // it about the enemy flag carrier ("efc going tun"). Held kWsgConfirmMs and
+    // dropped if the carrier turned back, so a carrier that doubles back is not
+    // called.
+    struct HsWsgPoint
+    {
+        TeamId      base;   // whose base the point is in
+        float       x, y, z;
+        char const* out;    // leaving with this base's flag; "" = no call
+        char const* in;     // coming home to cap in this base
+        char const* inSelf; // the carrier's own wording for `in`, when different
+    };
+
+    HsWsgPoint const kWsgPoints[] = {
+        { TEAM_HORDE,    921.60f,  1434.42f, 345.75f, "",            "on cap",       "im on cap" },
+        { TEAM_HORDE,    925.43f,  1454.86f, 346.04f, "hut",         "hut",          nullptr },
+        { TEAM_HORDE,    951.07f,  1422.89f, 345.37f, "",            "",             nullptr }, // main gate: wait for gy or ramp
+        { TEAM_HORDE,    952.07f,  1459.45f, 342.18f, "going tun",   "tun",          nullptr },
+        { TEAM_HORDE,    1114.22f, 1462.18f, 316.56f, "out tun",     "going up tun", nullptr },
+        { TEAM_HORDE,    985.21f,  1458.99f, 356.22f, "going top",   "top",          nullptr },
+        { TEAM_HORDE,    936.99f,  1475.66f, 367.11f, "roof",        "roof",         nullptr },
+        { TEAM_HORDE,    981.66f,  1475.58f, 336.14f, "going roof",  "roof",         nullptr },
+        { TEAM_HORDE,    1043.06f, 1522.87f, 337.79f, "going ramp",  "up ramp",      nullptr },
+        { TEAM_HORDE,    1054.52f, 1395.30f, 339.57f, "going gy",    "gy",           nullptr },
+        { TEAM_ALLIANCE, 1536.60f, 1481.47f, 352.22f, "",            "on cap",       "im on cap" },
+        { TEAM_ALLIANCE, 1529.04f, 1462.13f, 352.04f, "hut",         "hut",          nullptr },
+        { TEAM_ALLIANCE, 1501.81f, 1493.57f, 352.20f, "",            "",             nullptr }, // main gate: wait for gy or ramp
+        { TEAM_ALLIANCE, 1492.27f, 1457.68f, 342.79f, "going tun",   "tun",          nullptr },
+        { TEAM_ALLIANCE, 1370.93f, 1461.58f, 324.38f, "out tun",     "going up tun", nullptr },
+        { TEAM_ALLIANCE, 1471.75f, 1458.68f, 362.56f, "going top",   "top",          nullptr },
+        { TEAM_ALLIANCE, 1516.62f, 1447.95f, 373.23f, "roof",        "roof",         nullptr },
+        { TEAM_ALLIANCE, 1471.11f, 1440.65f, 342.80f, "going roof",  "roof",         nullptr },
+        { TEAM_ALLIANCE, 1405.73f, 1416.48f, 344.77f, "going ramp",  "up ramp",      nullptr },
+        { TEAM_ALLIANCE, 1432.40f, 1528.99f, 344.63f, "going gy",    "gy",           nullptr },
+    };
+
+    // The main gate is tracked but never called: every carrier leaves through
+    // it, so the route only shows at gy or ramp (operator, 2026-10-15).
+    // The closest two points (cap and hut) are ~20 yd apart.
+    constexpr float    kWsgPointRange   = 10.0f;
+    constexpr float    kWsgSightRange   = 60.0f;
+    constexpr uint32_t kWsgCheckMs      = 500;
+    constexpr int64_t  kWsgConfirmMs    = 1500;
+
+    int NearestWsgPoint(Player* carrier)
+    {
+        int   best     = -1;
+        float bestDist = kWsgPointRange;
+        for (int i = 0; i < static_cast<int>(std::size(kWsgPoints)); ++i)
+        {
+            float const dist = carrier->GetDistance(kWsgPoints[i].x, kWsgPoints[i].y, kWsgPoints[i].z);
+            if (dist <= bestDist)
+            {
+                best     = i;
+                bestDist = dist;
+            }
+        }
+        return best;
+    }
+
+    void CallWsgRoute(Battleground* bg, HsBgProgress& state, Player* carrier, int point)
+    {
+        HsWsgPoint const& p        = kWsgPoints[point];
+        TeamId const      team     = carrier->GetBgTeamId();
+        bool const        inbound  = (p.base == team);
+        char const*       phrase   = inbound ? p.in : p.out;
+        if (!*phrase)
+            return;
+
+        // The carrier itself, to its own side.
+        if (Hs_IsBot(carrier) && EligibleBot(carrier) && carrier->GetGroup() && SideHasRealPlayer(bg, team))
+            SpeakBgLine(state, team, { carrier }, nullptr, "", 0, (inbound && p.inSelf) ? p.inSelf : phrase);
+
+        // The other side, about the enemy flag carrier, from a bot that sees it.
+        TeamId const other = Battleground::GetOtherTeamId(team);
+        if (!SideHasRealPlayer(bg, other))
+            return;
+        std::vector<Player*> seeing;
+        for (auto const& [guid, player] : bg->GetPlayers())
+            if (player && player->GetBgTeamId() == other && player->IsAlive() && Hs_IsBot(player) &&
+                EligibleBot(player) && player->GetGroup() && player->GetDistance(carrier) <= kWsgSightRange &&
+                player->IsWithinLOSInMap(carrier))
+                seeing.push_back(player);
+        SpeakBgLine(state, other, seeing, nullptr, "", 0, ("efc " + std::string(phrase)).c_str());
+    }
+
+    void CheckWsgRoutes(Battleground* bg, HsBgProgress& state)
+    {
+        BattlegroundWS* ws  = bg->ToBattlegroundWS();
+        auto const      now = std::chrono::steady_clock::now();
+        for (TeamId flag : { TEAM_ALLIANCE, TEAM_HORDE })
+        {
+            HsWsgCarrier& track   = state.carriers[flag];
+            ObjectGuid const guid = ws->GetFlagPickerGUID(flag);
+            Player*     carrier   = guid ? ObjectAccessor::FindPlayer(guid) : nullptr;
+            if (!carrier || !carrier->IsAlive() || carrier->GetMap() != bg->GetBgMap())
+            {
+                track = HsWsgCarrier{};
+                continue;
+            }
+            if (track.guid != guid)
+                track = HsWsgCarrier{ guid };
+
+            int const point = NearestWsgPoint(carrier);
+            if (point >= 0 && point != track.last)
+            {
+                track.pending   = point;
+                track.pendingAt = now;
+                track.prev      = track.last;
+                track.last      = point;
+            }
+
+            if (track.pending < 0 ||
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - track.pendingAt).count() < kWsgConfirmMs)
+                continue;
+
+            // Turned back: now closer to where it came from than to where it went.
+            int const  pending  = track.pending;
+            track.pending       = -1;
+            if (track.prev >= 0)
+            {
+                HsWsgPoint const& to   = kWsgPoints[pending];
+                HsWsgPoint const& from = kWsgPoints[track.prev];
+                if (carrier->GetDistance(from.x, from.y, from.z) < carrier->GetDistance(to.x, to.y, to.z))
+                    continue;
+            }
+            CallWsgRoute(bg, state, carrier, pending);
+        }
+    }
+
+    void CheckFlags(Battleground* bg, HsBgProgress& state)
+    {
+        bool took[2] = {};
+        bool held[2] = {};
+        auto const* scores = bg->GetPlayerScores();
+        for (auto const& [guid, player] : bg->GetPlayers())
+        {
+            if (!player)
+                continue;
+            auto score = scores->find(guid.GetCounter());
+            if (score == scores->end() || !score->second)
+                continue;
+            uint32_t const attr1 = (score->second->*HsScoreAttr(HsAttr1Tag{}))();
+            uint32_t const attr2 = (score->second->*HsScoreAttr(HsAttr2Tag{}))();
+            auto [entry, first] = state.seen.try_emplace(guid.GetCounter(), attr1, attr2);
+            if (first)
+                continue;
+            TeamId const team = player->GetBgTeamId();
+            if (team == TEAM_ALLIANCE || team == TEAM_HORDE)
+            {
+                took[team] |= attr1 > entry->second.first;
+                held[team] |= attr2 > entry->second.second;
+            }
+            entry->second = { attr1, attr2 };
+        }
+
+        for (TeamId team : { TEAM_ALLIANCE, TEAM_HORDE })
+        {
+            TeamId const other = Battleground::GetOtherTeamId(team);
+            if (took[team])
+            {
+                if (SideHasRealPlayer(bg, team))
+                    SpeakBgLine(state, team, SideSpeakers(bg, team), "bg_flag_capped_ours");
+                if (SideHasRealPlayer(bg, other))
+                    SpeakBgLine(state, other, SideSpeakers(bg, other), "bg_flag_capped_theirs");
+            }
+            else if (held[team] && SideHasRealPlayer(bg, team))
+                SpeakBgLine(state, team, SideSpeakers(bg, team), "bg_flag_returned_ours");
+        }
+    }
+
+    void CheckNodes(Battleground* bg, HsBgProgress& state, std::vector<HsBgNode> const& nodes)
+    {
+        bool const real[2] = { SideHasRealPlayer(bg, TEAM_ALLIANCE), SideHasRealPlayer(bg, TEAM_HORDE) };
+        if (!real[TEAM_ALLIANCE] && !real[TEAM_HORDE])
+            return;
+
+        for (HsBgNode const& node : nodes)
+        {
+            bool         active = false;
+            TeamId const holder = NodeHolder(bg, node.index, active);
+            if (!active)
+                continue;
+
+            // Who is where, per side: at the flag, near it, and which bots of
+            // each side could see it.
+            uint32_t             at[2]   = {};
+            uint32_t             near[2] = {};
+            std::vector<Player*> seeing[2];
+            std::vector<Player*> standing[2];
+            for (auto const& [guid, player] : bg->GetPlayers())
+            {
+                if (!player || !player->IsAlive())
+                    continue;
+                TeamId const team = player->GetBgTeamId();
+                if (team != TEAM_ALLIANCE && team != TEAM_HORDE)
+                    continue;
+                float const dist = player->GetDistance(node.x, node.y, node.z);
+                if (dist > kBgNodeIncRange)
+                    continue;
+                ++near[team];
+                bool const atFlag = dist <= kBgNodeAtRange;
+                at[team] += atFlag ? 1 : 0;
+                if (Hs_IsBot(player) && EligibleBot(player) && player->GetGroup())
+                {
+                    seeing[team].push_back(player);
+                    if (atFlag)
+                        standing[team].push_back(player);
+                }
+            }
+
+            for (TeamId side : { TEAM_ALLIANCE, TEAM_HORDE })
+            {
+                TeamId const  other = Battleground::GetOtherTeamId(side);
+                HsBgNodeCall& call  = state.calls[side][node.index];
+                if (holder == side)
+                {
+                    call.taking = false;
+                    if (!real[side])
+                        continue;
+                    if (!call.helped && at[other] >= 2 && at[other] > at[side])
+                    {
+                        if (SpeakBgLine(state, side, seeing[side], "bg_node_help", node.name, at[other]))
+                            call.alerted = call.helped = true;
+                    }
+                    else if (!call.alerted && near[other] > 0)
+                    {
+                        if (SpeakBgLine(state, side, seeing[side], "bg_node_inc", node.name, near[other]))
+                            call.alerted = true;
+                    }
+                    else if (call.alerted && near[other] == 0)
+                    {
+                        // Cleared either way: a missed "safe" is not retried.
+                        SpeakBgLine(state, side, seeing[side], "bg_node_safe", node.name);
+                        call.alerted = call.helped = false;
+                    }
+                }
+                else
+                {
+                    call.alerted = call.helped = false;
+                    // A neutral node is the opening rush, not worth a call.
+                    if (holder == TEAM_NEUTRAL || at[side] == 0)
+                        call.taking = false;
+                    else if (real[side] && !call.taking && at[side] >= 2 && at[side] > at[other] &&
+                             SpeakBgLine(state, side, standing[side], "bg_node_taking", node.name, at[side]))
+                        call.taking = true;
+                }
+            }
+        }
+    }
+}
+
+// ---- TEMPORARY probe (2026-10-14) ----------------------------------------
+// Measures whether mod-playerbots keeps a "bg objective" set from outside:
+// `.hearthside bgobj <bot> <node>` points the bot at a node, and every check
+// for the next 40 seconds logs whether its objective is still that node and
+// how far the bot is from it. Remove once acting on callouts is decided.
+namespace
+{
+    struct HsBgObjProbe
+    {
+        ObjectGuid                            bot;
+        std::string                           node;
+        float                                 x = 0, y = 0, z = 0;
+        std::chrono::steady_clock::time_point started, until;
+    };
+    std::optional<HsBgObjProbe> g_BgObjProbe;
+
+    PositionInfo* BgObjectiveOf(Player* bot)
+    {
+        PlayerbotAI* ai = PlayerbotsMgr::instance().GetPlayerbotAI(bot);
+        if (!ai)
+            return nullptr;
+        return &ai->GetAiObjectContext()->GetValue<PositionMap&>("position")->Get()["bg objective"];
+    }
+
+    void LogBgObjProbe()
+    {
+        if (!g_BgObjProbe)
+            return;
+        auto const now = std::chrono::steady_clock::now();
+        Player*    bot = ObjectAccessor::FindPlayer(g_BgObjProbe->bot);
+        PositionInfo* pos = bot ? BgObjectiveOf(bot) : nullptr;
+        if (!pos || now > g_BgObjProbe->until)
+        {
+            LOG_INFO(kHsLogChat, "[HearthsideChat] bgobj probe ended.");
+            g_BgObjProbe.reset();
+            return;
+        }
+        bool const kept = pos->isSet() && std::abs(pos->x - g_BgObjProbe->x) < 1.0f && std::abs(pos->y - g_BgObjProbe->y) < 1.0f;
+        LOG_INFO(kHsLogChat, "[HearthsideChat] bgobj probe +{}s {}: objective {} ({:.0f},{:.0f}), bot {:.0f} yd from {}",
+                 std::chrono::duration_cast<std::chrono::seconds>(now - g_BgObjProbe->started).count(), bot->GetName(),
+                 kept ? "KEPT" : (pos->isSet() ? "CHANGED" : "UNSET"), pos->x, pos->y,
+                 bot->GetDistance(g_BgObjProbe->x, g_BgObjProbe->y, g_BgObjProbe->z), g_BgObjProbe->node);
+    }
+}
+
+std::string Hs_ProbeBgObjective(std::string const& botName, std::string const& nodeName)
+{
+    Player* bot = ObjectAccessor::FindPlayerByName(botName, false);
+    if (!bot || !Hs_IsBot(bot))
+        return "not an online bot";
+    Battleground* bg = bot->GetBattleground();
+    if (!bg)
+        return "not in a battleground";
+    PositionInfo* pos = BgObjectiveOf(bot);
+    if (!pos)
+        return "no playerbot AI";
+    for (HsBgNode const& node : NodesFor(bg->GetBgTypeID()))
+    {
+        if (nodeName != node.name)
+            continue;
+        pos->Set(node.x, node.y, node.z, bot->GetMapId());
+        auto const now = std::chrono::steady_clock::now();
+        g_BgObjProbe = HsBgObjProbe{ bot->GetGUID(), node.name, node.x, node.y, node.z, now, now + std::chrono::seconds(40) };
+        return "objective set to " + nodeName + "; watch Server.log for 'bgobj probe'";
+    }
+    return "no node '" + nodeName + "' in this battleground";
+}
+
+void HsEventBattlegroundHandler::OnBattlegroundUpdate(Battleground* bg, uint32 diff)
+{
+    if (!g_HsEnable || !bg || bg->isArena() || bg->GetStatus() != STATUS_IN_PROGRESS ||
+        !HsTierAllows(g_HsMaxTierEvents, HsTier::Corpus))
+        return;
+    BattlegroundTypeId const       type  = bg->GetBgTypeID();
+    std::vector<HsBgNode> const&   nodes = NodesFor(type);
+    bool const                     flags = (type == BATTLEGROUND_WS || type == BATTLEGROUND_EY);
+    if (!flags && nodes.empty())
+        return;
+
+    HsBgProgress& state = g_BgProgress[bg->GetInstanceID()];
+
+    // Carrier routes on a shorter clock: a gate is crossed in a second or two.
+    if (type == BATTLEGROUND_WS)
+    {
+        state.sinceRouteMs += diff;
+        if (state.sinceRouteMs >= kWsgCheckMs)
+        {
+            state.sinceRouteMs = 0;
+            CheckWsgRoutes(bg, state);
+        }
+    }
+
+    state.sinceCheckMs += diff;
+    if (state.sinceCheckMs < kBgCheckIntervalMs)
+        return;
+    state.sinceCheckMs = 0;
+
+    LogBgObjProbe();
+    if (flags)
+        CheckFlags(bg, state);
+    if (!nodes.empty())
+        CheckNodes(bg, state, nodes);
+}
+
+void HsEventBattlegroundHandler::OnBattlegroundDestroy(Battleground* bg)
+{
+    if (bg)
+        g_BgProgress.erase(bg->GetInstanceID());
+}
+
 void HsEventBattlegroundHandler::OnBattlegroundEnd(Battleground* bg, TeamId winnerTeamId)
 {
     if (!g_HsEnable || !bg || winnerTeamId == TEAM_NEUTRAL)
@@ -1570,7 +2211,7 @@ void HsEventBattlegroundHandler::OnBattlegroundEnd(Battleground* bg, TeamId winn
     }
 }
 
-std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid)
+std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel replyChannel)
 {
     std::lock_guard<std::mutex> lock(g_RecentEventMutex);
     auto it = g_RecentEvents.find(botGuid);
@@ -1582,11 +2223,17 @@ std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid)
     if (age > kRecentEventWindowSeconds)
         return "";
 
+    // Party and raid chat reach the same group, whichever one the event used.
+    auto audience = [](HsReplyChannel c) { return c == HsReplyChannel::Raid ? HsReplyChannel::Party : c; };
+    bool const counterpart = senderGuid && senderGuid == recent.counterpartGuid;
+    if (!counterpart && audience(replyChannel) != audience(recent.channel))
+        return "";
+
     // The model is never told who is speaking to it, so a winner's "loser"
     // and a bystander's read the same. When they are the other person in the
     // event, it says so.
     std::string out = recent.line;
-    if (senderGuid && senderGuid == recent.counterpartGuid && !recent.counterpartName.empty())
+    if (counterpart && !recent.counterpartName.empty())
         out += "\nThe one talking to you now is " + recent.counterpartName + ".";
     return out;
 }

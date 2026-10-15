@@ -198,6 +198,11 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
 
     if (channel == HsReplyChannel::Party || channel == HsReplyChannel::Raid)
     {
+        // Mid-match, bots answering each other drift off the match: "im a
+        // bit nervous tho" off a "rdy here" in Warsong Gulch (realm
+        // 2026-10-14). The match's own lines stand alone.
+        if (speaker->GetMap()->IsBattlegroundOrArena())
+            return;
         group = speaker->GetGroup();
         if (!group)
             return; // the speaker left the group during its typing delay

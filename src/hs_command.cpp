@@ -191,6 +191,15 @@ namespace
     // only meaningful relative to one specific player, so this reports the
     // row-level facts rather than a single invented ring number. See
     // HsIdentityInspection's doc comment in hs_identity_store.h.
+    // TEMPORARY (2026-10-14): see Hs_ProbeBgObjective.
+    bool HandleHearthsideBgObj(ChatHandler* handler, std::string_view botNameArg, Tail nodeArg)
+    {
+        std::string botName = std::string(botNameArg);
+        normalizePlayerName(botName);
+        handler->PSendSysMessage("[HearthsideChat] bgobj: {}", Hs_ProbeBgObjective(botName, std::string(nodeArg)));
+        return true;
+    }
+
     bool HandleHearthsideInspect(ChatHandler* handler, std::string_view botNameArg)
     {
         std::string botName = std::string(botNameArg);
@@ -600,6 +609,7 @@ ChatCommandTable HsCommandScript::GetCommands() const
         { "unpin",      HandleHearthsideUnpin,     SEC_GAMEMASTER, Console::Yes },
         { "evict-run",  HandleHearthsideEvictRun,  SEC_GAMEMASTER, Console::Yes },
         { "ask",        HandleHearthsideAsk,       SEC_GAMEMASTER, Console::Yes },
+        { "bgobj",      HandleHearthsideBgObj,     SEC_GAMEMASTER, Console::Yes },
     };
 
     static ChatCommandTable rootTable =

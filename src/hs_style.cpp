@@ -66,6 +66,10 @@ namespace
         // immediately after abbreviation.
         static const std::unordered_set<std::string> words = {
             "gz", "ty", "inv", "sum", "wtb", "wts", "lol", "wb", "rdy", "w/", "brb",
+            // Battleground callouts (hs_event.cpp): a typo'd node name points
+            // the team at the wrong node.
+            "inc", "fc", "gj", "st", "bs", "lm", "gm", "fr", "be", "dr", "mt", "gy", "sf",
+            "dbs", "dbn", "iwb", "shb", "ibt", "tp", "et", "wt", "ws", "efc", "tun", "hut", "cap", "roof", "ramp", "top", "front",
         };
         return words;
     }
@@ -791,9 +795,11 @@ namespace
         float perWordRate = 0.0f;
         switch (band)
         {
-            case StyleBand::Sloppy:  perWordRate = 0.03f;  break;
-            case StyleBand::Loose:   perWordRate = 0.015f; break;
-            case StyleBand::Careful: perWordRate = 0.005f; break;
+            // A third below the first-pass rates, which read as too often
+            // on the realm (2026-10-14).
+            case StyleBand::Sloppy:  perWordRate = 0.02f;  break;
+            case StyleBand::Loose:   perWordRate = 0.01f;  break;
+            case StyleBand::Careful: perWordRate = 0.0035f; break;
             case StyleBand::Precise: perWordRate = 0.0f;   break;
         }
         if (perWordRate <= 0.0f)

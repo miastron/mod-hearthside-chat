@@ -44,8 +44,8 @@
   {
     "id": "npc_banker",
     "title": "Bankers and Guild Banks",
-    "content": "Bankers in every capital and in Dalaran hold your personal bank: 28 slots plus seven bag slots bought with gold. A guild bank, opened at a guild vault, has up to six tabs of 98 slots, bought with gold, and the guild leader sets who can withdraw from each.",
-    "keywords": ["bank", "banker", "bank slots", "bank bag", "bank space", "guild bank", "gbank", "guild vault"],
+    "content": "Bankers in every capital and in Dalaran hold your personal bank: 28 slots plus seven bag slots bought with gold. Each character has its own bank and bags, nothing is shared between characters, so items go to an alt by mail. A guild bank, opened at a guild vault, has up to six tabs of 98 slots, bought with gold, and the guild leader sets who can withdraw from each.",
+    "keywords": ["bank", "banker", "bank slots", "bank bag", "bank space", "shared bank", "guild bank", "gbank", "guild vault"],
     "tags": ["npcs", "storage", "guild", "inventory"]
   },
   {

@@ -62,8 +62,8 @@
   {
     "id": "mechanic_pets",
     "title": "Pet System",
-    "content": "Hunters learn Tame Beast at level 10 and keep beasts as permanent combat pets; Beast Mastery hunters can also tame exotic beasts. Warlocks summon demons, Death Knights raise a ghoul and frost mages get a Water Elemental. Non-combat companion pets are purely cosmetic followers. Stable masters hold the beasts a hunter isn't using.",
-    "keywords": ["pet", "pets", "hunter pet", "tame", "tame beast", "demon pet", "warlock pet"],
+    "content": "Hunters learn Tame Beast and Feed Pet at level 10 and keep beasts as permanent combat pets; Beast Mastery hunters can also tame exotic beasts. Feed Pet takes a food the beast eats, such as meat, fish or bread, and keeps it happy, and an unhappy pet deals less damage. Warlocks summon demons, Death Knights raise a ghoul and frost mages get a Water Elemental. Non-combat companion pets are purely cosmetic followers. Stable masters hold the beasts a hunter isn't using.",
+    "keywords": ["pet", "pets", "hunter pet", "tame", "tame beast", "feed pet", "pet food", "pet happiness", "demon pet", "warlock pet"],
     "tags": ["mechanic", "companions", "pets", "collection"]
   },
   {

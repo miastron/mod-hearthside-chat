@@ -332,6 +332,10 @@ namespace
             if (!BotBaseEligible(bot))
                 continue;
 
+            // Dungeon downtime filler ("ready here") has no place mid-match.
+            if (bot->GetMap()->IsBattlegroundOrArena())
+                continue;
+
             Group* group = bot->GetGroup();
             if (!group)
                 continue;

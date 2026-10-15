@@ -262,12 +262,19 @@ public:
 
 // Battleground and arena results, per side: "Your side has just won Warsong
 // Gulch." / "Your team has just lost a 2v2 arena match." Only a side with a
-// real player on it gets anything.
+// real player on it gets anything. Mid-match, a flag capture or a base taken
+// draws a canned teammate line (hs_event.cpp, "Battleground progress").
 class HsEventBattlegroundHandler : public AllBattlegroundScript
 {
 public:
-    HsEventBattlegroundHandler() : AllBattlegroundScript("HsEventBattlegroundHandler", { ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_END }) {}
+    HsEventBattlegroundHandler() : AllBattlegroundScript("HsEventBattlegroundHandler", {
+        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_END,
+        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_UPDATE,
+        ALLBATTLEGROUNDHOOK_ON_BATTLEGROUND_DESTROY,
+    }) {}
     void OnBattlegroundEnd(Battleground* bg, TeamId winnerTeamId) override;
+    void OnBattlegroundUpdate(Battleground* bg, uint32 diff) override;
+    void OnBattlegroundDestroy(Battleground* bg) override;
 };
 
 // The real player whose resurrect spell this bot is accepting, or nullptr (a
@@ -280,16 +287,26 @@ Player* Hs_RealPlayerResurrecting(Player* bot);
 // The follow-up half of every event: the state line of the most recent event
 // this bot was part of, if it is at most two minutes old, for any reply it
 // makes that is not itself an event reaction -- plus "The one talking to you
-// now is X." when `senderGuid` is the other person in that event. "" when
-// there is none. hs_queue.cpp's WorkerLoop appends it last in the system
-// turn, the slot an event reaction's own state line takes. Safe from any
-// thread (the reactive worker reads it while hooks write it).
-std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid);
+// now is X." when `senderGuid` is the other person in that event. Only for
+// someone who could have seen it: that other person, or a reply in the
+// channel the event was spoken in. A duel in /say has nothing to do with a
+// stranger's question in General (realm 2026-10-14: "u got lucky, thats it"
+// to "forty kills and not one drop"). "" otherwise. hs_queue.cpp's
+// WorkerLoop appends it last in the system turn, the slot an event
+// reaction's own state line takes. Safe from any thread (the reactive worker
+// reads it while hooks write it).
+enum class HsReplyChannel : uint8_t;
+std::string Hs_RecentEventContext(uint64_t botGuid, uint64_t senderGuid, HsReplyChannel replyChannel);
 
 // True while this bot's latest event is under two minutes old (the window
 // Hs_RecentEventContext uses). Ambient lines skip such a bot: a stock musing
 // right after a duel or a death reads as not having noticed it.
 bool Hs_HasRecentEvent(uint64_t botGuid);
+
+// TEMPORARY (2026-10-14): `.hearthside bgobj`. Points a bot's mod-playerbots
+// "bg objective" at a battleground node and logs whether it holds. World
+// thread. Returns a one-line result for the GM.
+std::string Hs_ProbeBgObjective(std::string const& botName, std::string const& nodeName);
 
 // World thread (Hs_DeliverPending). `speaker` just said `text` in /say as
 // its reaction to a duel against `opponentGuid`; sometimes the opponent, if

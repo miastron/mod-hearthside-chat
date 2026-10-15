@@ -71,7 +71,7 @@
   {
     "id": "general_alt_management",
     "title": "Managing Multiple Characters",
-    "content": "You can have up to 10 characters on a realm and 50 across the account. Bind-to-account heirlooms can be mailed between your characters on the realm, and a Death Knight unlocks once one of them reaches level 55. Many players park a bank alt in a capital to hold materials and run auctions.",
+    "content": "You can have up to 10 characters on a realm and 50 across the account. Bind-to-account heirlooms can be mailed between your characters on the realm, and a Death Knight unlocks once one of them reaches level 55. Banks and bags are not shared between characters; the mailbox moves items between them. Many players park a bank alt in a capital to hold materials and run auctions.",
     "keywords": ["alt", "alts", "altoholic", "bank alt", "alt character", "character slots", "how many characters"],
     "tags": ["general", "alts", "management", "utility"],
     "expert_domain": "general",

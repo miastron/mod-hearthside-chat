@@ -61,6 +61,10 @@ namespace
     // Self-correction follow-up: a settled design constant, not an operator
     // knob, so it lives here rather than in hs_config.h.
     constexpr uint32_t kSelfCorrectionChancePercent   = 5;
+    // A typo in a word of three letters or fewer, or in a line of three words
+    // or fewer, leaves nothing to read it from ("hg" for "gg", realm
+    // 2026-10-14), so it nearly always draws the fix a person would send.
+    constexpr uint32_t kShortTypoCorrectionChancePercent = 70;
     // Review G7: how many ready replies Hs_DeliverPending sends in one world
     // tick. Sized well above ordinary traffic (Bucket.RepliesPerMinute
     // defaults to 90, i.e. ~1-2 per tick) so it binds only on a burst.
@@ -890,7 +894,7 @@ namespace
             // same prompt-cache reason as the event line above.
             if (!req.triggerIsStateLine)
             {
-                std::string recentEvent = Hs_RecentEventContext(req.botGuid, req.senderGuid);
+                std::string recentEvent = Hs_RecentEventContext(req.botGuid, req.senderGuid, req.channel);
                 if (!recentEvent.empty())
                     personaLine += "\n" + recentEvent;
             }
@@ -1195,7 +1199,10 @@ namespace
                 // line). The delay is measured from the primary reply's own
                 // deliverAt (not `now`) so the correction can never arrive
                 // before the line it corrects.
-                if (!style.correction.empty() && urand(0, 99) < kSelfCorrectionChancePercent)
+                bool const shortTypo = style.correction.size() <= 3 ||
+                                       std::count(style.text.begin(), style.text.end(), ' ') < 3;
+                if (!style.correction.empty() &&
+                    urand(0, 99) < (shortTypo ? kShortTypoCorrectionChancePercent : kSelfCorrectionChancePercent))
                 {
                     uint32_t delaySec = urand(kSelfCorrectionMinDelaySeconds, kSelfCorrectionMaxDelaySeconds);
                     std::string followUp = "*" + style.correction;
@@ -2177,9 +2184,10 @@ void Hs_DeliverPending()
         }
 
         // Bot-to-bot and channel lines too, so a General exchange can be
-        // corrected into training rows like a whisper (2026-10-10).
-        if (g_HsConversationLogEnabled &&
-            (reply.senderGuid != 0 || reply.channel == HsReplyChannel::Channel))
+        // corrected into training rows like a whisper (2026-10-10). Unprompted
+        // party/raid/say lines too: a battleground's capture lines were
+        // missing from it (2026-10-14).
+        if (g_HsConversationLogEnabled)
         {
             Player* sender = reply.senderGuid ? ObjectAccessor::FindPlayer(ObjectGuid(reply.senderGuid)) : nullptr;
             // An offline recipient (`.hearthside ask`, /api/ask) has no Player*, but the
