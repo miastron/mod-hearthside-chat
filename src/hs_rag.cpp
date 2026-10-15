@@ -414,8 +414,17 @@ bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery, b
         "is", "are", "does", "do", "did", "can", "could", "should", "would", "will", "any",
         "anyone", "anybody", "know", "best", "tips", "advice",
     };
+    // ...also behind one preposition or filler: "at what level do i get a mount."
+    static const std::unordered_set<std::string> kLeads = {
+        "at", "in", "on", "for", "from", "to", "so", "ok", "and", "but", "also", "hey", "btw",
+    };
     size_t end = normalizedQuery.find(' ');
-    const bool opener = kOpeners.count(normalizedQuery.substr(0, end)) > 0;
+    bool opener = kOpeners.count(normalizedQuery.substr(0, end)) > 0;
+    if (!opener && end != std::string::npos && kLeads.count(normalizedQuery.substr(0, end)))
+    {
+        size_t next = normalizedQuery.find(' ', end + 1);
+        opener = kOpeners.count(normalizedQuery.substr(end + 1, next == std::string::npos ? next : next - end - 1)) > 0;
+    }
     const auto spaces = std::count(normalizedQuery.begin(), normalizedQuery.end(), ' ');
     if (inConversation && spaces < 2 && !opener)
         return false;

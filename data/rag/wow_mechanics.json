@@ -69,9 +69,16 @@
   {
     "id": "mechanic_guilds",
     "title": "Guild System",
-    "content": "To found a guild, buy a guild charter from a guild master in a capital and collect signatures from other players, then turn it in. The guild leader sets ranks and what each rank may do, including which guild bank tabs it can withdraw from. Guilds in Wrath have no levels or perks.",
-    "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions", "make a guild"],
+    "content": "The Guild tab of the Social window (O) lists the members and who is online. A member whose rank allows it invites a player with /ginvite and their name, or the tab's Add Member button; /gquit leaves. To found a guild, buy a guild charter from a guild master in a capital, collect signatures and turn it in. The guild leader sets ranks and what each may do, including guild bank withdrawals. Guilds in Wrath have no levels or perks.",
+    "keywords": ["guild charter", "create a guild", "start a guild", "guild ranks", "guild leader", "guild master", "guild invite", "guild permissions", "make a guild", "guild roster", "guild members", "ginvite", "gquit"],
     "tags": ["mechanic", "social", "guilds", "community"]
+  },
+  {
+    "id": "mechanic_death",
+    "title": "Death and Your Corpse",
+    "content": "When you die, release your spirit and you appear as a ghost at the nearest graveyard; run back to your corpse and resurrect there for free. The spirit healer at the graveyard revives you on the spot instead, but from level 11 that costs extra durability on your gear and gives resurrection sickness, weaker stats for up to ten minutes. Every death wears your gear, which a repair vendor fixes for gold.",
+    "keywords": ["corpse", "graveyard", "resurrection sickness", "res sickness", "rez sickness"],
+    "tags": ["mechanic", "death", "basics"]
   },
   {
     "id": "mechanic_instances",

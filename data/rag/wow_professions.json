@@ -68,7 +68,7 @@
   {
     "id": "profession_mining",
     "title": "Mining Profession",
-    "content": "Miners gather ore and stone from mineral nodes, shown on the minimap with Find Minerals, and smelt it into bars at a forge for Blacksmithing, Engineering and Jewelcrafting. Northrend ores are Cobalt, Saronite and the rare Titanium, and the perk Toughness adds stamina.",
+    "content": "Mining is learned from a mining trainer in any capital or large town; a guard will point one out. Miners gather ore and stone from mineral nodes, shown on the minimap with Find Minerals, and smelt it into bars at a forge for Blacksmithing, Engineering and Jewelcrafting. Northrend ores are Cobalt, Saronite and the rare Titanium, and the perk Toughness adds stamina.",
     "keywords": ["mining", "miner", "ore", "ores", "smelting", "smelt", "cobalt", "saronite", "titanium", "toughness", "find minerals", "mining node"],
     "tags": ["profession", "gathering", "materials", "crafting", "blacksmithing", "engineering", "jewelcrafting"],
     "expert_domain": "gold",
@@ -179,7 +179,7 @@
   {
     "id": "profession_overview",
     "title": "Professions",
-    "content": "Every character can learn two primary professions and all three secondary ones: Cooking, Fishing and First Aid. Gathering professions are Herbalism, Mining and Skinning; crafting ones are Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking and Tailoring. Skill ranks cap at 75, 150, 225, 300, 375 and 450, the last taught by Grand Master trainers in Dalaran.",
+    "content": "A character can have two primary professions, and most fill both: two gathering ones (Herbalism, Mining, Skinning) make the most gold, or one gathering plus the crafting one it feeds (Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking, Tailoring). Cooking, Fishing and First Aid are secondary and don't count. Skill caps at 450, taught by Grand Master trainers in Northrend.",
     "keywords": ["profession", "professions", "prof", "profs", "primary profession", "secondary profession"],
     "tags": ["profession", "overview"]
   }
