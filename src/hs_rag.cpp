@@ -624,6 +624,19 @@ bool IsAsking(const std::string& normalizedQuery, const std::string& rawQuery, b
         return false;
     if (rawQuery.find('?') != std::string::npos || opener)
         return true;
+    // ...or a request for help anywhere in the line: "i died and im a ghost
+    // now what", "my armor is red what do i do" (2026-10-15 path audit).
+    static const char* const kHelp[] = {
+        " now what ", " what now ", " what do i do ", " what should i do ", " how do i ", " how can i ",
+        " help me ", " need help ", " any tips ", " any idea ", " cant find ", " cant figure ",
+    };
+    const std::string padded = " " + normalizedQuery + " ";
+    for (const char* h : kHelp)
+        if (padded.find(h) != std::string::npos)
+            return true;
+    // ...or a short choice: "tailoring or enchanting", "wsg or ab".
+    if (spaces <= 3 && padded.find(" or ") != std::string::npos)
+        return true;
     // ...or, in a short line, closers: "neutral ah where", "prot warrior tips".
     // Not in a long one: "picked it up questing, forget where".
     static const std::unordered_set<std::string> kClosers = {
@@ -823,6 +836,66 @@ size_t Hs_RagQueryTermCount(const std::string& query)
     // counts precisely what the scorer would see -- not words, and not
     // characters.
     return Terms(Normalize(query)).size();
+}
+
+bool Hs_RagIsFollowUp(const std::string& text)
+{
+    static const std::unordered_set<std::string> kFiller = { "ok", "okay", "k", "so", "then", "oh", "ah", "hmm", "lol" };
+    static const std::unordered_set<std::string> kConnectives = { "and", "also", "but", "plus" };
+    static const std::unordered_set<std::string> kPointers = {
+        "it", "its", "that", "thats", "there", "theres", "them", "they", "theyre", "those", "this", "these", "one",
+    };
+    std::vector<std::string> words;
+    const std::string norm = Normalize(text);
+    for (size_t i = 0, j; i < norm.size(); i = j + 1)
+    {
+        j = std::min(norm.find(' ', i), norm.size());
+        if (!words.empty() || !kFiller.count(norm.substr(i, j - i)))
+            words.push_back(norm.substr(i, j - i));
+    }
+    if (words.empty() || words.size() > 8)
+        return false;
+
+    auto join = [&](size_t from) {
+        std::string out;
+        for (size_t k = from; k < words.size(); ++k)
+            out += (out.empty() ? "" : " ") + words[k];
+        return out;
+    };
+
+    // "what about for horde", but not "what about you": that asks the bot.
+    if (words.size() >= 3 && (words[0] == "what" || words[0] == "how") && words[1] == "about")
+        return !(words.size() == 3 && (words[2] == "you" || words[2] == "u"));
+
+    auto has = [&](const std::unordered_set<std::string>& set) {
+        return std::any_of(words.begin(), words.end(), [&](const std::string& w) { return set.count(w) > 0; });
+    };
+
+    // "and how much does it cost", "and the epic one": the rest asks or points.
+    if (kConnectives.count(words[0]) && words.size() >= 2)
+        return IsAsking(join(1), text, /*inConversation=*/false) || has(kPointers);
+
+    // A line to the bot ("do you like this server") is about the bot, unless
+    // it asks the bot to know something ("do you know where it is").
+    static const std::unordered_set<std::string> kYou = { "you", "u", "ur", "your", "youre" };
+    if (has(kYou) && std::find(words.begin(), words.end(), "know") == words.end())
+        return false;
+
+    // Read as mid-conversation, so a two-word remark ("thats cool") is not asking.
+    if (!IsAsking(join(0), text, /*inConversation=*/true))
+        return false;
+
+    // "where is it", "is that for alliance": pointing back.
+    if (has(kPointers))
+        return true;
+
+    // "how many do i need", "which are best", "how?": a short question with
+    // at most one word of its own to retrieve on ("where is the nearest
+    // mailbox" has two, and is a new topic). Greetings excepted.
+    static const std::unordered_set<std::string> kGreetings = {
+        "whats up", "what up", "whats new", "hows it going", "how is it going", "whats good", "hows things",
+    };
+    return words.size() <= 5 && Terms(norm).size() <= 1 && !kGreetings.count(join(0));
 }
 
 std::string Hs_RagContextFor(const std::string& query, uint32_t maxEntries, float minScore, uint32_t maxChars,

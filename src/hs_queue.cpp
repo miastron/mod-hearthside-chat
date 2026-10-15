@@ -421,6 +421,11 @@ namespace
     {
         std::deque<HsHistoryTurn> turns;
         Clock::time_point         touchedAt{};
+
+        // The last scored RAG block this pair's conversation retrieved, for a
+        // follow-up line that names no topic of its own (Hs_RagIsFollowUp).
+        std::string               ragBlock;
+        Clock::time_point         ragAt{};
     };
 
     std::mutex g_HistoryMutex;
@@ -437,6 +442,42 @@ namespace
         if (it == g_History.end())
             return {};
         return { it->second.turns.begin(), it->second.turns.end() };
+    }
+
+    // Topic carry-over: a follow-up more than this long after the block was
+    // last used starts fresh.
+    constexpr int64_t kRagCarrySeconds = 180;
+
+    // Sets (or, with "", clears) the pair's carried block.
+    void HistoryRememberRag(uint64_t botGuid, uint64_t senderGuid, const std::string& block)
+    {
+        if (g_HsLLMHistoryTurns == 0)
+            return;
+        std::lock_guard<std::mutex> lock(g_HistoryMutex);
+        auto it = g_History.find({ botGuid, senderGuid });
+        if (it == g_History.end())
+        {
+            if (block.empty())
+                return;
+            it = g_History.emplace(std::make_pair(botGuid, senderGuid), HsHistoryEntry{}).first;
+            it->second.touchedAt = Clock::now();
+        }
+        it->second.ragBlock = block;
+        it->second.ragAt    = Clock::now();
+    }
+
+    // The pair's carried block if it is fresh, refreshing its age; else "".
+    std::string HistoryRecallRag(uint64_t botGuid, uint64_t senderGuid)
+    {
+        std::lock_guard<std::mutex> lock(g_HistoryMutex);
+        auto it = g_History.find({ botGuid, senderGuid });
+        if (it == g_History.end() || it->second.ragBlock.empty())
+            return {};
+        Clock::time_point now = Clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - it->second.ragAt).count() > kRagCarrySeconds)
+            return {};
+        it->second.ragAt = now;
+        return it->second.ragBlock;
     }
 
     // Stores the exact trigger/reply just used, byte-for-byte, then evicts
@@ -809,6 +850,22 @@ namespace
                 // question about something specific is never displaced by the
                 // room the bot happens to be standing in.
                 char const* how = "scored";
+
+                // Topic carry-over: "and how much does it cost" names nothing,
+                // so it gets the block its conversation last retrieved. A line
+                // that retrieves nothing and does not lean back ends the topic.
+                if (!req.isEvent)
+                {
+                    if (!ragLine.empty())
+                        HistoryRememberRag(req.botGuid, req.senderGuid, ragLine);
+                    else if (inConversation && Hs_RagIsFollowUp(req.prompt))
+                    {
+                        ragLine = HistoryRecallRag(req.botGuid, req.senderGuid);
+                        how     = "carried";
+                    }
+                    else
+                        HistoryRememberRag(req.botGuid, req.senderGuid, "");
+                }
 
                 if (ragLine.empty() && !req.topicGate.instanceName.empty())
                 {

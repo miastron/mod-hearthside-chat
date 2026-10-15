@@ -327,6 +327,23 @@ Relabeled against the new corpus, right path on all 502 lines: 73.1% shipping be
 77.7% with example questions, 84.3% with the new content; game questions answered with the right
 entry 67% -> 73% -> 85%.
 
+## Help requests and follow-ups (2026-10-15)
+
+`IsAsking` also accepts a help request anywhere in the line ("i died and im a ghost now what", "my
+armor is red what do i do": `now what`, `what do i do`, `how do i`, `need help`, ...) and a short
+choice ("tailoring or enchanting").
+
+**Topic carry-over.** A follow-up names no topic ("and how much does it cost", "what about for
+horde", "how many do i need"), so it retrieves nothing. `hs_queue.cpp` keeps the last scored block
+per bot-player pair; when a mid-conversation line retrieves nothing and `Hs_RagIsFollowUp` says it
+leans back (opens with and/also/but or what/how about; or asks and points back with it/that/there/
+they/one; or is a short question with at most one content word), it gets that block again, logged
+as `[carried]`. A line that retrieves nothing and doesn't lean back ends the topic; a carried block
+expires 180 s after it was last used. Lines to the bot ("do you like this server") never carry.
+`Tests/rag_followup_audit.py` on 120 blind two-line conversations: follow-ups left without facts
+33 of 60 -> 2; new topics given the old block 0 of 60. `Tests/test_hs_rag_followup.cpp` pins the
+predicate.
+
 ## Why the scoring looks like this
 
 `mod-ollama-chat`'s RAG scores cosine similarity over a corpus-wide vocabulary, normalized by the

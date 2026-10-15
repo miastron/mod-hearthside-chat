@@ -152,6 +152,15 @@ std::vector<HsRagHit> Hs_RetrieveRag(const std::string& query, uint32_t maxEntri
 // generator rather than a narrow request (hs_generator.cpp's script turns).
 size_t Hs_RagQueryTermCount(const std::string& query);
 
+// True when `text` reads as a follow-up to the previous exchange rather than
+// a question of its own: short, asking, and leaning on what came before --
+// opening with a connective ("and how much does it cost", "what about for
+// horde") or pointing back at it ("where is it", "is that for alliance").
+// hs_queue.cpp reuses the pair's previous RAG block for such a line when it
+// retrieves nothing itself, since the line alone carries no topic.
+// Pure function of the string; no table, no lock.
+bool Hs_RagIsFollowUp(const std::string& text);
+
 // Formats hits into the block appended to the persona line. Returns "" for
 // no hits. Truncated to `maxChars` on an entry boundary where possible, so
 // a large retrieval cannot blow the prompt budget; the first entry is
