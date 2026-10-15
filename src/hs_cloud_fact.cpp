@@ -82,6 +82,46 @@ bool Hs_CloudIsFactQuestion(const std::string& text)
     return !secondPerson || asksToKnow;
 }
 
+bool Hs_CloudIsHelpRequest(const std::string& text)
+{
+    static const std::unordered_set<std::string> kSecondPerson = {
+        "you", "u", "ur", "your", "youre", "yours", "yourself", "ya", "yall",
+    };
+    static const std::unordered_set<std::string> kWords = {
+        "tips", "advice", "help", "explain", "guide", "recommend", "worth",
+    };
+    static const char* const kPhrases[] = {
+        " or ", " now what ", " what now ", " what do i ", " what should i ", " how do i ", " how to ",
+        " cant find ", " cant figure ", " where to ", " who does ", " should i ", " which ", " where ",
+        " how much ", " how many ",
+    };
+
+    std::vector<std::string> words = Words(text);
+    if (words.size() < 3)
+        return false;
+
+    bool secondPerson = false, asksToKnow = false, helpWord = false;
+    std::string padded = " ";
+    for (std::string const& w : words)
+    {
+        if (kSecondPerson.count(w))
+            secondPerson = true;
+        if (w == "know" || w == "remember")
+            asksToKnow = true;
+        if (kWords.count(w))
+            helpWord = true;
+        padded += w + " ";
+    }
+    if (secondPerson && !asksToKnow)
+        return false;
+    if (helpWord)
+        return true;
+    for (const char* p : kPhrases)
+        if (padded.find(p) != std::string::npos)
+            return true;
+    return false;
+}
+
 HsCloudReply Hs_ParseCloudReply(const std::string& raw)
 {
     HsCloudReply out;

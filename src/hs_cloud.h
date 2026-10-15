@@ -6,7 +6,8 @@
 #include <functional>
 
 // Cloud facts (Claude/PLAN-CLOUD-FACTS.md). A real player asks a bot something
-// that is not about WoW; a cloud model (HearthsideChat.Cloud.Model, Claude
+// that is not about WoW, or a WoW question the RAG table has no entry for (the
+// game fallback, below); a cloud model (HearthsideChat.Cloud.Model, Claude
 // Haiku by default) supplies one fact sentence or "unknown", never the reply.
 // The fact rides in the request back to the queue worker, which puts it in the
 // prompt under kHsCloudFactPrefix, and the tuned model voices it like any RAG
@@ -37,7 +38,16 @@ void Hs_CloudShutdown();
 // router (Cloud.Router) says it is not about the game. With Router = model
 // that last test is a call to the tuned model in its ROUTE mode, made on this
 // thread so the GPU still sees one request at a time.
-bool Hs_CloudWantsRequest(HsReplyRequest const& req);
+// Records the router's label in req.cloudRoute.
+bool Hs_CloudWantsRequest(HsReplyRequest& req);
+
+// Queue worker thread, after the RAG lookup found nothing for this line. The
+// game fallback: true when the router labeled it "game" (Cloud.Router = model
+// only; Router = local never labels) and it is a question or a help request
+// (hs_cloud_fact.h). The cloud model then answers as of patch 3.3.5a, or
+// "unknown" for anything this server may have changed. Set req.cloudGame
+// before handing the request to Hs_CloudSubmit.
+bool Hs_CloudWantsGameFact(HsReplyRequest const& req);
 
 // Queue worker thread. Hands the request to the cloud thread; `resume` is
 // called exactly once, from that thread (or inline, if the cloud queue is full

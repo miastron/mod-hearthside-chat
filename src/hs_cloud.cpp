@@ -40,6 +40,43 @@ namespace
         " If the answer may have changed since your training data, search before answering, and end the "
         "line with [days:N], the number of days the answer will stay true.";
 
+    // The game fallback's instruction (Hs_CloudWantsGameFact). Tests/
+    // cloud_game_probe.py reads it from here. The realm's own changes (rates,
+    // charters, mail, cross-faction rules) live in the RAG table, which
+    // answers before this is ever asked; the cloud model cannot know them, so
+    // it is told to stay out, by topic. Measured 2026-10-15 (graded blind,
+    // Tests/cloud_game_probe.py): on 55 real-player questions the table
+    // missed, the list of later features with adaptive thinking gave 31
+    // right, 5 wrong, 19 unknown, where the world prompt's settings (thinking
+    // off, no list) gave 17 right, 27 wrong, and Sonnet with the list 37
+    // right, 15 wrong. The topic list then took 27 questions about this
+    // server's changed rules that the table missed from 10 retail answers
+    // to 27 unknowns, and 0 of 38 chat or server-settings lines got a fact.
+    constexpr char kSystemGame[] =
+        "You supply one fact for a chat bot playing World of Warcraft: Wrath of the Lich King, patch 3.3.5a, to "
+        "mention in passing to another player. Answer only as the game was in patch 3.3.5a: nothing from "
+        "Cataclysm or any later patch or expansion, and nothing from Classic re-releases. If what was asked did "
+        "not exist yet in 3.3.5a, say so. "
+        "Reply with exactly one line: Title -- One plain sentence with the answer, naming the place, NPC, cost or "
+        "level when there is one. For a request for advice, give the usual 3.3.5a recommendation. "
+        "This is a private server whose settings can differ from the original game: if the answer depends on "
+        "this server's own settings (experience or drop rates, custom features, population, its rules or "
+        "events), reply with only the word unknown. This server changed these, so reply unknown to any question "
+        "about them: guild charters and signatures, reputation and experience rates, profession skill-up rates, "
+        "durability loss and repair costs, mail delivery and postage, anything between Horde and Alliance "
+        "(talking, grouping, trading, mail, guilds), instance limits and resets, the Dungeon Finder, the Deserter "
+        "debuff, Wintergrasp's schedule and level, riding training costs and levels, class mount quests, and "
+        "character limits. Also reply unknown if the message is not about World of "
+        "Warcraft, is chat or a request to the player rather than a question or a request for advice, or you "
+        "are not sure the answer is right for patch 3.3.5a. "
+        "Things that did not exist yet in 3.3.5a: transmogrification, reforging, archaeology, void storage, pet "
+        "battles, Looking For Raid, rated battlegrounds, Twin Peaks and Battle for Gilneas, mastery, guild levels and "
+        "perks, monks, worgen and goblin players, flying in Kalimdor and the Eastern Kingdoms, and the Cataclysm zones "
+        "(Mount Hyjal questing, Uldum, Deepholm, Vashj'ir, Twilight Highlands, Gilneas, Kezan). The old world was not "
+        "yet reshaped: the Barrens is one zone, Thousand Needles is dry, Auberdine and Theramore stand. Classic race "
+        "and class limits still apply (no human hunter, gnome priest or tauren paladin). Never correct yourself in "
+        "the reply: if you are not sure, reply only unknown.";
+
     constexpr char kHost[]          = "api.anthropic.com";
     constexpr char kPath[]          = "/v1/messages";
     constexpr char kApiVersion[]    = "2023-06-01";
@@ -104,20 +141,25 @@ namespace
         int         httpStatus = 0;
     };
 
-    CallOutcome CallCloud(HsCloudStrings const& s, std::string const& question)
+    CallOutcome CallCloud(HsCloudStrings const& s, std::string const& question, bool game)
     {
         CallOutcome out;
+        bool const search = g_HsCloudWebSearchEnable && !game;
 
         hs_json body;
         body["model"]      = s.model;
-        body["max_tokens"] = 300;
-        body["system"]     = std::string(kSystemBase) + (g_HsCloudWebSearchEnable ? kSystemSearch : kSystemNoSearch);
-        // Measured best for a one-line lookup: medium effort with thinking off
-        // (902 ms median; adaptive thinking added slow outliers).
-        body["thinking"]      = { { "type", "disabled" } };
+        // Thinking tokens count against max_tokens: a game fact thinks first.
+        body["max_tokens"] = game ? 2000 : 300;
+        body["system"]     = game ? std::string(kSystemGame)
+                                  : std::string(kSystemBase) + (search ? kSystemSearch : kSystemNoSearch);
+        // Measured best for a one-line world lookup: medium effort with
+        // thinking off (902 ms median; adaptive thinking added slow outliers).
+        // A game fact is worth the wait: thinking cut wrong 3.3.5a answers
+        // from 27 to 5 in 55 (3.4 s median, 5.5 s at the 90th percentile).
+        body["thinking"]      = { { "type", game ? "adaptive" : "disabled" } };
         body["output_config"] = { { "effort", s.effort.empty() ? "medium" : s.effort } };
         body["messages"]      = hs_json::array({ { { "role", "user" }, { "content", question } } });
-        if (g_HsCloudWebSearchEnable && !s.webSearchDomain.empty())
+        if (search && !s.webSearchDomain.empty())
             body["tools"] = hs_json::array({ { { "type", kSearchTool }, { "name", "web_search" }, { "max_uses", 1 },
                                                { "allowed_domains", hs_json::array({ s.webSearchDomain }) } } });
 
@@ -240,7 +282,7 @@ namespace
             return;
         }
 
-        CallOutcome call = CallCloud(s, req.prompt);
+        CallOutcome call = CallCloud(s, req.prompt, req.cloudGame);
         if (!call.ok)
             return;
 
@@ -251,8 +293,9 @@ namespace
         if (reply.known || call.searches > 0)
             g_Limiter.TryTake(req.cloudAccountId, day, g_HsCloudDailyLimitPerAccount);
 
-        LOG_INFO(kHsLogChat, "[HearthsideChat] Cloud {} ms, {} search(es) for \"{}\": {}", call.latencyMs,
-            call.searches, req.prompt, reply.known ? reply.fact : std::string("unknown"));
+        LOG_INFO(kHsLogChat, "[HearthsideChat] Cloud {}{} ms, {} search(es) for \"{}\": {}",
+            req.cloudGame ? "(game) " : "", call.latencyMs, call.searches, req.prompt,
+            reply.known ? reply.fact : std::string("unknown"));
         if (!reply.known)
             return;
 
@@ -305,9 +348,10 @@ namespace
     }
 
     // Router = model: the tuned model's ROUTE mode labels the line game,
-    // world or chat. Only "world" goes out. Anything else, an unexpected
-    // label or a failed call included, keeps the line local.
-    bool ModelSaysWorld(std::string const& line)
+    // world or chat. "world" goes out at once; "game" may go out later, by
+    // the game fallback. Anything else, an unexpected label or a failed call
+    // included (returned as empty), keeps the line local.
+    std::string ModelRoute(std::string const& line)
     {
         HsLLMStrings const llm = Hs_LLMStringsSnapshot();
         HsLLMConfig cfg;
@@ -324,13 +368,13 @@ namespace
         if (g_HsDebugEnabled)
             LOG_INFO(kHsLogChat, "[HearthsideChat] Cloud route \"{}\" -> {} ({} ms)", line,
                 r.success ? r.text : std::string("call failed"), r.latencyMs);
-        if (!r.success)
-            return false;
         std::string label;
+        if (!r.success)
+            return label;
         for (char c : r.text)
             if (std::isalpha(static_cast<unsigned char>(c)))
                 label += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        return label == "world";
+        return label;
     }
 }
 
@@ -369,16 +413,29 @@ void Hs_CloudShutdown()
     // Their resume pushes into a queue that is shutting down too; dropped.
 }
 
-bool Hs_CloudWantsRequest(HsReplyRequest const& req)
+bool Hs_CloudWantsRequest(HsReplyRequest& req)
 {
     if (req.cloudDone || !StructurallyEligible(req))
         return false;
     HsCloudStrings const s = Hs_CloudStringsSnapshot();
-    if (!FeatureOn(s) || !Hs_CloudIsFactQuestion(req.prompt))
+    if (!FeatureOn(s))
         return false;
-    if (s.router == "model")
-        return ModelSaysWorld(req.prompt);
-    return true; // local: the cloud model itself answers unknown to game and chat lines
+    bool const fact = Hs_CloudIsFactQuestion(req.prompt);
+    if (s.router != "model")
+        return fact; // local: the cloud model itself answers unknown to game and chat lines
+    // A help request is routed too, for the game fallback; only a fact
+    // question leaves now, as before.
+    if (!fact && !Hs_CloudIsHelpRequest(req.prompt))
+        return false;
+    req.cloudRoute = ModelRoute(req.prompt);
+    return fact && req.cloudRoute == "world";
+}
+
+bool Hs_CloudWantsGameFact(HsReplyRequest const& req)
+{
+    if (req.cloudDone || req.cloudRoute != "game" || !StructurallyEligible(req))
+        return false;
+    return FeatureOn(Hs_CloudStringsSnapshot());
 }
 
 void Hs_CloudSubmit(HsReplyRequest req, std::function<void(HsReplyRequest)> resume)

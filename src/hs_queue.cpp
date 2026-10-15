@@ -749,7 +749,7 @@ namespace
             // carrying a fact or not. Decided on this thread because
             // Cloud.Router = model asks the tuned model, and the GPU should
             // still see one request at a time.
-            if (Hs_CloudWantsRequest(req))
+            if (Hs_CloudWantsRequest(job.request))
             {
                 Clock::time_point const enqueuedAt = job.enqueuedAt;
                 bool const              isProbe    = job.isProbe;
@@ -823,7 +823,9 @@ namespace
             // game, so a block could only be a near-miss riding along with the
             // fact ("who's the king of england" -> The Lich King, "how far is
             // the moon" -> Darnassus; Tests/rag_path_audit.py).
-            if (g_HsRagEnable && !req.cloudDone)
+            // A game-fallback request that came back without a fact retrieves
+            // again, so it still gets the instance-keyed block below.
+            if (g_HsRagEnable && (!req.cloudDone || (req.cloudGame && req.cloudFact.empty())))
             {
                 const bool inConversation = !req.isEvent && !HistorySnapshot(req.botGuid, req.senderGuid).empty();
 
@@ -867,6 +869,25 @@ namespace
                         HistoryRememberRag(req.botGuid, req.senderGuid, "");
                 }
 
+                // Game fallback (hs_cloud.h): a WoW question the table has
+                // nothing for goes out once, and comes back through
+                // ResumeAfterCloud with a 3.3.5a fact or none. Ahead of the
+                // instance-keyed block: the room the bot stands in does not
+                // answer a question about something else.
+                if (ragLine.empty() && !req.isEvent && Hs_CloudWantsGameFact(req))
+                {
+                    LOG_INFO(kHsLogChat, "[HearthsideChat] Reply RAG: bot {} <- \"{}\" -> NO BLOCK, asking the cloud [game]",
+                             req.botName, req.prompt);
+                    job.request.cloudGame              = true;
+                    Clock::time_point const enqueuedAt = job.enqueuedAt;
+                    bool const              isProbe    = job.isProbe;
+                    Hs_CloudSubmit(std::move(job.request), [enqueuedAt, isProbe](HsReplyRequest back)
+                    {
+                        ResumeAfterCloud(std::move(back), enqueuedAt, isProbe);
+                    });
+                    continue;
+                }
+
                 if (ragLine.empty() && !req.topicGate.instanceName.empty())
                 {
                     ragLine = Hs_RagContextForKeys({ req.topicGate.instanceName }, g_HsRagMaxChars,
@@ -892,8 +913,15 @@ namespace
 
             // The cloud fact (hs_cloud.h), where a RAG block goes: a line the
             // router sent out gets no RAG block (above), so the two never meet.
+            // A game fact reads as one: same heading, and a follow-up carries it.
             if (!req.cloudFact.empty())
-                personaLine += "\n" + std::string(kHsCloudFactPrefix) + req.cloudFact;
+            {
+                std::string const factLine =
+                    std::string(req.cloudGame ? kHsRagReplyPrefix : kHsCloudFactPrefix) + req.cloudFact;
+                if (req.cloudGame)
+                    HistoryRememberRag(req.botGuid, req.senderGuid, factLine);
+                personaLine += "\n" + factLine;
+            }
 
             // Grounds a reply in what this bot itself said publicly (a
             // corpus/ambient WTS line, a reflex/grounded answer, an opener)

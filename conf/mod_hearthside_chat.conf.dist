@@ -1292,7 +1292,11 @@ HearthsideChat.Cloud.Effort = medium
 #                  model - the bot's own model decides first, and only
 #                          questions it marks as real-world go out. Needs a
 #                          model trained with the ROUTE mode; on one that
-#                          isn't, nothing goes out.
+#                          isn't, nothing goes out. Also turns on the game
+#                          fallback: a question or help request it marks as
+#                          about the game, that the RAG table has nothing
+#                          for, goes out once with a patch 3.3.5a prompt that
+#                          answers "unknown" to anything this server changed.
 #     Default:     local
 HearthsideChat.Cloud.Router = local
 

@@ -440,3 +440,23 @@ Rules:
 
 The log line `Reply RAG: ... [scored, expert-eligible gold]` shows when a reply qualified.
 `rag_block_cli` takes `"expert": "<domain>"` so training rows can carry the exact expert block.
+
+## Cloud game fallback (2026-10-15)
+
+A blind set of 369 new player lines found 30% of game questions with no entry and another quarter
+missed by retrieval, so the long tail of 3.3.5a is not something entries alone will cover. With
+`Cloud.Router = model`, a question or help request the router marks as about the game, that
+retrieves nothing (scored or carried), goes to the cloud once with a patch 3.3.5a prompt
+(`kSystemGame` in `src/hs_cloud.cpp`, adaptive thinking). Its fact comes back under this block's
+heading, and a follow-up carries it like any block. Entries still answer first.
+
+The cloud model only knows retail 3.3.5a. Anything this realm changes must therefore be **in an
+entry and retrievable**, and its topic must be in `kSystemGame`'s list of topics the cloud answers
+"unknown" to. A blind set of 120 questions about the realm's changed rules (charters, rates,
+durability, mail, cross-faction, instance limits, Dungeon Finder, Deserter, Wintergrasp, riding,
+class mounts, character limits) is the check: 72 retrieve, and of the 27 that reach the cloud, all
+27 come back unknown. When adding a realm-specific fact to an entry, add its topic to that list.
+
+Measured on 55 blind game questions the table missed (`Tests/cloud_game_probe.py`, graded blind):
+29 get a fact (28 right), 26 come back unknown; with a fact, the bot's reply agrees 66% of the time,
+is wrong 18% and deflects 16%. Without the fallback those questions got no block at all.

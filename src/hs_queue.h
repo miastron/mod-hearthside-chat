@@ -126,6 +126,14 @@ struct HsReplyRequest
     // the worker routes each request at most once.
     std::string cloudFact;
     bool        cloudDone = false;
+    // The router's label for this line (Cloud.Router = model): "game",
+    // "world", "chat", or empty when it was never asked. Kept so the game
+    // fallback does not ask twice.
+    std::string cloudRoute;
+    // Sent out by the game fallback (hs_cloud.h): a WoW question the RAG
+    // table had nothing for. Its fact is a game fact, so it goes under the
+    // RAG block's heading.
+    bool        cloudGame = false;
 };
 
 // World thread only. Fills the identity and bot-state halves of a request

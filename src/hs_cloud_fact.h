@@ -25,6 +25,15 @@
 // other test (Hs_RagHasGameTerm, hs_rag.h), which needs the live RAG table.
 bool Hs_CloudIsFactQuestion(const std::string& text);
 
+// True when `text` asks for game help without being shaped like a question:
+// "ret pally or prot for leveling", "i keep getting ganked in stv, tips",
+// "i lost a ton of durability from wiping, where to repair". A choice, a help
+// word or a question phrase anywhere, three words or more, and, as above, not
+// addressed to the bot. Used only for the game fallback (hs_cloud.h), after
+// the router has said the line is about the game: on its own it would take
+// "where to eat tonight" too.
+bool Hs_CloudIsHelpRequest(const std::string& text);
+
 // The cloud model's answer, read. The instruction asks for exactly one line,
 // "Title -- One plain sentence. [days:N]", or "unknown". With web search on it
 // tends to wrap that line ("Based on the search results, the answer is: ..."),
