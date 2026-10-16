@@ -215,6 +215,8 @@ void Hs_NoteBotLine(Player* speaker, HsReplyChannel channel, HsChannelKind kind,
         // the same way TryFireChannelScript checks it independently.
         if (!HsTierAllows(Hs_ChannelPolicyFor(kind).maxTier, HsTier::Corpus))
             return;
+        if (Hs_IsGroupSeekingLine(text))
+            return;
         scopeId = Hs_BotChainScopeForChannel(kind);
     }
     else

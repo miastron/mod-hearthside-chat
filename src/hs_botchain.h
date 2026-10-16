@@ -74,6 +74,32 @@ inline uint32_t Hs_BotChainHopChancePercent(uint32_t basePercent, uint32_t decay
     return static_cast<uint32_t>(chance);
 }
 
+// A group-seeking broadcast ("lfg for the blood furnace", "lf tank for
+// maraudon", "anyone want to run rfc"). It is a call to real players, not a
+// remark another bot can answer: a hop off one produced "send me a whisper"
+// and "dont waste my time" between two bots (realm 2026-10-15), so it never
+// seeds a chain. Matched on the line's opening words, lowercase or not.
+inline bool Hs_IsGroupSeekingLine(const std::string& text)
+{
+    auto startsWith = [&](const char* prefix)
+    {
+        size_t i = 0;
+        for (; prefix[i]; ++i)
+        {
+            if (i >= text.size())
+                return false;
+            char c = text[i];
+            if (c >= 'A' && c <= 'Z')
+                c = static_cast<char>(c - 'A' + 'a');
+            if (c != prefix[i])
+                return false;
+        }
+        return true;
+    };
+    return startsWith("lfg") || startsWith("lfm") || startsWith("lf ") ||
+           startsWith("anyone want to run") || startsWith("anyone want to do");
+}
+
 // ---- runtime (AzerothCore-dependent, hs_botchain.cpp) ---------------------
 
 // Called from Hs_DeliverPending for every successfully delivered line that
