@@ -8,11 +8,13 @@
 -- corpus has no archetype axis, so the lines are written to fit any voice.
 --
 -- flag_* lines follow a flag capture or return in Warsong Gulch and Eye of the
--- Storm. node_* lines are said by a bot standing at or near a node, before
--- the outcome, the way players call it: inc as enemies close on a node its
+-- Storm (bg_flag_capped_theirs_ey for Eye of the Storm, whose flag is fought
+-- over at the center rather than defended at home). node_* lines are said by
+-- a bot standing at or near a node, before the outcome, the way players call
+-- it: inc as enemies close on a node its
 -- side holds, help once they outnumber the defenders, safe when they are gone,
 -- taking when its side outnumbers the other at a node it does not hold.
--- %node is the node's short name (lm, gm, fr, sh gy, ...), %n how many
+-- %node is the node's short name (lm, gm, fr, bet, sh gy, ...), %n how many
 -- players: enemies for inc and help, allies for taking.
 --
 -- Safe to edit and re-apply, like hside_corpus.sql: the DELETE removes this
@@ -25,6 +27,7 @@ DELETE FROM `hside_corpus_category` WHERE `name` IN ('bg_base_taken_ours', 'bg_b
 INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `channel`, `is_opener`) VALUES
 ('bg_flag_capped_ours',   'none', 0, 'raid', 1),
 ('bg_flag_capped_theirs', 'none', 0, 'raid', 1),
+('bg_flag_capped_theirs_ey', 'none', 0, 'raid', 1),
 ('bg_flag_returned_ours', 'none', 0, 'raid', 1),
 ('bg_node_inc',           'none', 0, 'raid', 1),
 ('bg_node_help',          'none', 0, 'raid', 1),
@@ -32,7 +35,7 @@ INSERT IGNORE INTO `hside_corpus_category` (`name`, `tag_axis`, `card_gated`, `c
 ('bg_node_taking',        'none', 0, 'raid', 1);
 
 DELETE FROM `hside_corpus` WHERE `generated_at` IS NULL AND `name` IN (
-  'bg_flag_capped_ours', 'bg_flag_capped_theirs', 'bg_flag_returned_ours',
+  'bg_flag_capped_ours', 'bg_flag_capped_theirs', 'bg_flag_capped_theirs_ey', 'bg_flag_returned_ours',
   'bg_node_inc', 'bg_node_help', 'bg_node_safe', 'bg_node_taking',
   'bg_base_taken_ours', 'bg_base_taken_theirs', 'bg_base_defended_ours'
 );
@@ -59,6 +62,15 @@ INSERT INTO `hside_corpus` (`name`, `text`) VALUES
 ('bg_flag_capped_theirs', 'kill their fc'),
 ('bg_flag_capped_theirs', 'd pls'),
 ('bg_flag_capped_theirs', 'ffs'),
+
+('bg_flag_capped_theirs_ey', 'come on'),
+('bg_flag_capped_theirs_ey', 'ugh'),
+('bg_flag_capped_theirs_ey', 'ffs'),
+('bg_flag_capped_theirs_ey', 'gg'),
+('bg_flag_capped_theirs_ey', 'need more mid'),
+('bg_flag_capped_theirs_ey', 'next one is ours'),
+('bg_flag_capped_theirs_ey', 'win mid'),
+('bg_flag_capped_theirs_ey', 'get the next one'),
 
 ('bg_flag_returned_ours', 'nice'),
 ('bg_flag_returned_ours', 'good save'),

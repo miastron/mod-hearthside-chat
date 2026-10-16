@@ -1604,7 +1604,7 @@ namespace
             return nodes;
         }();
         static std::vector<HsBgNode> const ey = [] {
-            static char const* const names[] = { "fr", "be", "dr", "mt" };
+            static char const* const names[] = { "fr", "bet", "dr", "mt" };
             std::vector<HsBgNode> nodes;
             for (uint8_t i = 0; i < EY_POINTS_MAX; ++i)
                 nodes.push_back({ i, names[i], BG_EY_TriggerPositions[i][0], BG_EY_TriggerPositions[i][1], BG_EY_TriggerPositions[i][2] });
@@ -1960,8 +1960,11 @@ namespace
             {
                 if (SideHasRealPlayer(bg, team))
                     SpeakBgLine(state, team, SideSpeakers(bg, team), "bg_flag_capped_ours");
+                // Eye of the Storm's flag is fought over at the center, not
+                // carried out of a base: "wheres d" makes no sense there.
                 if (SideHasRealPlayer(bg, other))
-                    SpeakBgLine(state, other, SideSpeakers(bg, other), "bg_flag_capped_theirs");
+                    SpeakBgLine(state, other, SideSpeakers(bg, other),
+                                bg->GetBgTypeID() == BATTLEGROUND_EY ? "bg_flag_capped_theirs_ey" : "bg_flag_capped_theirs");
             }
             else if (held[team] && SideHasRealPlayer(bg, team))
                 SpeakBgLine(state, team, SideSpeakers(bg, team), "bg_flag_returned_ours");

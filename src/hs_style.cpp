@@ -68,7 +68,7 @@ namespace
             "gz", "ty", "inv", "sum", "wtb", "wts", "lol", "wb", "rdy", "w/", "brb",
             // Battleground callouts (hs_event.cpp): a typo'd node name points
             // the team at the wrong node.
-            "inc", "fc", "gj", "st", "bs", "lm", "gm", "fr", "be", "dr", "mt", "gy", "sf",
+            "inc", "fc", "gj", "st", "bs", "lm", "gm", "fr", "bet", "dr", "mt", "gy", "sf",
             "dbs", "dbn", "iwb", "shb", "ibt", "tp", "et", "wt", "ws", "efc", "tun", "hut", "cap", "roof", "ramp", "top", "front",
         };
         return words;
